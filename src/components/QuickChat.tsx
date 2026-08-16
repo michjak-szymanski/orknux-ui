@@ -1,0 +1,221 @@
+import { useEffect, useRef, useState } from 'react';
+import type { FormEvent, KeyboardEvent } from 'react';
+import { useLocation } from 'react-router-dom';
+
+import { askQuickChat } from '../api/quickChat';
+import type { QuickChatTurn } from '../api/quickChat';
+import { fetchWorkspace } from '../api/workspaces';
+import botIcon from '../assets/bot.svg';
+import { Markdown } from './Markdown';
+import { PAGES } from '../navigation';
+import styles from './QuickChat.module.css';
+
+export interface QuickChatProps {
+  /** The workspace it asks about, or undefined while none is known. */
+  workspacePath?: string;
+}
+
+/**
+ * What the interface calls the page somebody is on.
+ *
+ * Read from the same list the router and Go to read, matched by shape rather
+ * than by string: `/workspace/12/executions/9` is the run page, and the label
+ * that page carries is what the model should be told. A page with no label of
+ * its own — a particular run, a particular function — borrows the label of the
+ * list it belongs to, which is still the right word for where somebody is.
+ */
+function labelFor(pathname: string): string | null {
+  const parts = pathname.split('/').filter(Boolean);
+
+  const matches = PAGES.filter((page) => {
+    const shape = page.path.split('/').filter(Boolean);
+    if (shape.length !== parts.length) return false;
+    return shape.every((piece, at) => piece.startsWith(':') || piece === parts[at]);
+  });
+
+  const exact = matches.find((page) => page.goTo !== false);
+  if (exact?.goTo !== undefined && exact.goTo !== false) return exact.goTo.label;
+
+  // Nothing with a label of its own: walk up to the list it came from.
+  for (let depth = parts.length - 1; depth > 0; depth -= 1) {
+    const above = '/' + parts.slice(0, depth).join('/');
+    const found = PAGES.find((page) => {
+      const shape = page.path.split('/').filter(Boolean);
+      if (shape.length !== depth) return false;
+      return shape.every((piece, at) => piece.startsWith(':') || piece === parts[at]) && page.goTo !== false;
+    });
+    if (found?.goTo !== undefined && found.goTo !== false) return found.goTo.label;
+  }
+  return null;
+}
+
+/**
+ * A small chat that opens over whatever is on screen.
+ *
+ * Not the Chat page shrunk: there is no history, no model picker, no files and
+ * no voice. It is for the question somebody has *while looking at something* —
+ * why did this fail, what is this page for — so the one thing it carries that
+ * the Chat page does not is where they are.
+ *
+ * It appears only where the workspace has chosen a model for it. A button that
+ * opens onto an apology is worse than no button.
+ */
+export function QuickChat({ workspacePath }: QuickChatProps) {
+  const { pathname } = useLocation();
+  const workspaceId = workspacePath?.split('/').filter(Boolean)[1];
+
+  const [offered, setOffered] = useState(false);
+  /** Whether this workspace lets it start things; only wording depends on it here. */
+  const [mayWrite, setMayWrite] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [said, setSaid] = useState<QuickChatTurn[]>([]);
+  const [draft, setDraft] = useState('');
+  const [asking, setAsking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const logRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (workspaceId === undefined) {
+      setOffered(false);
+      return;
+    }
+    let live = true;
+    fetchWorkspace(workspaceId)
+      .then((held) => {
+        if (!live) return;
+        setOffered(held?.quickChatModelId != null);
+        setMayWrite(held?.quickChatMayWrite ?? false);
+      })
+      .catch(() => {
+        if (live) setOffered(false);
+      });
+    return () => {
+      live = false;
+    };
+  }, [workspaceId]);
+
+  // The newest answer, and the box, without hunting for either.
+  useEffect(() => {
+    if (!open) return;
+    logRef.current?.scrollTo({ top: logRef.current.scrollHeight });
+    inputRef.current?.focus();
+  }, [open, said, asking]);
+
+  useEffect(() => {
+    if (!open) return;
+    function onKey(event: globalThis.KeyboardEvent) {
+      if (event.key === 'Escape') setOpen(false);
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open]);
+
+  async function ask(event: FormEvent) {
+    event.preventDefault();
+    const question = draft.trim();
+    if (question === '' || asking || workspaceId === undefined) return;
+
+    const conversation: QuickChatTurn[] = [...said, { role: 'user', content: question }];
+    setSaid(conversation);
+    setDraft('');
+    setAsking(true);
+    setError(null);
+    try {
+      // The page is read at the moment of asking rather than when the panel
+      // opened: somebody can navigate with it open, and "this" then means the
+      // page they are looking at now.
+      const answer = await askQuickChat(workspaceId, conversation, {
+        label: labelFor(pathname),
+        path: pathname,
+      });
+      setSaid([...conversation, { role: 'assistant', content: answer }]);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'That could not be answered.');
+    } finally {
+      setAsking(false);
+    }
+  }
+
+  /** Enter sends, Shift+Enter is a new line — the way the Chat page does it. */
+  function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      void ask(event as unknown as FormEvent);
+    }
+  }
+
+  if (!offered) return null;
+
+  return (
+    <>
+      {open && (
+        <section className={styles.panel} aria-label="Quick chat">
+          <header className={styles.header}>
+            <span className={styles.title}>Ask about this page</span>
+            <button type="button" className={styles.close} onClick={() => setOpen(false)} aria-label="Close">
+              ×
+            </button>
+          </header>
+
+          <div className={styles.log} ref={logRef}>
+            {said.length === 0 && (
+              <p className={styles.empty}>
+                Ask about what is on screen, or about this workspace — its workflows, its runs and what they
+                did.{' '}
+                {mayWrite
+                  ? 'It can look those up, and change things here if you ask it to.'
+                  : 'It can look those up; it cannot change anything.'}
+              </p>
+            )}
+            {said.map((turn, index) =>
+              turn.role === 'user' ? (
+                <p key={index} className={styles.asked}>
+                  {turn.content}
+                </p>
+              ) : (
+                <div key={index} className={styles.answered}>
+                  <Markdown>{turn.content}</Markdown>
+                </div>
+              ),
+            )}
+            {asking && <p className={styles.thinking}>Looking…</p>}
+            {error !== null && (
+              <p className={styles.error} role="alert">
+                {error}
+              </p>
+            )}
+          </div>
+
+          <form className={styles.composer} onSubmit={ask}>
+            <textarea
+              ref={inputRef}
+              className={styles.input}
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={onKeyDown}
+              placeholder="Ask about this page…"
+              rows={2}
+              aria-label="Ask about this page"
+            />
+            <button type="submit" className={styles.send} disabled={asking || draft.trim() === ''}>
+              {asking ? '…' : 'Ask'}
+            </button>
+          </form>
+        </section>
+      )}
+
+      <button
+        type="button"
+        className={open ? `${styles.launcher} ${styles.launcherOpen}` : styles.launcher}
+        onClick={() => setOpen((was) => !was)}
+        aria-expanded={open}
+        aria-label={open ? 'Close the quick chat' : 'Ask about this page'}
+        title={open ? 'Close' : 'Ask about this page'}
+      >
+        <img src={botIcon} alt="" width={18} height={18} />
+        <span className={styles.launcherLabel}>AI</span>
+      </button>
+    </>
+  );
+}

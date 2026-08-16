@@ -1,0 +1,786 @@
+/* The run detail: summary, the graph as it ran, its log, and the node panel. */
+
+.layout {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-24);
+  width: 100%;
+}
+
+/*
+ * The page header belongs to the whole page, not to the left column.
+ *
+ * It used to sit inside that column, so the panel beside it started level with
+ * the breadcrumb while the first card started below the title — the panel and
+ * the cards were a header's height out of step with each other.
+ */
+.headerRow {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.main {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--space-24);
+  min-width: 0;
+}
+
+/* ---- Header ---- */
+
+.contentHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.crumbLink {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.crumbLink:hover {
+  color: var(--color-text-primary);
+}
+
+.crumbSeparator {
+  color: var(--color-text-muted);
+}
+
+.crumbCurrent {
+  color: var(--color-text-primary);
+}
+
+.statusHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.headerLeft {
+  display: flex;
+  flex: 1 0 0;
+  align-items: center;
+  gap: var(--space-16);
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  overflow: hidden;
+  font-weight: 700;
+  font-size: var(--text-2xl);
+  color: var(--color-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viewWorkflow {
+  flex-shrink: 0;
+  font-weight: 500;
+  font-size: var(--text-base);
+  color: var(--color-accent-brand);
+  text-decoration: none;
+}
+
+.viewWorkflow:hover {
+  text-decoration: underline;
+}
+
+.duration {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-6);
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+/* Reload now, beside the timer that reloads on its own. */
+.refresh {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-12);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+/* The same control as a link, which is what "go and look" is. */
+a.refresh {
+  text-decoration: none;
+}
+
+.refresh:hover:not(:disabled) {
+  border-color: var(--color-accent-brand);
+  color: var(--color-text-primary);
+}
+
+.refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.rerun {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-16);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.rerun:hover:not(:disabled) {
+  border-color: var(--color-accent-brand);
+}
+
+.rerun:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- Status badges ---- */
+
+.statusBadge,
+.graphStatus {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-6);
+  font-size: var(--text-md);
+  white-space: nowrap;
+}
+
+.statusBadge {
+  padding: var(--space-4) var(--space-10);
+  border-radius: var(--radius-full);
+}
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: currentcolor;
+}
+
+.completed {
+  background: var(--color-success-soft);
+  color: var(--color-success-solid);
+}
+
+.running {
+  background: var(--color-amber-soft);
+  color: var(--color-amber);
+}
+
+.failed {
+  background: var(--color-danger-soft);
+  color: var(--color-danger-solid);
+}
+
+.pending {
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+}
+
+/* The graph header shows the outcome as plain text, not a pill. */
+.graphStatus {
+  background: none;
+  padding: 0;
+}
+
+.graphStatus.completed {
+  color: var(--color-success-solid);
+}
+
+.graphStatus.failed {
+  color: var(--color-danger-solid);
+}
+
+.graphStatus.running {
+  color: var(--color-amber);
+}
+
+/* ---- Cards ---- */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  width: 100%;
+  padding: var(--space-24);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+
+.cardTitle {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-lg);
+  color: var(--color-text-primary);
+}
+
+.notice {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.loadError {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-danger);
+}
+
+/* ---- Summary ---- */
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 0;
+}
+
+.summaryRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+  padding: var(--space-12) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.summaryRow:last-child {
+  border-bottom: 0;
+}
+
+.summaryLabel {
+  flex-shrink: 0;
+  width: 130px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.summaryValue {
+  flex: 1 0 0;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.summaryError {
+  color: var(--color-danger);
+}
+
+/* ---- Graph ---- */
+
+.graphHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.canvas {
+  width: 100%;
+  height: 332px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  overflow: hidden;
+}
+
+.canvas :global(.react-flow__edge-path) {
+  stroke: var(--color-border);
+  stroke-width: 1.5;
+}
+
+/* ---- Graph nodes ---- */
+
+.node {
+  position: relative;
+  width: 200px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.nodeSelected {
+  border-color: var(--color-accent-brand);
+  box-shadow: 0 0 0 1px var(--color-accent-brand);
+}
+
+.accentBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+}
+
+.trigger {
+  background: var(--color-success-solid);
+}
+
+.agent {
+  background: var(--color-accent-brand);
+}
+
+.action {
+  background: #06b6d4;
+}
+
+.condition {
+  background: var(--color-amber);
+}
+
+/* An object node: what a workflow puts together, as opposed to what it does. */
+.objectNode {
+  background: #a855f7;
+}
+
+.handle {
+  width: 6px;
+  height: 6px;
+  background: var(--color-text-muted);
+  border: 0;
+}
+
+.nodeContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-10) var(--space-14);
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  margin-bottom: var(--space-4);
+}
+
+.kindLabel {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-2xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.nodeName {
+  overflow: hidden;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nodeDescription,
+.nodeDuration {
+  overflow: hidden;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The outcome sits in the corner of each node. */
+.stepBadge {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-full);
+  font-size: 9px;
+  line-height: 1;
+  color: var(--color-accent);
+}
+
+.badgeCompleted {
+  background: var(--color-success-solid);
+  color: #052e16;
+}
+
+.badgeFailed {
+  background: var(--color-danger-solid);
+  color: #450a0a;
+}
+
+.badgeRunning {
+  background: var(--color-amber);
+}
+
+.badgePending {
+  background: var(--color-border);
+}
+
+/* ---- Logs ---- */
+
+.logsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.logsTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-lg);
+  color: var(--color-text-primary);
+}
+
+.logControls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.logSearch {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-4) var(--space-8);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.logSearch:focus-within {
+  border-color: var(--color-accent-brand);
+}
+
+.logSearchField {
+  width: 110px;
+  background: none;
+  border: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.logSearchField:focus {
+  outline: none;
+}
+
+.logSearchField::placeholder {
+  color: var(--color-text-muted);
+}
+
+.download {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-4);
+  cursor: pointer;
+}
+
+.download:hover {
+  background: var(--color-surface-raised);
+}
+
+.terminal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  max-height: 340px;
+  padding: var(--space-16) var(--space-20);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  overflow: auto;
+}
+
+.terminalLine {
+  display: flex;
+  gap: var(--space-16);
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 16px;
+}
+
+.terminalTime {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.levelINFO {
+  color: var(--color-text-secondary);
+}
+
+.levelSUCCESS {
+  color: var(--color-success-solid);
+}
+
+.levelERROR {
+  color: var(--color-danger-solid);
+}
+
+.terminalEmpty {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* ---- Node details panel ---- */
+
+/*
+ * The same box as the cards it sits beside. It had its own padding and spacing,
+ * so its heading and text started a few pixels in from theirs and the column
+ * read as slightly askew — the kind of misalignment that is easier to see than
+ * to name.
+ */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  flex-shrink: 0;
+  width: 260px;
+  padding: var(--space-24);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+
+/* Weighted like a card title, since that is what it sits level with. */
+.panelTitle {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-lg);
+  color: var(--color-text-primary);
+}
+
+.panelClose {
+  padding: 0;
+  background: none;
+  border: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.panelClose:hover {
+  color: var(--color-text-primary);
+}
+
+.panelSubtitle {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.panelField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.panelLabel {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.panelValue {
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.panelHeading {
+  margin: var(--space-8) 0 0;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.payload {
+  max-height: 160px;
+  margin: 0;
+  padding: var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.payloadError {
+  color: var(--color-danger);
+}
+
+/* ---- A run a condition ended early ---- */
+
+
+.summaryStopped {
+  color: var(--color-amber);
+  text-decoration: none;
+}
+
+/* A link only underlines when it is asked to be one. */
+a.summaryStopped:hover,
+a.summaryStopped:focus-visible {
+  text-decoration: underline;
+}
+
+.panelLink {
+  color: var(--color-accent-brand);
+  text-decoration: none;
+}
+
+.panelLink:hover,
+.panelLink:focus-visible {
+  text-decoration: underline;
+}
+
+/* ---- What happened to each node, on the node ----
+ *
+ * The outcome is the whole point of this graph, so it is the border, the mark in
+ * the corner and a word under the name — not something to work out from a badge
+ * two screens away.
+ */
+
+.outcomeLabel {
+  font-weight: 500;
+  font-size: var(--text-xs);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.outcome-done {
+  border-color: rgb(34 197 94 / 45%);
+}
+
+.outcome-start {
+  border-color: rgb(34 197 94 / 30%);
+}
+
+.outcome-failed {
+  border-color: var(--color-danger-solid);
+}
+
+.outcome-running,
+/* Parked, not finished: the same in-progress amber as a step still working. */
+.outcome-waiting {
+  border-color: var(--color-amber);
+}
+
+/* The condition that ended the run: the reason nothing after it happened. */
+.outcome-not-met {
+  border-color: var(--color-danger-solid);
+  box-shadow: 0 0 0 1px var(--color-danger-solid);
+}
+
+.outcome-not-met .outcomeLabel {
+  color: var(--color-danger);
+}
+
+/* Never reached: there, but plainly not part of what ran. */
+.outcome-skipped {
+  border-style: dashed;
+  opacity: 0.55;
+}
+
+.outcome-skipped .outcomeLabel {
+  color: var(--color-text-muted);
+}
+
+.mark-done,
+.mark-start {
+  background: rgb(34 197 94 / 15%);
+  color: var(--color-success-solid);
+}
+
+.mark-failed,
+.mark-not-met {
+  background: rgb(239 68 68 / 15%);
+  color: var(--color-danger-solid);
+}
+
+.mark-running,
+.mark-waiting {
+  background: var(--color-amber);
+}
+
+.mark-skipped,
+.mark-pending {
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+}
+
+/* An edge into something that never ran. */
+.edgeSkipped :global(.react-flow__edge-path) {
+  stroke-dasharray: 4 4;
+  opacity: 0.5;
+}

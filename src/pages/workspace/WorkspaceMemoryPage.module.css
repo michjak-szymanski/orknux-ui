@@ -1,0 +1,523 @@
+/*
+ * Memory: a list of catalogs beside what is in the one selected.
+ *
+ * The catalog list is a second sidebar, so the screen manages its own padding
+ * the way the chat does — the shell's would sit between the two columns.
+ */
+
+.split {
+  display: flex;
+  flex: 1 0 0;
+  width: 100%;
+  min-height: 0;
+  margin: calc(var(--space-32) * -1);
+}
+
+/* ---- Catalogs ---- */
+
+.catalogs {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: var(--space-16);
+  width: 280px;
+  padding: var(--space-20);
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  overflow-y: auto;
+}
+
+/*
+ * Folded away, when the list is not what somebody is working on.
+ *
+ * A strip rather than nothing: the column has to be findable again, and a
+ * layout that changes width with no visible cause reads as a bug.
+ */
+.catalogsCollapsed {
+  width: auto;
+  padding: var(--space-12) var(--space-8);
+}
+
+.catalogsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+/* The fold, and the arrow that says which way it goes. */
+.collapseCatalogs {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-4);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.collapseCatalogs:hover {
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+}
+
+.collapseIcon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  background-color: currentColor;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+}
+
+/* Pointing the other way when the column is already folded. */
+.collapseIconOpen {
+  transform: rotate(180deg);
+}
+
+.catalogsTitle {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+}
+
+.newCatalog {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4) var(--space-6);
+  background: var(--color-border);
+  border: 0;
+  border-radius: var(--radius-4);
+  cursor: pointer;
+}
+
+.catalogsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+.catalog,
+.catalogCurrent {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  width: 100%;
+  padding: var(--space-10) var(--space-12);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-size: var(--text-md);
+  text-align: left;
+  cursor: pointer;
+}
+
+.catalog {
+  background: none;
+  color: var(--color-text-secondary);
+}
+
+.catalog:hover {
+  background: var(--color-surface-raised);
+}
+
+.catalogCurrent {
+  background: var(--color-border);
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.catalogName {
+  flex: 1 0 0;
+  min-width: 0;
+  overflow: hidden;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The badge is the count, and it is violet only on the catalog being read. */
+.count,
+.countCurrent {
+  flex-shrink: 0;
+  padding: 2px var(--space-6);
+  border-radius: var(--radius-4);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-2xs, 10px);
+}
+
+.count {
+  background: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.countCurrent {
+  background: var(--color-surface-raised);
+  color: var(--color-accent-brand);
+}
+
+.sidebarNote {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+/* ---- The catalog being read ---- */
+
+.panel {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--space-16);
+  min-width: 0;
+  padding: var(--space-24) var(--space-20) var(--space-32);
+  overflow-y: auto;
+}
+
+.catalogHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.catalogHeading {
+  margin: 0;
+  font-weight: 500;
+  font-size: var(--text-lg);
+  color: var(--color-text-primary);
+}
+
+.catalogActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.iconButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-4);
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.iconButton:hover {
+  background: var(--color-surface-raised);
+  opacity: 1;
+}
+
+.rule {
+  width: 100%;
+  height: 1px;
+  background: var(--color-border);
+}
+
+/* ---- Search, filter, sort ---- */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  width: 100%;
+}
+
+.searchBox,
+.selectBox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.searchBox {
+  flex: 1 0 0;
+  min-width: 0;
+  background: var(--color-surface-raised);
+}
+
+.selectBox {
+  flex-shrink: 0;
+  background: var(--color-surface);
+}
+
+.searchInput {
+  flex: 1 0 0;
+  min-width: 0;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.searchInput::placeholder {
+  color: var(--color-text-muted);
+}
+
+.searchInput:focus,
+.select:focus,
+.sortSelect:focus {
+  outline: none;
+}
+
+/* The chevron beside it is the one drawn; the control's own is hidden. */
+.select,
+.sortSelect {
+  appearance: none;
+  background: none;
+  /* The menu the browser drops takes its colour from here, not from the box. */
+  background-color: var(--color-surface);
+  border: 0;
+  font-family: inherit;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.select {
+  font-size: var(--text-md);
+}
+
+.sortSelect {
+  font-weight: 500;
+  font-size: var(--text-sm);
+}
+
+.addMemory {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  text-decoration: none;
+  white-space: nowrap;
+  padding: var(--space-8) var(--space-14);
+  background: var(--color-accent-brand);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding-bottom: var(--space-4);
+}
+
+.statsText {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.sortBy {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+/* ---- The memories ---- */
+
+.cards {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  width: 100%;
+  padding: var(--space-20);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-10);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  width: 100%;
+}
+
+.cardTitle {
+  flex: 1 0 0;
+  min-width: 0;
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+/* The title opens the memory, so it reads as something to click. */
+.cardTitleLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.cardTitleLink:hover {
+  color: var(--color-accent-brand);
+  text-decoration: underline;
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+/*
+ * Three lines, then an ellipsis. The design shows one, but a memory is written
+ * to be read and a single line rarely carries the point of one — the card is
+ * the summary, and the editor has the whole of it.
+ */
+.cardBody {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--text-md);
+  line-height: 20px;
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding-top: var(--space-12);
+  border-top: 1px solid var(--color-border);
+}
+
+.author {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background: var(--color-surface-raised);
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: 9px;
+  color: var(--color-text-secondary);
+}
+
+.date {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* ---- Paging ---- */
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.pageControls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.pageButton,
+.pageCurrent {
+  padding: var(--space-6) var(--space-10);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.pageButton {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.pageButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.pageCurrent {
+  background: var(--color-accent-brand);
+  border: 1px solid var(--color-accent-brand);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.empty {
+  margin: 0;
+  padding: var(--space-24) 0;
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-danger);
+}
+
+/*
+ * A revealed value, in the card of the thing that holds it.
+ *
+ * Monospaced and allowed to wrap: what is being read is usually a key somebody
+ * is comparing character by character against another window.
+ */
+.cardValue {
+  margin: 0;
+  padding: var(--space-8) var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+  user-select: all;
+}

@@ -1,0 +1,852 @@
+/* ---- Toolbar ---- */
+
+.toolbar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  height: 40px;
+  padding: 0 var(--space-24);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.toolbarLeft,
+.toolbarRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.toolbarRight {
+  gap: var(--space-8);
+}
+
+.backButton,
+.renameButton {
+  display: flex;
+  align-items: center;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.crumbLink {
+  padding: 0;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  font-weight: 500;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.crumbLink:hover {
+  text-decoration: underline;
+}
+
+.crumbSeparator {
+  font-weight: 500;
+  font-size: var(--text-base);
+  color: #66666b;
+}
+
+.workflowName {
+  font-weight: 500;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.badge {
+  padding: var(--space-2) var(--space-6);
+  background: var(--color-border);
+  border-radius: var(--radius-4);
+  font-weight: 500;
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+}
+
+.badgeLive {
+  background: var(--color-success-soft);
+  color: var(--color-success-solid);
+}
+
+.error {
+  font-size: var(--text-md);
+  color: var(--color-danger);
+}
+
+.savedNote {
+  font-size: var(--text-md);
+  color: var(--color-success-solid);
+}
+
+/* Not in the frame: nodes have to come from somewhere. */
+.addMenu {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-right: var(--space-8);
+}
+
+.addLabel {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.addButton {
+  padding: var(--space-4) var(--space-8);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.addButton:hover {
+  color: var(--color-text-primary);
+}
+
+.deleteButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  color: var(--color-danger-solid);
+  cursor: pointer;
+}
+
+.ghostButton,
+.publishButton {
+  padding: var(--space-6) var(--space-14);
+  border-radius: var(--radius-6);
+  font-weight: 500;
+  font-size: var(--text-md);
+  cursor: pointer;
+}
+
+.ghostButton {
+  background: none;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.publishButton {
+  background: var(--color-accent-brand);
+  border: 0;
+  color: var(--color-text-primary);
+}
+
+/* Nothing to publish: still there, no longer asking to be pressed. */
+.publishButtonQuiet {
+  composes: publishButton;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.ghostButton:disabled,
+.publishButton:disabled,
+.publishButtonQuiet:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- Editor layout ---- */
+
+.editor {
+  display: flex;
+  flex: 1 0 0;
+  min-height: 0;
+}
+
+.canvas {
+  position: relative;
+  flex: 1 0 0;
+  min-width: 0;
+  background: var(--color-bg);
+}
+
+.loadError {
+  margin: 0;
+  padding: var(--space-24);
+  font-size: var(--text-base);
+  color: var(--color-danger);
+}
+
+/* ---- Nodes ---- */
+
+.node {
+  position: relative;
+  /*
+   * Grows with what it holds. It was a fixed 96px box, so a long name, a
+   * description or the ports it carries were simply cut off — the node looked
+   * complete while hiding the part that mattered. Width stays a starting size
+   * rather than a limit: the resize handles set their own.
+   */
+  width: 100%;
+  min-width: 220px;
+  min-height: 96px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.25);
+}
+
+.nodeSelected {
+  border-color: var(--color-accent-brand);
+}
+
+.accentBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+}
+
+.trigger {
+  background: var(--color-success-solid);
+}
+
+.agent {
+  background: var(--color-accent-brand);
+}
+
+/* A condition node: the question the run has to pass. */
+.condition {
+  background: var(--color-amber);
+}
+
+/* An object node: what a workflow puts together, as opposed to what it does. */
+.objectNode {
+  background: #a855f7;
+}
+
+/* An action node: what a workflow does, as opposed to what thinks. */
+.action {
+  background: #06b6d4;
+}
+
+.nodeContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  height: 100%;
+  padding: var(--space-14) var(--space-16);
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+/* Whatever else the row holds, the dot stays at the far end. */
+.activeDot {
+  margin-left: auto;
+}
+
+.kindLabel {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-2xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.activeDot {
+  width: 6px;
+  height: 6px;
+  background: var(--color-accent-brand);
+  border-radius: var(--radius-full);
+}
+
+.nodeText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* Wraps rather than trailing off: a node's name is how it is identified. */
+.nodeName {
+  font-weight: 500;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+/*
+ * Wraps, but not without end: three lines is enough to say what a node is for,
+ * and a paragraph on the canvas would push everything else out of view.
+ */
+.nodeDescription {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+/*
+ * The node's own icon. Big enough to be the thing you see first — at 14px it
+ * read as punctuation beside the kind label rather than as what the node is.
+ */
+.nodeIcon {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  background-color: var(--color-text-primary);
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+}
+
+/* The chosen icon beside its name, in the field that opens the browser. */
+.iconPreview {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  background-color: var(--color-text-primary);
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+}
+
+.iconName {
+  flex: 1 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-primary);
+}
+
+.iconNone {
+  flex: 1 0 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/*
+ * The data the node takes and gives, on the node itself. The edges already say
+ * what runs next; without this, what travels along them is invisible until a run
+ * either works or does not.
+ */
+.portRows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-8);
+  padding-top: var(--space-8);
+  border-top: 1px dashed var(--color-border);
+}
+
+.portRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.portArrow {
+  font-size: var(--text-xs);
+  line-height: 1;
+  color: var(--color-text-muted);
+}
+
+.portArrowOut {
+  color: var(--color-accent-brand);
+}
+
+.portChip {
+  padding: 1px var(--space-6);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  /* A long field name is worth seeing whole; the node grows rather than clipping it. */
+  overflow-wrap: anywhere;
+}
+
+/* What it produces is what the next node can reach for, so it carries the brand. */
+.portChipOut {
+  border-color: var(--color-accent-brand);
+  color: var(--color-accent-brand);
+}
+
+.handle {
+  width: 12px;
+  height: 12px;
+  background: var(--color-surface-raised);
+  border: 2px solid var(--color-border);
+}
+
+/* ---- React Flow chrome ---- */
+
+.minimap {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.controls button {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  fill: currentColor;
+}
+
+.controls button:hover {
+  background: var(--color-surface-raised);
+}
+
+/* ---- Properties panel ---- */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 280px;
+  flex-shrink: 0;
+  padding: 20px;
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+  overflow-y: auto;
+}
+
+.panelHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.panelTitle {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-lg);
+  color: var(--color-text-primary);
+}
+
+.panelSubtitle {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.panelDivider {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.panelEmpty {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.inputWrapper {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.inputActive,
+.inputWrapper:focus-within {
+  border-color: var(--color-accent-brand);
+}
+
+.inputWrapperTall {
+  align-items: stretch;
+  height: 96px;
+  padding: var(--space-12);
+}
+
+.input {
+  flex: 1 0 0;
+  min-width: 0;
+  padding: var(--space-8) 0;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.input:focus {
+  outline: none;
+}
+
+.select {
+  appearance: none;
+  cursor: pointer;
+}
+
+.select option {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.textarea {
+  padding: 0;
+  color: var(--color-text-secondary);
+  resize: none;
+}
+
+.panelFooter {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+/* A label with the way to what it names, on the same line. */
+.labelRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+.definitionLink {
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: var(--text-xs);
+  color: var(--color-accent-brand);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.definitionLink:hover {
+  text-decoration: underline;
+}
+
+/*
+ * The parameters an action node passes. One row per parameter the action has and
+ * no others: a node shows what it can actually send, not the union of everything
+ * any action might take.
+ */
+.parameterList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+.parameter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+/* The name on the left, and anything acting on the field on the right. */
+.parameterHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+
+/* Written, or read from somewhere else. Two states, so a switch rather than a list. */
+.modeSwitch {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+}
+
+.modeOption {
+  flex: 1 0 0;
+  padding: 3px var(--space-6);
+  background: none;
+  border: 0;
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.modeOption:hover {
+  color: var(--color-text-primary);
+}
+
+.modeOptionOn {
+  background: var(--color-surface-raised);
+  color: var(--color-accent-brand);
+}
+
+/* The parameter's own name, as the function declares it. */
+.parameterName {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/*
+ * Copies the definition's wording over the node's. Only shown once the two have
+ * actually drifted, so it is an answer to something visible rather than a button
+ * whose effect cannot be seen.
+ */
+.parameterSync {
+  padding: 0;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  font-size: var(--text-xs);
+  color: var(--color-accent-brand);
+  cursor: pointer;
+}
+
+.parameterSync:hover {
+  text-decoration: underline;
+}
+
+/* An expression or a plain value; both are read as written, so both are mono. */
+.parameterValue {
+  font-family: var(--font-mono);
+}
+
+.parameterHint {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: 16px;
+  color: var(--color-text-muted);
+}
+
+.updateButton {
+  width: 100%;
+  padding: var(--space-8);
+  background: var(--color-border);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+/* Violet while the panel holds an edit the node has not taken. */
+.updateButtonPending {
+  composes: updateButton;
+  background: var(--color-accent-brand);
+}
+
+/* The chevron is decoration; the select reaches under it and takes the click. */
+.inputWrapper {
+  position: relative;
+}
+
+.inputWrapper > img {
+  position: absolute;
+  right: var(--space-12);
+  pointer-events: none;
+}
+
+.select {
+  width: 100%;
+  padding-right: var(--space-20);
+}
+
+/* ---- What the graph is missing ---- */
+
+.problems {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+  padding: var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.problemsTitle {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.problemList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.problem {
+  padding-left: var(--space-10);
+  border-left: 2px solid var(--color-amber);
+}
+
+.problemError {
+  border-left-color: var(--color-danger-solid);
+}
+
+.problemButton {
+  padding: 0;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.problemButton:hover {
+  color: var(--color-text-primary);
+}
+
+/* ---- What a node needs and hands on ---- */
+
+.ports {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  padding: var(--space-12) 0 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.portsHeading {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.portsList {
+  margin: 0 0 var(--space-8);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+/*
+ * A select wearing the shared input class. The box already looks right; this is
+ * only so the menu the browser drops has a colour of its own — left transparent
+ * it opens white. Narrower than `.input` on purpose, so real inputs keep theirs.
+ */
+select.input {
+  background-color: var(--color-bg);
+}
+
+/*
+ * What a line carries, beside the line: one row per field, so four of them read
+ * as a list rather than as a sentence running off the canvas.
+ *
+ * Not clickable — the line under it is the graph's, and a label that swallowed
+ * the click would make an edge hard to select.
+ */
+.edgeLabel {
+  position: absolute;
+  margin: 0;
+  padding: var(--space-4) var(--space-8);
+  list-style: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  background: var(--color-surface-raised);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* A bullet per row, so two fields read as two entries and not one phrase. */
+.edgeLabelRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: 2px 0;
+}
+
+/* Drawn, not typed: a bullet glyph is at the mercy of the mono font. */
+.edgeLabelRow::before {
+  content: '';
+  flex: none;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+}
+
+/* What is read, then what it answers: the field leads, the parameter follows. */
+.edgeLabelFrom {
+  color: var(--color-accent-brand);
+}
+
+.edgeLabelArrow {
+  color: var(--color-text-muted);
+}
+
+.edgeLabelTo {
+  color: var(--color-text-secondary);
+}
+
+.edgeLabelMore {
+  color: var(--color-text-muted);
+}

@@ -1,0 +1,7 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="mic">
+<path id="Body" d="M8 1.5C7.17157 1.5 6.5 2.17157 6.5 3V8C6.5 8.82843 7.17157 9.5 8 9.5C8.82843 9.5 9.5 8.82843 9.5 8V3C9.5 2.17157 8.82843 1.5 8 1.5Z" stroke="#A1A1AA" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Arc" d="M12 7.5V8C12 10.2091 10.2091 12 8 12C5.79086 12 4 10.2091 4 8V7.5" stroke="#A1A1AA" stroke-width="1.6" stroke-linecap="round"/>
+<path id="Stand" d="M8 12V14.5" stroke="#A1A1AA" stroke-width="1.6" stroke-linecap="round"/>
+</g>
+</svg>

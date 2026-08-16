@@ -1,0 +1,194 @@
+/*
+ * The Tools and Skills lists, which are the same table: a name, what it is for,
+ * a toggle, when it last changed, and a way in. Shared rather than copied,
+ * because the two screens are the same screen over different content.
+ */
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.titleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.title {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--text-2xl);
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+.createButton {
+  flex-shrink: 0;
+  padding: var(--space-8) var(--space-14);
+  background: var(--color-accent-brand);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.createButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.pageError {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-danger);
+}
+
+/* ---- Table ---- */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  overflow: clip;
+}
+
+.tableHeader,
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.tableHeader {
+  padding: var(--space-12) var(--space-24);
+  background: var(--color-surface-raised);
+  border-bottom: 1px solid var(--color-border);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  letter-spacing: 0.55px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.row {
+  padding: var(--space-14) var(--space-24);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* The pagination bar supplies the final rule. */
+.row:last-of-type {
+  border-bottom: 0;
+}
+
+.colName {
+  flex-shrink: 0;
+  width: 240px;
+}
+
+.colDescription {
+  flex: 1 0 0;
+  min-width: 0;
+}
+
+.colStatus {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+}
+
+.colModified {
+  flex-shrink: 0;
+  width: 170px;
+  text-align: center;
+}
+
+.colActions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+}
+
+/* The name opens the editor, so it reads as something to click. */
+.name {
+  overflow: hidden;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.name:hover {
+  color: #c084fc;
+}
+
+.description {
+  font-size: var(--text-md);
+  line-height: 18px;
+  color: var(--color-text-secondary);
+}
+
+/* Nothing said about it, which is worth showing as an absence. */
+.noDescription {
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.modified {
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.rowAction {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.notice {
+  margin: 0;
+  padding: var(--space-16) var(--space-24);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.noticeError {
+  color: var(--color-danger);
+}

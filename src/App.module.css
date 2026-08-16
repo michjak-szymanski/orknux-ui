@@ -1,0 +1,32 @@
+/*
+ * Shown while the server is not answering — during a restart, most often.
+ *
+ * Deliberately not the login form. Somebody whose session is perfectly valid should
+ * not be asked for a password because the thing that would have accepted it is
+ * briefly down; and a form that cannot work is a worse answer than a sentence
+ * saying what is wrong.
+ */
+.unreachable {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: var(--space-40);
+  background: var(--color-bg);
+  text-align: center;
+}
+
+.unreachableTitle {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-lg);
+  color: var(--color-text-primary);
+}
+
+.unreachableDetail {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}

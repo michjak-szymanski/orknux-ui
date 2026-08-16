@@ -1,0 +1,349 @@
+.contentHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.headerText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+/* Kept together on the right, so the header stays two things wide. */
+.headerActions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+/* Nothing here polls, so the list is caught up by asking. */
+.refresh {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-14);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.refresh:hover:not(:disabled) {
+  border-color: var(--color-accent-brand);
+}
+
+.refresh:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.title {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--text-2xl);
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+/* ---- Filters ---- */
+
+.filtersBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  width: 100%;
+}
+
+.filtersLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.filter,
+.searchBox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-12);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.filter {
+  cursor: pointer;
+}
+
+.filter:focus-within,
+.searchBox:focus-within {
+  border-color: var(--color-accent-brand);
+}
+
+.filterLabel {
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.filterSelect {
+  padding: 0;
+  background: none;
+  /* The menu the browser drops takes its colour from here, not from the box. */
+  background-color: var(--color-surface);
+  border: 0;
+  font-family: inherit;
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  appearance: none;
+  cursor: pointer;
+}
+
+.filterSelect:focus {
+  outline: none;
+}
+
+.filterSelect option {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.filterValue {
+  font-weight: 400;
+}
+
+.searchBox {
+  width: 260px;
+}
+
+.searchField {
+  flex: 1 0 0;
+  min-width: 0;
+  background: none;
+  border: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.searchField:focus {
+  outline: none;
+}
+
+.searchField::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* ---- Table ---- */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  overflow: clip;
+}
+
+.tableHeader,
+.row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: var(--space-14) var(--space-16);
+}
+
+.tableHeader {
+  border-bottom: 1px solid var(--color-border);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  letter-spacing: 0.55px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.row {
+  border-top: 1px solid var(--color-border);
+}
+
+/* The header's own bottom rule already separates it from the first row. */
+.row:first-of-type {
+  border-top: 0;
+}
+
+/* Each cell carries its own inset, as in the frame. */
+.colRun,
+.colWorkflow,
+.colStatus,
+.colStarted,
+.colDuration,
+.colTrigger {
+  padding: 0 var(--space-16);
+}
+
+/*
+ * The run takes the slack, and it is a link to what the run did.
+ *
+ * It used to be 90px of number with the workflow name taking the rest, which meant
+ * the wide, easy target opened the workflow editor and the narrow one opened the
+ * run — the wrong way round for a list of runs. The cell is the link, so giving it
+ * the empty space gives the click somewhere to land.
+ */
+.colRun {
+  flex: 1 0 0;
+  min-width: 90px;
+}
+
+/*
+ * An id is read a digit at a time, and compared with one somebody quoted — so
+ * it stays monospaced, but reads as the link it is, like the workflow beside it.
+ */
+.runId {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.runId:hover {
+  text-decoration: underline;
+}
+
+/*
+ * The workflow sits between the run and the status, centred in what is left after
+ * the run has taken the space it needs. It shrinks before the run does; a long name
+ * ellipsises rather than squeezing the target next to it.
+ */
+.colWorkflow {
+  flex: 0 1 auto;
+  min-width: 0;
+  text-align: center;
+}
+
+.colStatus {
+  flex-shrink: 0;
+  width: 140px;
+}
+
+.colStarted {
+  flex-shrink: 0;
+  width: 150px;
+}
+
+.colDuration {
+  flex-shrink: 0;
+  width: 120px;
+}
+
+.colTrigger {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-8);
+  width: 160px;
+}
+
+.workflowName {
+  overflow: hidden;
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workflowName:hover {
+  text-decoration: underline;
+}
+
+.muted {
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+/* ---- Status badge ---- */
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--radius-4);
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  border-radius: var(--radius-full);
+}
+
+.completed {
+  background: var(--color-success-soft);
+  color: var(--color-success-solid);
+}
+
+.running {
+  background: var(--color-amber-soft);
+  color: var(--color-amber);
+}
+
+.failed {
+  background: var(--color-danger-soft);
+  color: var(--color-danger-solid);
+}
+
+/* ---- Loading / empty / error ---- */
+
+.notice {
+  margin: 0;
+  padding: var(--space-14) var(--space-16);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.noticeError {
+  color: var(--color-danger);
+}
+
+/*
+ * The icons around a filter are decoration: they take no clicks, and the select
+ * is stretched under the chevron beside it, so clicking the arrow opens the
+ * list instead of hitting the label and doing nothing.
+ */
+.filter {
+  position: relative;
+}
+
+.filter > img {
+  pointer-events: none;
+}
+
+.filterSelect {
+  padding-right: var(--space-16);
+  margin-right: calc(var(--space-16) * -1);
+  cursor: pointer;
+}
+

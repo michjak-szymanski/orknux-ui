@@ -1,0 +1,12 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="object-graph">
+<circle id="Ellipse" cx="5" cy="5" r="2" fill="#A1A1AA"/>
+<circle id="Ellipse_2" cx="11" cy="5" r="2" fill="#A1A1AA"/>
+<circle id="Ellipse_3" cx="5" cy="11" r="2" fill="#A1A1AA"/>
+<circle id="Ellipse_4" cx="11" cy="11" r="2" fill="#A1A1AA"/>
+<line id="Line" x1="7.75" y1="5.25" x2="12.25" y2="5.25" stroke="#A1A1AA" stroke-width="1.5" stroke-linecap="round"/>
+<line id="Line_2" x1="6.75" y1="7.75" x2="6.75" y2="12.25" stroke="#A1A1AA" stroke-width="1.5" stroke-linecap="round"/>
+<line id="Line_3" x1="12.75" y1="7.75" x2="12.75" y2="12.25" stroke="#A1A1AA" stroke-width="1.5" stroke-linecap="round"/>
+<line id="Line_4" x1="7.75" y1="11.25" x2="12.25" y2="11.25" stroke="#A1A1AA" stroke-width="1.5" stroke-linecap="round"/>
+</g>
+</svg>

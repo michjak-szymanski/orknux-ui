@@ -1,0 +1,498 @@
+/* One model: what it is, what it has been used for, and what it is allowed. */
+
+.headerBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  margin: 0;
+  font-size: var(--text-base);
+}
+
+.crumbLink {
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.crumbLink:hover {
+  color: var(--color-text-secondary);
+}
+
+.crumbSeparator {
+  color: var(--color-text-muted);
+}
+
+.crumbCurrent {
+  color: var(--color-text-primary);
+}
+
+.pageTitle {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--text-2xl);
+  color: var(--color-text-primary);
+}
+
+/* ---- Cards ---- */
+
+.card,
+.dangerCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-20);
+  width: 100%;
+  padding: var(--space-24);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-12);
+}
+
+.dangerCard {
+  border-color: var(--color-danger-border);
+}
+
+.sectionHeading {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-lg);
+  color: var(--color-text-primary);
+}
+
+.notice,
+.loadError,
+.emptyMetrics {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.loadError {
+  color: var(--color-danger);
+}
+
+.emptyMetrics {
+  max-width: 70ch;
+  line-height: 20px;
+}
+
+/* ---- Provider details ---- */
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-20) var(--space-40);
+  width: 100%;
+}
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.detailLabel {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.55px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.detailValue {
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.detailMono {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  text-overflow: ellipsis;
+}
+
+.detailLink {
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-accent-brand);
+  text-decoration: none;
+}
+
+.detailLink:hover {
+  text-decoration: underline;
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.statusActive {
+  font-size: var(--text-base);
+  color: var(--color-success-solid);
+}
+
+.statusInactive {
+  font-size: var(--text-base);
+  color: var(--color-text-muted);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+/* ---- Usage metrics ---- */
+
+.statsRow {
+  display: flex;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.stat {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--space-12);
+  min-width: 0;
+  padding: var(--space-20);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-12);
+}
+
+.statLabel {
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.statValue {
+  font-weight: 700;
+  font-size: var(--text-2xl);
+  color: var(--color-text-primary);
+}
+
+.statChangeGood,
+.statChangeBad {
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.statChangeGood {
+  color: var(--color-success-solid);
+}
+
+.statChangeBad {
+  color: var(--color-danger);
+}
+
+.chartArea {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  width: 100%;
+  padding: var(--space-16);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+
+.chartTitle {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.chartDates {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+.breakdownTitle {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.breakdownGrid {
+  display: flex;
+  gap: var(--space-24);
+  width: 100%;
+  padding: var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+
+.figure {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.figureLabel,
+.figureLabelAccent {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.55px;
+  text-transform: uppercase;
+}
+
+.figureLabel {
+  color: var(--color-text-muted);
+}
+
+.figureLabelAccent {
+  color: var(--color-accent-brand);
+}
+
+.figureValue,
+.figureValueAccent {
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+}
+
+.figureValue {
+  color: var(--color-text-primary);
+}
+
+.figureValueAccent {
+  font-weight: 700;
+  color: var(--color-accent-brand);
+}
+
+/* ---- Quotas form ---- */
+
+.fieldRow {
+  display: flex;
+  gap: var(--space-24);
+  width: 100%;
+}
+
+.field {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.label {
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.input {
+  width: 100%;
+  padding: var(--space-10) var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  font-family: inherit;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.inputMono {
+  font-family: var(--font-mono);
+}
+
+.input:focus {
+  border-color: var(--color-accent-brand);
+  outline: none;
+}
+
+.selectWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.select {
+  appearance: none;
+  padding-right: var(--space-32);
+}
+
+.selectChevron {
+  position: absolute;
+  top: 50%;
+  right: var(--space-12);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.usageBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+.usageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+}
+
+.usageValue,
+.usageWarn {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-md);
+}
+
+.usageValue {
+  color: var(--color-text-secondary);
+}
+
+/* Close to the limit is worth noticing before it is reached. */
+.usageWarn {
+  color: var(--color-amber);
+}
+
+.usageTrack {
+  width: 100%;
+  height: 10px;
+  background: var(--color-bg);
+  border-radius: var(--radius-full);
+  overflow: clip;
+}
+
+.usageFill,
+.usageFillWarn {
+  height: 100%;
+  border-radius: var(--radius-full);
+}
+
+.usageFill {
+  background: var(--color-accent-brand);
+}
+
+.usageFillWarn {
+  background: var(--color-amber);
+}
+
+.usageNote {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.formFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.saveError {
+  margin: 0;
+  margin-right: auto;
+  font-size: var(--text-md);
+  color: var(--color-danger);
+}
+
+.saved {
+  margin: 0;
+  margin-right: auto;
+  font-size: var(--text-md);
+  color: var(--color-success-solid);
+}
+
+.primaryButton {
+  padding: var(--space-8) var(--space-16);
+  background: var(--color-accent-brand);
+  border: 0;
+  border-radius: var(--radius-8);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.primaryButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ---- Danger zone ---- */
+
+.dangerHeading {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-lg);
+  color: var(--color-danger-solid);
+}
+
+.dangerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.dangerText {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.dangerTitle {
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.dangerNote {
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.dangerButton {
+  flex-shrink: 0;
+  padding: var(--space-8) var(--space-16);
+  background: var(--color-danger-solid);
+  border: 0;
+  border-radius: var(--radius-8);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.dangerButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

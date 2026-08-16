@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="19 29 162 138" width="162" height="138">
+  <!--
+    The primary mark, matching the treatment the website header uses so the two
+    products show the same logo.
+
+    The viewBox crops to the geometry rather than the 200-unit design square, so
+    the mark fills its box instead of carrying a margin of its own — the tile
+    around it supplies the padding.
+
+    Nut and kernel void are one even-odd path, so the void is a knockout and
+    whatever is behind shows through. The vector set fills it with #0D1518,
+    which would sit as a slab of the wrong dark in either theme.
+  -->
+  <linearGradient id="orknuxMarkMoss" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#668A6B"/>
+    <stop offset="100%" stop-color="#4A6B52"/>
+  </linearGradient>
+
+  <path fill="url(#orknuxMarkMoss)" fill-rule="evenodd"
+        d="M42 29 L67 50 L133 50 L158 29 L154 64 L181 113 L151 167 L49 167 L19 113 L46 64 Z
+           M147 109 A47 47 0 1 0 53 109 A47 47 0 1 0 147 109 Z"/>
+  <path d="M81 125 L112 129 L121 96 Z" fill="none" stroke="#5F8467" stroke-width="8" stroke-linejoin="round"/>
+  <circle cx="81" cy="125" r="11" fill="#5F8467"/>
+  <circle cx="112" cy="129" r="11" fill="#5F8467"/>
+  <circle cx="121" cy="96" r="11" fill="#5F8467"/>
+</svg>

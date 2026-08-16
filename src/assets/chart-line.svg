@@ -1,0 +1,10 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="chart-line" clip-path="url(#clip0_0_11)">
+<path id="Vector" d="M1.75 1.75V11.0833C1.75 11.3928 1.87292 11.6895 2.09171 11.9083C2.3105 12.1271 2.60725 12.25 2.91667 12.25H12.25M11.0833 5.25L8.16667 8.16667L5.83333 5.83333L4.08333 7.58333" stroke="#FAFAFA" stroke-width="2" stroke-linecap="round"/>
+</g>
+<defs>
+<clipPath id="clip0_0_11">
+<rect width="14" height="14" fill="white"/>
+</clipPath>
+</defs>
+</svg>

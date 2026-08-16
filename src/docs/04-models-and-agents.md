@@ -1,0 +1,95 @@
+# Models and agents
+
+## Providers and models
+
+![Providers with their endpoints and status, and the models reached through them](/screens/models.png)
+
+A **provider** is somewhere models are reached: an OpenAI-compatible endpoint,
+whether that is OpenAI itself, a local llama.cpp or vLLM server, or a proxy of
+your own. A **model** is one model on one provider.
+
+Add a model from **Models** in a workspace. The dialog asks for the type first,
+because the rest of the form depends on it:
+
+- **Chat** — the models a chat or an agent can talk to. Adding one usually
+  discovers what the provider offers and lets you pick from the list.
+- **Transcription** — speech to text. Provider is an OpenAI-compatible API,
+  given as a server URL and an optional key. No model discovery is attempted:
+  a transcription endpoint is not required to have a model list.
+
+Transcription models never appear in the chat model dropdown. They are for
+hearing, not for answering.
+
+The model list shows each model's type, its provider, and what it has been used
+for. Usage over time is charted on the same page.
+
+## Workspace models
+
+Two model choices belong to the workspace rather than to a conversation:
+
+- the **companion model**, used for the small jobs nobody should have to pick a
+  model for — naming a chat, for instance. Clearing it switches those jobs off
+  rather than falling back to something you did not ask for.
+- the **speech-to-text model**, used by the microphone in chat. Only a
+  transcription model will do.
+
+Both are set in workspace settings, by anyone who can see the workspace.
+
+## Agents
+
+![The workspace's agents](/screens/agents.png)
+
+An agent is a model with a brief: instructions, and access to the workspace's
+skills, tools and memory. Agents can be used from chat and as a node in a
+workflow, where their input comes from the parameters the node is given.
+
+- **Skills** are written instructions the agent can draw on, grouped into
+  catalogs.
+- **Tools** are things the agent can call, including MCP servers connected to
+  the workspace.
+- **Memory** is what a workspace has written down for its agents to read.
+
+## Letting an agent drive orknux
+
+An agent's settings carry one switch that is not an MCP server: **Orknux**. It
+lets the agent ask this installation about itself — its workspace's workflows,
+runs and agents — and, unlike the AI button, to start a workflow, which really
+runs it.
+
+It is deliberately not listed among the workspace's MCP servers. Those are
+addresses somebody registered, with a credential; this is the application the
+agent is already inside, so there is nothing to register and nothing to point
+at. Off for every agent until somebody turns it on, and turning it on is
+recorded in the audit log.
+
+An agent that starts a workflow which asks an agent is a loop nothing here
+breaks, so grant it where that is not a risk.
+
+## Driving orknux from outside
+
+The same tools are offered over **MCP**, for an agent that runs somewhere else —
+on a laptop, in an editor, in another product. One server per workspace:
+
+```
+http://your-orknux/mcp/{workspaceId}
+```
+
+It speaks JSON-RPC over HTTP POST, and it authenticates the way everything else
+here does: sign in first (`POST /api/session`, or a bearer token where the
+installation uses OIDC) and send the session with the request. What you may see
+through it is what you may see in this interface — the same check, on the same
+workspace — and what you may change is what you could already change by hand.
+Being reachable by an agent grants nothing extra.
+
+Everything with a page of its own comes back with its address, so an agent that
+mentions a run can link you to it.
+
+The workspace's own MCP servers, listed under Integrations, are a different
+thing entirely: those are servers somebody registered for agents to call *out*
+to. This is the way *in*.
+
+## Integrations
+
+**Integrations** holds the workspace's connections — Slack, MCP servers, HTTP
+endpoints. A connection made in the admin section can be marked as the default
+for new workspaces; that setting lives on the connection's own page.

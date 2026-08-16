@@ -1,0 +1,580 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-height: 100%;
+  background: var(--color-bg);
+}
+
+/*
+ * The window held to its own height, so a long page scrolls inside the frame
+ * rather than growing it. Without the fixed height the flex chain simply gets
+ * taller and there is nothing for `overflow` further down to act on.
+ */
+.shellFixed {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ---- Top nav ---- */
+
+/*
+ * Brand, sections, the go-anywhere box, the account.
+ *
+ * A grid rather than space-between: the box is centred on the window, not on
+ * whatever room the two sides happen to leave, so it does not shift as a
+ * workspace name grows or the Admin link comes and goes.
+ */
+.topNav {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  height: var(--top-nav-height);
+  padding: var(--space-16) var(--space-24);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* The left of the bar, so the middle column is free to hold the centred box. */
+.topLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-24);
+  min-width: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.logoIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.wordmark {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-base);
+  letter-spacing: 1px;
+  color: var(--color-text-primary);
+}
+
+
+/* ---- Top-bar section links ---- */
+
+.navLinks {
+  display: flex;
+  flex: 1 0 0;
+  align-items: center;
+  gap: var(--space-16);
+  min-width: 0;
+  padding-left: 20px;
+}
+
+.navDivider {
+  width: 1px;
+  height: 24px;
+  background: var(--color-border);
+}
+
+.navLink {
+  padding: var(--space-6) var(--space-12);
+  border-radius: var(--radius-6);
+  font-size: var(--text-md);
+  line-height: 20px;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.navLink[aria-disabled='true'] {
+  opacity: 0.5;
+}
+
+.navLinkCurrent {
+  background: var(--color-border);
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.userMenu {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  justify-self: end;
+}
+
+.userMenuWrapper {
+  position: relative;
+  justify-self: end;
+}
+
+/*
+ * Where you are, when where you are is your own settings. The same marking a
+ * section link gets, drawn around the block that opens them.
+ */
+.userMenuCurrent {
+  border-radius: var(--radius-8);
+  outline: 1px solid var(--color-accent-brand);
+  outline-offset: 4px;
+}
+
+/* The user block itself opens the account menu. */
+.userMenuButton {
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+/* ---- Account menu ---- */
+
+.userDropdown {
+  position: absolute;
+  top: calc(100% + var(--space-8));
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 220px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-menu);
+  overflow: clip;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-6);
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.menuItem:hover,
+.menuItem:focus-visible {
+  background: var(--color-surface-raised);
+}
+
+.menuRule {
+  height: 1px;
+  margin: var(--space-2) 0;
+  background: var(--color-border);
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-8);
+  padding: var(--space-12) var(--space-16);
+  background: var(--color-bg);
+}
+
+.dropdownName {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.dropdownEmail {
+  margin: 0;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roleBadge {
+  padding: var(--space-2) var(--space-8);
+  background: var(--color-accent-brand-soft);
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  color: var(--color-accent-brand);
+  white-space: nowrap;
+}
+
+.logOut {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  gap: var(--space-10);
+  padding: var(--space-8) var(--space-12);
+  background: var(--color-danger-soft);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-danger-solid);
+  text-align: left;
+  cursor: pointer;
+}
+
+.logOut:hover,
+.logOut:focus-visible {
+  background: var(--color-danger-soft);
+}
+
+.userText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.userName {
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.userRole {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+/* ---- Workspace ---- */
+
+.workspace {
+  display: flex;
+  flex: 1 0 0;
+  align-items: stretch;
+  min-height: 0;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  padding: var(--space-16);
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  transition: width 150ms ease;
+}
+
+/*
+ * Collapsed to its icons.
+ *
+ * The items stay where they are and lose their labels rather than being
+ * replaced by a different menu: the same rows in the same order, so the muscle
+ * memory survives. Titles carry what the labels said, since the only thing left
+ * to read is an icon.
+ */
+.sidebarCollapsed {
+  width: 64px;
+  padding: var(--space-16) var(--space-12);
+  overflow: hidden;
+}
+
+.sidebarCollapsed .navLabel,
+.sidebarCollapsed .activeIndicator,
+.sidebarCollapsed .workspaceSelector,
+.sidebarCollapsed .sidebarFooter {
+  display: none;
+}
+
+.sidebarCollapsed .navItem,
+.sidebarCollapsed .navItemActive {
+  justify-content: center;
+  padding-inline: var(--space-8);
+}
+
+/* The toggle sits at the bottom, below whatever the page put in the column. */
+.collapseToggle {
+  display: flex;
+  align-items: center;
+  margin-top: auto;
+  padding: var(--space-10) var(--space-12);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-6);
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.collapseToggle:hover {
+  background: var(--color-surface-raised);
+  opacity: 1;
+}
+
+/* Pointing the other way says what pressing it does now. */
+.sidebarCollapsed .collapseToggle img {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar {
+    transition: none;
+  }
+}
+
+/* ---- Workspace selector ---- */
+
+.workspaceSelector {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.workspaceSelect {
+  flex: 1 0 0;
+  min-width: 0;
+  padding: var(--space-10) var(--space-12);
+  padding-right: var(--space-32);
+  background: none;
+  /* The menu the browser drops takes its colour from here, not from the box. */
+  background-color: var(--color-surface);
+  border: 0;
+  font-family: inherit;
+  font-size: var(--text-base);
+  line-height: 20px;
+  color: var(--color-text-primary);
+  appearance: none;
+  cursor: pointer;
+}
+
+.workspaceSelect:focus {
+  outline: none;
+}
+
+.workspaceSelect option {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.workspaceChevron {
+  position: absolute;
+  right: var(--space-12);
+  pointer-events: none;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-10) var(--space-12);
+  /* Transparent border keeps inactive items the same height as the active one. */
+  border: 1px solid transparent;
+  border-radius: var(--radius-6);
+  text-decoration: none;
+}
+
+.navItemActive {
+  background: var(--color-surface-raised);
+  border-color: var(--color-border);
+}
+
+.navIcon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  /* #71717A is the colour the icon files stroke themselves, so inactive items
+     look exactly as they did before the mask. */
+  background-color: var(--color-text-muted);
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+}
+
+/* The page you are on is the one place the brand colour appears in the nav. */
+.navItemActive .navIcon {
+  background-color: var(--color-accent-brand);
+}
+
+.navLabel {
+  flex: 1 0 0;
+  min-width: 0;
+  font-weight: 500;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+.navItemActive .navLabel {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.activeIndicator {
+  width: 6px;
+  height: 6px;
+  background: var(--color-success);
+  border-radius: var(--radius-full);
+}
+
+.sidebarFooter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  padding-top: var(--space-32);
+}
+
+.divider {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.ldapStatus {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  margin: 0;
+  padding: var(--space-8);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.statusDotOnline,
+.statusDotOffline {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+}
+
+.statusDotOnline {
+  background: var(--color-success);
+}
+
+.statusDotOffline {
+  background: var(--color-text-muted);
+}
+
+/* ---- Content ---- */
+
+.content {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--space-24);
+  min-width: 0;
+  padding: var(--space-40);
+}
+
+/* Long pages scroll here, under a top bar and a sidebar that stay put. */
+.contentScroll {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* The editor supplies its own toolbar and panel edge to edge. */
+.contentFlush {
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* ---- Motion ----
+ *
+ * The content area is keyed by route, so React replaces it on navigation and
+ * this runs again: a short rise and fade, enough to say "this is a new page"
+ * without making anybody wait to read it. Everything here is off for anyone
+ * who has asked for less motion.
+ */
+
+@keyframes contentEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.contentEnter {
+  animation: contentEnter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* The sidebar and top bar stay put across a navigation, so they only ease
+ * their own colour changes rather than animating in. */
+.navLink,
+.navItem {
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.userDropdown {
+  animation: contentEnter 140ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contentEnter,
+  .userDropdown {
+    animation: none;
+  }
+
+  .navLink,
+  .navItem {
+    transition: none;
+  }
+}
+
+/*
+ * The attribution strip along the bottom of every signed-in screen.
+ *
+ * Part of the shell rather than of any page, and low enough to stay out of the
+ * way — but present, which is the whole point of it: the licence term about
+ * preserving attribution only binds a derivative to display what this displays.
+ */
+.attributionBar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: flex-end;
+  padding: var(--space-4) var(--space-16);
+  background: var(--color-bg);
+  border-top: 1px solid var(--color-border);
+}

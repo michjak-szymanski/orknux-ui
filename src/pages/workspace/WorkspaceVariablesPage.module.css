@@ -1,0 +1,307 @@
+/*
+ * Values above, secrets below, both as tables.
+ *
+ * The two are read the same way — down the name column, looking for the one
+ * somebody mentioned — so they are the same table twice rather than two designs.
+ * What differs is one column: a value shows what it holds, a secret cannot.
+ */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  width: 100%;
+}
+
+/*
+ * Air above the first table as well, so the search box is not sitting on it.
+ * The toolbar belongs to the catalog, not to the list under it.
+ */
+.section:first-of-type {
+  margin-top: var(--space-12);
+}
+
+/*
+ * Air between the two tables.
+ *
+ * The panel's own gap is what separates a heading from the thing under it; two
+ * tables of the same shape need more than that to read as two lists rather than
+ * one interrupted by a title.
+ */
+.section + .section {
+  margin-top: var(--space-24);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.sectionTitles {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+/* Each table adds its own kind, so which one it is never has to be asked. */
+.addButton {
+  flex-shrink: 0;
+  padding: var(--space-6) var(--space-12);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.addButton:hover {
+  border-color: var(--color-accent-brand);
+  color: var(--color-text-primary);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.sectionNote {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.table {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  overflow: clip;
+}
+
+.tableHeader,
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+  width: 100%;
+  padding: var(--space-10) var(--space-16);
+}
+
+.tableHeader {
+  border-bottom: 1px solid var(--color-border);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  letter-spacing: 0.55px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.row + .row {
+  border-top: 1px solid var(--color-border);
+}
+
+.colName {
+  flex-shrink: 0;
+  width: 200px;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.colValue {
+  flex: 1 0 0;
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.colDescription {
+  flex: 1 0 0;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.colType {
+  flex-shrink: 0;
+  width: 110px;
+}
+
+.colActions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  /* Centred: the tick comes and goes, and a bin that shifts when it does reads
+     as two different controls. */
+  justify-content: center;
+  gap: var(--space-8);
+  width: 110px;
+}
+
+/*
+ * Every cell is editable, so every cell is a box — but a table of boxes reads
+ * as a form, not a list. They are drawn flat and only outlined once somebody is
+ * in one, which keeps the rows scannable and the editing where the eye is.
+ */
+.cellInput {
+  padding: var(--space-6) var(--space-8);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-4);
+  font-family: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.cellInput:hover {
+  border-color: var(--color-border);
+}
+
+.cellInput:focus {
+  border-color: var(--color-accent-brand);
+  outline: none;
+}
+
+.cellInput::placeholder {
+  color: var(--color-text-muted);
+}
+
+/*
+ * A covered secret: there to look at, not to type into.
+ *
+ * A read-only input still takes focus, and the outline every other cell uses to
+ * say "you are editing this" said the same thing here — over a box that ignores
+ * every key. It stays flat whether or not the caret is in it.
+ */
+.cellInput[readonly] {
+  cursor: default;
+}
+
+.cellInput[readonly]:hover,
+.cellInput[readonly]:focus,
+.cellInput[readonly]:focus-visible {
+  border-color: transparent;
+  outline: none;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+/*
+ * The type, drawn like the other cells.
+ *
+ * A bare select brings the platform's own chrome — a grey well and a system
+ * arrow — which in a row of flat cells is the one thing that looks pasted in.
+ * The arrow is drawn here instead, in the row's own colours.
+ */
+/*
+ * The type, drawn the way every other select in the product is: the control
+ * flattened, and the app's own chevron beside it.
+ *
+ * Two arrows out of gradients was an approximation of the one this product
+ * already ships, and a select left with its own chrome is the one cell in the
+ * row that looks like the operating system rather than the page.
+ */
+.typeCell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+/*
+ * The menu the browser drops takes its colours from the control, not from the
+ * page — so a transparent select opens a white list in the middle of a dark
+ * screen. It is given the surface it sits on instead: flat in the row, themed
+ * when it opens.
+ */
+.typeCell select {
+  flex: 1 0 0;
+  min-width: 0;
+  appearance: none;
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.typeCell option {
+  background-color: var(--color-surface-raised);
+  color: var(--color-text-primary);
+}
+
+/* The row being added sits on the raised surface, so its control does too. */
+.addRow .typeCell select {
+  background-color: var(--color-surface-raised);
+}
+
+.typeCell img {
+  flex: none;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* The value and the button that uncovers it, sharing one cell. */
+.valueCell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.valueCell .cellInput {
+  flex: 1 0 0;
+  min-width: 0;
+}
+
+.textButton {
+  flex-shrink: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-accent-brand);
+  cursor: pointer;
+}
+
+.textButton:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.textButton:disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+}
+
+/* The row being added, marked while it is not yet a thing that exists. */
+.addRow {
+  background: var(--color-surface-raised);
+}
+
+.empty {
+  margin: 0;
+  padding: var(--space-16);
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}

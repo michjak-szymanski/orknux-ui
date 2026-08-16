@@ -1,0 +1,357 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: var(--space-40);
+  background: var(--color-bg);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+  width: 440px;
+  max-width: 100%;
+  padding: var(--space-40);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-12);
+  box-shadow: var(--shadow-card);
+}
+
+/* ---- Header ---- */
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.logomark {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.logoIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.logoIcon img {
+  /* The mark's own ratio, matching the website header. A square here would
+     squash it. */
+  width: 24px;
+  height: 20px;
+}
+
+.wordmark {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-base);
+  letter-spacing: 1px;
+  color: var(--color-text-primary);
+}
+
+.versionBadge {
+  padding: var(--space-2) var(--space-6);
+  background: var(--color-border);
+  border-radius: var(--radius-4);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-2xs);
+  color: var(--color-text-secondary);
+}
+
+.headings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.title {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-2xl);
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+/* ---- Form ---- */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.fieldHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-sm);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.resetLink {
+  padding: 0;
+  background: none;
+  border: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.inputContainer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  height: var(--control-height);
+  padding: 0 var(--space-12);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.inputContainer:focus-within {
+  border-color: var(--color-text-muted);
+}
+
+.input {
+  flex: 1 0 0;
+  min-width: 0;
+  background: none;
+  border: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.input:focus {
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* The username reads as an identifier, so it uses the mono face. */
+.inputMono {
+  font-family: var(--font-mono);
+}
+
+.toggleVisibility {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.toggleVisibility img {
+  width: 16px;
+  height: 16px;
+}
+
+.toggleVisibility[aria-pressed='true'] {
+  opacity: 0.6;
+}
+
+/* ---- Actions ---- */
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: var(--control-height);
+  background: var(--color-accent);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-accent-foreground);
+  cursor: pointer;
+}
+
+.submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Not in the Figma frame: the design has no error state for failed sign-in. */
+.error {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-danger);
+  text-align: center;
+}
+
+.authNote {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* ---- Motion ----
+ *
+ * Sign-in is the first thing anybody sees, so it arrives rather than appearing:
+ * the card rises into place and its parts follow a beat behind it, which reads
+ * as the page settling instead of as three separate things moving. A slow
+ * violet wash sits behind it all.
+ *
+ * Everything here is off for anyone who has asked for less motion — an
+ * animation nobody can turn off is worse than none.
+ */
+
+@keyframes cardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes glowDrift {
+  from {
+    opacity: 0.35;
+    transform: translate3d(-6%, -3%, 0) scale(1);
+  }
+
+  to {
+    opacity: 0.6;
+    transform: translate3d(6%, 3%, 0) scale(1.12);
+  }
+}
+
+.page {
+  position: relative;
+  overflow: hidden;
+}
+
+/* The wash. Behind everything, and out of the accessibility tree. */
+.page::before {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  z-index: 0;
+  background:
+    radial-gradient(40% 40% at 30% 30%, rgb(124 58 237 / 18%), transparent 70%),
+    radial-gradient(35% 35% at 70% 65%, rgb(96 165 250 / 10%), transparent 70%);
+  animation: glowDrift 14s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.card {
+  position: relative;
+  z-index: 1;
+  animation: cardEnter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* A beat behind the card, in the order they are read. */
+.header {
+  animation: riseIn 380ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
+}
+
+.form {
+  animation: riseIn 380ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both;
+}
+
+.error {
+  animation: riseIn 200ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page::before,
+  .card,
+  .header,
+  .form,
+  .error {
+    animation: none;
+  }
+}
+
+/*
+ * The way in when the provider holds the passwords.
+ *
+ * A link, not a button: it is a navigation to somewhere else, and the browser should
+ * treat it as one — middle-click, open in a new tab, and the status bar showing where
+ * it goes all matter when the destination is where somebody types their password.
+ */
+.provider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: var(--space-12) var(--space-16);
+  background: var(--color-accent-brand);
+  border-radius: var(--radius-6);
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.provider:hover {
+  filter: brightness(1.08);
+}

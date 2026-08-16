@@ -1,0 +1,167 @@
+/*
+ * A documentation page: one column of prose on the same card every other admin
+ * screen uses, so the manual looks like part of the product rather than a
+ * website that happens to be embedded in it.
+ */
+.card {
+  width: 100%;
+  padding: var(--space-24) var(--space-32);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+
+/*
+ * Prose, not chat. The Markdown component is shared with the chat, where
+ * answers are short and sit in a bubble; here the same markup is a page
+ * somebody reads top to bottom, so the headings get room and the measure is
+ * held to something readable.
+ */
+.card :global(h1) {
+  margin: 0 0 var(--space-8);
+  font-weight: 600;
+  font-size: var(--text-2xl);
+  color: var(--color-text-primary);
+}
+
+.card :global(h2) {
+  margin: var(--space-24) 0 var(--space-8);
+  padding-top: var(--space-16);
+  font-weight: 600;
+  font-size: var(--text-lg);
+  color: var(--color-text-primary);
+  border-top: 1px solid var(--color-border);
+}
+
+.card :global(h3) {
+  margin: var(--space-16) 0 var(--space-8);
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.card :global(p),
+.card :global(li) {
+  font-size: var(--text-base);
+  line-height: 1.65;
+  color: var(--color-text-secondary);
+}
+
+.card :global(li) {
+  margin: var(--space-4) 0;
+}
+
+.card :global(strong) {
+  color: var(--color-text-primary);
+}
+
+/* Wide content scrolls inside itself rather than pushing the page sideways. */
+.card :global(pre),
+.card :global(table) {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* The box above the contents; the same one the audit pages search with. */
+.search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+  padding: var(--space-8) var(--space-10);
+  margin-bottom: var(--space-8);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.searchField {
+  flex: 1 0 0;
+  min-width: 0;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.searchField:focus {
+  outline: none;
+}
+
+.searchField::placeholder {
+  color: var(--color-text-muted);
+}
+
+/*
+ * Which match of how many. Tabular figures so the number does not jitter as it
+ * steps from 9 to 10 and the box stops looking like it is being retyped.
+ */
+.counter {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+}
+
+.noHits {
+  margin: var(--space-4) 0 0;
+  padding: 0 var(--space-10);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* A result: the page it was found on, and the line it was found in. */
+.hit {
+  display: flex;
+  flex-direction: column;
+}
+
+/*
+ * Kept to two lines. A matching line can be a whole paragraph, and a sidebar
+ * that reflows to the length of the prose is no longer a list of results.
+ */
+.snippet {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  margin: 0 0 var(--space-6);
+  padding: 0 var(--space-10) 0 var(--space-32);
+  overflow: hidden;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+/* It goes to the same place the title does, so it answers to the pointer too. */
+.snippet:hover {
+  color: var(--color-text-secondary);
+}
+
+/*
+ * The same tint the prose uses, so a hit looks the same in both places — but the
+ * marked text is brightened to the primary colour rather than inheriting. On the
+ * flat sidebar background the tint alone is nearly invisible behind muted grey
+ * snippet text; lifting the words is what actually reads as a match.
+ */
+.mark {
+  border-radius: var(--radius-4, 4px);
+  background: var(--color-accent-brand-soft);
+  color: var(--color-text-primary);
+}
+
+/*
+ * One page of the manual within the whole of it.
+ *
+ * A rule between sections rather than a gap alone: read continuously, the join
+ * between two pages is the one place a reader needs to be told that the subject
+ * changed. The first has none — nothing changed before the beginning.
+ */
+.section + .section {
+  margin-top: var(--space-40);
+  padding-top: var(--space-40);
+  border-top: 1px solid var(--color-border);
+}

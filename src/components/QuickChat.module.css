@@ -1,0 +1,188 @@
+/*
+ * The quick chat: a button in the corner, and what it opens above itself.
+ *
+ * Fixed to the window rather than placed in the page, because it belongs to the
+ * application and not to whatever is being scrolled underneath it.
+ */
+.launcher {
+  position: fixed;
+  right: var(--space-24);
+  bottom: var(--space-24);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-10) var(--space-16);
+  background: var(--color-accent-brand);
+  border: 0;
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-modal);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-accent-foreground);
+  cursor: pointer;
+}
+
+.launcher:hover {
+  filter: brightness(1.08);
+}
+
+/* Open, it is the way out rather than the way in. */
+.launcherOpen {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.launcherLabel {
+  line-height: 1;
+  letter-spacing: 0.4px;
+}
+
+.panel {
+  position: fixed;
+  right: var(--space-24);
+  /* Clear of the button, which stays reachable while this is open. */
+  bottom: 84px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  width: 380px;
+  max-width: calc(100vw - var(--space-32));
+  height: 460px;
+  max-height: calc(100vh - 140px);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-12);
+  box-shadow: var(--shadow-modal);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-12) var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.title {
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-4);
+  font-size: var(--text-lg);
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.close:hover {
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+}
+
+.log {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--space-10);
+  min-height: 0;
+  padding: var(--space-16);
+  overflow-y: auto;
+}
+
+.empty,
+.thinking {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+/* What was asked, against the answer: the same shapes the Chat page uses. */
+.asked {
+  align-self: flex-end;
+  max-width: 85%;
+  margin: 0;
+  padding: var(--space-8) var(--space-12);
+  background: var(--color-accent-brand-soft);
+  border-radius: var(--radius-8, 8px);
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.answered {
+  max-width: 100%;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+/* The panel is narrow, so an answer's own margins would waste most of it. */
+.answered :global(p:last-child) {
+  margin-bottom: 0;
+}
+
+.error {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+}
+
+.composer {
+  display: flex;
+  flex: none;
+  align-items: flex-end;
+  gap: var(--space-8);
+  padding: var(--space-12);
+  border-top: 1px solid var(--color-border);
+}
+
+.input {
+  flex: 1 0 0;
+  min-width: 0;
+  padding: var(--space-8) var(--space-10);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  resize: none;
+}
+
+.input:focus {
+  border-color: var(--color-accent-brand);
+  outline: none;
+}
+
+.send {
+  flex: none;
+  padding: var(--space-8) var(--space-14);
+  background: var(--color-accent-brand);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-accent-foreground);
+  cursor: pointer;
+}
+
+.send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

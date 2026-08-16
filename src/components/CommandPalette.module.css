@@ -1,0 +1,145 @@
+/*
+ * The go-anywhere box, in the middle of the top bar.
+ *
+ * Sized to sit between the sections and the account without crowding either,
+ * and quiet until it is being used: a box that shouts is a box in the way of
+ * every screen behind it.
+ */
+/* The middle column of the top bar, so it is centred on the window itself. */
+.palette {
+  position: relative;
+  justify-self: center;
+  width: min(420px, 34vw);
+  min-width: 200px;
+}
+
+.box {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+  padding: var(--space-6) var(--space-10, 10px);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.boxOpen {
+  border-color: var(--color-accent-brand);
+}
+
+.input {
+  flex: 1 0 0;
+  min-width: 0;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* What opens it, said where somebody would look for it. */
+.shortcut {
+  flex: none;
+  padding: 1px var(--space-6);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.results {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + var(--space-6));
+  right: 0;
+  left: 0;
+  margin: 0;
+  padding: var(--space-4);
+  max-height: 60vh;
+  overflow-y: auto;
+  list-style: none;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 35%);
+}
+
+.result {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-8);
+  width: 100%;
+  padding: var(--space-6) var(--space-8);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-4);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Where the keyboard is, whether it got there by arrow or by pointer. */
+.resultAt {
+  background: var(--color-accent-brand-soft);
+}
+
+/*
+ * The same masked shape the sidebar draws, a couple of pixels smaller: a palette
+ * row is denser than a nav item, and a 16px icon beside this text reads as a
+ * picture with a caption. Centred rather than sharing the baseline of its
+ * neighbours, because a square has no baseline to share.
+ */
+.resultIcon {
+  flex: none;
+  align-self: center;
+  width: 14px;
+  height: 14px;
+  background-color: var(--color-text-muted);
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+}
+
+/* The row under the caret carries the brand colour, as the current nav item does. */
+.resultAt .resultIcon {
+  background-color: var(--color-accent-brand);
+}
+
+/*
+ * Takes the free space, so the icon stays left and the section stays right — and
+ * clips rather than wraps, because these are workflow and memory names now, and a
+ * memory is titled with a whole sentence often enough to matter.
+ */
+.resultLabel {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.resultWhere {
+  flex: none;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.empty {
+  padding: var(--space-8);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}

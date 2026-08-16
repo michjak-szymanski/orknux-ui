@@ -1,0 +1,219 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+  width: 100%;
+  padding: var(--space-24);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  overflow: clip;
+}
+
+/* ---- Workspaces header ---- */
+
+.workspacesHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+}
+
+.titleBlock {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-2xl);
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-lg);
+  color: var(--color-text-primary);
+}
+
+.createWorkspace {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-10) var(--space-14);
+  /* The page's primary action, filled like every other Create button. It was
+     the one left on the neutral surface style. Transparent border rather than
+     none, so the metrics stay as they were. */
+  background: var(--color-accent-brand);
+  border: 1px solid transparent;
+  border-radius: var(--radius-6);
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+/* The plus is masked, not drawn: the icon file hardcodes a grey stroke, which
+   on a filled button reads as a smudge. */
+.createWorkspaceIcon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  background-color: currentColor;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+}
+
+/* ---- Tables ---- */
+
+.table {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  overflow: clip;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-14) var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.row:last-child {
+  border-bottom: 0;
+}
+
+.tableHeader {
+  padding: var(--space-12) var(--space-16);
+  background: var(--color-surface-raised);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-sm);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.colGrow {
+  flex: 1 0 0;
+  min-width: 0;
+}
+
+.colDescription {
+  flex-shrink: 0;
+  width: 320px;
+}
+
+.colUser,
+.colTimestamp {
+  flex-shrink: 0;
+  width: 120px;
+}
+
+.colActions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-12);
+  width: 80px;
+  overflow: clip;
+}
+
+.rowAction {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-6);
+  cursor: pointer;
+}
+
+.rowAction:hover {
+  background: var(--color-surface-raised);
+}
+
+.removeWorkspace {
+  color: var(--color-danger-strong);
+}
+
+/* ---- Workspaces rows ---- */
+
+.workspaceName {
+  display: flex;
+  flex: 1 0 0;
+  align-items: center;
+  gap: var(--space-10);
+  min-width: 0;
+}
+
+.workspaceIcon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.workspaceLabel {
+  flex: 1 0 0;
+  min-width: 0;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.workspaceLabel:hover {
+  text-decoration: underline;
+}
+
+/* ---- Loading / empty / error ---- */
+
+.tableNotice {
+  margin: 0;
+  padding: var(--space-14) var(--space-16);
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.tableError {
+  color: var(--color-danger);
+}
+
+.description {
+  overflow: hidden;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

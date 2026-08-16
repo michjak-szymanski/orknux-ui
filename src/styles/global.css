@@ -1,0 +1,133 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+input {
+  font: inherit;
+  color: inherit;
+}
+
+/*
+ * The clear button on a search field, in all eight places the app has one.
+ *
+ * It is the browser's own control, and it inherits the text cursor from the
+ * field it sits in — so the one thing in that box which really is a button is
+ * the one thing that does not say so when the pointer is over it. Only the
+ * cursor is corrected here: the button cannot be restyled without
+ * `appearance: none`, and that removes it outright unless a replacement shape is
+ * supplied, which is a bigger change than the affordance needs.
+ */
+input[type='search']::-webkit-search-cancel-button {
+  cursor: pointer;
+}
+
+/*
+ * Every select in the app, and the menu it drops.
+ *
+ * The popup is drawn by the browser, not by the page, and it takes its colours
+ * from the control rather than from anything around it. A select left to its
+ * own devices opens a white list in the middle of a dark screen — so the
+ * control and its options are given the surface they belong on, and
+ * `color-scheme` tells the browser which way round to draw the scrollbar and
+ * the highlight inside it.
+ *
+ * Global rather than per screen: there is no select anywhere that wants the
+ * default, and one that is added tomorrow should not have to remember this.
+ */
+select {
+  font: inherit;
+  color: var(--color-text-primary);
+  background-color: var(--color-surface-raised);
+}
+
+option {
+  background-color: var(--color-surface-raised);
+  color: var(--color-text-primary);
+}
+
+/* Grey rather than invisible: an option that cannot be chosen still reads. */
+option:disabled {
+  color: var(--color-text-muted);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-text-secondary);
+  outline-offset: 2px;
+}
+
+/*
+ * Scrollbars, drawn to belong to the page.
+ *
+ * A default scrollbar is a wide grey trough with arrow buttons at each end,
+ * which on a dark surface reads as a strip of somebody else's interface running
+ * down the side of ours. What it needs to say is only two things: that there is
+ * more, and where in it you are.
+ *
+ * The standard properties are enough for Firefox and are what the platform is
+ * moving to; the WebKit pseudo-elements do the same for Chrome and Safari,
+ * where `thin` is thinner than a comfortable target. Both are given, rather
+ * than one with the other as a fallback, because neither browser reads both.
+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-scrollbar) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+/* No trough: the surface behind it is the page, which is already the right colour. */
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/*
+ * The thumb is inset from the edge by a transparent border, so it reads as a
+ * bar floating on the page rather than as a filled channel. `background-clip`
+ * is what keeps the border transparent instead of painting it.
+ */
+*::-webkit-scrollbar-thumb {
+  background: var(--color-scrollbar);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--color-scrollbar-hover);
+  background-clip: padding-box;
+}
+
+/* The little arrow buttons at each end; nothing here needs them. */
+*::-webkit-scrollbar-button {
+  display: none;
+}
+
+/* Where two scrollbars meet, which is otherwise a pale square. */
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}

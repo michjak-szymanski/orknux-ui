@@ -1,0 +1,41 @@
+/*
+ * The attribution line.
+ *
+ * Quiet, but not hidden: the licence term it exists for asks that it stay
+ * visible, and something styled to be unreadable would be attribution in name
+ * only. So it is muted the way a footer is muted, and no further.
+ */
+.attribution {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-6);
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.name {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.separator {
+  color: var(--color-border);
+}
+
+.link {
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.link:hover {
+  color: var(--color-text-primary);
+  text-decoration: underline;
+}
+
+/* In the sidebar, where it sits beneath everything else all day. */
+.compact {
+  padding: var(--space-8) var(--space-12);
+}

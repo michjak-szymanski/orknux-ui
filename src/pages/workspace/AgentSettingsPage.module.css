@@ -1,0 +1,454 @@
+.headerBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.crumbLink {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.crumbLink:hover {
+  text-decoration: underline;
+}
+
+.crumbSeparator {
+  color: var(--color-text-muted);
+}
+
+.crumbCurrent {
+  color: var(--color-text-primary);
+}
+
+.pageTitle {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--text-2xl);
+  color: var(--color-text-primary);
+}
+
+/* ---- Cards ---- */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  padding: var(--space-24);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+
+.sectionHeading {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+/* ---- Fields ---- */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.inputWrapper {
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.inputWrapper:focus-within {
+  border-color: var(--color-accent-brand);
+}
+
+.inputWrapperTall {
+  align-items: stretch;
+  height: 80px;
+  padding: var(--space-12);
+}
+
+.inputWrapperPrompt {
+  align-items: stretch;
+  height: 120px;
+  padding: var(--space-12);
+}
+
+.input {
+  flex: 1 0 0;
+  min-width: 0;
+  padding: var(--space-10) 0;
+  background: none;
+  border: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.input:focus {
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.textarea {
+  padding: 0;
+  resize: vertical;
+}
+
+.promptInput {
+  font-size: var(--text-md);
+  line-height: 1.5;
+}
+
+/* ---- System prompt disclosure ---- */
+
+.promptToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: 0;
+  background: none;
+  border: 0;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.chevron {
+  transition: transform 120ms ease;
+}
+
+.chevronClosed {
+  transform: rotate(-90deg);
+}
+
+/* ---- MCP servers ---- */
+
+.hint {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.servers {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-4) var(--space-8);
+  background: var(--color-border);
+  border-radius: var(--radius-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.chipRemove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.addServer {
+  padding: 0 var(--space-4);
+  background: none;
+  border: 0;
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-accent-brand);
+  cursor: pointer;
+}
+
+.newServer {
+  width: 160px;
+  padding: var(--space-4) var(--space-8);
+  background: var(--color-bg);
+  border: 1px solid var(--color-accent-brand);
+  border-radius: var(--radius-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.newServer:focus {
+  outline: none;
+}
+
+/* ---- Actions ---- */
+
+.error {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-danger);
+}
+
+.loadError {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-danger);
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-12);
+  padding-top: var(--space-8);
+}
+
+.savedNote {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-success);
+}
+
+.save {
+  padding: var(--space-8) var(--space-16);
+  background: var(--color-accent-brand);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- Danger zone ---- */
+
+.dangerCard {
+  border-color: var(--color-danger-border);
+}
+
+.dangerHeading {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-danger-solid);
+}
+
+.dangerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+}
+
+.dangerText {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.dangerTitle {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.dangerMessage {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.delete {
+  flex-shrink: 0;
+  padding: var(--space-8) var(--space-16);
+  background: var(--color-danger-solid);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+/* The chevron is decoration; the select reaches under it and takes the click. */
+.inputWrapper {
+  position: relative;
+}
+
+.inputWrapper > img {
+  position: absolute;
+  right: var(--space-12);
+  pointer-events: none;
+}
+
+.select {
+  width: 100%;
+  padding-right: var(--space-20);
+}
+
+/* The way back sits beside the breadcrumb, not above it. */
+.contentHeader {
+  position: relative;
+}
+
+.contentHeader > a[aria-label^='Back to'] {
+  position: absolute;
+  top: 0;
+  left: -36px;
+}
+
+/* The chevron beside it is the one drawn; the control's own is hidden. */
+.select {
+  appearance: none;
+  cursor: pointer;
+}
+
+/*
+ * The catalogs this agent may read. Checkboxes rather than a multi-select: the
+ * list is short, and what matters is seeing at a glance what it can and cannot
+ * reach.
+ */
+.checkList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.checkRow:hover {
+  border-color: var(--color-accent-brand);
+}
+
+.checkCount {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.emptyNote {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+/*
+ * A select wearing the shared input class. The box already looks right; this is
+ * only so the menu the browser drops has a colour of its own — left transparent
+ * it opens white. Narrower than `.input` on purpose, so real inputs keep theirs.
+ */
+select.input {
+  background-color: var(--color-bg);
+}
+
+/*
+ * What the trigger form needs on top of the fields every settings page uses.
+ *
+ * The same form is shown in a dialog while a trigger is being created, so it
+ * paints itself with names handed in rather than with a stylesheet of its own.
+ * These are this page's answers to the few it asks for that were not here
+ * already — a mono field, a path prefix, a label with a link on its right.
+ */
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+.labelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+.jump {
+  font-size: var(--text-sm);
+  color: var(--color-accent-brand);
+  text-decoration: none;
+}
+.jump:hover {
+  text-decoration: underline;
+}
+.inputMono {
+  font-family: var(--font-mono);
+}
+/* A cron expression is the one field here that reads as an answer, not a value. */
+.inputCron {
+  color: var(--color-success-solid);
+}
+.prefix {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  user-select: none;
+}
+.ghost {
+  padding: var(--space-8) var(--space-16);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+.ghost:disabled,
+.save:disabled,
+.delete:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

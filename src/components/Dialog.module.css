@@ -1,0 +1,658 @@
+/* Modal chrome, from the popups frame in Figma (rename-workspace / delete-workspace). */
+.dialog {
+  width: 380px;
+  max-width: calc(100vw - var(--space-32));
+  padding: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-12);
+  box-shadow: var(--shadow-modal);
+  color: var(--color-text-primary);
+}
+
+/* The create-workflow modal is wider in the design. */
+.dialogWide {
+  width: 420px;
+}
+
+/*
+ * Wider still, for a form that asks several questions at once.
+ *
+ * A trigger's settings are a type, what it listens to, a URL, a shape, a
+ * condition and a payload — read one after another down a 420px column, they
+ * stop looking like one form. Capped against the window so it stays a dialog on
+ * a laptop rather than a page pretending to be one.
+ */
+.dialogWider {
+  width: 560px;
+}
+
+.dialog::backdrop {
+  background: rgba(9, 9, 11, 0.7);
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+  padding: var(--space-24);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-xl);
+  color: var(--color-text-primary);
+}
+
+/* The line under a modal title explaining what the form does. */
+.dialogMessage {
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-danger);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-8);
+}
+
+/* A delete offered inside an edit form sits away from the confirming pair. */
+.destructiveGhost {
+  margin-right: auto;
+  padding: var(--space-8) var(--space-16);
+  background: none;
+  border: 1px solid var(--color-danger-border);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-danger-solid);
+  cursor: pointer;
+}
+
+.destructiveGhost:hover {
+  border-color: var(--color-danger-solid);
+}
+
+.checkboxField {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.checkboxField input {
+  margin-top: 2px;
+  accent-color: var(--color-accent-brand);
+}
+
+.checkboxHint {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.ghost,
+.filled,
+.destructive,
+.amber {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--space-16);
+  border-radius: var(--radius-6);
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.ghost {
+  background: none;
+  border: 1px solid var(--color-border);
+}
+
+.filled {
+  background: var(--color-accent-brand);
+  border: 0;
+}
+
+.destructive {
+  background: var(--color-danger-solid);
+  border: 0;
+}
+
+/* Disabling is reversible, so the design gives it an outline rather than a fill. */
+.amber {
+  background: none;
+  border: 1px solid var(--color-amber);
+  color: var(--color-amber);
+}
+
+.ghost:disabled,
+.filled:disabled,
+.destructive:disabled,
+.amber:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- Warning (delete) ---- */
+
+.warning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-16);
+}
+
+.warningBadge,
+.warningBadgeAmber {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+}
+
+.warningBadge {
+  background: var(--color-danger-soft);
+}
+
+.warningBadgeAmber {
+  background: var(--color-amber-soft);
+}
+
+.warningMessage {
+  flex: 1 0 0;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-base);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.warningMessage strong {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+/* ---- Form field (rename / create) ---- */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+/* What the provider had to say about a field, under the field it is about. */
+.fieldNote {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.inputWrapper {
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.inputWrapper:focus-within {
+  border-color: var(--color-accent-brand);
+}
+
+/* Sits inside the field, so the reveal is beside the thing it reveals. */
+.revealToggle {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-left: var(--space-8);
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-4);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.revealToggle:hover {
+  color: var(--color-text-primary);
+}
+
+/* Revealed is a state worth seeing at a glance: a secret on screen is not the
+   resting condition. */
+.revealToggle[aria-pressed='true'] {
+  color: var(--color-accent-brand);
+}
+
+.revealIcon {
+  width: 16px;
+  height: 16px;
+  /* Masked, so the eye takes the button's colour instead of the grey the file
+     is drawn in. */
+  background-color: currentColor;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+}
+
+.inputWrapperTall {
+  align-items: stretch;
+  height: 96px;
+  padding: var(--space-10) var(--space-12);
+}
+
+.input {
+  flex: 1 0 0;
+  min-width: 0;
+  padding: var(--space-10) 0;
+  background: none;
+  border: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.input:focus {
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.textarea {
+  resize: vertical;
+}
+
+/* The line under a field explaining what it is for. */
+.fieldHint {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+/* A cron expression reads as code, and the design colours it. */
+.inputCron {
+  color: var(--color-success-solid);
+}
+
+/* URLs, tokens and header names read as monospace in the design. */
+.inputMono {
+  font-family: var(--font-mono);
+}
+
+.select {
+  appearance: none;
+  cursor: pointer;
+}
+
+.select option {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+/* ---- Action settings ---- */
+
+/* A group heading over the parameters an action takes or produces. */
+.paramHeading {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.paramList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0 0 0 var(--space-8);
+  list-style: none;
+}
+
+.paramRow {
+  position: relative;
+  padding-left: var(--space-12);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.paramRow::before {
+  position: absolute;
+  top: 8px;
+  left: 0;
+  width: 4px;
+  height: 4px;
+  background: var(--color-text-muted);
+  border-radius: 50%;
+  content: '';
+}
+
+.mappingList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+.mappingRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+/* The argument being mapped, in the width the design gives it. */
+.mappingArgument {
+  flex-shrink: 0;
+  width: 64px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.mappingRow .inputWrapper {
+  flex: 1 0 0;
+  min-width: 0;
+}
+
+/* Deleting is on the left, away from the button that saves. */
+.danger {
+  margin-right: auto;
+  padding: var(--space-8) var(--space-16);
+  background: none;
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-danger);
+  cursor: pointer;
+}
+
+.danger:hover {
+  background: rgb(248 113 113 / 12%);
+}
+
+/* Adds another row to a list a form builds up. */
+.addRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+  width: 100%;
+  padding: var(--space-8);
+  background: none;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.addRow:hover {
+  border-color: var(--color-accent-brand);
+  color: var(--color-text-primary);
+}
+
+/*
+ * The chevron is decoration: it takes no clicks, and the select reaches under
+ * it, so clicking the arrow opens the list rather than doing nothing.
+ */
+.inputWrapper {
+  position: relative;
+}
+
+.inputWrapper > img {
+  position: absolute;
+  right: var(--space-12);
+  pointer-events: none;
+}
+
+.select {
+  width: 100%;
+  padding-right: var(--space-20);
+}
+
+/* ---- Condition builder ---- */
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.toggleLabel {
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  width: 44px;
+  height: 22px;
+  padding: 2px;
+  background: var(--color-surface-raised);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.toggleOn {
+  background: var(--color-success-solid);
+  justify-content: flex-end;
+}
+
+.knob {
+  width: 18px;
+  height: 18px;
+  background: var(--color-text-primary);
+  border-radius: 999px;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+  align-content: flex-start;
+  width: 100%;
+  min-height: 60px;
+  padding: var(--space-10);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.tag {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  height: fit-content;
+  padding: var(--space-4) var(--space-6) var(--space-4) var(--space-8);
+  background: var(--color-surface-raised);
+  border-radius: var(--radius-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.tagRemove {
+  padding: 0;
+  background: none;
+  border: 0;
+  font-size: var(--text-md);
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.tagRemove:hover {
+  color: var(--color-danger);
+}
+
+/* The design has this as a link rather than a button. */
+.addValue {
+  align-self: flex-start;
+  padding: 0;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-accent-brand);
+  cursor: pointer;
+}
+
+/*
+ * A select wearing the shared input class. The box already looks right; this is
+ * only so the menu the browser drops has a colour of its own — left transparent
+ * it opens white. Narrower than `.input` on purpose, so real inputs keep theirs.
+ */
+select.input {
+  background-color: var(--color-bg);
+}
+
+/*
+ * The part of a URL that is not the user's to type, shown where they would
+ * otherwise have to know it: /api/webhooks/ before the path they choose.
+ */
+.prefix {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  user-select: none;
+}
+
+/* A label with something to its right: a reveal, a clear, a count. */
+.labelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+
+/* A word that acts, beside a field rather than under the form. */
+.textButton {
+  padding: 0;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-accent-brand);
+  cursor: pointer;
+}
+
+.textButton:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.textButton:disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+}
+
+/*
+ * The type of a chosen external, and the way to drop it.
+ *
+ * An external is picked rather than typed, so the row is a select and then two
+ * small things about it: what type the workspace says it is, and a way to remove
+ * it. Kept narrow so the select still gets the width.
+ */
+.externalMeta {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.externalType {
+  padding: 2px var(--space-6);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4, 4px);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.removeRow {
+  padding: 0 var(--space-4);
+  background: none;
+  border: 0;
+  font-size: var(--text-lg);
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.removeRow:hover {
+  color: var(--color-danger);
+}
+
+/*
+ * The link out of a field, to the definition the field is pointing at. Like
+ * `.textButton`, but it is a link — so the underline is the hover, not the rest.
+ */
+.jump {
+  font-size: var(--text-sm);
+  color: var(--color-accent-brand);
+  text-decoration: none;
+}
+.jump:hover {
+  text-decoration: underline;
+}

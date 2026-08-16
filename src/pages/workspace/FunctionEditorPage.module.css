@@ -1,0 +1,660 @@
+.pageHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  width: 100%;
+}
+
+.breadcrumb {
+  display: flex;
+  gap: var(--space-8);
+  align-items: center;
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.crumbLink {
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.crumbLink:hover {
+  color: var(--color-text-secondary);
+}
+
+.crumbSeparator {
+  color: var(--color-text-muted);
+}
+
+.crumbCurrent {
+  color: var(--color-text-secondary);
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.titleGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.title {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-xl);
+  color: var(--color-text-primary);
+}
+
+.activeBadge {
+  padding: var(--space-2) var(--space-6);
+  background: rgb(124 58 237 / 15%);
+  border: 1px solid var(--color-accent-brand);
+  border-radius: var(--radius-4);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  color: #c084fc;
+}
+
+.headerActions {
+  display: flex;
+  gap: var(--space-12);
+  align-items: center;
+}
+
+.ghostButton,
+.saveButton {
+  padding: var(--space-8) var(--space-14);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 500;
+  font-size: var(--text-md);
+  cursor: pointer;
+}
+
+.ghostButton {
+  background: none;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.ghostButton:hover {
+  border-color: var(--color-accent-brand);
+}
+
+.saveButton {
+  background: var(--color-accent-brand);
+  border: 0;
+  color: var(--color-text-primary);
+}
+
+/*
+ * Icon only, so it is not sized like the buttons that hold words.
+ *
+ * It used to share their padding, which made a wide box around a small glyph and
+ * left it looking like the most important control in the row. Stretched to the
+ * height of its neighbours rather than given one, so it stays in proportion if
+ * their padding or type size ever changes.
+ */
+.deleteButton {
+  display: flex;
+  align-self: stretch;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-10);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  color: var(--color-danger);
+  cursor: pointer;
+}
+
+.deleteButton:hover {
+  border-color: var(--color-danger);
+}
+
+/* ---- Split: editor and properties ---- */
+
+.split {
+  display: flex;
+  flex: 1 0 0;
+  gap: var(--space-24);
+  align-items: stretch;
+  width: 100%;
+  min-height: 0;
+}
+
+.editorCard {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  overflow: clip;
+}
+
+/* Three things now — the name, the signature, the language — so they need a gap. */
+.editorHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding: var(--space-12) var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.editorTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.languageBadge {
+  padding: var(--space-4) var(--space-8);
+  background: var(--color-surface-raised);
+  border-radius: var(--radius-4);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.codeArea {
+  display: flex;
+  flex: 1 1 0;
+  /* Same reason as the editor's own box: sized by the layout, not by the editor. */
+  min-width: 0;
+  min-height: 420px;
+  overflow: hidden;
+  background: var(--color-background);
+}
+
+/* The line numbers scroll with the code they belong to. */
+.gutter {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: 40px;
+  padding: var(--space-16) 0;
+  overflow: hidden;
+  text-align: center;
+}
+
+.lineNumber {
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  line-height: 20px;
+  color: var(--color-text-muted);
+}
+
+/*
+ * The editor is two layers: a coloured copy of the code, and the textarea on
+ * top of it drawing nothing but its caret and selection. They have to agree on
+ * every metric, so the shared rules live in one place.
+ */
+.codeStack {
+  position: relative;
+  flex: 1 0 0;
+  min-width: 0;
+}
+
+.code,
+.highlight {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  /*
+   * Even on both sides. It used to be narrower on the left than the right, which
+   * put the caret at column one a couple of pixels off the gutter while leaving a
+   * gap at the end of the line — the same text, padded two different ways.
+   */
+  padding: var(--space-16) var(--space-12);
+  border: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  line-height: 20px;
+  tab-size: 2;
+  white-space: pre;
+  overflow-wrap: normal;
+}
+
+.highlight {
+  overflow: hidden;
+  color: var(--color-text-primary);
+  pointer-events: none;
+}
+
+.code {
+  width: 100%;
+  height: 100%;
+  background: none;
+  outline: none;
+  resize: none;
+  overflow: auto;
+  /* Transparent text, so what is read is the layer underneath. */
+  color: transparent;
+  caret-color: var(--color-text-primary);
+}
+
+.code::selection {
+  background: rgb(124 58 237 / 35%);
+}
+
+/* ---- Tokens, in the design's palette ---- */
+
+.tokenComment {
+  color: var(--color-text-muted);
+}
+
+.tokenString {
+  color: #22c55e;
+}
+
+.tokenNumber {
+  color: var(--color-amber);
+}
+
+.tokenKeyword {
+  color: #c084fc;
+}
+
+.tokenCallee {
+  color: #60a5fa;
+}
+
+.tokenProperty {
+  color: var(--color-amber);
+}
+
+.editorFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-8) var(--space-16);
+  border-top: 1px solid var(--color-border);
+}
+
+.statusLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.indicatorOk {
+  background: var(--color-success-solid);
+}
+
+.indicatorBad {
+  background: var(--color-danger-solid);
+}
+
+.statusText {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.statusTextBad {
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+}
+
+.caret {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* ---- Properties ---- */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: var(--space-24);
+  width: 380px;
+  padding: var(--space-20);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  align-self: flex-start;
+}
+
+.panelSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  width: 100%;
+}
+
+.panelHeading {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--text-sm);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+}
+
+.fieldLabel {
+  font-weight: 500;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.input {
+  width: 100%;
+  padding: var(--space-10);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.input:focus {
+  border-color: var(--color-accent-brand);
+  outline: none;
+}
+
+.inputMono {
+  font-family: var(--font-mono);
+}
+
+.textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.selectWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.selectWrapper img {
+  position: absolute;
+  right: var(--space-10);
+  pointer-events: none;
+}
+
+.selectWrapper select {
+  appearance: none;
+}
+
+.paramList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+.paramRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+  padding: var(--space-6) var(--space-10);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.paramName {
+  flex: 1 0 0;
+  min-width: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  outline: none;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.typeBadge {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-6);
+  background: var(--color-surface-raised);
+  border: 0;
+  border-radius: var(--radius-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.removeParam {
+  flex-shrink: 0;
+  padding: 0 var(--space-4);
+  background: none;
+  border: 0;
+  font-size: var(--text-lg);
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.removeParam:hover {
+  color: var(--color-danger);
+}
+
+.addParam {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+  width: 100%;
+  padding: var(--space-8);
+  background: none;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.addParam:hover {
+  border-color: var(--color-accent-brand);
+  color: var(--color-text-primary);
+}
+
+.divider {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.metadata {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.metadataLabel {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.metadataValue {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.metadataValue strong {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+/* ---- Failure to load ---- */
+
+.card {
+  width: 100%;
+  padding: var(--space-24);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+
+.loadError {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-danger);
+}
+
+/* The way back sits beside the breadcrumb, not above it. */
+.pageHeader {
+  position: relative;
+}
+
+.pageHeader > a[aria-label^='Back to'] {
+  position: absolute;
+  top: 0;
+  left: -36px;
+}
+
+/*
+ * The live signature, between the editor's name and its language badge.
+ *
+ * Monospace because it is code, muted because it is a reminder rather than a
+ * control, and clipped rather than wrapped: a function handed six externals must
+ * not push the header into two lines.
+ */
+.signature {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * Below this width the two columns stop being two columns.
+ *
+ * The panel is a fixed 380px and the sidebar takes its own share, so on a 1150px
+ * window the code was left with about 425px — less than the panel beside it, for
+ * the thing the page exists to edit. Under this width the panel goes below the
+ * editor and the code gets the full measure.
+ *
+ * Last in the file on purpose: a media query adds no specificity, so this has to
+ * come after the `.panel` rule it overrides or the fixed width simply wins.
+ */
+@media (width < 1300px) {
+  .split {
+    flex-direction: column;
+  }
+
+  .panel {
+    width: 100%;
+    align-self: stretch;
+  }
+}
+
+/*
+ * What saves this, said where the details end.
+ *
+ * Quiet: it is a thing to notice once and then know. The key is set from the stored
+ * shortcut rather than written here, so it cannot drift from what the editor obeys.
+ */
+.shortcutHint {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.shortcutKey {
+  padding: 1px var(--space-6);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.shortcutLink {
+  color: var(--color-accent-brand);
+  text-decoration: none;
+}
+
+.shortcutLink:hover {
+  text-decoration: underline;
+}
+
+/*
+ * An action that belongs to the editor, sitting in the editor's own header.
+ *
+ * Scaled to the badge beside it rather than to the page's buttons: it is a tool on
+ * the box, not a decision about the function, and it should not compete with Save.
+ */
+.editorAction {
+  flex: none;
+  padding: var(--space-4) var(--space-10);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.editorAction:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-text-muted);
+}
+
+/*
+ * Which object a parameter names, under the row that says it names one.
+ *
+ * Its own line because the row above is already three controls wide and an object's
+ * name is longer than a type's — side by side, both would be truncated to nothing.
+ */
+.paramObjectRow {
+  display: flex;
+  padding-left: var(--space-12);
+}
+
+.paramObject {
+  flex: 1 0 0;
+  min-width: 0;
+  padding: var(--space-6) var(--space-8);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}

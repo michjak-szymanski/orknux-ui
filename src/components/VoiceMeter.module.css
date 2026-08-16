@@ -1,0 +1,34 @@
+/*
+ * Five bars, one per register, beside the microphone while it is recording.
+ *
+ * Sized to the button next to it so the composer does not change height when
+ * recording starts — a row that jumps is a row that draws the eye away from
+ * what is being said.
+ */
+.meter {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 3px;
+  height: 32px;
+  padding: 0 var(--space-6);
+}
+
+.bar {
+  width: 3px;
+  min-height: 3px;
+  background: var(--color-accent-brand);
+  border-radius: 999px;
+  /*
+   * Short, and only on the way down: a rise is the sound arriving and should be
+   * immediate, while a fall that is instant reads as flicker.
+   */
+  transition: height 90ms ease-out;
+}
+
+/* Somebody who has asked for less movement gets a level, not a dance. */
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    transition: none;
+  }
+}

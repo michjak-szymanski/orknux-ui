@@ -1,0 +1,88 @@
+.loader {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.edge {
+  fill: none;
+  stroke: #5f8467;
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  /*
+   * The triad's perimeter is ~114.87, so a 57.43 dash cycle tiles it exactly
+   * twice. Anything that does not divide the perimeter leaves a visible seam
+   * where the pattern meets the path start.
+   */
+  stroke-dasharray: 15 42.43;
+  animation: chase 1.15s linear infinite;
+}
+
+.node {
+  fill: #5f8467;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pulse 1.15s ease-in-out infinite;
+}
+
+/* Staggered so the three nodes read as a sequence rather than a flash. */
+.node2 {
+  animation-delay: 0.18s;
+}
+
+.node3 {
+  animation-delay: 0.36s;
+}
+
+/*
+ * The graph is centred on the kernel void and turns slowly inside it. Its
+ * farthest node sits 26.3 units from centre and 11.9 more at peak pulse,
+ * against a 47-unit hole, so the rotation never clips.
+ */
+.spinner {
+  transform-origin: 100px 109px;
+  animation: slowspin 10s linear infinite;
+}
+
+@keyframes chase {
+  to {
+    stroke-dashoffset: -57.43;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.82);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes slowspin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edge,
+  .node,
+  .spinner {
+    animation: none;
+  }
+
+  /* Without this the stalled loader is a dashed fragment, not the mark. */
+  .edge {
+    stroke-dasharray: none;
+  }
+}

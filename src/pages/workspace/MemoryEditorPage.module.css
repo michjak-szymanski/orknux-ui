@@ -1,0 +1,288 @@
+/*
+ * Writing one memory: the editor on the left, what is known about it on the
+ * right. Same split the function and tool editors use.
+ */
+
+.breadcrumbBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.crumb,
+.crumbSeparator {
+  color: var(--color-text-muted);
+}
+
+.crumbCurrent {
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.spacer {
+  flex: 1 0 0;
+}
+
+.save {
+  flex-shrink: 0;
+  padding: var(--space-8) var(--space-16);
+  background: var(--color-accent-brand);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.save:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.saved {
+  font-size: var(--text-md);
+  color: var(--color-success);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-danger);
+}
+
+.split {
+  display: flex;
+  flex: 1 0 0;
+  gap: var(--space-24);
+  align-items: stretch;
+  width: 100%;
+  min-height: 0;
+}
+
+/* ---- The editor ---- */
+
+.editorCard {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  overflow: clip;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  width: 100%;
+  padding: var(--space-20) var(--space-20) var(--space-12);
+}
+
+.sectionLabel {
+  font-weight: 600;
+  font-size: var(--text-xs);
+  letter-spacing: 0.55px;
+  color: var(--color-text-muted);
+}
+
+.titleInput {
+  width: 100%;
+  padding: var(--space-12) var(--space-16);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.titleInput::placeholder {
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+.titleInput:focus,
+.content:focus,
+.select:focus {
+  outline: none;
+}
+
+.contentLabelRow {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  padding: var(--space-20) var(--space-20) var(--space-12);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  width: 100%;
+  padding: var(--space-6) var(--space-20);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6) var(--radius-6) 0 0;
+}
+
+.tool {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--space-6);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-4);
+  cursor: pointer;
+}
+
+.tool:hover {
+  background: var(--color-surface-raised);
+}
+
+.toolLetter,
+.toolItalic {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-sm);
+  line-height: 14px;
+  color: var(--color-text-secondary);
+}
+
+.toolItalic {
+  font-style: italic;
+}
+
+/*
+ * The body. Markdown, so it is monospaced and wraps — the toolbar puts the
+ * marks in, and what is stored is what is shown.
+ */
+.content {
+  flex: 1 0 0;
+  width: 100%;
+  min-height: 420px;
+  padding: var(--space-20) var(--space-20) var(--space-24);
+  background: var(--color-bg);
+  border: 0;
+  font-family: inherit;
+  font-size: var(--text-base);
+  line-height: 22px;
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+  resize: none;
+}
+
+.content::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* ---- What is known about it ---- */
+
+.properties {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: var(--space-24);
+  width: 380px;
+  padding: var(--space-20);
+  align-self: flex-start;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+
+.propertySection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  width: 100%;
+}
+
+.propertyHeading {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+}
+
+.fieldLabel {
+  font-weight: 500;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.metaLabel {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.fieldValue {
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.selectWrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+  padding: var(--space-10);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+/* The chevron beside it is the one drawn; the control's own is hidden. */
+.select {
+  flex: 1 0 0;
+  min-width: 0;
+  appearance: none;
+  background: none;
+  /* The menu the browser drops takes its colour from here, not from the box. */
+  background-color: var(--color-bg);
+  border: 0;
+  font-family: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+/*
+ * Destructive, and it says so. This is the one place on the memory screens
+ * where red is right: a labelled button somebody chose to press, not an icon
+ * sitting on every row.
+ */
+.delete {
+  align-self: flex-start;
+  padding: var(--space-8) var(--space-16);
+  background: var(--color-danger-solid);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: #ffffff;
+  cursor: pointer;
+}

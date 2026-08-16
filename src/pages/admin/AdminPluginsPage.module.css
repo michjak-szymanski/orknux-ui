@@ -1,0 +1,332 @@
+/*
+ * The same layout as the other admin tables — integrations, workspaces — because
+ * this is another list of things the organisation holds, and a screen that looks
+ * different for no reason reads as a screen from somewhere else.
+ */
+
+.titleBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.titleBlock {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--text-2xl);
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+/* The button drives this; a file input cannot be styled to match the others. */
+.picker {
+  display: none;
+}
+
+/*
+ * Getting a template and loading one are different kinds of act — one takes
+ * something away to work on, the other puts something into the installation. Set
+ * apart with a rule between them so the pointer does not slide from one to the
+ * other, rather than sitting in a pair like Cancel and Save.
+ */
+.actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-16);
+}
+
+.divider {
+  width: 1px;
+  height: 24px;
+  background: var(--color-border);
+}
+
+.load,
+.template {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-10) var(--space-14);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  cursor: pointer;
+}
+
+.load {
+  background: var(--color-accent-brand);
+  border: 0;
+  color: var(--color-text-primary);
+}
+
+/* Secondary: getting a template is a step towards loading one, not the act. */
+.template {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.load:disabled,
+.template:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ---- Table ---- */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  overflow: clip;
+}
+
+.tableHeader,
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.tableHeader {
+  padding: var(--space-12) var(--space-16);
+  background: var(--color-surface-raised);
+  border-bottom: 1px solid var(--color-border);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.row {
+  padding: var(--space-14) var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.colName {
+  display: flex;
+  flex: 1 0 0;
+  align-items: center;
+  gap: var(--space-10);
+  min-width: 0;
+}
+
+
+.colApi {
+  flex-shrink: 0;
+  width: 60px;
+}
+
+/* A badge, because it is a fact about the plugin rather than a measurement. */
+.api {
+  padding: 2px var(--space-6);
+  background: var(--color-accent-brand-soft);
+  border-radius: var(--radius-4, 4px);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.colSize {
+  flex-shrink: 0;
+  width: 80px;
+}
+
+.colWhen {
+  flex-shrink: 0;
+  width: 240px;
+}
+
+/* Wide enough for the two words the confirm puts here. */
+.colActions {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-8);
+  justify-content: flex-end;
+  width: 160px;
+}
+
+.icon {
+  flex-shrink: 0;
+}
+
+/* The name, and under it what the plugin brings. */
+.nameBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/*
+ * Signatures, in the monospace the rest of the product uses for code. One line:
+ * a plugin declaring ten functions must not make its row ten lines tall.
+ */
+.declares {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.name {
+  overflow: hidden;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.muted {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowAction {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  cursor: pointer;
+}
+
+.rowAction:hover {
+  border-color: var(--color-text-muted);
+}
+
+.rowAction:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/*
+ * Unloading is confirmed in the row. The confirm carries the danger colour and
+ * the way out does not, so the pointer lands on Cancel by accident rather than on
+ * the other one.
+ */
+.confirm,
+.cancel {
+  padding: var(--space-6) var(--space-10);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.confirm {
+  background: var(--color-danger);
+  border: 0;
+  color: var(--color-text-primary);
+}
+
+.confirm:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.cancel {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+/* ---- Loading / empty / error ---- */
+
+.notice {
+  margin: 0;
+  padding: var(--space-14) var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.noticeError {
+  color: var(--color-danger);
+}
+
+/* ---- Footer note ---- */
+
+.disclaimer {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  width: 100%;
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.disclaimer img {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+/*
+ * A plugin from somewhere on the web.
+ *
+ * Its own row, below the header rather than inside it. Put in the header it became a
+ * third item in that flex row and squeezed the title and its subtitle into a column
+ * an inch wide — the header is a row of two things, and this is not one of them.
+ *
+ * A URL is long, too: a field showing the last twelve characters of one is a field
+ * nobody can check before pressing the button beside it.
+ */
+.fromUrl {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+.urlInput {
+  flex: 1 0 0;
+  min-width: 0;
+  padding: var(--space-8) var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.urlInput::placeholder {
+  color: var(--color-text-muted);
+}

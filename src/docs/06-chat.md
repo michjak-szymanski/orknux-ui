@@ -1,0 +1,93 @@
+# Chat
+
+Chat is a conversation with one of the workspace's models, or with one of its
+agents. Each conversation has its own address, so a chat can be linked to and
+reloaded.
+
+Whether an installation has a chat at all is an administrator's decision; see
+Administration.
+
+## Choosing what answers
+
+The dropdown above the composer picks the model. Picking an agent instead gives
+the conversation that agent's instructions, skills and tools. A new chat starts
+on the workspace's default so there is always something to talk to.
+
+## Attachments
+
+The **+** to the left of the composer attaches files — several at once. They
+are stored on the server, in a directory of their own per workspace, and can be
+opened from the message they were sent with. Images are previewed in the chat
+and are sent to the model as images, so a model that can see will describe what
+is in the picture.
+
+Attachments can be switched off for the whole installation. When they are off,
+the button is not offered.
+
+## Speaking instead of typing
+
+The microphone to the left of Send records, and sends what it recorded to the
+workspace's speech-to-text model. While it records, a meter shows what it is
+hearing across five registers — a muted microphone and a working one look
+identical otherwise.
+
+Recording is converted to 16 kHz mono WAV in the browser before it is sent,
+because that is what transcription servers actually decode.
+
+The microphone appears only once the workspace has a transcription model.
+
+## Listening instead of reading
+
+The speaker under an answer reads it aloud, using the workspace's text-to-speech
+model. Pressing it again stops; so does leaving the chat, since an answer read
+aloud over a conversation nobody is looking at is a voice from nowhere.
+
+A long answer takes a moment to synthesise — the button says so while it does,
+because a control that looks inert for ten seconds gets pressed twice. Only one
+answer is read at a time.
+
+The audio is played and not kept: nothing is written to the server, and the
+speaker appears only once the workspace has a speech model.
+
+## Attachments, previewed
+
+Clicking a picture in a chat opens it over the conversation rather than in a new
+tab, with the arrow keys stepping between the pictures in the same group.
+Anything that is not a picture downloads instead — the server sends those as
+attachments, so there is nothing a viewer could show.
+
+## The AI button
+
+![Workspace settings, where the quick chat's model and whether it may make changes are chosen](/screens/workspace-settings.png)
+
+Bottom right of every page, a small panel that answers about **what you are
+looking at**. It is told which page you have open, so "why did this fail" on a
+run page means that run, and it can look up the workspace's workflows, runs and
+agents to answer.
+
+It reads and nothing else, unless the workspace says otherwise — **Let it make
+changes** under Settings. Off, it says plainly that it cannot. On, it can act on
+the workspace when asked: start a run, repeat a past one on the same input, and
+turn a workflow or an agent on or off. Those are real — a run that messaged
+somebody messages them again, and a workflow switched off stops answering its
+trigger.
+
+Nothing deletes, either way. There is no tool here that removes a workflow, a
+run or a credential, whatever the switch says.
+
+Off is the default, including for a workspace that has already chosen a model:
+the panel opens over whatever somebody happens to be reading, and a model that
+decides "run it" from a question is a worse mistake there than on a page with a
+button on it.
+
+Nothing it is told is written down: the conversation lives in the browser until
+the panel is closed.
+
+Which model answers is also set per workspace, and the button appears only once
+one has been chosen.
+
+## Finding a conversation
+
+**Search content** looks inside the messages rather than only at chat names. It
+is off by default: most searches are for a chat by its name, and reading
+everything ever said is a different question.

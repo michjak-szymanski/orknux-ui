@@ -1,0 +1,213 @@
+/*
+ * Design tokens taken from the Figma file (zinc-based dark theme).
+ * Every colour/space/radius used by a page should come from here so the
+ * management, workspace and workflow screens stay consistent with the login page.
+ *
+ * Spacing and radius tokens are named after their pixel value; type sizes keep
+ * a t-shirt scale.
+ */
+:root {
+  /*
+   * What the browser paints for itself: scrollbars, form controls, the flash
+   * before the first paint. Without it every scrollbar on a dark page is a
+   * light one, which is the only part of the app the tokens cannot reach.
+   */
+  color-scheme: dark;
+
+  /* Surfaces */
+  --color-bg: #09090b;
+  --color-surface: #121214;
+  --color-surface-raised: #18181b;
+
+  /*
+   * The scrollbar's thumb: bright enough to find, quiet enough to ignore.
+   * Its own token because it is drawn over whichever surface is behind it and
+   * belongs to neither of them.
+   */
+  --color-scrollbar: #3f3f46;
+  --color-scrollbar-hover: #52525b;
+  --color-border: #27272a;
+
+  /*
+   * Code, coloured the way the editor colours it.
+   *
+   * The same five values the Monaco theme defines, as tokens, so a snippet in
+   * the manual and the same snippet open in the function editor are the same
+   * colours. Two places painting code differently is the sort of thing nobody
+   * reports and everybody notices.
+   */
+  --code-comment: #71717a;
+  --code-string: #22c55e;
+  --code-number: #d08a1a;
+  --code-keyword: #c084fc;
+  --code-type: #60a5fa;
+
+  /* Text */
+  --color-text-primary: #fafafa;
+  --color-text-secondary: #a1a1aa;
+  --color-text-muted: #71717a;
+
+  /* Inverted (primary button, selected page) */
+  --color-accent: #fafafa;
+  --color-accent-foreground: #09090b;
+
+  /*
+   * Primary action inside modals. Iron-moss, the brand colour — but the mark's
+   * lighter node tint rather than #4A6B52 itself, which goes muddy against this
+   * background.
+   */
+  --color-accent-brand: #5f8467;
+  --color-accent-brand-soft: rgba(95, 132, 103, 0.15);
+
+  /* Status */
+  --color-success: #10b981;
+  --color-success-solid: #22c55e;
+  --color-success-soft: rgba(34, 197, 94, 0.1);
+  --color-danger: #f87171;
+  --color-danger-solid: #ef4444;
+  --color-danger-strong: rgba(239, 68, 68, 0.7);
+  --color-danger-soft: rgba(239, 68, 68, 0.1);
+  --color-danger-border: rgba(239, 68, 68, 0.2);
+  --color-amber: #f59e0b;
+
+  /* Audit badges, one per category */
+  --color-badge-workflow: #581c87;
+  --color-badge-agent: #1e1b4b;
+  --color-badge-workspace: #14532d;
+  --color-badge-integration: #3b0764;
+
+  --color-amber-soft: rgba(245, 158, 11, 0.1);
+
+  /* Typography */
+  --font-sans: 'Geist Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', 'Cascadia Mono', monospace;
+
+  --text-2xs: 10px;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 13px;
+  --text-base: 14px;
+  --text-lg: 16px;
+  --text-xl: 18px;
+  --text-2xl: 24px;
+
+  /* Spacing */
+  --space-2: 2px;
+  --space-4: 4px;
+  --space-6: 6px;
+  --space-8: 8px;
+  --space-10: 10px;
+  --space-12: 12px;
+  --space-14: 14px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-40: 40px;
+
+  /* Radii */
+  --radius-4: 4px;
+  --radius-6: 6px;
+  --radius-8: 8px;
+  --radius-12: 12px;
+  --radius-full: 999px;
+
+  /* Elevation */
+  --shadow-card: 0 16px 16px rgba(0, 0, 0, 0.25);
+  --shadow-modal: 0 16px 16px rgba(0, 0, 0, 0.5);
+  --shadow-menu: 0 8px 16px rgba(0, 0, 0, 0.4);
+
+  /* Controls */
+  --control-height: 40px;
+  --top-nav-height: 64px;
+  --sidebar-width: 240px;
+}
+
+/*
+ * Light mode.
+ *
+ * Only the colours are redefined — every space, radius and type size is the
+ * same interface, drawn the other way up. That works because the screens buy
+ * their colours from here and nowhere else; the handful that do not are noted
+ * at the end of this block.
+ *
+ * The surfaces invert their *order*, not just their value: the page is the
+ * lightest thing and cards sit slightly darker with a real border, because a
+ * white card on a white page has nothing to stand on.
+ */
+:root[data-theme='light'] {
+  /* Scrollbars and controls follow the theme the same way the tokens do. */
+  color-scheme: light;
+
+  /* Surfaces */
+  --color-bg: #ffffff;
+  --color-surface: #fafafa;
+  --color-surface-raised: #f4f4f5;
+
+  /* The same idea the other way up: dark enough to see on a light page. */
+  --color-scrollbar: #c4c4c8;
+  --color-scrollbar-hover: #a1a1aa;
+  --color-border: #e4e4e7;
+
+  /* Code: the editor's light rules, which are darker so they hold on white. */
+  --code-comment: #71717a;
+  --code-string: #15803d;
+  --code-number: #b45309;
+  --code-keyword: #7e22ce;
+  --code-type: #1d4ed8;
+
+  /* Text */
+  --color-text-primary: #18181b;
+  --color-text-secondary: #52525b;
+  --color-text-muted: #71717a;
+
+  /* Inverted (primary button, selected page) */
+  --color-accent: #18181b;
+  --color-accent-foreground: #fafafa;
+
+  /* The brand colour keeps its hue: it is the product's, not the theme's. On
+     white it can be the full-strength iron-moss. */
+  --color-accent-brand: #4a6b52;
+  --color-accent-brand-soft: rgba(74, 107, 82, 0.12);
+
+  /* Status, darkened so they carry on white rather than glowing on it. */
+  --color-success: #059669;
+  --color-success-solid: #16a34a;
+  --color-success-soft: rgba(22, 163, 74, 0.12);
+  --color-danger: #dc2626;
+  --color-danger-solid: #dc2626;
+  --color-danger-strong: rgba(220, 38, 38, 0.7);
+  --color-danger-soft: rgba(220, 38, 38, 0.08);
+  --color-danger-border: rgba(220, 38, 38, 0.25);
+  --color-amber: #b45309;
+  --color-amber-soft: rgba(180, 83, 9, 0.12);
+
+  /* Audit badges: the same hues, light enough to read dark text on. */
+  --color-badge-workflow: #e9d5ff;
+  --color-badge-agent: #e0e7ff;
+  --color-badge-workspace: #dcfce7;
+  --color-badge-integration: #ede9fe;
+
+  /* Shadows are cast by light, so they soften rather than deepen. */
+  --shadow-card: 0 8px 16px rgba(24, 24, 27, 0.08);
+  --shadow-modal: 0 16px 32px rgba(24, 24, 27, 0.16);
+  --shadow-menu: 0 8px 16px rgba(24, 24, 27, 0.12);
+}
+
+/*
+ * The icons are `<img>` files with a light stroke baked in, so they cannot take
+ * a token. Darkening them keeps them readable on white.
+ *
+ * Every `<img>` in the app is one of those icons — no photographs, no avatars —
+ * so the rule matches the element rather than the URL. It used to match
+ * `[src$='.svg']`, which holds only while the dev server hands out file URLs: a
+ * build inlines anything under 4kB as a `data:image/svg+xml` URI, and 58 of the
+ * 59 icons are under it. The light theme lost every icon in production while
+ * looking perfectly right in development.
+ *
+ * `data-keeps-colour` opts out the ones carrying real colour of their own — a
+ * toggle is green for on, and darkening that says the wrong thing.
+ */
+:root[data-theme='light'] img:not([data-keeps-colour]) {
+  filter: brightness(0.42);
+}

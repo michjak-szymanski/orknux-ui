@@ -1,0 +1,324 @@
+.headerBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  margin: 0;
+  font-size: var(--text-base);
+}
+
+.crumbLink {
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.crumbLink:hover {
+  text-decoration: underline;
+}
+
+.crumbSeparator {
+  color: var(--color-text-muted);
+}
+
+.crumbCurrent {
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.pageTitle {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--text-2xl);
+  color: var(--color-text-primary);
+}
+
+/* ---- Cards ---- */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  padding: var(--space-24);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+
+.sectionTitle {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  width: 100%;
+}
+
+.sectionHeading {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.sectionTitle::after {
+  content: '';
+  display: block;
+  width: 100%;
+  border-top: 1px solid var(--color-border);
+}
+
+/* ---- Fields ---- */
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.label {
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.inputWrapper {
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.inputWrapper:focus-within {
+  border-color: var(--color-accent-brand);
+}
+
+.inputWrapperTall {
+  align-items: stretch;
+  height: 80px;
+  padding: var(--space-10) var(--space-12);
+}
+
+.input {
+  flex: 1 0 0;
+  min-width: 0;
+  padding: var(--space-10) 0;
+  background: none;
+  border: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.input:focus {
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.inputMono {
+  font-family: var(--font-mono);
+}
+
+.textarea {
+  padding: 0;
+  resize: vertical;
+}
+
+/* Not in the frame: says what the field actually controls. */
+.hint {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-danger);
+}
+
+.loadError {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-danger);
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-12);
+}
+
+.savedNote {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-success);
+}
+
+.save {
+  padding: var(--space-10) var(--space-16);
+  background: var(--color-accent-brand);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- Danger zone ---- */
+
+.dangerCard {
+  border-color: var(--color-danger-border);
+}
+
+.dangerHeading {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-danger-solid);
+}
+
+.dangerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+}
+
+.dangerText {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 600px;
+  min-width: 0;
+}
+
+.dangerTitle {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.dangerMessage {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.delete {
+  flex-shrink: 0;
+  padding: var(--space-10) var(--space-16);
+  background: var(--color-danger-solid);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+/*
+ * A select wearing the shared input class. The box already looks right; this is
+ * only so the menu the browser drops has a colour of its own — left transparent
+ * it opens white. Narrower than `.input` on purpose, so real inputs keep theirs.
+ */
+select.input {
+  background-color: var(--color-bg);
+}
+
+/* ---- The roles that open a workspace ---- */
+
+/*
+ * A row per role, with the add button under them: the same shape the function
+ * editor uses for parameters and externals, because it is the same job — a short
+ * list somebody adds to and takes from, where each row is one decision.
+ */
+.roleList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.roleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.roleSelect {
+  flex: 1 0 0;
+  min-width: 0;
+  padding: var(--space-8) var(--space-10);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.roleRemove {
+  flex: none;
+  padding: var(--space-4) var(--space-8);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-4);
+  font-family: inherit;
+  font-size: var(--text-base);
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.roleRemove:hover {
+  border-color: var(--color-border);
+  color: var(--color-danger);
+}
+
+.addRole {
+  align-self: flex-start;
+  padding: var(--space-6) var(--space-10);
+  background: none;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.addRole:hover:not(:disabled) {
+  border-style: solid;
+  color: var(--color-text-primary);
+}
+
+.addRole:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

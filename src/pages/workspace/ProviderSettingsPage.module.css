@@ -1,0 +1,372 @@
+/* Adding a provider, and editing one: the same form either way. */
+
+.headerBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.crumbLink {
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.crumbLink:hover {
+  color: var(--color-text-secondary);
+}
+
+.crumbSeparator {
+  color: var(--color-text-muted);
+}
+
+.crumbCurrent {
+  color: var(--color-text-secondary);
+}
+
+.pageTitle {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--text-2xl);
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+  width: 100%;
+}
+
+/* ---- Cards ---- */
+
+.card,
+.dangerCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-20);
+  width: 100%;
+  padding: var(--space-24);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-12);
+}
+
+.dangerCard {
+  background: var(--color-danger-soft);
+  border-color: var(--color-danger-border);
+}
+
+.cardTitle {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-lg);
+  color: var(--color-text-primary);
+}
+
+/* The rule under a card title, which the gap alone does not give. */
+.divider {
+  width: 100%;
+  height: 1px;
+  margin-top: calc(var(--space-20) * -1 + var(--space-4));
+  background: var(--color-border);
+}
+
+.loadError {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-danger);
+}
+
+/* ---- Fields ---- */
+
+.fieldRow {
+  display: flex;
+  gap: var(--space-24);
+  width: 100%;
+}
+
+.field {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.label {
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.required {
+  font-weight: 400;
+  color: var(--color-danger-solid);
+}
+
+.input {
+  width: 100%;
+  padding: var(--space-10) var(--space-14);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  font-family: inherit;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.inputMono {
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.input:focus {
+  border-color: var(--color-accent-brand);
+  outline: none;
+}
+
+.selectWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.select {
+  appearance: none;
+  padding-right: var(--space-32);
+}
+
+.chevron {
+  position: absolute;
+  top: 50%;
+  right: var(--space-14);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.hintRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* ---- Authentication method ---- */
+
+.segmented {
+  display: flex;
+  gap: var(--space-4);
+  width: 320px;
+  max-width: 100%;
+  padding: var(--space-4);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+
+.segment,
+.segmentActive {
+  flex: 1 0 0;
+  padding: var(--space-6) var(--space-12);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-size: var(--text-md);
+  cursor: pointer;
+}
+
+.segment {
+  background: none;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.segment:hover {
+  color: var(--color-text-secondary);
+}
+
+.segmentActive {
+  background: var(--color-accent-brand);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.secretRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.revealButton {
+  position: absolute;
+  right: var(--space-12);
+  padding: 0;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-accent-brand);
+  cursor: pointer;
+}
+
+/* ---- Footer ---- */
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.status {
+  display: flex;
+  flex: 1 0 0;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+  font-size: var(--text-base);
+}
+
+.dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+}
+
+.dotConnected {
+  background: var(--color-success);
+}
+
+.dotFailed {
+  background: var(--color-danger-solid);
+}
+
+.dotIdle {
+  background: var(--color-text-muted);
+}
+
+.statusConnected {
+  font-weight: 600;
+  color: var(--color-success);
+}
+
+.statusFailed {
+  font-weight: 600;
+  color: var(--color-danger);
+}
+
+.statusIdle {
+  color: var(--color-text-muted);
+}
+
+.buttons {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-12);
+}
+
+.primaryButton,
+.secondaryButton {
+  padding: var(--space-10) var(--space-24);
+  border-radius: var(--radius-8);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.primaryButton {
+  background: var(--color-accent-brand);
+  border: 0;
+}
+
+.secondaryButton {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ---- Danger zone ---- */
+
+.dangerHeading {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-lg);
+  color: var(--color-danger-solid);
+}
+
+.dangerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.dangerText {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.dangerTitle {
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.dangerNote {
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.dangerButton {
+  flex-shrink: 0;
+  padding: var(--space-10) var(--space-20);
+  background: var(--color-danger-solid);
+  border: 0;
+  border-radius: var(--radius-8);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}

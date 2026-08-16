@@ -1,0 +1,236 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  width: 100%;
+  padding: var(--space-24);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  overflow: clip;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+}
+
+/* Pushes the controls to the right of the heading. */
+.headerSpacer {
+  flex: 1 0 0;
+}
+
+.title {
+  flex: 1 0 0;
+  min-width: 0;
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-xl);
+  line-height: 27px;
+  color: var(--color-text-primary);
+}
+
+.createWorkflow {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-8) var(--space-14);
+  background: var(--color-accent-brand);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-weight: 500;
+  font-size: var(--text-md);
+  line-height: 19.5px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+/* ---- Table ---- */
+
+.table {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow: clip;
+}
+
+.tableHeader,
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.tableHeader {
+  padding: var(--space-10) var(--space-16);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  line-height: 16.5px;
+  letter-spacing: 0.55px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.row {
+  padding: var(--space-14) var(--space-16);
+  border-top: 1px solid var(--color-border);
+}
+
+.colGrow {
+  flex: 1 0 0;
+  min-width: 0;
+}
+
+/*
+ * Wide enough for what is in it: a 36px toggle, a 12px gap and a 32px button
+ * whose border takes it to 34. At 80px the last pixels of the gear fell outside
+ * the column and were clipped.
+ */
+.colActions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-12);
+  width: 96px;
+}
+
+.name {
+  font-weight: 500;
+  font-size: var(--text-md);
+  line-height: 19.5px;
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.name:hover {
+  text-decoration: underline;
+}
+
+.description {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  line-height: 18px;
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+/*
+ * The icon, and nothing around it until it is pointed at. A boxed button on
+ * every row draws the eye down the actions column rather than across the
+ * workflows, which are what the table is about.
+ */
+.settings {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-6);
+  opacity: 0.75;
+}
+
+.settings:hover {
+  background: var(--color-surface-raised);
+  border-color: var(--color-border);
+  opacity: 1;
+}
+
+/* ---- Loading / empty / error ---- */
+
+.notice {
+  margin: 0;
+  padding: var(--space-14) var(--space-16);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.noticeError {
+  color: var(--color-danger);
+}
+
+/* ---- Last run ---- */
+
+.colLastRun {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  width: 140px;
+}
+
+.lastRun {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.lastRun:hover {
+  color: var(--color-text-primary);
+}
+
+.neverRun {
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.runDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.runCompleted {
+  background: var(--color-success-solid);
+}
+
+.runFailed {
+  background: var(--color-danger-solid);
+}
+
+.runRunning {
+  background: var(--color-amber);
+}
+
+/* Runs the workflow now; the only way to start one by hand. */
+.runButton {
+  padding: var(--space-4) var(--space-10);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 500;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.runButton:hover:enabled {
+  border-color: var(--color-accent-brand);
+  color: var(--color-text-primary);
+}
+
+/* When the clock will start it next. */
+.nextRun {
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}

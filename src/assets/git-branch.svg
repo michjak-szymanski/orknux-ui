@@ -1,0 +1,9 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="git-branch">
+<line id="main-line" x1="8.75" y1="2.75" x2="8.75" y2="13.25" stroke="#A1A1AA" stroke-width="1.5" stroke-linecap="round"/>
+<circle id="top-dot" cx="8" cy="2" r="2" fill="#A1A1AA"/>
+<circle id="bottom-dot" cx="8" cy="14" r="2" fill="#A1A1AA"/>
+<line id="branch-line" x1="8" y1="5.93934" x2="12.5962" y2="1.34314" stroke="#A1A1AA" stroke-width="1.5" stroke-linecap="round"/>
+<circle id="branch-dot" cx="14" cy="4" r="2" fill="#A1A1AA"/>
+</g>
+</svg>

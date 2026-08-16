@@ -1,0 +1,328 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-20);
+  width: 100%;
+  padding: var(--space-24);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-16);
+}
+
+.titleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--text-xl);
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  margin: 0;
+  max-width: 70ch;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.create {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-8) var(--space-16);
+  background: var(--color-accent-brand);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.create:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-danger);
+}
+
+/* ---- The form, which opens in place rather than over the list ---- */
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  padding: var(--space-20);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+
+.editorTitle {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.input {
+  width: 100%;
+  padding: var(--space-10) var(--space-12);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.scope {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-10);
+  cursor: pointer;
+}
+
+.scope > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.scopeName {
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.scopeHint {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.editorActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-12);
+}
+
+.ghost,
+.save {
+  padding: var(--space-8) var(--space-16);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.ghost {
+  background: none;
+  border: 1px solid var(--color-border);
+}
+
+.save {
+  background: var(--color-accent-brand);
+  border: 0;
+}
+
+.ghost:disabled,
+.save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- The list ---- */
+
+.table {
+  display: flex;
+  flex-direction: column;
+}
+
+.tableHeader,
+.row,
+.rowClickable {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr) minmax(0, 2fr) 110px;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-12) var(--space-8);
+}
+
+.tableHeader {
+  border-bottom: 1px solid var(--color-border);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.row,
+.rowClickable {
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* The whole row opens the role, so the whole row says so. */
+.rowClickable {
+  cursor: pointer;
+}
+
+.rowClickable:hover {
+  background: var(--color-surface-raised);
+}
+
+.rowClickable:focus-visible {
+  outline: 2px solid var(--color-accent-brand);
+  outline-offset: -2px;
+}
+
+.row:last-child,
+.rowClickable:last-child {
+  border-bottom: 0;
+}
+
+.colName {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.description {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.colScopes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+}
+
+.scopeBadge,
+.scopeBadgeAdmin {
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--radius-4);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-xs);
+}
+
+.scopeBadge {
+  background: var(--color-surface-raised);
+  color: var(--color-text-secondary);
+}
+
+/*
+ * The administrator scope is called out. It is the one that means "and everything
+ * else", and a list where it looks like any other badge is a list somebody skims.
+ */
+.scopeBadgeAdmin {
+  background: var(--color-amber-soft);
+  color: var(--color-amber);
+}
+
+.colModified,
+.colActions {
+  min-width: 0;
+}
+
+.muted {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.colActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-8);
+}
+
+.rowAction {
+  display: flex;
+  align-items: center;
+  padding: var(--space-4) var(--space-8);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-4);
+  font-family: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.rowAction:hover {
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
+
+/* Asks once, in place, rather than throwing a dialog over the list. */
+.confirm {
+  padding: var(--space-4) var(--space-8);
+  background: var(--color-danger-solid);
+  border: 0;
+  border-radius: var(--radius-4);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.notice {
+  margin: 0;
+  padding: var(--space-16) var(--space-8);
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}

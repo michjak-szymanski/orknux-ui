@@ -1,0 +1,391 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  width: 100%;
+  padding: var(--space-24);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  overflow: clip;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+/* Reload now, and reload repeatedly. Kept together at the end of the header. */
+.watch {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.refresh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  cursor: pointer;
+}
+
+.refresh:hover {
+  border-color: var(--color-text-muted);
+}
+
+.titleGroup {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-xl);
+  line-height: 27px;
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: 20px;
+  color: var(--color-text-secondary);
+}
+
+.createTrigger {
+  flex-shrink: 0;
+  padding: var(--space-8) var(--space-14);
+  background: var(--color-accent-brand);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+/* ---- Table ---- */
+
+.table {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.tableHeader,
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.tableHeader {
+  padding: var(--space-10) var(--space-16);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  letter-spacing: 0.55px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.row {
+  padding: var(--space-14) var(--space-16);
+  border-top: 1px solid var(--color-border);
+}
+
+.colName {
+  flex-shrink: 0;
+  width: 240px;
+}
+
+.colType {
+  flex-shrink: 0;
+  width: 150px;
+}
+
+.colSource {
+  flex-shrink: 0;
+  width: 180px;
+}
+
+.colAction {
+  flex-shrink: 0;
+  width: 180px;
+}
+
+/*
+ * What the trigger last did, and the way into its log. A trigger that starts
+ * nothing is silent in every other screen — the executions list only holds runs
+ * that began — so this column exists to answer "was it even asked?".
+ */
+.colFired {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 2px;
+  width: 150px;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.firedButton:hover .outcomeGood,
+.firedButton:hover .outcomeQuiet {
+  text-decoration: underline;
+}
+
+.outcomeGood {
+  font-size: var(--text-md);
+  line-height: 18px;
+  color: var(--color-success);
+}
+
+/* Turned down, undecided or unwired: not a failure, but not a run either. */
+.outcomeQuiet {
+  font-size: var(--text-md);
+  line-height: 18px;
+  color: var(--color-text-secondary);
+}
+
+.firedAt,
+.never {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.log {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+  padding: var(--space-12) var(--space-16);
+  background: var(--color-surface-raised);
+  border-top: 1px solid var(--color-border);
+}
+
+.logRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-12);
+  width: 100%;
+}
+
+.logAt {
+  flex-shrink: 0;
+  width: 90px;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.logDetail {
+  flex: 1 0 0;
+  min-width: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.logEmpty {
+  margin: 0;
+  max-width: 70ch;
+  font-size: var(--text-sm);
+  line-height: 18px;
+  color: var(--color-text-muted);
+}
+
+.colStatus,
+.colActions {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: center;
+  width: 80px;
+  text-align: center;
+}
+
+.name {
+  overflow: hidden;
+  font-weight: 500;
+  font-size: var(--text-md);
+  line-height: 19.5px;
+  color: var(--color-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.muted {
+  overflow: hidden;
+  font-size: var(--text-md);
+  line-height: 18px;
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A cron expression reads as what it is. */
+.mono {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  line-height: 18px;
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.rowAction {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-6);
+  cursor: pointer;
+}
+
+.rowAction:hover {
+  background: var(--color-surface-raised);
+}
+
+/* ---- Loading / empty / error ---- */
+
+.notice {
+  margin: 0;
+  padding: var(--space-14) var(--space-16);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.noticeError {
+  color: var(--color-danger);
+}
+
+/* The name opens the row, so it reads as something to click. */
+.nameButton {
+  padding: 0;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nameButton:hover {
+  color: #c084fc;
+}
+
+/*
+ * The history, as a table rather than a log.
+ *
+ * The same columns every other list here has — a header, then rows separated by
+ * a rule — because it is read the same way: down one column at a time, looking
+ * for the entry that is not like the others.
+ */
+.historyHeader,
+.historyRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+  width: 100%;
+  padding: var(--space-10) var(--space-16);
+}
+
+.historyHeader {
+  border-bottom: 1px solid var(--color-border);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  letter-spacing: 0.55px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.historyBody {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.historyRow + .historyRow {
+  border-top: 1px solid var(--color-border);
+}
+
+/*
+ * Two columns grow and the rest are as wide as what they hold, so the table
+ * fills the card the way every other one does: a timestamp and a count are a
+ * known size, a trigger's name and what it said are not.
+ */
+.colWhen {
+  flex-shrink: 0;
+  width: 120px;
+}
+
+.colTrigger {
+  flex: 1 0 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.colOutcome {
+  flex-shrink: 0;
+  width: 150px;
+}
+
+/* Digits in a column, so a firing that started three runs stands out from one. */
+.colRuns {
+  flex-shrink: 0;
+  width: 56px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.colDetail {
+  flex: 2 0 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.historyTrigger {
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.historyTrigger:hover {
+  text-decoration: underline;
+}

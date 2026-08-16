@@ -1,0 +1,311 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+  width: 100%;
+  padding: var(--space-24);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.titleBlock {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-2xl);
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+.refresh {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-10) var(--space-14);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.refresh:hover:not(:disabled) {
+  border-color: var(--color-accent-brand);
+}
+
+.refresh:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- Components ---- */
+
+.components {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.component {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  width: 100%;
+  padding: var(--space-20);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+
+.componentTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+.componentName {
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-lg);
+  color: var(--color-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.statusDot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+}
+
+.dotHealthy {
+  background: var(--color-success-solid);
+  box-shadow: 0 0 0 5px var(--color-success-soft);
+}
+
+.dotDegraded {
+  background: var(--color-amber);
+  box-shadow: 0 0 0 5px var(--color-amber-soft);
+}
+
+.dotDown {
+  background: var(--color-danger-solid);
+  box-shadow: 0 0 0 5px var(--color-danger-soft);
+}
+
+.badge {
+  flex-shrink: 0;
+  padding: var(--space-4) var(--space-10);
+  border: 1px solid;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.badgeHealthy {
+  background: var(--color-success-soft);
+  border-color: var(--color-success-solid);
+  color: var(--color-success-solid);
+}
+
+.badgeDegraded {
+  background: var(--color-amber-soft);
+  border-color: var(--color-amber);
+  color: var(--color-amber);
+}
+
+.badgeDown {
+  background: var(--color-danger-soft);
+  border-color: var(--color-danger-solid);
+  color: var(--color-danger-solid);
+}
+
+.description {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+.divider {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.metrics {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-40);
+  width: 100%;
+  margin: 0;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+/* The detail can be a long message, so it takes what is left. */
+.metric:last-child {
+  flex: 1 0 0;
+}
+
+.metricLabel {
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.metricValue {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.metricMuted {
+  margin: 0;
+  overflow: hidden;
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+}
+
+/* ---- What a component depends on ---- */
+
+.dependencies {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+  margin: 0;
+  padding: var(--space-12) 0 0;
+  border-top: 1px solid var(--color-border);
+  list-style: none;
+}
+
+.dependency {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-12);
+  width: 100%;
+}
+
+.depDotUp,
+.depDotDown {
+  flex-shrink: 0;
+  align-self: center;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+}
+
+.depDotUp {
+  background: var(--color-success-solid);
+}
+
+.depDotDown {
+  background: var(--color-danger-solid);
+}
+
+.depName {
+  flex-shrink: 0;
+  width: 90px;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.depDescription {
+  flex: 1 0 0;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.depDetail {
+  flex-shrink: 0;
+  max-width: 40%;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Loading / error ---- */
+
+.notice {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-danger);
+}
+
+/* Where a dependency keeps its own screen, for someone going to look at it. */
+.depLink {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-accent-brand);
+  text-decoration: none;
+}
+
+.depLink:hover,
+.depLink:focus-visible {
+  text-decoration: underline;
+}

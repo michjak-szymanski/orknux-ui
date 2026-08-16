@@ -1,0 +1,27 @@
+/*
+ * Where Monaco draws itself.
+ *
+ * It measures its own container, so this has to have a height of its own rather
+ * than growing to fit content — an editor that sizes to its text is an editor with
+ * no scrollbar and a page that jumps. The minimum keeps a short function from
+ * collapsing to a couple of lines.
+ */
+.host {
+  /*
+   * Monaco measures this box and then writes a pixel width onto its own child. If
+   * the box can grow to fit that child, the two chase each other: the editor sets a
+   * width, the flex item grows to it, the editor measures again. The page ends up
+   * wider than the window and whatever sits to the right — here, the properties
+   * panel — is pushed off the screen.
+   *
+   * `overflow: hidden` with `min-width: 0` stops it: this box is sized by the
+   * layout, never by its content, and Monaco lays itself out inside whatever it is
+   * given.
+   */
+  position: relative;
+  flex: 1 1 0;
+  width: 100%;
+  min-width: 0;
+  min-height: 420px;
+  overflow: hidden;
+}

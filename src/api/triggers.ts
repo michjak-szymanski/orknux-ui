@@ -1,0 +1,291 @@
+import { graphql } from './client';
+import type { PageOf } from './client';
+
+/** What kind of event a trigger definition waits for. */
+export type TriggerType = 'INCOMING_CONNECTION' | 'SCHEDULED' | 'WEBHOOK';
+
+/**
+ * How a webhook decides whether its caller may start anything.
+ *
+ * `NONE` is open: knowing the path and the shape is enough. `FUNCTION` asks one
+ * of the workspace's functions, which answers yes or no — and can check a
+ * signature against a variable without the secret leaving the sandbox.
+ */
+export type WebhookAuthType = 'NONE' | 'FUNCTION';
+
+/** The event on a connection that starts the workflow. */
+export type TriggerAction = 'MENTION' | 'REPLY' | 'MESSAGE' | 'ISSUE_CREATED' | 'ISSUE_UPDATED';
+
+/**
+ * One entry in the workspace's trigger catalogue. It names no workflow: a workflow
+ * instances it by pointing a trigger node at it, in the editor.
+ */
+/** What became of one firing. */
+export type FiringOutcome =
+  | 'STARTED'
+  | 'NO_INSTANCE'
+  | 'UNAUTHENTICATED'
+  | 'CONDITION_DID_NOT_HOLD'
+  | 'UNDECIDED'
+  | 'FAILED';
+
+export interface TriggerFiring {
+  id: string;
+  at: string;
+  outcome: FiringOutcome;
+  detail: string | null;
+  runsStarted: number;
+  /** Which trigger did it; null in a list that is one trigger's own. */
+  triggerId?: string | null;
+  triggerName?: string | null;
+}
+
+/** Said in the words the screen uses, so a row explains itself. */
+export const FIRING_OUTCOME_LABEL: Record<FiringOutcome, string> = {
+  STARTED: 'Started',
+  NO_INSTANCE: 'Nothing instances it',
+  CONDITION_DID_NOT_HOLD: 'Condition said no',
+  UNDECIDED: 'Could not decide',
+  FAILED: 'Failed',
+  UNAUTHENTICATED: 'Not authenticated',
+};
+
+export interface Trigger {
+  id: string;
+  workspaceId: string;
+  name: string;
+  type: TriggerType;
+  connectionId: string | null;
+  action: TriggerAction | null;
+  cron: string | null;
+  timezone: string | null;
+  /** JSON object handed to the runs this starts; null when it says nothing. */
+  payload: string | null;
+  /** Asked of the event before anything starts; null fires on everything. */
+  conditionId: string | null;
+  /** The condition's name, for the list. */
+  conditionName: string | null;
+  /** The most recent thing this trigger did; null when it has never been asked. */
+  lastFiring: TriggerFiring | null;
+  enabled: boolean;
+  /** Where the event comes from, ready to show: the connection, or "Cron". */
+  source: string;
+  /** What the event is, ready to show: "Mention", or the cron expression. */
+  event: string;
+  /** Which icon a node drawn from this starts with; null draws the kind's own. */
+  icon: string | null;
+  /** Where a webhook answers, relative to this installation: `build/finished`. */
+  webhookPath: string | null;
+  /** The shape a webhook's request has to have; anything else is answered 404. */
+  objectId: string | null;
+  /** What that shape is called, for the list. */
+  objectName: string | null;
+  /** How a webhook decides whether its caller may start anything. */
+  authType: WebhookAuthType;
+  authFunctionId: string | null;
+  authFunctionName: string | null;
+}
+
+const TRIGGER_FIELDS =
+  `id workspaceId name type connectionId action cron timezone payload conditionId conditionName enabled source event icon webhookPath objectId objectName authType authFunctionId authFunctionName
+   lastFiring { id at outcome detail runsStarted }`;
+
+const WORKSPACE_TRIGGERS_QUERY = `
+  query WorkspaceTriggers($workspaceId: ID!, $page: Int!, $size: Int!) {
+    workspaceTriggers(workspaceId: $workspaceId, page: $page, size: $size) {
+      content { ${TRIGGER_FIELDS} }
+      page
+      size
+      totalElements
+      totalPages
+    }
+  }
+`;
+
+const CREATE_TRIGGER_MUTATION = `
+  mutation CreateTrigger($input: CreateTriggerInput!) {
+    createTrigger(input: $input) { ${TRIGGER_FIELDS} }
+  }
+`;
+
+const UPDATE_TRIGGER_MUTATION = `
+  mutation UpdateTrigger($id: ID!, $input: UpdateTriggerInput!) {
+    updateTrigger(id: $id, input: $input) { ${TRIGGER_FIELDS} }
+  }
+`;
+
+const SET_ENABLED_MUTATION = `
+  mutation SetTriggerEnabled($id: ID!, $enabled: Boolean!) {
+    setTriggerEnabled(id: $id, enabled: $enabled) { ${TRIGGER_FIELDS} }
+  }
+`;
+
+const DELETE_TRIGGER_MUTATION = `
+  mutation DeleteTrigger($id: ID!) {
+    deleteTrigger(id: $id)
+  }
+`;
+
+/** `page` is 0-based, matching the server. */
+export async function fetchWorkspaceTriggers(workspaceId: string, page: number, size: number): Promise<PageOf<Trigger>> {
+  const data = await graphql<{ workspaceTriggers: PageOf<Trigger> }>(WORKSPACE_TRIGGERS_QUERY, { workspaceId, page, size });
+  return data.workspaceTriggers;
+}
+
+/**
+ * One trigger, by id. What a link from a workflow node opens: the definition may
+ * be on any page of the list, so the page it is on is not worth working out.
+ */
+export async function fetchTrigger(id: string): Promise<Trigger | null> {
+  const data = await graphql<{ trigger: Trigger | null }>(
+    `query TriggerById($id: ID!) { trigger(id: $id) { ${TRIGGER_FIELDS} } }`,
+    { id },
+  );
+  return data.trigger;
+}
+
+export interface CreateTriggerInput {
+  workspaceId: string;
+  name: string;
+  type: TriggerType;
+  connectionId?: string;
+  action?: TriggerAction;
+  cron?: string;
+  timezone?: string;
+  /** JSON object handed to the runs this starts. */
+  payload?: string;
+  /** Asked before anything starts; null asks nothing. */
+  conditionId?: string | null;
+  /** Where a webhook answers, relative to this installation. */
+  webhookPath?: string;
+  /** The shape a webhook's request has to have; null takes the contract off. */
+  objectId?: string | null;
+  authType?: WebhookAuthType;
+  /** The function that authenticates a caller; null when nothing does. */
+  authFunctionId?: string | null;
+}
+
+export async function createTrigger(input: CreateTriggerInput): Promise<Trigger> {
+  const data = await graphql<{ createTrigger: Trigger }>(CREATE_TRIGGER_MUTATION, { input });
+  return data.createTrigger;
+}
+
+export async function updateTrigger(
+  id: string,
+  input: {
+    name: string;
+    connectionId?: string;
+    action?: TriggerAction;
+    cron?: string;
+    timezone?: string;
+    payload?: string;
+    /** Null takes the condition off, so the form can stop asking. */
+    conditionId?: string | null;
+    icon?: string | null;
+    /** Where a webhook answers, relative to this installation. */
+    webhookPath?: string;
+    /** The shape a webhook's request has to have; null takes the contract off. */
+    objectId?: string | null;
+    authType?: WebhookAuthType;
+    /** The function that authenticates a caller; null when nothing does. */
+    authFunctionId?: string | null;
+  },
+): Promise<Trigger> {
+  const data = await graphql<{ updateTrigger: Trigger }>(UPDATE_TRIGGER_MUTATION, { id, input });
+  return data.updateTrigger;
+}
+
+/**
+ * What this trigger has done, newest first — including the firings no run came
+ * of, which is the reason the log exists.
+ */
+export async function fetchTriggerFirings(
+  triggerId: string,
+  page = 0,
+  size = 20,
+): Promise<PageOf<TriggerFiring>> {
+  const data = await graphql<{ triggerFirings: PageOf<TriggerFiring> }>(
+    `query TriggerFirings($triggerId: ID!, $page: Int!, $size: Int!) {
+       triggerFirings(triggerId: $triggerId, page: $page, size: $size) {
+         content { id at outcome detail runsStarted }
+         page size totalElements totalPages
+       }
+     }`,
+    { triggerId, page, size },
+  );
+  return data.triggerFirings;
+}
+
+/**
+ * What every trigger in the workspace has done, newest first.
+ *
+ * The same entries a trigger's own log holds, read the other way round: not
+ * "what did this one do" but "what has happened here", which is the question
+ * somebody has when a workflow did not run and they do not know whose fault
+ * that was.
+ */
+export async function fetchWorkspaceTriggerFirings(
+  workspaceId: string,
+  page = 0,
+  size = 20,
+): Promise<PageOf<TriggerFiring>> {
+  const data = await graphql<{ workspaceTriggerFirings: PageOf<TriggerFiring> }>(
+    `query WorkspaceTriggerFirings($workspaceId: ID!, $page: Int!, $size: Int!) {
+       workspaceTriggerFirings(workspaceId: $workspaceId, page: $page, size: $size) {
+         content { id at outcome detail runsStarted triggerId triggerName }
+         page size totalElements totalPages
+       }
+     }`,
+    { workspaceId, page, size },
+  );
+  return data.workspaceTriggerFirings;
+}
+
+export async function setTriggerEnabled(id: string, enabled: boolean): Promise<Trigger> {
+  const data = await graphql<{ setTriggerEnabled: Trigger }>(SET_ENABLED_MUTATION, { id, enabled });
+  return data.setTriggerEnabled;
+}
+
+export async function deleteTrigger(id: string): Promise<boolean> {
+  const data = await graphql<{ deleteTrigger: boolean }>(DELETE_TRIGGER_MUTATION, { id });
+  return data.deleteTrigger;
+}
+
+/** "INCOMING_CONNECTION" -> "Incoming Connection", as the table shows it. */
+export const TRIGGER_TYPE_LABEL: Record<TriggerType, string> = {
+  INCOMING_CONNECTION: 'Incoming Connection',
+  SCHEDULED: 'Scheduled',
+  WEBHOOK: 'Webhook',
+};
+
+/**
+ * The whole vocabulary, which is not the same as what is wired: only some of
+ * these have anything publishing them. The form asks the server which ones it
+ * can actually deliver — see `fetchSupportedTriggerActions` — so nobody
+ * configures a trigger that is enabled, instanced and silent for ever. This list
+ * is only the order they are offered in.
+ */
+export const TRIGGER_ACTIONS: TriggerAction[] = [
+  'MENTION',
+  'REPLY',
+  'MESSAGE',
+  'ISSUE_CREATED',
+  'ISSUE_UPDATED',
+];
+
+/** What this installation can actually deliver today. */
+export async function fetchSupportedTriggerActions(): Promise<TriggerAction[]> {
+  const data = await graphql<{ supportedTriggerActions: TriggerAction[] }>(
+    `query SupportedTriggerActions { supportedTriggerActions }`,
+    {},
+  );
+  return data.supportedTriggerActions;
+}
+
+export const TRIGGER_ACTION_LABEL: Record<TriggerAction, string> = {
+  MENTION: 'Mention',
+  REPLY: 'Reply',
+  MESSAGE: 'Message',
+  ISSUE_CREATED: 'Issue Created',
+  ISSUE_UPDATED: 'Issue Updated',
+};

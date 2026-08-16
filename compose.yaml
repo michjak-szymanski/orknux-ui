@@ -1,0 +1,26 @@
+# Pinned so container and volume names follow the product, not the directory
+# this happens to be checked out into.
+name: orknux-ui
+
+services:
+  # Node is not installed on the dev machine, so the toolchain runs in a container.
+  #   docker compose up dev      -> http://localhost:5173
+  #   docker compose run --rm dev npm run build
+  dev:
+    image: node:22-bookworm-slim
+    working_dir: /app
+    command: sh -c "npm install --no-fund --no-audit && npm run dev -- --host 0.0.0.0"
+    ports:
+      - "5173:5173"
+    environment:
+      # orknux-server runs on the host, not in this network.
+      ORKNUX_SERVER_URL: http://host.docker.internal:8080
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - .:/app
+      # Keeps the Linux-built dependency tree out of the Windows working copy.
+      - node_modules:/app/node_modules
+
+volumes:
+  node_modules:

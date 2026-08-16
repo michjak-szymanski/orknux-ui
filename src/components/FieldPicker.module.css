@@ -1,0 +1,160 @@
+.box {
+  position: relative;
+  flex: 1 0 0;
+  min-width: 0;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  width: 100%;
+  padding: var(--space-8) var(--space-10);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-size: var(--text-xs);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.trigger:hover,
+.trigger[aria-expanded='true'] {
+  border-color: var(--color-accent-brand);
+}
+
+.chosen {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+/* Which node it came from, quieter than the field itself. */
+.chosenNode {
+  overflow: hidden;
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chosenField {
+  font-family: var(--font-mono);
+  color: var(--color-accent-brand);
+}
+
+.empty {
+  color: var(--color-text-muted);
+}
+
+/* A reference whose source has gone. Visible on purpose. */
+.missing {
+  font-family: var(--font-mono);
+  color: var(--color-danger);
+}
+
+.caret {
+  flex: none;
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+
+.menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: var(--space-10);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-strong, var(--color-border));
+  border-radius: var(--radius-6);
+  box-shadow: 0 12px 24px rgb(0 0 0 / 0.35);
+}
+
+.search {
+  width: 100%;
+  padding: var(--space-6) var(--space-8);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font-family: inherit;
+  font-size: var(--text-xs);
+  color: var(--color-text-primary);
+  outline: none;
+}
+
+.search:focus {
+  border-color: var(--color-accent-brand);
+}
+
+/* Scrolls on its own, so the search box stays put. */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.groupName {
+  margin: 0 0 2px;
+  font-size: var(--text-2xs);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.option {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-8);
+  padding: var(--space-6) var(--space-8);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-4);
+  font-family: inherit;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.option:hover {
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+}
+
+.optionChosen {
+  color: var(--color-accent-brand);
+}
+
+.optionField {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.optionType {
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+}
+
+.note {
+  margin: 0;
+  padding: var(--space-8);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}

@@ -1,0 +1,298 @@
+.titleHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+}
+
+.title {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--text-2xl);
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+/* ---- Filters ---- */
+
+.filterBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  width: 100%;
+}
+
+.searchInput,
+.filter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-12);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.searchInput {
+  flex: 1 0 0;
+  min-width: 0;
+}
+
+.searchInput:focus-within,
+.filter:focus-within {
+  border-color: var(--color-accent-brand);
+}
+
+.searchField {
+  flex: 1 0 0;
+  min-width: 0;
+  background: none;
+  border: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.searchField:focus {
+  outline: none;
+}
+
+.searchField::placeholder {
+  color: var(--color-text-muted);
+}
+
+.filter {
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.filterLabel {
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.filterSelect {
+  padding: 0;
+  background: none;
+  /* The menu the browser drops takes its colour from here, not from the box. */
+  background-color: var(--color-surface);
+  border: 0;
+  font-family: inherit;
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  appearance: none;
+  cursor: pointer;
+}
+
+.filterSelect:focus {
+  outline: none;
+}
+
+.filterSelect option {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+/* The date range shows only its value, so it is not bold. */
+.filterValue {
+  font-weight: 400;
+}
+
+/* ---- Table ---- */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: var(--space-24);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+
+.tableHeader,
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.tableHeader {
+  padding: var(--space-10) var(--space-16);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  letter-spacing: 0.55px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.tableBody {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.row {
+  padding: var(--space-14) var(--space-16);
+  border-top: 1px solid var(--color-border);
+}
+
+.colAction {
+  flex: 1 0 0;
+  min-width: 0;
+  font-weight: 500;
+  font-size: var(--text-md);
+  line-height: 20px;
+  color: var(--color-text-primary);
+}
+
+.colUser {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-8);
+  width: 160px;
+}
+
+.colTimestamp {
+  flex-shrink: 0;
+  width: 180px;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+/* The header's action column starts past the badge. */
+.tableHeader .colAction {
+  padding-left: 42px;
+  font-weight: 500;
+  line-height: normal;
+  color: var(--color-text-muted);
+}
+
+.tableHeader .colUser,
+.tableHeader .colTimestamp {
+  color: var(--color-text-muted);
+}
+
+/* ---- Row pieces ---- */
+
+.badge {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-6);
+}
+
+.workflow {
+  background: var(--color-badge-workflow);
+}
+
+.agent {
+  background: var(--color-badge-agent);
+}
+
+.workspace {
+  background: var(--color-badge-workspace);
+}
+
+.integration {
+  background: var(--color-badge-integration);
+}
+
+.userDot {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 8px;
+  color: var(--color-text-secondary);
+}
+
+.userName {
+  overflow: hidden;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Loading / empty / error ---- */
+
+.notice {
+  margin: 0;
+  padding: var(--space-14) var(--space-16);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.noticeError {
+  color: var(--color-danger);
+}
+
+/*
+ * The icons around a filter are decoration: they take no clicks, and the select
+ * is stretched under the chevron beside it, so clicking the arrow opens the
+ * list instead of hitting the label and doing nothing.
+ */
+.filter {
+  position: relative;
+}
+
+.filter > img {
+  pointer-events: none;
+}
+
+.filterSelect {
+  padding-right: var(--space-16);
+  margin-right: calc(var(--space-16) * -1);
+  cursor: pointer;
+}
+
+/*
+ * Reload now, and reload repeatedly. At the end of the filter row because that is
+ * where the other things that change what is on screen already live.
+ */
+.watch {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-8);
+  margin-left: auto;
+}
+
+.refresh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  cursor: pointer;
+}
+
+.refresh:hover {
+  border-color: var(--color-text-muted);
+}

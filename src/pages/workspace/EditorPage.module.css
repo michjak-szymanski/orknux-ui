@@ -1,0 +1,665 @@
+/*
+ * The tool and skill editors: the content on the left, what it is on the right.
+ * Shared, because the two screens differ only in what is being typed into them.
+ */
+
+.headerBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  width: 100%;
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.crumbLink {
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.crumbLink:hover {
+  color: var(--color-text-secondary);
+}
+
+.crumbSeparator {
+  color: var(--color-text-muted);
+}
+
+.crumbCurrent {
+  color: var(--color-text-secondary);
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.titleGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+.pageTitle {
+  margin: 0;
+  overflow: hidden;
+  font-weight: 700;
+  font-size: var(--text-2xl);
+  color: var(--color-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activeBadge,
+.inactiveBadge {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-6);
+  border-radius: var(--radius-4);
+  font-weight: 600;
+  font-size: var(--text-xs);
+}
+
+.activeBadge {
+  background: var(--color-success-soft);
+  border: 1px solid var(--color-success-solid);
+  color: var(--color-success-solid);
+}
+
+.inactiveBadge {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-12);
+}
+
+.secondaryButton,
+.primaryButton {
+  padding: var(--space-8) var(--space-14);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.secondaryButton {
+  background: none;
+  border: 1px solid var(--color-border);
+}
+
+.primaryButton {
+  padding: var(--space-8) var(--space-16);
+  background: var(--color-accent-brand);
+  border: 0;
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ---- Split ---- */
+
+.split {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-24);
+  width: 100%;
+}
+
+.editorCard {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  overflow: clip;
+}
+
+.editorHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-12) var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.editorTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.formatBadge {
+  padding: var(--space-4) var(--space-8);
+  background: var(--color-surface-raised);
+  border-radius: var(--radius-4);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.codeArea {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 420px;
+  background: var(--color-bg);
+}
+
+/* The line numbers scroll with the code they belong to. */
+.gutter {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: 40px;
+  padding: var(--space-16) 0;
+  overflow: hidden;
+  text-align: center;
+}
+
+.lineNumber {
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  line-height: 20px;
+  color: var(--color-text-muted);
+}
+
+/*
+ * Two layers: a coloured copy of the code, and the textarea on top of it
+ * drawing nothing but its caret and selection. They have to agree on every
+ * metric, so the shared rules live in one place.
+ */
+.codeStack {
+  position: relative;
+  flex: 1 0 0;
+  min-width: 0;
+}
+
+.code,
+.highlight {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: var(--space-16) var(--space-16) var(--space-16) var(--space-12);
+  border: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  line-height: 20px;
+  tab-size: 2;
+  white-space: pre;
+  overflow-wrap: normal;
+}
+
+.highlight {
+  overflow: hidden;
+  color: var(--color-text-primary);
+  pointer-events: none;
+}
+
+.code {
+  background: transparent;
+  color: transparent;
+  caret-color: var(--color-text-primary);
+  overflow: auto;
+  resize: none;
+}
+
+.code:focus {
+  outline: none;
+}
+
+.code::selection {
+  background: rgba(124, 58, 237, 0.35);
+}
+
+/*
+ * Markdown is prose, so it wraps and needs no gutter — but it is still a
+ * coloured copy under a transparent textarea, the same as the function editor.
+ * Every property that decides where a glyph lands is shared between the two, or
+ * the caret drifts away from the text it is meant to be in.
+ */
+.proseStack {
+  position: relative;
+  flex: 1 0 0;
+  min-width: 0;
+  min-height: 420px;
+  background: var(--color-bg);
+}
+
+.prose,
+.proseHighlight {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: var(--space-20);
+  border: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  line-height: 22px;
+  tab-size: 2;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.proseHighlight {
+  overflow: hidden;
+  color: var(--color-text-primary);
+  pointer-events: none;
+}
+
+/*
+ * `code` carries a browser default of `monospace`, which is not the font the
+ * textarea above it is using. Two mono fonts at the same size still advance
+ * differently, so the coloured copy slides away from the caret along the line.
+ * It inherits, like everything else that decides where a glyph lands.
+ */
+.proseHighlight code,
+.highlight code {
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+.prose {
+  background: transparent;
+  color: transparent;
+  caret-color: var(--color-text-primary);
+  overflow: auto;
+  resize: none;
+}
+
+.prose:focus {
+  outline: none;
+}
+
+.prose::selection {
+  background: rgba(124, 58, 237, 0.35);
+}
+
+/*
+ * The markdown palette. Colour only, and no weight or slant: the underlay has
+ * to occupy exactly the same space as the text in the textarea above it, and a
+ * bold run that measures a fraction wider drags the rest of the line out of
+ * alignment with the caret.
+ */
+.mdFrontmatter {
+  color: var(--color-text-muted);
+}
+
+.mdHeading {
+  color: #c084fc;
+}
+
+.mdCode {
+  color: #86efac;
+}
+
+.mdQuote {
+  color: var(--color-text-muted);
+}
+
+.mdBullet {
+  color: #fbbf24;
+}
+
+.mdLink {
+  color: #60a5fa;
+}
+
+.mdBold {
+  color: #f0abfc;
+}
+
+.mdItalic {
+  color: #7dd3fc;
+}
+
+/* ---- The object editor's property table ---- */
+
+/*
+ * A list of name/type pairs, drawn as a table because that is what it is. Both
+ * cells are controls rather than text: an object is edited in place, and a
+ * separate dialog per property would be four clicks to rename a field.
+ */
+.propertyHeader,
+.propertyRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+  width: 100%;
+  padding: var(--space-12) var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.propertyHeader {
+  padding-top: var(--space-12);
+  padding-bottom: var(--space-8);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.propertyNameCol {
+  flex: 1 0 0;
+  min-width: 0;
+}
+
+.propertyTypeCol {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  width: 220px;
+}
+
+.propertyActionCol {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  width: 40px;
+}
+
+/* A property name is read after a dot, so it is shown the way it is written. */
+.propertyName {
+  padding: var(--space-6) var(--space-8);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.propertyName:hover {
+  border-color: var(--color-border);
+}
+
+.propertyName:focus {
+  background: var(--color-bg);
+  border-color: var(--color-accent-brand);
+  outline: none;
+}
+
+/* Drawn as the badge the design shows, but it is the picker. */
+.propertyType {
+  max-width: 100%;
+  padding: var(--space-4) var(--space-8);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.propertyDelete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-4);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.propertyDelete:hover {
+  color: var(--color-danger);
+}
+
+.propertyEmpty {
+  margin: 0;
+  padding: var(--space-16);
+  max-width: 70ch;
+  font-size: var(--text-sm);
+  line-height: 18px;
+  color: var(--color-text-muted);
+}
+
+.addProperty {
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-accent-brand);
+  cursor: pointer;
+}
+
+.addProperty:hover {
+  text-decoration: underline;
+}
+
+/* The badge beside the card's title: what kind of definition this card holds. */
+.editorBadge {
+  padding: var(--space-4) var(--space-8);
+  background: var(--color-border);
+  border-radius: var(--radius-4);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.editorFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-8) var(--space-16);
+  border-top: 1px solid var(--color-border);
+}
+
+.statusLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+}
+
+.indicatorOk {
+  background: var(--color-success-solid);
+}
+
+.indicatorBad {
+  background: var(--color-danger-solid);
+}
+
+.caret {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* ---- Properties ---- */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: var(--space-24);
+  width: 380px;
+  padding: var(--space-20);
+  align-self: flex-start;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+
+.panelSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  width: 100%;
+}
+
+.panelHeading {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+}
+
+.label {
+  font-weight: 500;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.input,
+.textarea {
+  width: 100%;
+  padding: var(--space-10);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.inputMono {
+  font-family: var(--font-mono);
+}
+
+.textarea {
+  min-height: 72px;
+  line-height: 18px;
+  resize: vertical;
+}
+
+.input:focus,
+.textarea:focus {
+  border-color: var(--color-accent-brand);
+  outline: none;
+}
+
+.metadata {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+}
+
+.metadataLabel {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.metadataValue {
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.metadataWho {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.deleteButton {
+  align-self: flex-start;
+  padding: var(--space-8) var(--space-16);
+  background: var(--color-danger-solid);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.deleteButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.saved {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-success-solid);
+}
+
+/*
+ * The same note, sitting in the button row rather than above the editor: it
+ * belongs beside the button that caused it, where somebody who just clicked
+ * Save is already looking. `composes` needs .saved defined first, hence here.
+ */
+.savedInline {
+  composes: saved;
+  align-self: center;
+  white-space: nowrap;
+}
+
+.error,
+.loadError {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-danger);
+}
+
+/* ---- Syntax colours, matching the function editor ---- */
+
+.tokenComment {
+  color: var(--color-text-muted);
+}
+
+.tokenString {
+  color: #86efac;
+}
+
+.tokenNumber {
+  color: #fbbf24;
+}
+
+.tokenKeyword {
+  color: #c084fc;
+}
+
+.tokenCallee {
+  color: #60a5fa;
+}
+
+.tokenProperty {
+  color: #7dd3fc;
+}
