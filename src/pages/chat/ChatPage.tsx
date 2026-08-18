@@ -564,7 +564,7 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
    * the transcript exactly as a typed one does — same chat, same history, and
    * the answer grows on screen while it is still being spoken.
    */
-  async function handleVoiceTurn(text: string): Promise<string> {
+  async function handleVoiceTurn(text: string, onProgress: (soFar: string) => void): Promise<string> {
     if (currentId === null) return '';
 
     setMessages((present) => [...present, { role: 'user', content: text }, { role: 'assistant', content: '' }]);
@@ -581,6 +581,10 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
           grown[last] = { ...grown[last], content: grown[last].content + piece };
           return grown;
         });
+        // The panel reads whole sentences out of this while the rest is still
+        // being written, so it is handed the answer so far rather than the
+        // piece: what it needs to know is how much of it it has already read.
+        onProgress(answer);
       },
       onDone: (millis) => setLastMillis(millis),
       onError: (reason) => {

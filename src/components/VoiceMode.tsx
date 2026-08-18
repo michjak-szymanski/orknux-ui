@@ -21,8 +21,15 @@ export type VoicePhase = 'listening' | 'thinking' | 'speaking';
 
 export interface VoiceModeProps {
   workspaceId: string;
-  /** Sends what was heard and resolves with the answer, to be read back. */
-  onSay: (text: string) => Promise<string>;
+  /**
+   * Sends what was heard and resolves with the answer, to be read back.
+   *
+   * `onProgress` is handed the answer so far, as often as the chat grows it.
+   * Reading only starts on the whole answer means the pause between a question
+   * and the first word is however long the model takes to finish - and a long
+   * answer makes that pause longer, which is exactly backwards.
+   */
+  onSay: (text: string, onProgress: (soFar: string) => void) => Promise<string>;
   onClose: () => void;
 }
 
@@ -37,6 +44,23 @@ const LONGEST_TURN_MS = 30_000;
 
 /** Below this, the circle is still: a room's own noise is not a voice. */
 const VISIBLE_LEVEL = 0.01;
+
+/**
+ * Where the text so far can be cut without reading half a sentence aloud.
+ *
+ * A full stop, question mark or exclamation followed by a space, or the end of
+ * a line. Prose only: nothing here tries to be clever about "Dr. Smith", and
+ * being wrong costs a clause read as two, not a wrong word.
+ */
+const SENTENCE_END = /[.!?…]["')\]]*(?=\s)|\n/g;
+
+/**
+ * Short fragments are not worth a request of their own.
+ *
+ * "Yes." spoken alone, then the rest, sounds like two answers. Anything under
+ * this waits for the sentence after it, unless the answer has finished.
+ */
+const SHORTEST_TO_SPEAK = 24;
 
 export function VoiceMode({ workspaceId, onSay, onClose }: VoiceModeProps) {
   const [phase, setPhase] = useState<VoicePhase>('listening');
@@ -68,6 +92,13 @@ export function VoiceMode({ workspaceId, onSay, onClose }: VoiceModeProps) {
   const stream = useRef<MediaStream | null>(null);
   const recorder = useRef<MediaRecorder | null>(null);
   const audio = useRef<{ element: HTMLAudioElement; url: string } | null>(null);
+  /**
+   * The next turn, held in a ref.
+   *
+   * The reading is defined above the listening and finishes by starting it,
+   * which is a circle the language will not let either side of close directly.
+   */
+  const listenAgain = useRef<() => void>(() => undefined);
   const context = useRef<AudioContext | null>(null);
   const frame = useRef<number | null>(null);
 
@@ -89,6 +120,98 @@ export function VoiceMode({ workspaceId, onSay, onClose }: VoiceModeProps) {
     URL.revokeObjectURL(audio.current.url);
     audio.current = null;
   }, []);
+
+  /*
+   * The reading, which runs a sentence behind the writing.
+   *
+   * `clips` are requests already made, in the order they must be heard; the
+   * drain plays them one at a time and the next is being fetched while the
+   * current one plays. `generation` is what makes an interruption final: a
+   * request that lands after somebody cut in belongs to a turn that is over,
+   * and playing it would be the panel talking over the person.
+   */
+  const clips = useRef<Promise<Blob>[]>([]);
+  const draining = useRef(false);
+  const finished = useRef(false);
+  const generation = useRef(0);
+  /** How much of the answer has been sent to be read. */
+  const read = useRef(0);
+
+  /** Plays one clip and resolves when it has finished, or at once if it cannot. */
+  const play = useCallback(
+    (clip: Blob, mine: number) =>
+      new Promise<void>((done) => {
+        if (!live.current || mine !== generation.current) {
+          done();
+          return;
+        }
+        const url = URL.createObjectURL(clip);
+        const element = new Audio(url);
+        audio.current = { element, url };
+        element.addEventListener('ended', () => done(), { once: true });
+        // A clip that will not play must not stop the ones behind it.
+        element.addEventListener('error', () => done(), { once: true });
+        element.play().catch(() => done());
+      }),
+    [],
+  );
+
+  const drain = useCallback(async () => {
+    if (draining.current) return;
+    draining.current = true;
+    const mine = generation.current;
+
+    while (clips.current.length > 0 && live.current && mine === generation.current) {
+      const next = clips.current.shift();
+      if (next === undefined) break;
+      // A sentence that could not be read is skipped rather than ending the
+      // answer: the rest of it is still worth hearing.
+      const clip = await next.catch(() => null);
+      if (clip === null) continue;
+      await play(clip, mine);
+      hush();
+    }
+
+    draining.current = false;
+    if (!live.current || mine !== generation.current) return;
+    // Nothing left and nothing more coming: the turn is over, so listen again.
+    if (finished.current && clips.current.length === 0) void listenAgain.current();
+  }, [hush, play]);
+
+  /**
+   * Reads whatever whole sentences have arrived since the last time.
+   *
+   * `whole` is the answer so far, always from the beginning, so the offset is
+   * the only state this needs. When the answer is done the remainder goes too,
+   * punctuated or not - the last thing somebody says often is not.
+   */
+  const readOn = useCallback(
+    (whole: string, done: boolean) => {
+      if (!live.current) return;
+      const mine = generation.current;
+      const rest = whole.slice(read.current);
+
+      let upTo = 0;
+      SENTENCE_END.lastIndex = 0;
+      for (let found = SENTENCE_END.exec(rest); found !== null; found = SENTENCE_END.exec(rest)) {
+        upTo = found.index + found[0].length;
+      }
+
+      const piece = (done ? rest : rest.slice(0, upTo)).trim();
+      if (piece === '') return;
+      if (!done && piece.length < SHORTEST_TO_SPEAK) return;
+
+      read.current += done ? rest.length : upTo;
+      clips.current.push(
+        speak(workspaceId, piece).then((clip) => {
+          if (mine !== generation.current) throw new Error('interrupted');
+          return clip;
+        }),
+      );
+      void drain();
+    },
+    [drain, workspaceId],
+  );
 
   /**
    * One turn: listen until the talking stops, then answer and read it back.
@@ -179,7 +302,28 @@ export function VoiceMode({ workspaceId, onSay, onClose }: VoiceModeProps) {
           setHeard(text.trim());
           setError(null);
 
-          const answer = await say.current(text.trim());
+          /*
+           * A turn of its own, so anything left over from the last one - a clip
+           * still arriving, an offset into an answer that is finished with -
+           * belongs to a generation nobody is listening to any more.
+           */
+          generation.current += 1;
+          clips.current = [];
+          read.current = 0;
+          finished.current = false;
+
+          /*
+           * Speaking starts on the first whole sentence, not on the last one.
+           *
+           * The phase changes as soon as there is anything to read, which is
+           * what the circle in the middle is showing; the drain below is
+           * already fetching that sentence while the model writes the next.
+           */
+          const answer = await say.current(text.trim(), (soFar) => {
+            if (!live.current) return;
+            setPhase('speaking');
+            readOn(soFar, false);
+          });
           if (!live.current) return;
           if (answer.trim() === '') {
             void listen();
@@ -187,21 +331,11 @@ export function VoiceMode({ workspaceId, onSay, onClose }: VoiceModeProps) {
           }
 
           setPhase('speaking');
-          const spoken = await speak(workspaceId, answer);
-          if (!live.current) return;
-
-          const url = URL.createObjectURL(spoken);
-          const element = new Audio(url);
-          audio.current = { element, url };
-          element.addEventListener(
-            'ended',
-            () => {
-              hush();
-              void listen();
-            },
-            { once: true },
-          );
-          await element.play();
+          // Whatever is left, punctuated or not: the end of an answer often is
+          // not a sentence.
+          finished.current = true;
+          readOn(answer, true);
+          void drain();
         })
         .catch((cause: unknown) => {
           if (!live.current) return;
@@ -214,13 +348,20 @@ export function VoiceMode({ workspaceId, onSay, onClose }: VoiceModeProps) {
 
     held.start();
     frame.current = requestAnimationFrame(watch);
-  }, [hush, release, workspaceId]);
+  }, [drain, hush, readOn, release, workspaceId]);
+
+  useEffect(() => {
+    listenAgain.current = () => void listen();
+  }, [listen]);
 
   useEffect(() => {
     live.current = true;
     void listen();
     return () => {
       live.current = false;
+      // Nothing that arrives after this belongs to anybody.
+      generation.current += 1;
+      clips.current = [];
       recorder.current?.stop();
       release();
       hush();
@@ -234,6 +375,10 @@ export function VoiceMode({ workspaceId, onSay, onClose }: VoiceModeProps) {
    */
   function interrupt() {
     if (phase === 'speaking') {
+      // The generation moves, so a clip already asked for is not played at
+      // somebody who has started talking again.
+      generation.current += 1;
+      clips.current = [];
       hush();
       void listen();
       return;
