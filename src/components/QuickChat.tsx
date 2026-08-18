@@ -179,6 +179,23 @@ export function QuickChat({ workspacePath }: QuickChatProps) {
   }
 
   /*
+   * A page asking for this panel to open.
+   *
+   * The wand on the function editor sends this. The opener is only asked on a
+   * conversation that has not started: somebody who has already been talking
+   * to the panel is joined, not talked over with a scripted question.
+   */
+  useEffect(() => {
+    function onAsked(event: Event) {
+      const opener = (event as CustomEvent<{ opener?: string }>).detail?.opener;
+      setOpen(true);
+      if (typeof opener === 'string' && said.length === 0) void send(opener);
+    }
+    window.addEventListener('orknux:quick-chat', onAsked);
+    return () => window.removeEventListener('orknux:quick-chat', onAsked);
+  });
+
+  /*
    * The editor settling an offer this panel handed it.
    *
    * Re-bound every render on purpose: `send` closes over the conversation as

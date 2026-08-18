@@ -22,6 +22,7 @@ import type { SessionUser } from '../../api/session';
 import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import codeIcon from '../../assets/code.svg';
 import plusIcon from '../../assets/plus.svg';
+import wandIcon from '../../assets/wand.svg';
 import { VARIABLE_TYPE_LABEL, fetchVariables } from '../../api/variables';
 import type { Variable } from '../../api/variables';
 import { AppShell } from '../../components/AppShell';
@@ -606,6 +607,25 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                   others, so the button would lead somewhere that could not show
                   what it was opened for.
                 */}
+                {/*
+                  Help, offered where the work is. The wand opens the quick
+                  chat; on a conversation that has not started it also asks the
+                  first question, so one click goes from stuck to being helped -
+                  a conversation already under way is joined, not talked over.
+                */}
+                <button
+                  type="button"
+                  className={styles.ghostButton}
+                  onClick={() =>
+                    window.dispatchEvent(
+                      new CustomEvent('orknux:quick-chat', { detail: { opener: 'Can you help with that?' } }),
+                    )
+                  }
+                  aria-label="Ask the assistant for help with this function"
+                  title="Ask the assistant for help"
+                >
+                  <img src={wandIcon} alt="" width={16} height={16} />
+                </button>
                 {!creating && returnType === 'BOOLEAN' && (
                   <button
                     type="button"
