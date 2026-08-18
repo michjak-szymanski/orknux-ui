@@ -39,10 +39,17 @@ between the three parts of the product:
 
 ## Finding things
 
+![The command palette, open on a letter: pages, and the things the workspace
+holds, in one list](/screens/command-palette.png)
+
 The box in the middle of the top bar is the command palette. Open it with your
 Go To shortcut — `Ctrl`/`Cmd` + `K` unless you have changed it in Preferences —
-type a few letters of any page, and press Enter. It knows every page in the
-current workspace as well as the admin ones.
+type a few letters, and press Enter.
+
+It knows every page in the current workspace and the admin ones, and it knows
+what the workspace *holds*: a trigger, a function, an agent, a variable and the
+catalog it is in are all reachable by name. Each row says what kind of thing it
+is, so two things with similar names can be told apart before you press Enter.
 
 ## Your first workflow
 
@@ -56,3 +63,10 @@ current workspace as well as the admin ones.
    still missing — an unset parameter, a node with nothing feeding it.
 5. Enable the workflow. Every run then shows up under **Executions**, with the
    graph, the steps, and what each one passed on.
+
+## Your own preferences
+
+![Preferences: what belongs to you rather than to any workspace](/screens/preferences.png)
+
+Preferences belong to the person signed in rather than to any workspace —
+the theme among them — so they follow you into every workspace you can see.

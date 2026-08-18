@@ -23,6 +23,13 @@ hearing, not for answering.
 The model list shows each model's type, its provider, and what it has been used
 for. Usage over time is charted on the same page.
 
+![A provider on its own page: where it is, how it authenticates, and what it
+said when it was last asked](/screens/model-provider.png)
+
+A provider's page is also where it is tested. The status is the answer to the
+last check, not a guess: a provider with no credential fails the check rather
+than waiting to fail at the first question.
+
 ## Workspace models
 
 Two model choices belong to the workspace rather than to a conversation:
@@ -48,6 +55,31 @@ workflow, where their input comes from the parameters the node is given.
 - **Tools** are things the agent can call, including MCP servers connected to
   the workspace.
 - **Memory** is what a workspace has written down for its agents to read.
+
+![One agent's settings: the model it answers on, its brief, and the catalogs and
+tools it was granted](/screens/agent-settings.png)
+
+## Skills and tools
+
+![The workspace's skills, in the catalogs they are grouped into](/screens/skills.png)
+
+A **skill** is written instruction — how to answer in a thread, when to escalate
+somebody — kept as markdown that opens with a frontmatter header naming it. That
+header is what an agent reads to decide whether the skill applies before it
+reads the rest.
+
+![The skill editor](/screens/skill-editor.png)
+
+Agents are granted whole **catalogs** rather than single skills, so adding a
+skill to a catalog gives it to every agent already holding that catalog.
+
+![The workspace's tools](/screens/tools.png)
+
+A **tool** is JavaScript an agent may call while it answers. Unlike a function,
+which a workflow node calls with arguments it mapped, a tool is offered to the
+model and called if the model decides to.
+
+![The tool editor](/screens/tool-editor.png)
 
 ## Letting an agent drive orknux
 
@@ -89,6 +121,9 @@ thing entirely: those are servers somebody registered for agents to call *out*
 to. This is the way *in*.
 
 ## Integrations
+
+![The workspace's connections and the MCP servers its agents may
+reach](/screens/integrations.png)
 
 **Integrations** holds the workspace's connections — Slack, MCP servers, HTTP
 endpoints. A connection made in the admin section can be marked as the default

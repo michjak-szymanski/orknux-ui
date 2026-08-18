@@ -34,6 +34,42 @@ Each kind can be **inline** — defined in this workflow only — or made from a
 **definition** in the workspace catalogue, which several workflows can share.
 Editing the definition changes every workflow using it.
 
+## The catalogue
+
+A definition made once and used by several workflows lives in the workspace's
+catalogue, down the left of every workspace page.
+
+![The action catalogue: what each action calls, and what it hands
+back](/screens/actions.png)
+
+**Actions** are the calls out — an HTTP request, a message on a connection, a
+function, a wait. Each declares its inputs and outputs, and those are what a
+node pointing at it is offered to map.
+
+![Conditions: the question each one asks, and what it asks it
+of](/screens/conditions.png)
+
+**Conditions** are the questions: a property, a check, and the values to check
+against. A condition node follows one edge or the other on the answer.
+
+![The workspace's functions](/screens/functions.png)
+
+**Functions** are JavaScript called from an action node with the arguments that
+node maps to them.
+
+![The function editor: the source, the parameters it takes, and what it
+returns](/screens/function-editor.png)
+
+A function is written in TypeScript and stored together with the JavaScript
+compiled from it, so what runs is always what was written. Its parameters are
+declared rather than guessed at, and the workspace variables it may read are
+granted one by one — naming a secret is not enough to reach it.
+
+![The objects a workspace has declared](/screens/objects.png)
+
+**Objects** are the shapes that travel between nodes: named fields with types,
+which an object node fills in and later nodes read field by field.
+
 ## Values and references
 
 Every parameter is either **written** or **referenced**. There are no
@@ -64,6 +100,12 @@ Enable the workflow to let its trigger start it. Each run appears in
   what each step passed on;
 - the **Workflow** column, which opens the definition it ran from;
 - the execution id, for matching against logs.
+
+![One run: its summary, and the graph as it ran with each node marked by how it
+went](/screens/execution-detail.png)
+
+Opening a run shows the graph as it ran, each node carrying its own outcome and
+timing, with the log underneath.
 
 Runs are carried out by Temporal, so a run that fails part-way is retried
 according to the workflow's settings rather than silently lost. Administrators

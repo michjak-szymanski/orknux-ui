@@ -7,9 +7,18 @@
  * product while the paragraph beside it is correct. Regenerating has to be one
  * command or it never happens.
  *
- * Run it against a running installation with the demo data in it:
- *
+ *   docker exec orknux-ui-dev-1 npx playwright install --with-deps chromium
+ *   docker exec orknux-ui-dev-1 node scripts/seed-demo.mjs
  *   docker exec orknux-ui-dev-1 node scripts/screenshots.mjs
+ *
+ * The first line is needed once per container: the browser and the system
+ * libraries it needs live in the container's own filesystem, not in the
+ * node_modules volume, so recreating the container takes them with it.
+ *
+ * The seed comes first and is not optional. These pictures used to be taken of
+ * whatever was in the developer's database, which is how the manual ended up
+ * showing a workflow called `dgd`; now the content is built on purpose and this
+ * finds it by name.
  *
  * The credentials are the ones seeded into the development directory in
  * orknux-server's `docker/ldap/bootstrap.ldif` — they are in that repository in
@@ -27,6 +36,8 @@ import { mkdir } from 'node:fs/promises';
 const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
 const USER = process.env.ORKNUX_USER ?? 'alice';
 const PASSWORD = process.env.ORKNUX_PASSWORD ?? 'password';
+/** The workspace the seed builds. Must match `WORKSPACE_NAME` in seed-demo.mjs. */
+const WORKSPACE_NAME = process.env.ORKNUX_DEMO_WORKSPACE ?? 'Acme Support';
 /*
  * `screens` rather than `docs`, which would put the files under the same path
  * as the documentation's own route. A static file wins that race today; a
@@ -34,34 +45,6 @@ const PASSWORD = process.env.ORKNUX_PASSWORD ?? 'password';
  * the docs page rendered as an image request.
  */
 const OUT = new URL('../public/screens/', import.meta.url).pathname;
-
-/**
- * What to photograph, and how to know the page has settled.
- *
- * `waitFor` is a selector that only exists once the data has arrived. Without
- * one every screenshot is a race, and the ones that lose show an empty table —
- * which is exactly the "raw and dull" the pictures are meant to fix.
- */
-const SHOTS = [
-  { name: 'workflows', path: '/workspace/1', waitFor: 'text=Workflows' },
-  /*
-   * The graph, which is the one picture that shows what this product is. It
-   * waits for a node to be on the canvas rather than for the page: React Flow
-   * mounts the canvas empty and fills it a frame later, so a screenshot of the
-   * page alone is a screenshot of a grid.
-   */
-  { name: 'editor', path: '/workspace/1/workflows/3/editor', waitFor: '.react-flow__node' },
-  { name: 'executions', path: '/workspace/1/executions', waitFor: 'text=Executions' },
-  { name: 'models', path: '/workspace/1/models', waitFor: 'text=Available Models' },
-  { name: 'variables', path: '/workspace/1/variables', waitFor: 'text=Variables' },
-  { name: 'agents', path: '/workspace/1/agents', waitFor: 'text=Agents' },
-  { name: 'triggers', path: '/workspace/1/triggers', waitFor: 'text=Triggers' },
-  // The composer, by its label rather than its placeholder: `text=` matches
-  // content, and a placeholder is an attribute, so it never matched at all.
-  { name: 'chat', path: '/chat', waitFor: 'textarea[aria-label="Message"]' },
-  { name: 'doctor', path: '/admin/doctor', waitFor: 'text=Doctor' },
-  { name: 'workspace-settings', path: '/workspace/1/settings', waitFor: 'text=Workspace Settings' },
-];
 
 const browser = await chromium.launch();
 const context = await browser.newContext({
@@ -85,14 +68,203 @@ if (!signedIn.ok()) {
   process.exit(1);
 }
 
+async function gql(query) {
+  const response = await context.request.post(`${BASE}/graphql`, { data: { query } });
+  const body = await response.json();
+  if (body.errors?.length) throw new Error(body.errors[0].message);
+  return body.data;
+}
+
+/*
+ * Everything is found by name, never by id. The seed rebuilds its workspace on
+ * every run, so the ids move; a path with a number in it would photograph the
+ * wrong page a week later, or none at all.
+ */
+const { workspaces } = await gql('{ workspaces(size: 100) { content { id name } } }');
+const workspace = workspaces.content.find((w) => w.name === WORKSPACE_NAME);
+if (!workspace) {
+  console.error(`No workspace called "${WORKSPACE_NAME}". Run scripts/seed-demo.mjs first.`);
+  process.exit(1);
+}
+const ws = workspace.id;
+
+const found = await gql(`{
+  workflows: workspaceWorkflows(workspaceId: "${ws}") { content { id name } }
+  executions: workspaceExecutions(workspaceId: "${ws}") { content { id } }
+  agents: workspaceAgents(workspaceId: "${ws}") { content { id name } }
+  functions: workspaceFunctions(workspaceId: "${ws}") { content { id name } }
+  tools: workspaceTools(workspaceId: "${ws}") { content { id name } }
+  skills: workspaceSkills(workspaceId: "${ws}") { content { id name } }
+  providers: modelProviders(workspaceId: "${ws}") { id name }
+}`);
+
+const byName = (list, name) => list.find((item) => item.name === name) ?? list[0];
+const flagship = byName(found.workflows.content, 'Azure Agent reply for Slack');
+const responder = byName(found.agents.content, 'Support responder');
+const fn = byName(found.functions.content, 'escalationNote');
+const tool = byName(found.tools.content, 'lookupCustomer');
+const skill = byName(found.skills.content, 'When to escalate');
+const run = found.executions.content[0];
+const provider = found.providers[0];
+
+/**
+ * What to photograph.
+ *
+ * `waitFor` is a selector that only exists once the data has arrived. Without
+ * one every screenshot is a race, and the ones that lose show an empty table.
+ * Where no selector is given, the wait is for the page to have some content in
+ * it at all, which is enough for a list that renders its heading with its rows.
+ */
+const SHOTS = [
+  { name: 'workflows', path: `/workspace/${ws}` },
+  /*
+   * The graph, which is the one picture that shows what this product is. It
+   * waits for a node to be on the canvas rather than for the page: React Flow
+   * mounts the canvas empty and fills it a frame later, so a screenshot of the
+   * page alone is a screenshot of a grid. Then it fits the graph in the frame
+   * and selects a node, because an editor photographed with nothing selected
+   * shows an empty properties panel next to it — which is what it looked like
+   * when the manual undersold the product.
+   */
+  { name: 'editor', path: `/workspace/${ws}/workflows/${flagship.id}/editor`, waitFor: '.react-flow__node', editor: true },
+  { name: 'executions', path: `/workspace/${ws}/executions` },
+  run && { name: 'execution-detail', path: `/workspace/${ws}/executions/${run.id}` },
+  { name: 'triggers', path: `/workspace/${ws}/triggers` },
+  { name: 'agents', path: `/workspace/${ws}/agents` },
+  responder && { name: 'agent-settings', path: `/workspace/${ws}/agents/${responder.id}/settings` },
+  { name: 'models', path: `/workspace/${ws}/models` },
+  provider && { name: 'model-provider', path: `/workspace/${ws}/models/providers/${provider.id}` },
+  { name: 'functions', path: `/workspace/${ws}/functions` },
+  fn && { name: 'function-editor', path: `/workspace/${ws}/functions/${fn.id}` },
+  { name: 'tools', path: `/workspace/${ws}/tools` },
+  tool && { name: 'tool-editor', path: `/workspace/${ws}/tools/${tool.id}` },
+  { name: 'skills', path: `/workspace/${ws}/skills` },
+  skill && { name: 'skill-editor', path: `/workspace/${ws}/skills/${skill.id}` },
+  { name: 'actions', path: `/workspace/${ws}/actions` },
+  { name: 'conditions', path: `/workspace/${ws}/conditions` },
+  { name: 'objects', path: `/workspace/${ws}/objects` },
+  { name: 'variables', path: `/workspace/${ws}/variables` },
+  { name: 'integrations', path: `/workspace/${ws}/integrations` },
+  { name: 'audit', path: `/workspace/${ws}/audit` },
+  { name: 'workspace-settings', path: `/workspace/${ws}/settings` },
+  // The composer, by its label rather than its placeholder: `text=` matches
+  // content, and a placeholder is an attribute, so it never matched at all.
+  { name: 'chat', path: '/chat', waitFor: 'textarea[aria-label="Message"]' },
+  {
+    name: 'quick-chat',
+    /*
+     * Photographed over the executions list rather than an empty page: the
+     * panel answers about whatever is on screen, so what is behind it is part
+     * of what it is. And opened with a question already answered, because a
+     * picture of the closed launcher is a picture of a button.
+     */
+    path: `/workspace/${ws}/executions`,
+    prepare: async (page) => {
+      await page.click('button[aria-label="Ask about this page"]');
+      await page.waitForSelector('section[aria-label="Quick chat"]', { timeout: 10_000 });
+      await page.fill('textarea[aria-label="Ask about this page"]', 'Which run failed, and what stopped it?');
+      /*
+       * How much text the panel holds before the answer, so the wait is for it
+       * to grow rather than for a length picked in advance — a short answer is
+       * still an answer, and the first version of this called one a timeout.
+       */
+      const before = await page.evaluate(
+        () => document.querySelector('section[aria-label="Quick chat"]')?.innerText.length ?? 0,
+      );
+      await page.click('section[aria-label="Quick chat"] button[type="submit"]');
+      try {
+        // A real model answers this, so it takes as long as it takes.
+        await page.waitForFunction(
+          (base) => (document.querySelector('section[aria-label="Quick chat"]')?.innerText.length ?? 0) > base + 40,
+          before,
+          { timeout: 90_000 },
+        );
+      } catch {
+        // Answer never came: the question and the panel are still worth showing.
+        // Usually not a failure: the panel keeps its conversation, so a second
+        // run finds this question already answered and nothing grows.
+        console.warn('  quick-chat: the panel did not grow — it may already hold this answer');
+      }
+    },
+  },
+  {
+    name: 'command-palette',
+    /*
+     * Open, with something typed into it. Closed it is a box in the top bar
+     * that the reader has already seen in every other picture here; what the
+     * page is about is the list underneath.
+     */
+    path: `/workspace/${ws}`,
+    prepare: async (page) => {
+      const box = 'input[aria-label="Go to a page"]';
+      await page.click(box);
+      await page.type(box, 's', { delay: 40 });
+      await page.waitForSelector('ul[role="listbox"]', { timeout: 10_000 });
+      await page.waitForTimeout(300);
+    },
+  },
+  { name: 'admin-workspaces', path: '/admin' },
+  {
+    name: 'doctor',
+    path: '/admin/doctor',
+    /*
+     * The one page whose text is changed before it is photographed.
+     *
+     * The attachments check prints the absolute path it resolved, which is the
+     * whole point of the check — and on the machine that takes these pictures
+     * that path is somebody's home directory, which then ships in a public
+     * manual. So the picture shows a placeholder instead.
+     *
+     * It is written down here rather than done by hand to an image afterwards:
+     * a manual that quietly differs from the product is a trap, and this way
+     * the difference is one commented function in the open. Nothing else in
+     * this file changes what a page says.
+     */
+    redact: () => {
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      // The configured value, which is what this installation actually holds —
+      // `orknux.attachments.location` is `data/attachments`. Only where the
+      // working directory happens to be is hidden, and the sentence keeps its
+      // "relative to the working directory" clause honest, which an absolute
+      // placeholder would have contradicted.
+      const placeholder = 'data/attachments';
+      for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+        if (node.nodeValue === null) continue;
+        // Windows or POSIX, as far as the end of the path.
+        node.nodeValue = node.nodeValue.replace(/(?:[A-Za-z]:\\|\/)[^\s,;]*attachments/g, placeholder);
+      }
+    },
+  },
+  { name: 'plugins', path: '/admin/plugins' },
+  { name: 'roles', path: '/admin/roles' },
+  { name: 'monitoring', path: '/admin/monitoring' },
+  { name: 'admin-settings', path: '/admin/settings' },
+  { name: 'preferences', path: '/preferences' },
+].filter(Boolean);
+
+/*
+ * `ORKNUX_ONLY=doctor,chat` takes just those, for when one page has changed and
+ * rewriting thirty other files would be noise in the diff.
+ */
+const only = (process.env.ORKNUX_ONLY ?? '').split(',').map((name) => name.trim()).filter(Boolean);
+const CHOSEN = only.length === 0 ? SHOTS : SHOTS.filter((shot) => only.includes(shot.name));
+if (only.length > 0 && CHOSEN.length === 0) {
+  console.error(`Nothing called ${only.join(', ')}. Names come from the list above.`);
+  process.exit(1);
+}
+
 // The sign-in screen itself, before the session is used — the one page a reader
 // meets before they are anybody.
-const anonymous = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
-const loginPage = await anonymous.newPage();
-await loginPage.goto(`${BASE}/`, { waitUntil: 'networkidle' });
-await loginPage.screenshot({ path: `${OUT}sign-in.png` });
-console.log('sign-in');
-await anonymous.close();
+let taken = 0;
+if (only.length === 0 || only.includes('sign-in')) {
+  const anonymous = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
+  const loginPage = await anonymous.newPage();
+  await loginPage.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  await loginPage.screenshot({ path: `${OUT}sign-in.png` });
+  console.log('sign-in');
+  await anonymous.close();
+  taken += 1;
+}
 
 /*
  * `domcontentloaded` and then the selector, rather than `networkidle`.
@@ -104,18 +276,40 @@ await anonymous.close();
  * and the selector is what says the content arrived.
  */
 let failures = 0;
-for (const shot of SHOTS) {
+for (const shot of CHOSEN) {
   try {
     await page.goto(`${BASE}${shot.path}`, { waitUntil: 'domcontentloaded' });
-    await page.waitForSelector(shot.waitFor, { timeout: 15_000 });
+    if (shot.waitFor) {
+      await page.waitForSelector(shot.waitFor, { timeout: 15_000 });
+    } else {
+      await page.waitForFunction(
+        () => (document.querySelector('main')?.innerText.trim().length ?? 0) > 40,
+        undefined,
+        { timeout: 15_000 },
+      );
+    }
+
+    if (shot.editor) {
+      // Fit the graph to the frame, then select a node so the properties panel
+      // has something in it.
+      const fit = page.locator('.react-flow__controls-fitview');
+      if (await fit.count()) await fit.first().click();
+      await page.waitForTimeout(400);
+      const agentNode = page.locator('.react-flow__node', { hasText: 'Support responder' });
+      const target = (await agentNode.count()) ? agentNode.first() : page.locator('.react-flow__node').first();
+      await target.click();
+    }
+
     // Animations settle, and a refresh already in flight lands.
     await page.waitForTimeout(700);
+    if (shot.prepare) await shot.prepare(page);
+    if (shot.redact) await page.evaluate(shot.redact);
     await page.screenshot({ path: `${OUT}${shot.name}.png` });
+    taken += 1;
     console.log(shot.name);
   } catch (failure) {
-    // One page that will not settle should not cost the other nine. It is
-    // reported and counted, so a run that half worked cannot look like a
-    // run that worked.
+    // One page that will not settle should not cost the others. It is reported
+    // and counted, so a run that half worked cannot look like one that worked.
     failures += 1;
     console.warn(`  ${shot.name}: ${failure.message.split('\n')[0]}`);
   }
@@ -124,7 +318,7 @@ for (const shot of SHOTS) {
 await browser.close();
 
 if (failures > 0) {
-  console.error(`\n${failures} of ${SHOTS.length} could not be taken.`);
+  console.error(`\n${failures} could not be taken; ${taken} written.`);
   process.exit(1);
 }
-console.log('\nWritten to public/screens/');
+console.log(`\n${taken} written to public/screens/`);

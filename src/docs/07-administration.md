@@ -5,10 +5,19 @@ It is offered only to holders of the admin role.
 
 ## Workspaces
 
+![Every workspace on the installation](/screens/admin-workspaces.png)
+
 Create a workspace, rename it, give it a description, and assign the roles whose
-holders may see it. Deleting one takes its contents with it.
+holders may see it.
+
+Deleting one is meant to take its contents with it, and today it refuses when
+any of the workspace's agents is used by a node in a workflow — the workflow
+still points at the agent, so the workspace will not go. Empty the graphs that
+use them, or remove the workflows, and the delete goes through.
 
 ## Roles
+
+![The roles this installation defines, and what each one opens](/screens/roles.png)
 
 A role is what your provider says about somebody — a directory group, or a claim
 from an OIDC provider — mapped once, here, to something this application
@@ -24,6 +33,8 @@ nobody can get back into.
 
 ## Audit logs
 
+![The audit log: who changed what, and when](/screens/audit.png)
+
 There are two, and the difference matters.
 
 - The **organisation audit log** records what happened to the organisation:
@@ -35,6 +46,8 @@ There are two, and the difference matters.
 Both can be filtered by user and by period, and searched.
 
 ## Settings
+
+![The switches that belong to the installation rather than to a workspace](/screens/admin-settings.png)
 
 What this installation allows, for every workspace in it.
 
@@ -53,11 +66,15 @@ from this screen, but not back on where the file has said no.
 
 ## Monitoring
 
+![Monitoring: the health of the service and everything it needs to be up](/screens/monitoring.png)
+
 What is answering and what is not: the server, the database, Temporal, and the
 connections workspaces depend on. A run's underlying Temporal workflow can be
 opened from here and from the run page.
 
 ## Doctor
+
+![Doctor: whether this installation is configured correctly](/screens/doctor.png)
 
 Monitoring asks whether the server can reach the things it needs. Doctor asks
 the other question: **is this installation configured correctly?**
@@ -70,6 +87,8 @@ already stored under it, how sign-in is configured, and the schema version, and
 says which of them is wrong rather than that something is.
 
 ## Plugins
+
+![The plugins loaded into this installation](/screens/plugins.png)
 
 JavaScript loaded into the sandbox to give workflows functions the platform does
 not ship. A plugin can be uploaded, fetched from a URL, or written from the
