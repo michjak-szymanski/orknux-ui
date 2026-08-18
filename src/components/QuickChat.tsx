@@ -3,6 +3,8 @@ import type { FormEvent, KeyboardEvent } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { askQuickChat } from '../api/quickChat';
+import type { QuickChatSuggestion } from '../api/quickChat';
+import { CodeSuggestion } from './CodeSuggestion';
 import type { QuickChatTurn } from '../api/quickChat';
 import { fetchWorkspace } from '../api/workspaces';
 import botIcon from '../assets/bot.svg';
@@ -70,6 +72,16 @@ export function QuickChat({ workspacePath }: QuickChatProps) {
   const [said, setSaid] = useState<QuickChatTurn[]>([]);
   const [draft, setDraft] = useState('');
   const [asking, setAsking] = useState(false);
+  /*
+   * The changes offered, by the turn each was offered in.
+   *
+   * Beside the conversation rather than in it: a turn is text, and this is a
+   * thing with two buttons whose answer goes back into the conversation as the
+   * next thing said. Kept after it has been answered, because a card that
+   * disappears the moment it is accepted leaves somebody scrolling back for
+   * what they just agreed to.
+   */
+  const [offers, setOffers] = useState<Record<number, QuickChatSuggestion>>({});
   const [error, setError] = useState<string | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -114,10 +126,23 @@ export function QuickChat({ workspacePath }: QuickChatProps) {
     event.preventDefault();
     const question = draft.trim();
     if (question === '' || asking || workspaceId === undefined) return;
+    setDraft('');
+    await send(question);
+  }
+
+  /**
+   * One turn, from wherever it came.
+   *
+   * Accepting or rejecting a change is a thing said in the conversation, not a
+   * side channel: the model is told in the same place it is told everything
+   * else, so its next answer is about what actually happened rather than about
+   * what it offered.
+   */
+  async function send(question: string) {
+    if (asking || workspaceId === undefined) return;
 
     const conversation: QuickChatTurn[] = [...said, { role: 'user', content: question }];
     setSaid(conversation);
-    setDraft('');
     setAsking(true);
     setError(null);
     try {
@@ -128,7 +153,12 @@ export function QuickChat({ workspacePath }: QuickChatProps) {
         label: labelFor(pathname),
         path: pathname,
       });
-      setSaid([...conversation, { role: 'assistant', content: answer }]);
+      const grown: QuickChatTurn[] = [...conversation, { role: 'assistant', content: answer.answer }];
+      setSaid(grown);
+      if (answer.suggestion !== undefined) {
+        const suggestion = answer.suggestion;
+        setOffers((held) => ({ ...held, [grown.length - 1]: suggestion }));
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'That could not be answered.');
     } finally {
@@ -175,6 +205,10 @@ export function QuickChat({ workspacePath }: QuickChatProps) {
               ) : (
                 <div key={index} className={styles.answered}>
                   <Markdown>{turn.content}</Markdown>
+                  {/* Under the answer that offered it, where it was explained. */}
+                  {offers[index] !== undefined && (
+                    <CodeSuggestion suggestion={offers[index]} onSettled={(detail) => void send(detail)} />
+                  )}
                 </div>
               ),
             )}

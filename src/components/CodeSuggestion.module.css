@@ -1,0 +1,137 @@
+/*
+ * A change offered, in a panel three hundred pixels wide.
+ *
+ * Unified rather than side by side: two columns of code in this width would be
+ * two columns of nothing readable. The marks in the gutter are the same ones a
+ * patch uses, so it reads as what it is.
+ */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  margin: var(--space-8) 0;
+  padding: var(--space-10);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+
+.name {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.count {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.note {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.loading {
+  margin: var(--space-8) 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* Its own scroll, so a long line moves the diff and never the panel. */
+.diff {
+  display: flex;
+  flex-direction: column;
+  max-height: 320px;
+  margin: 0;
+  padding: var(--space-8);
+  overflow: auto;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+}
+
+.diff code {
+  white-space: pre;
+}
+
+.same {
+  color: var(--color-text-secondary);
+}
+
+.added {
+  color: var(--color-accent-brand);
+}
+
+.removed {
+  color: var(--color-danger);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--color-danger) 40%, transparent);
+}
+
+.failed {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+}
+
+.buttons {
+  display: flex;
+  gap: var(--space-8);
+}
+
+.accept,
+.reject {
+  flex: 1 1 0;
+  padding: var(--space-6) var(--space-10);
+  border-radius: var(--radius-4);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.accept {
+  background: var(--color-accent-brand);
+  border: 1px solid var(--color-accent-brand);
+  /* The same pairing every filled button in the dialogs uses. */
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.reject {
+  background: none;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.accept:disabled,
+.reject:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.accepted,
+.rejected {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.accepted {
+  color: var(--color-accent-brand);
+}
+
+.rejected {
+  color: var(--color-text-muted);
+}

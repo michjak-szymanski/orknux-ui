@@ -17,6 +17,26 @@ export interface QuickChatPage {
 }
 
 /**
+ * A change the assistant is offering for a function's code.
+ *
+ * Beside the answer rather than inside it: it is not prose, and the panel draws
+ * it against what the function says now with an accept and a reject under it.
+ * Nothing has been saved when this arrives — that is what the accept is for.
+ */
+export interface QuickChatSuggestion {
+  functionId: string;
+  /** What the function is called, for the line above the diff. */
+  function: string;
+  note: string | null;
+  code: string;
+}
+
+export interface QuickChatAnswer {
+  answer: string;
+  suggestion?: QuickChatSuggestion;
+}
+
+/**
  * Asks the quick chat.
  *
  * REST rather than GraphQL to sit beside the other things a chat needs, and
@@ -27,7 +47,7 @@ export async function askQuickChat(
   workspaceId: string,
   messages: QuickChatTurn[],
   page: QuickChatPage,
-): Promise<string> {
+): Promise<QuickChatAnswer> {
   const answer = await fetch(`/api/workspaces/${workspaceId}/quick-chat`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -35,7 +55,9 @@ export async function askQuickChat(
     credentials: 'include',
   });
 
-  const said = (await answer.json().catch(() => null)) as { answer?: string; error?: string } | null;
+  const said = (await answer.json().catch(() => null)) as
+    | { answer?: string; error?: string; suggestion?: QuickChatSuggestion }
+    | null;
   if (!answer.ok) throw new Error(said?.error ?? 'That could not be answered.');
-  return said?.answer ?? '';
+  return { answer: said?.answer ?? '', suggestion: said?.suggestion };
 }

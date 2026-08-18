@@ -212,6 +212,41 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
       });
   }, [functionId]);
 
+  /*
+   * Somebody accepted a change to this function in the panel beside it.
+   *
+   * The page is holding the version from before, and its next save would put
+   * that back - so it reloads. Only for this function: the panel can be used
+   * anywhere, and another function being changed is none of this page's
+   * business.
+   */
+  useEffect(() => {
+    function onSaved(event: Event) {
+      const saved = (event as CustomEvent<{ id: string }>).detail;
+      if (saved?.id !== functionId) return;
+      synced.current = false;
+      printed.current = null;
+      fetchFunction(functionId)
+        .then((found) => {
+          if (found === null) return;
+          setFn(found);
+          setName(found.name);
+          setDescription(found.description ?? '');
+          setSource(found.typescript ?? found.source);
+          setReturnType(found.returnType);
+          setReturnObjectId(found.returnObjectId);
+          setParams(found.params);
+          setExternals(found.externals.map((external) => external.variableId));
+          setSaved(false);
+          setStatus({ ok: true, message: 'Reloaded — the change was accepted.' });
+        })
+        .catch(() => undefined);
+    }
+
+    window.addEventListener('orknux:function-saved', onSaved);
+    return () => window.removeEventListener('orknux:function-saved', onSaved);
+  }, [functionId]);
+
   /**
    * The function's parameter list, as TypeScript would write it.
    *
