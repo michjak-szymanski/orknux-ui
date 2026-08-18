@@ -10,7 +10,7 @@
   max-width: 80ch;
   font-size: var(--text-base);
   line-height: 22px;
-  color: var(--color-text-primary);
+  color: var(--color-text-body);
 }
 
 /* The first and last things said should not push the bubble around. */
