@@ -126,3 +126,13 @@ export const PROPERTY_KIND_LABEL: Record<PropertyKind, string> = {
   OBJECT: 'object',
   ARRAY: 'array',
 };
+
+/**
+ * What a picker holds while an object is being made rather than chosen.
+ *
+ * The same trick as NEW_FUNCTION: a stored id is a number the server printed, so
+ * a word can never collide with one. An object is created from a name and a
+ * description alone - which is exactly what the Objects list asks for before it
+ * opens the editor - so a form can make one without leaving the field.
+ */
+export const NEW_OBJECT = 'new';

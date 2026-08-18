@@ -20,7 +20,7 @@ import type {
   ConnectionActionKind,
   MessageTarget,
 } from '../api/actions';
-import { fetchWorkspaceConditions } from '../api/conditions';
+import { NEW_CONDITION, fetchWorkspaceConditions } from '../api/conditions';
 import type { Condition } from '../api/conditions';
 import {
   NEW_FUNCTION,
@@ -33,6 +33,8 @@ import type { WorkspaceFunction } from '../api/functions';
 import { fetchWorkspaceConnections } from '../api/integrations';
 import type { WorkspaceConnection } from '../api/integrations';
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
+import { ConditionDialog } from './ConditionDialog';
+import { DefinitionPicker } from './DefinitionPicker';
 import { IconField } from './IconField';
 import styles from './Dialog.module.css';
 
@@ -47,6 +49,17 @@ export interface ActionDialogProps {
 }
 
 const FUNCTION_PAGE_SIZE = 100;
+
+/*
+ * The rows that make a definition instead of choosing one.
+ *
+ * Held still rather than written into the JSX, because the picker treats a new
+ * row object as a new list and puts its cursor back to the top - which, from a
+ * form that re-renders on every keystroke, would be a picker nobody can arrow
+ * down through.
+ */
+const NEW_FUNCTION_ROW = { value: NEW_FUNCTION, label: '+ New function' };
+const NEW_CONDITION_ROW = { value: NEW_CONDITION, label: '+ New condition' };
 
 /**
  * Create Action, and the same form again for editing one.
@@ -70,6 +83,10 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
   const [content, setContent] = useState('');
   const [target, setTarget] = useState<MessageTarget>('CHANNEL');
   const [targetName, setTargetName] = useState('');
+  const [emailTo, setEmailTo] = useState('');
+  const [emailCc, setEmailCc] = useState('');
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailReplyTo, setEmailReplyTo] = useState('');
   const [url, setUrl] = useState('');
   const [method, setMethod] = useState('GET');
   const [headers, setHeaders] = useState('');
@@ -95,6 +112,15 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
   const [conditions, setConditions] = useState<Condition[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * Whether Create Condition is open on top of this dialog.
+   *
+   * A condition is a property, a check and a list of values, so there is nothing
+   * to be gained from asking for it in a corner of this form the way a function's
+   * name is asked for - the dialog that asks properly already exists, and it
+   * comes back with something this picker can point at.
+   */
+  const [makingCondition, setMakingCondition] = useState(false);
 
   const editing = action !== null;
 
@@ -111,6 +137,10 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
       setContent(action?.content ?? '');
       setTarget(action?.target ?? 'CHANNEL');
       setTargetName(action?.targetName ?? '');
+      setEmailTo(action?.emailTo ?? '');
+      setEmailCc(action?.emailCc ?? '');
+      setEmailSubject(action?.emailSubject ?? '');
+      setEmailReplyTo(action?.emailReplyTo ?? '');
       setUrl(action?.url ?? '');
       setMethod(action?.method ?? 'GET');
       setHeaders(action?.headers ?? '');
@@ -150,9 +180,46 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
       .catch(() => setConditions([]));
   }, [open, workspaceId]);
 
+  /**
+   * The connections a mail may go through, which is the mail servers and nothing
+   * else. Offering a Slack connection here would save cleanly and be refused by
+   * the server, which is a slower way to learn the same thing.
+   */
+  const mailConnections = useMemo(
+    () => connections.filter((candidate) => candidate.type === 'SMTP'),
+    [connections],
+  );
+
   const chosenFunction = useMemo(
     () => functions.find((candidate) => candidate.id === functionId) ?? null,
     [functions, functionId],
+  );
+
+  /*
+   * What each picker offers, with a second line saying which one this is.
+   *
+   * The hint is searched alongside the name, so a function can be found by an
+   * argument it takes and a condition by what it asks - which is how somebody
+   * who has forgotten the name still knows the one they mean.
+   */
+  const connectionOptions = useMemo(
+    () => connections.map((held) => ({ value: held.id, label: held.name, hint: held.effectiveUrl })),
+    [connections],
+  );
+
+  const mailConnectionOptions = useMemo(
+    () => mailConnections.map((held) => ({ value: held.id, label: held.name, hint: held.effectiveUrl })),
+    [mailConnections],
+  );
+
+  const functionOptions = useMemo(
+    () => functions.map((held) => ({ value: held.id, label: held.name, hint: held.signature })),
+    [functions],
+  );
+
+  const conditionOptions = useMemo(
+    () => conditions.map((held) => ({ value: held.id, label: held.name, hint: held.description })),
+    [conditions],
   );
 
   // The arguments to map are the chosen function's, in the order it takes them.
@@ -179,10 +246,21 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
     setSubtype(SUBTYPES_BY_TYPE[next][0]);
   }
 
+  /**
+   * Whether the connection picked is one this subtype can use.
+   *
+   * The picker remembers what was chosen when the subtype changes, so switching
+   * from a Slack send to a mail leaves a Slack connection selected against a
+   * field that no longer offers it.
+   */
+  const connectionUsable =
+    connectionId !== '' &&
+    (subtype !== 'SEND_EMAIL' || mailConnections.some((candidate) => candidate.id === connectionId));
+
   const complete =
     name.trim() !== '' &&
-    (subtype === 'OUTGOING_CONNECTION'
-      ? connectionId !== ''
+    (subtype === 'OUTGOING_CONNECTION' || subtype === 'SEND_EMAIL'
+      ? connectionUsable
       : subtype === 'HTTP_REQUEST'
         ? url.trim() !== ''
         : subtype === 'FUNCTION'
@@ -218,11 +296,17 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
       const settings = {
         name: name.trim(),
         subtype,
-        connectionId: subtype === 'OUTGOING_CONNECTION' ? connectionId : null,
+        connectionId: subtype === 'OUTGOING_CONNECTION' || subtype === 'SEND_EMAIL' ? connectionId : null,
         connectionAction: subtype === 'OUTGOING_CONNECTION' ? connectionAction : null,
-        content: subtype === 'OUTGOING_CONNECTION' ? content : null,
+        // A mail's body is the same column a message's text is, which is why one
+        // field feeds both.
+        content: subtype === 'OUTGOING_CONNECTION' || subtype === 'SEND_EMAIL' ? content : null,
         target: subtype === 'OUTGOING_CONNECTION' ? target : null,
         targetName: subtype === 'OUTGOING_CONNECTION' ? targetName : null,
+        emailTo: subtype === 'SEND_EMAIL' ? emailTo : null,
+        emailCc: subtype === 'SEND_EMAIL' ? emailCc : null,
+        emailSubject: subtype === 'SEND_EMAIL' ? emailSubject : null,
+        emailReplyTo: subtype === 'SEND_EMAIL' ? emailReplyTo : null,
         url: subtype === 'HTTP_REQUEST' ? url.trim() : null,
         method: subtype === 'HTTP_REQUEST' ? method : null,
         headers: subtype === 'HTTP_REQUEST' ? headers : null,
@@ -352,25 +436,24 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                 <label className={styles.label} htmlFor="action-connection">
                   Connection
                 </label>
-                <div className={styles.inputWrapper}>
-                  <select
-                    id="action-connection"
-                    className={`${styles.input} ${styles.select}`}
-                    value={connectionId}
-                    onChange={(event) => setConnectionId(event.target.value)}
-                    required
-                  >
-                    <option value="" disabled>
-                      Select connection...
-                    </option>
-                    {connections.map((connection) => (
-                      <option key={connection.id} value={connection.id}>
-                        {connection.name}
-                      </option>
-                    ))}
-                  </select>
-                  <img src={chevronDown12Icon} alt="" width={12} height={12} />
-                </div>
+                <DefinitionPicker
+                  id="action-connection"
+                  value={connectionId}
+                  options={connectionOptions}
+                  onChoose={setConnectionId}
+                  placeholder="Select connection…"
+                  searchPlaceholder="Search connections…"
+                />
+                {/* Nothing to make from here: a connection is a URL, a token and a
+                    handshake with the service, none of which can be got from a
+                    name - so this says where they are instead of offering a row
+                    that would only lead to a half-made one. */}
+                {connections.length === 0 && (
+                  <p className={styles.fieldHint}>
+                    None set up yet. Connections carry credentials, so they are added under the
+                    workspace&apos;s Integrations and chosen here afterwards.
+                  </p>
+                )}
               </div>
 
               <div className={styles.field}>
@@ -448,6 +531,120 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
             </>
           )}
 
+          {subtype === 'SEND_EMAIL' && (
+            <>
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="action-mail-connection">
+                  Mail Server
+                </label>
+                {/* Nothing to make from here: a mail server is a host, a port and
+                    credentials, none of which can be got from a name - so this
+                    says where they are set up instead. */}
+                <DefinitionPicker
+                  id="action-mail-connection"
+                  value={connectionUsable ? connectionId : ''}
+                  options={mailConnectionOptions}
+                  onChoose={setConnectionId}
+                  placeholder={
+                    mailConnections.length === 0
+                      ? 'No mail connection in this workspace'
+                      : 'Select connection…'
+                  }
+                  searchPlaceholder="Search mail servers…"
+                />
+                <p className={styles.fieldHint}>
+                  An SMTP connection from this workspace&apos;s integrations. The from-address is
+                  the connection&apos;s, so every mail sent through it agrees about who it is from.
+                </p>
+              </div>
+
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="action-mail-to">
+                  To
+                </label>
+                <div className={styles.inputWrapper}>
+                  <input
+                    id="action-mail-to"
+                    className={styles.input}
+                    type="text"
+                    placeholder="someone@example.com, someone-else@example.com"
+                    value={emailTo}
+                    onChange={(event) => setEmailTo(event.target.value)}
+                  />
+                </div>
+                <p className={styles.fieldHint}>
+                  Sent exactly as written. Leave it empty and each node says who the mail goes to.
+                </p>
+              </div>
+
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="action-mail-subject">
+                  Subject
+                </label>
+                <div className={styles.inputWrapper}>
+                  <input
+                    id="action-mail-subject"
+                    className={styles.input}
+                    type="text"
+                    placeholder="Your request has been approved"
+                    value={emailSubject}
+                    onChange={(event) => setEmailSubject(event.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="action-mail-body">
+                  Body
+                </label>
+                <div className={`${styles.inputWrapper} ${styles.inputWrapperTall}`}>
+                  <textarea
+                    id="action-mail-body"
+                    className={`${styles.input} ${styles.textarea}`}
+                    placeholder="Your request has been approved."
+                    value={content}
+                    onChange={(event) => setContent(event.target.value)}
+                  />
+                </div>
+                <p className={styles.fieldHint}>
+                  Plain text. Leave it empty and each node says what the mail says.
+                </p>
+              </div>
+
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="action-mail-cc">
+                  Cc
+                </label>
+                <div className={styles.inputWrapper}>
+                  <input
+                    id="action-mail-cc"
+                    className={styles.input}
+                    type="text"
+                    placeholder="Optional"
+                    value={emailCc}
+                    onChange={(event) => setEmailCc(event.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="action-mail-reply-to">
+                  Reply To
+                </label>
+                <div className={styles.inputWrapper}>
+                  <input
+                    id="action-mail-reply-to"
+                    className={styles.input}
+                    type="text"
+                    placeholder="Optional; answers go to the from-address otherwise"
+                    value={emailReplyTo}
+                    onChange={(event) => setEmailReplyTo(event.target.value)}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
           {subtype === 'HTTP_REQUEST' && (
             <>
               <div className={styles.field}>
@@ -511,29 +708,18 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                 <label className={styles.label} htmlFor="action-function">
                   Function
                 </label>
-                <div className={styles.inputWrapper}>
-                  <select
-                    id="action-function"
-                    className={`${styles.input} ${styles.select}`}
-                    value={functionId}
-                    onChange={(event) => setFunctionId(event.target.value)}
-                    required
-                  >
-                    <option value="" disabled>
-                      Select function...
-                    </option>
-                    {/* Above the list rather than under it: a workspace's functions
-                        fill a hundred rows, and the way to make one should not be
-                        the row you have to scroll to find. */}
-                    <option value={NEW_FUNCTION}>+ New function</option>
-                    {functions.map((candidate) => (
-                      <option key={candidate.id} value={candidate.id}>
-                        {candidate.name}
-                      </option>
-                    ))}
-                  </select>
-                  <img src={chevronDown12Icon} alt="" width={12} height={12} />
-                </div>
+                {/* The way to make one sits above the list and outlasts the search:
+                    a workspace's functions fill a hundred rows, and typing a name
+                    that matches none of them is exactly when it is wanted. */}
+                <DefinitionPicker
+                  id="action-function"
+                  value={functionId}
+                  options={functionOptions}
+                  onChoose={setFunctionId}
+                  placeholder="Select function…"
+                  searchPlaceholder="Search functions…"
+                  create={NEW_FUNCTION_ROW}
+                />
                 {functionId === NEW_FUNCTION && (
                   <>
                     <div className={styles.inputWrapper}>
@@ -598,26 +784,25 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
               <label className={styles.label} htmlFor="action-saved-condition">
                 Condition
               </label>
-              <div className={styles.inputWrapper}>
-                <select
-                  id="action-saved-condition"
-                  className={`${styles.input} ${styles.select}`}
-                  value={conditionId}
-                  onChange={(event) => setConditionId(event.target.value)}
-                  required
-                >
-                  <option value="" disabled>
-                    Select condition...
-                  </option>
-                  {conditions.map((candidate) => (
-                    <option key={candidate.id} value={candidate.id}>
-                      {candidate.name}
-                    </option>
-                  ))}
-                </select>
-                <img src={chevronDown12Icon} alt="" width={12} height={12} />
-              </div>
-              <p className={styles.fieldHint}>Select a condition defined in Conditions</p>
+              <DefinitionPicker
+                id="action-saved-condition"
+                value={conditionId}
+                options={conditionOptions}
+                onChoose={(picked) => {
+                  // The row is an instruction rather than an answer: nothing is
+                  // stored until the dialog it opens comes back with a real id.
+                  if (picked === NEW_CONDITION) setMakingCondition(true);
+                  else setConditionId(picked);
+                }}
+                placeholder="Select condition…"
+                searchPlaceholder="Search conditions…"
+                create={NEW_CONDITION_ROW}
+              />
+              <p className={styles.fieldHint}>
+                {conditions.length === 0
+                  ? 'None defined yet. Make one here and this action waits on it.'
+                  : 'Select a condition defined in Conditions, or make one here.'}
+              </p>
             </div>
           )}
 
@@ -738,6 +923,29 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
           </button>
         </div>
       </form>
+
+      {/*
+        Beside the form rather than inside it, and only while it is open.
+        A form nested in a form is not something a browser will keep apart: the
+        inner dialog's submit would bubble into this one's handler and save the
+        action somebody is still filling in.
+      */}
+      {makingCondition && (
+        <ConditionDialog
+          open
+          workspaceId={workspaceId}
+          condition={null}
+          onClose={() => setMakingCondition(false)}
+          onSaved={(made) => {
+            // Into this dialog's own list as well as into the field: the picker
+            // has to be able to show what was just chosen, and nothing is going
+            // to fetch the conditions again while this stays open.
+            setConditions((current) => [...current, made]);
+            setConditionId(made.id);
+            setMakingCondition(false);
+          }}
+        />
+      )}
     </dialog>
   );
 }

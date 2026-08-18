@@ -1,0 +1,156 @@
+/*
+ * A searchable picker wearing the clothes of the select it replaces.
+ *
+ * Its own stylesheet rather than class names handed in by the form around it:
+ * this stands in a modal painted from Dialog.module.css and in a settings card
+ * painted from its own page, and a look described twice in two places is a look
+ * that eventually differs.
+ */
+.picker {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.current {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+  min-height: 38px;
+  padding: 0 var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font: inherit;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.current:hover:not(:disabled) {
+  border-color: var(--color-text-muted);
+}
+
+/* The same ring the fields beside it get, so one focused control looks like
+   the next. */
+.current:focus-visible,
+.currentOpen {
+  outline: none;
+  border-color: var(--color-accent-brand);
+}
+
+.current:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* The chosen name, cut off rather than pushing the chevron out of the box. */
+.chosen {
+  flex: 1 0 0;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.placeholder {
+  color: var(--color-text-muted);
+}
+
+/*
+ * Over the page rather than in the flow: this sits in a column of fields, and a
+ * list that pushed them down would move the button somebody is about to press.
+ */
+.menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 260px;
+  margin-top: var(--space-4);
+  padding: var(--space-8);
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  box-shadow: var(--shadow-modal);
+}
+
+.search {
+  margin-bottom: var(--space-4);
+  padding: var(--space-8) var(--space-10);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.search:focus {
+  outline: none;
+  border-color: var(--color-accent-brand);
+}
+
+.option {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-8);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-4);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.optionLabel {
+  overflow: hidden;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.optionHint {
+  overflow: hidden;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* The way to make one reads as an offer rather than as another name in the list. */
+.optionCreate .optionLabel {
+  color: var(--color-accent-brand);
+}
+
+.option:hover {
+  background: var(--color-surface-raised);
+}
+
+/*
+ * The row the arrows are on.
+ *
+ * The same treatment as hover, because they are the same thing said two ways:
+ * a hand and a keyboard should never disagree about which row is next.
+ */
+.optionAt {
+  background: var(--color-surface-raised);
+  outline: 1px solid var(--color-accent-brand);
+}
+
+.notice {
+  margin: 0;
+  padding: var(--space-8);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}

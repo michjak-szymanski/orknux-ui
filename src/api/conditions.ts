@@ -219,3 +219,14 @@ export function valuesLabel(check: ConditionCheck | null): string | null {
 export function composite(type: ConditionType): boolean {
   return type === 'ANY_OF' || type === 'ALL_OF';
 }
+
+/**
+ * What a picker holds while a condition is being made rather than chosen.
+ *
+ * The same trick as NEW_FUNCTION, and for the same reason: a stored id is a
+ * number the server printed, so a word can never collide with one. What it means
+ * is the form's business - here it opens a Create Condition dialog on top of the
+ * form, because a condition is more than a name and there is already a dialog
+ * that asks for the rest.
+ */
+export const NEW_CONDITION = 'new';

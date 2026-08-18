@@ -6,6 +6,7 @@ import {
   CHECK_LABEL,
   CONDITION_TYPES,
   CONDITION_TYPE_LABEL,
+  NEW_CONDITION,
   PROPERTIES_BY_TYPE,
   PROPERTY_LABEL,
   composite,
@@ -26,6 +27,7 @@ import {
 } from '../api/functions';
 import type { WorkspaceFunction } from '../api/functions';
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
+import { DefinitionPicker } from './DefinitionPicker';
 import { IconField } from './IconField';
 import styles from './Dialog.module.css';
 
@@ -49,6 +51,17 @@ export interface ConditionDialogProps {
 }
 
 const PAGE_SIZE = 100;
+
+/*
+ * The rows that make a definition instead of choosing one.
+ *
+ * Held still rather than written into the JSX, because the picker treats a new
+ * row object as a new list and puts its cursor back to the top - which, from a
+ * form that re-renders on every keystroke, would be a picker nobody can arrow
+ * down through.
+ */
+const NEW_FUNCTION_ROW = { value: NEW_FUNCTION, label: '+ New function' };
+const NEW_CONDITION_ROW = { value: NEW_CONDITION, label: '+ New condition' };
 
 /**
  * Create Condition, and the same form for editing one.
@@ -93,6 +106,15 @@ export function ConditionDialog({
   const [others, setOthers] = useState<Condition[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * Whether a second Create Condition is open on top of this one.
+   *
+   * Only ever reached from the member list of a combining condition, where what
+   * is being chosen is a condition - so what makes one is this same dialog. It
+   * is rendered only while open, which is what keeps the recursion finite: a
+   * closed one renders nothing, so nothing renders another.
+   */
+  const [makingMember, setMakingMember] = useState(false);
 
   const editing = condition !== null;
 
@@ -156,6 +178,26 @@ export function ConditionDialog({
   const properties = PROPERTIES_BY_TYPE[type];
   const checks = useMemo(() => (isComposite ? [] : CHECKS_BY_PROPERTY[property]), [isComposite, property]);
   const label = valuesLabel(isComposite || type === 'FUNCTION' ? null : check);
+
+  /*
+   * What each picker offers, with a second line saying which one this is.
+   *
+   * The hint is searched alongside the name, so a function can be found by an
+   * argument it takes and a condition by what it asks - which is how somebody
+   * who has forgotten the name still knows the one they mean.
+   */
+  const functionOptions = useMemo(
+    () => functions.map((held) => ({ value: held.id, label: held.name, hint: held.signature })),
+    [functions],
+  );
+
+  const memberOptions = useMemo(
+    () =>
+      others
+        .filter((other) => !members.includes(other.id))
+        .map((other) => ({ value: other.id, label: other.name, hint: other.description })),
+    [others, members],
+  );
 
   function changeType(next: ConditionType) {
     setType(next);
@@ -398,29 +440,18 @@ export function ConditionDialog({
               <label className={styles.label} htmlFor="condition-function">
                 Function
               </label>
-              <div className={styles.inputWrapper}>
-                <select
-                  id="condition-function"
-                  className={`${styles.input} ${styles.select}`}
-                  value={functionId}
-                  onChange={(event) => setFunctionId(event.target.value)}
-                  required
-                >
-                  <option value="" disabled>
-                    Select function...
-                  </option>
-                  {/* Above the list rather than under it: a workspace's functions
-                      fill a hundred rows, and the way to make one should not be
-                      the row you have to scroll to find. */}
-                  <option value={NEW_FUNCTION}>+ New function</option>
-                  {functions.map((candidate) => (
-                    <option key={candidate.id} value={candidate.id}>
-                      {candidate.name}
-                    </option>
-                  ))}
-                </select>
-                <img src={chevronDown12Icon} alt="" width={12} height={12} />
-              </div>
+              {/* The way to make one sits above the list and outlasts the search:
+                  a workspace's functions fill a hundred rows, and typing a name
+                  that matches none of them is exactly when it is wanted. */}
+              <DefinitionPicker
+                id="condition-function"
+                value={functionId}
+                options={functionOptions}
+                onChoose={setFunctionId}
+                placeholder="Select function…"
+                searchPlaceholder="Search functions…"
+                create={NEW_FUNCTION_ROW}
+              />
               {functionId === NEW_FUNCTION ? (
                 <>
                   <div className={styles.inputWrapper}>
@@ -529,27 +560,24 @@ export function ConditionDialog({
                 ))}
                 {members.length === 0 && <span className={styles.fieldHint}>Nothing yet.</span>}
               </div>
-              <div className={styles.inputWrapper}>
-                <select
-                  className={`${styles.input} ${styles.select}`}
-                  value=""
-                  aria-label="Add a condition"
-                  onChange={(event) => {
-                    const id = event.target.value;
-                    if (id !== '') setMembers((current) => [...current, id]);
-                  }}
-                >
-                  <option value="">+ Add Condition</option>
-                  {others
-                    .filter((other) => !members.includes(other.id))
-                    .map((other) => (
-                      <option key={other.id} value={other.id}>
-                        {other.name}
-                      </option>
-                    ))}
-                </select>
-                <img src={chevronDown12Icon} alt="" width={12} height={12} />
-              </div>
+              {/*
+                Held at nothing on purpose: this picks a member and hands it to
+                the list above, so what it says afterwards is the invitation to
+                add another rather than the one just added.
+              */}
+              <DefinitionPicker
+                id="condition-members"
+                value=""
+                options={memberOptions}
+                onChoose={(picked) => {
+                  if (picked === NEW_CONDITION) setMakingMember(true);
+                  else setMembers((current) => [...current, picked]);
+                }}
+                placeholder="+ Add Condition"
+                searchPlaceholder="Search conditions…"
+                ariaLabel="Add a condition"
+                create={NEW_CONDITION_ROW}
+              />
             </div>
           )}
 
@@ -576,6 +604,27 @@ export function ConditionDialog({
           </button>
         </div>
       </form>
+
+      {/*
+        Beside the form rather than inside it. A form nested in a form is not
+        something a browser will keep apart: the inner dialog's submit would
+        bubble into this one's handler and save the condition being filled in.
+      */}
+      {makingMember && (
+        <ConditionDialog
+          open
+          workspaceId={workspaceId}
+          condition={null}
+          onClose={() => setMakingMember(false)}
+          onSaved={(made) => {
+            // Into this dialog's own list as well as into the members, because
+            // nothing is going to fetch the conditions again while it stays open.
+            setOthers((current) => [...current, made]);
+            setMembers((current) => [...current, made.id]);
+            setMakingMember(false);
+          }}
+        />
+      )}
     </dialog>
   );
 }

@@ -7,6 +7,7 @@ export type ActionType = 'EXECUTE' | 'WAIT';
 /** How it does it; each subtype belongs to one type. */
 export type ActionSubtype =
   | 'OUTGOING_CONNECTION'
+  | 'SEND_EMAIL'
   | 'HTTP_REQUEST'
   | 'FUNCTION'
   | 'INLINE_CONDITION'
@@ -52,6 +53,11 @@ export interface Action {
   content: string | null;
   target: MessageTarget | null;
   targetName: string | null;
+  /** A mail's recipients and copy list, comma-separated, and what it is about. */
+  emailTo: string | null;
+  emailCc: string | null;
+  emailSubject: string | null;
+  emailReplyTo: string | null;
   url: string | null;
   method: string | null;
   headers: string | null;
@@ -73,6 +79,7 @@ export interface Action {
 const ACTION_FIELDS = `
   id workspaceId name type subtype subtypeLabel
   connectionId connectionName connectionAction content target targetName
+  emailTo emailCc emailSubject emailReplyTo
   url method headers
   functionId functionName mappings { argument expression }
   conditionExpression conditionId conditionName timeoutSeconds retryIntervalSeconds durationSeconds
@@ -137,6 +144,10 @@ export interface ActionInput {
   content?: string | null;
   target?: MessageTarget | null;
   targetName?: string | null;
+  emailTo?: string | null;
+  emailCc?: string | null;
+  emailSubject?: string | null;
+  emailReplyTo?: string | null;
   url?: string | null;
   method?: string | null;
   headers?: string | null;
@@ -174,12 +185,13 @@ export const ACTION_TYPE_LABEL: Record<ActionType, string> = {
 
 /** Which subtypes an action of each type can be, in the order the form offers them. */
 export const SUBTYPES_BY_TYPE: Record<ActionType, ActionSubtype[]> = {
-  EXECUTE: ['OUTGOING_CONNECTION', 'HTTP_REQUEST', 'FUNCTION'],
+  EXECUTE: ['OUTGOING_CONNECTION', 'SEND_EMAIL', 'HTTP_REQUEST', 'FUNCTION'],
   WAIT: ['INLINE_CONDITION', 'CONDITION', 'TIME'],
 };
 
 export const ACTION_SUBTYPE_LABEL: Record<ActionSubtype, string> = {
   OUTGOING_CONNECTION: 'Outgoing Connection',
+  SEND_EMAIL: 'Send Email',
   HTTP_REQUEST: 'HTTP Request',
   FUNCTION: 'Function',
   INLINE_CONDITION: 'Inline Condition',

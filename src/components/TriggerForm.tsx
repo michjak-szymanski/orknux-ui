@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 
-import { fetchWorkspaceConditions } from '../api/conditions';
+import { NEW_CONDITION, fetchWorkspaceConditions } from '../api/conditions';
 import type { Condition } from '../api/conditions';
 import { fetchWorkspaceConnections } from '../api/integrations';
 import type { WorkspaceConnection } from '../api/integrations';
@@ -24,9 +24,12 @@ import {
   validFunctionName,
 } from '../api/functions';
 import type { WorkspaceFunction } from '../api/functions';
-import { fetchWorkspaceObjects } from '../api/objects';
+import { NEW_OBJECT, createObject, fetchWorkspaceObjects } from '../api/objects';
 import type { WorkflowObject } from '../api/objects';
+import { ConditionDialog } from './ConditionDialog';
+import { DefinitionPicker } from './DefinitionPicker';
 import { IconField } from './IconField';
+import { NameDialog } from './NameDialog';
 
 /**
  * The class names the form paints itself with.
@@ -77,6 +80,21 @@ const TIMEZONES = ['UTC', 'Europe/Warsaw', 'Europe/London', 'America/New_York', 
 /** The whole of a workspace's shapes fits in the picker. */
 const OBJECT_PAGE_SIZE = 100;
 
+/*
+ * The rows that make a definition instead of choosing one.
+ *
+ * Held still rather than written into the JSX, because the picker treats a new
+ * row object as a new list and puts its cursor back to the top - which, from a
+ * form that re-renders on every keystroke, would be a picker nobody can arrow
+ * down through.
+ */
+const NEW_FUNCTION_ROW = { value: NEW_FUNCTION, label: '+ New function' };
+const NEW_CONDITION_ROW = { value: NEW_CONDITION, label: '+ New condition' };
+const NEW_OBJECT_ROW = { value: NEW_OBJECT, label: '+ New object' };
+
+/** Choosing nothing is a real answer here, so it is a row like any other. */
+const ANY_EVENT_ROW = { value: '', label: 'Fire on everything' };
+
 /**
  * What a trigger waits for and what it hands on. The form changes with the type:
  * an incoming connection asks which connection and which event, a scheduled one
@@ -123,6 +141,17 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
   const [connections, setConnections] = useState<WorkspaceConnection[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * Which dialog is open on top of this form, if any.
+   *
+   * A condition and an object are both more than a name, and both already have
+   * something that asks for the rest properly - the condition dialog, and the
+   * same name-and-description step the Objects list uses before it opens the
+   * editor. Neither is worth rebuilding in a corner of this form; what matters
+   * is that going to make one does not cost the half-filled trigger.
+   */
+  const [makingCondition, setMakingCondition] = useState(false);
+  const [makingObject, setMakingObject] = useState(false);
 
   const editing = trigger !== null;
 
@@ -159,6 +188,41 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
 
   const incoming = type === 'INCOMING_CONNECTION';
   const webhook = type === 'WEBHOOK';
+
+  /*
+   * What each picker offers, with a second line saying which one this is.
+   *
+   * The hint is searched alongside the name, so an object can be found by how
+   * many fields it has and a condition by what it asks - which is how somebody
+   * who has forgotten the name still knows the one they mean.
+   */
+  const connectionOptions = useMemo(
+    () => connections.map((held) => ({ value: held.id, label: held.name, hint: held.effectiveUrl })),
+    [connections],
+  );
+
+  const objectOptions = useMemo(
+    () =>
+      objects.map((shape) => ({
+        value: shape.id,
+        label: shape.name,
+        hint: `${shape.propertyCount} ${shape.propertyCount === 1 ? 'field' : 'fields'}`,
+      })),
+    [objects],
+  );
+
+  const functionOptions = useMemo(
+    () => functions.map((held) => ({ value: held.id, label: held.name, hint: held.signature })),
+    [functions],
+  );
+
+  const conditionOptions = useMemo(
+    () => [
+      ANY_EVENT_ROW,
+      ...conditions.map((held) => ({ value: held.id, label: held.name, hint: held.description })),
+    ],
+    [conditions],
+  );
   const complete =
     name.trim() !== '' &&
     (incoming
@@ -233,412 +297,440 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
   }
 
   return (
-    <form className={styles.body} onSubmit={handleSubmit}>
-      <p className={styles.message}>
-        {incoming
-          ? 'Set up a trigger to execute your workflow automatically when events occur.'
-          : webhook
-            ? 'Give something outside a URL to call, and say what it has to send.'
-            : 'Set up a trigger to execute your workflow automatically on a schedule.'}
-      </p>
+    <>
+      <form className={styles.body} onSubmit={handleSubmit}>
+        <p className={styles.message}>
+          {incoming
+            ? 'Set up a trigger to execute your workflow automatically when events occur.'
+            : webhook
+              ? 'Give something outside a URL to call, and say what it has to send.'
+              : 'Set up a trigger to execute your workflow automatically on a schedule.'}
+        </p>
 
-      <div className={styles.fields}>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="trigger-name">
-            Trigger Name
-          </label>
-          <div className={styles.inputWrapper}>
-            <input
-              id="trigger-name"
-              name="triggerName"
-              className={styles.input}
-              type="text"
-              placeholder={incoming ? 'e.g. Slack Mention Handler' : 'e.g. Midnight Cleanup Job'}
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              autoFocus
-              required
-            />
+        <div className={styles.fields}>
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="trigger-name">
+              Trigger Name
+            </label>
+            <div className={styles.inputWrapper}>
+              <input
+                id="trigger-name"
+                name="triggerName"
+                className={styles.input}
+                type="text"
+                placeholder={incoming ? 'e.g. Slack Mention Handler' : 'e.g. Midnight Cleanup Job'}
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                autoFocus
+                required
+              />
+            </div>
           </div>
-        </div>
 
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="trigger-type">
-            Type
-          </label>
-          <div className={styles.inputWrapper}>
-            <select
-              id="trigger-type"
-              name="triggerType"
-              className={`${styles.input} ${styles.select}`}
-              value={type}
-              onChange={(event) => setType(event.target.value as TriggerType)}
-              // What a trigger waits for does not change; its settings do.
-              disabled={editing}
-            >
-              <option value="INCOMING_CONNECTION">Incoming Connection</option>
-              <option value="SCHEDULED">Scheduled</option>
-              <option value="WEBHOOK">Webhook</option>
-            </select>
-            <img src={chevronDown12Icon} alt="" width={12} height={12} />
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="trigger-type">
+              Type
+            </label>
+            <div className={styles.inputWrapper}>
+              <select
+                id="trigger-type"
+                name="triggerType"
+                className={`${styles.input} ${styles.select}`}
+                value={type}
+                onChange={(event) => setType(event.target.value as TriggerType)}
+                // What a trigger waits for does not change; its settings do.
+                disabled={editing}
+              >
+                <option value="INCOMING_CONNECTION">Incoming Connection</option>
+                <option value="SCHEDULED">Scheduled</option>
+                <option value="WEBHOOK">Webhook</option>
+              </select>
+              <img src={chevronDown12Icon} alt="" width={12} height={12} />
+            </div>
           </div>
-        </div>
 
-        {webhook && (
-          <>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="trigger-webhook-path">
-                URL
-              </label>
-              <div className={styles.inputWrapper}>
-                <span className={styles.prefix}>/api/webhooks/</span>
-                <input
-                  id="trigger-webhook-path"
-                  name="webhookPath"
-                  className={`${styles.input} ${styles.inputMono}`}
-                  type="text"
-                  placeholder="build/finished"
-                  value={webhookPath}
-                  onChange={(event) => setWebhookPath(event.target.value)}
-                  required
-                />
-              </div>
-              <p className={styles.fieldHint}>
-                Where this installation answers. One trigger per path, across every workspace.
-              </p>
-            </div>
-
-            <div className={styles.field}>
-              {/*
-                What the picker points at is a definition somebody may need to
-                read or change while deciding — a webhook stands or falls on
-                whether the caller's JSON matches this shape. Opened in a tab of
-                its own so that going to look at it does not throw away a form
-                that has not been saved yet.
-              */}
-              <span className={styles.labelRow}>
-                <label className={styles.label} htmlFor="trigger-object">
-                  Expected object
-                </label>
-                {objectId !== '' && (
-                  <Link
-                    className={styles.jump}
-                    to={`/workspace/${workspaceId}/objects/${objectId}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    title="Opens the object's definition in a new tab"
-                  >
-                    Open definition &#8599;
-                  </Link>
-                )}
-              </span>
-              <div className={styles.inputWrapper}>
-                <select
-                  id="trigger-object"
-                  name="objectId"
-                  className={`${styles.input} ${styles.select}`}
-                  value={objectId}
-                  onChange={(event) => setObjectId(event.target.value)}
-                  required
-                >
-                  <option value="" disabled>
-                    Select object&hellip;
-                  </option>
-                  {objects.map((shape) => (
-                    <option key={shape.id} value={shape.id}>
-                      {shape.name} &middot; {shape.propertyCount} fields
-                    </option>
-                  ))}
-                </select>
-                <img src={chevronDown12Icon} alt="" width={12} height={12} />
-              </div>
-              <p className={styles.fieldHint}>
-                What a request has to contain. Anything else is answered 404 &mdash; and what does
-                match is what the workflow can rely on being handed.
-              </p>
-            </div>
-
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="trigger-auth">
-                Authentication
-              </label>
-              <div className={styles.inputWrapper}>
-                <select
-                  id="trigger-auth"
-                  name="authType"
-                  className={`${styles.input} ${styles.select}`}
-                  value={authType}
-                  onChange={(event) => setAuthType(event.target.value as WebhookAuthType)}
-                >
-                  <option value="NONE">Open &mdash; the URL is the secret</option>
-                  <option value="FUNCTION">Function &mdash; ask one of this workspace&apos;s functions</option>
-                </select>
-                <img src={chevronDown12Icon} alt="" width={12} height={12} />
-              </div>
-              <p className={styles.fieldHint}>
-                A caller the function turns down is answered 401, and the refusal is written into
-                this trigger&apos;s history.
-              </p>
-            </div>
-
-            {authType === 'FUNCTION' && (
+          {webhook && (
+            <>
               <div className={styles.field}>
-                {/* The same reason as the object above: this is a definition, and it opens. */}
+                <label className={styles.label} htmlFor="trigger-webhook-path">
+                  URL
+                </label>
+                <div className={styles.inputWrapper}>
+                  <span className={styles.prefix}>/api/webhooks/</span>
+                  <input
+                    id="trigger-webhook-path"
+                    name="webhookPath"
+                    className={`${styles.input} ${styles.inputMono}`}
+                    type="text"
+                    placeholder="build/finished"
+                    value={webhookPath}
+                    onChange={(event) => setWebhookPath(event.target.value)}
+                    required
+                  />
+                </div>
+                <p className={styles.fieldHint}>
+                  Where this installation answers. One trigger per path, across every workspace.
+                </p>
+              </div>
+
+              <div className={styles.field}>
+                {/*
+                  What the picker points at is a definition somebody may need to
+                  read or change while deciding — a webhook stands or falls on
+                  whether the caller's JSON matches this shape. Opened in a tab of
+                  its own so that going to look at it does not throw away a form
+                  that has not been saved yet.
+                */}
                 <span className={styles.labelRow}>
-                  <label className={styles.label} htmlFor="trigger-auth-function">
-                    Function
+                  <label className={styles.label} htmlFor="trigger-object">
+                    Expected object
                   </label>
-                  {/* Nothing to open while the picker is on a name: the function
-                      is created when the trigger is saved, not before. */}
-                  {authFunctionId !== '' && authFunctionId !== NEW_FUNCTION && (
+                  {objectId !== '' && (
                     <Link
                       className={styles.jump}
-                      to={`/workspace/${workspaceId}/functions/${authFunctionId}`}
+                      to={`/workspace/${workspaceId}/objects/${objectId}`}
                       target="_blank"
                       rel="noreferrer"
-                      title="Opens the function in a new tab"
+                      title="Opens the object's definition in a new tab"
                     >
                       Open definition &#8599;
                     </Link>
                   )}
                 </span>
+                <DefinitionPicker
+                  id="trigger-object"
+                  value={objectId}
+                  options={objectOptions}
+                  onChoose={(picked) => {
+                    // The row is an instruction rather than an answer: nothing is
+                    // stored until the dialog it opens comes back with a real id.
+                    if (picked === NEW_OBJECT) setMakingObject(true);
+                    else setObjectId(picked);
+                  }}
+                  placeholder="Select object…"
+                  searchPlaceholder="Search objects…"
+                  create={NEW_OBJECT_ROW}
+                />
+                <p className={styles.fieldHint}>
+                  What a request has to contain. Anything else is answered 404 &mdash; and what does
+                  match is what the workflow can rely on being handed.
+                </p>
+                {/* Said out loud, because an object made from here starts empty and
+                    an empty shape demands nothing - which is the opposite of what
+                    somebody choosing an expected object is usually after. */}
+                {objects.find((shape) => shape.id === objectId)?.propertyCount === 0 && (
+                  <p className={styles.fieldHint}>
+                    This one has no fields yet, so any JSON matches it. Open it in Objects to say what a
+                    caller has to send.
+                  </p>
+                )}
+              </div>
+
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="trigger-auth">
+                  Authentication
+                </label>
                 <div className={styles.inputWrapper}>
                   <select
-                    id="trigger-auth-function"
-                    name="authFunctionId"
+                    id="trigger-auth"
+                    name="authType"
                     className={`${styles.input} ${styles.select}`}
-                    value={authFunctionId}
-                    onChange={(event) => setAuthFunctionId(event.target.value)}
-                    required
+                    value={authType}
+                    onChange={(event) => setAuthType(event.target.value as WebhookAuthType)}
                   >
-                    <option value="" disabled>
-                      Select function&hellip;
-                    </option>
-                    {/* Above the list rather than under it: a workspace's functions
-                        fill a hundred rows, and the way to make one should not be
-                        the row you have to scroll to find. */}
-                    <option value={NEW_FUNCTION}>+ New function</option>
-                    {functions.map((held) => (
-                      <option key={held.id} value={held.id}>
-                        {held.name}
+                    <option value="NONE">Open &mdash; the URL is the secret</option>
+                    <option value="FUNCTION">Function &mdash; ask one of this workspace&apos;s functions</option>
+                  </select>
+                  <img src={chevronDown12Icon} alt="" width={12} height={12} />
+                </div>
+                <p className={styles.fieldHint}>
+                  A caller the function turns down is answered 401, and the refusal is written into
+                  this trigger&apos;s history.
+                </p>
+              </div>
+
+              {authType === 'FUNCTION' && (
+                <div className={styles.field}>
+                  {/* The same reason as the object above: this is a definition, and it opens. */}
+                  <span className={styles.labelRow}>
+                    <label className={styles.label} htmlFor="trigger-auth-function">
+                      Function
+                    </label>
+                    {/* Nothing to open while the picker is on a name: the function
+                        is created when the trigger is saved, not before. */}
+                    {authFunctionId !== '' && authFunctionId !== NEW_FUNCTION && (
+                      <Link
+                        className={styles.jump}
+                        to={`/workspace/${workspaceId}/functions/${authFunctionId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Opens the function in a new tab"
+                      >
+                        Open definition &#8599;
+                      </Link>
+                    )}
+                  </span>
+                  {/* The way to make one sits above the list and outlasts the search:
+                      a workspace's functions fill a hundred rows, and typing a name
+                      that matches none of them is exactly when it is wanted. */}
+                  <DefinitionPicker
+                    id="trigger-auth-function"
+                    value={authFunctionId}
+                    options={functionOptions}
+                    onChoose={setAuthFunctionId}
+                    placeholder="Select function…"
+                    searchPlaceholder="Search functions…"
+                    create={NEW_FUNCTION_ROW}
+                  />
+                  {authFunctionId === NEW_FUNCTION && (
+                    <div className={styles.inputWrapper}>
+                      <input
+                        id="trigger-new-function"
+                        name="newFunctionName"
+                        className={`${styles.input} ${styles.inputMono}`}
+                        type="text"
+                        aria-label="New function name"
+                        placeholder={NEW_FUNCTION_NAME}
+                        value={newFunctionName}
+                        // Selected on focus, as the function editor does it: the box
+                        // arrives with a name in it, so typing over it is one gesture.
+                        onFocus={(event) => event.target.select()}
+                        onChange={(event) => setNewFunctionName(event.target.value)}
+                      />
+                    </div>
+                  )}
+                  <p className={styles.fieldHint}>
+                    {authFunctionId === NEW_FUNCTION
+                      ? 'Created with this trigger, turning every caller away. Open it in Functions to say who may call.'
+                      : functions.length === 0
+                        ? 'No function here returns true or false yet; one that does can be chosen here, or made above.'
+                        : 'Handed the request by name — body, rawBody, headers, path — then its own external parameters, which is where a stored secret comes from.'}
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+
+          {webhook ? null : incoming ? (
+            <>
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="trigger-connection">
+                  Connection
+                </label>
+                {/* Nothing to make from here: a connection is a URL, a token and a
+                    handshake with the service, none of which can be got from a name
+                    - so this says where they are instead of offering a row that
+                    would only lead to a half-made one. */}
+                <DefinitionPicker
+                  id="trigger-connection"
+                  value={connectionId}
+                  options={connectionOptions}
+                  onChoose={setConnectionId}
+                  placeholder="Select connection…"
+                  searchPlaceholder="Search connections…"
+                />
+                <p className={styles.fieldHint}>
+                  {connections.length === 0
+                    ? "None set up yet. Connections carry credentials, so they are added under the workspace's Integrations and chosen here afterwards."
+                    : 'Select the connection that will trigger this event.'}
+                </p>
+              </div>
+
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="trigger-action">
+                  Action
+                </label>
+                <div className={styles.inputWrapper}>
+                  <select
+                    id="trigger-action"
+                    name="action"
+                    className={`${styles.input} ${styles.select}`}
+                    value={action}
+                    onChange={(event) => setAction(event.target.value as TriggerAction)}
+                  >
+                    {TRIGGER_ACTIONS.filter((candidate) => deliverable.includes(candidate)).map((candidate) => (
+                      <option key={candidate} value={candidate}>
+                        {TRIGGER_ACTION_LABEL[candidate]}
                       </option>
                     ))}
                   </select>
                   <img src={chevronDown12Icon} alt="" width={12} height={12} />
                 </div>
-                {authFunctionId === NEW_FUNCTION && (
-                  <div className={styles.inputWrapper}>
-                    <input
-                      id="trigger-new-function"
-                      name="newFunctionName"
-                      className={`${styles.input} ${styles.inputMono}`}
-                      type="text"
-                      aria-label="New function name"
-                      placeholder={NEW_FUNCTION_NAME}
-                      value={newFunctionName}
-                      // Selected on focus, as the function editor does it: the box
-                      // arrives with a name in it, so typing over it is one gesture.
-                      onFocus={(event) => event.target.select()}
-                      onChange={(event) => setNewFunctionName(event.target.value)}
-                    />
-                  </div>
-                )}
-                <p className={styles.fieldHint}>
-                  {authFunctionId === NEW_FUNCTION
-                    ? 'Created with this trigger, turning every caller away. Open it in Functions to say who may call.'
-                    : functions.length === 0
-                      ? 'No function here returns true or false yet; one that does can be chosen here, or made above.'
-                      : 'Handed the request by name — body, rawBody, headers, path — then its own external parameters, which is where a stored secret comes from.'}
-                </p>
+                <p className={styles.fieldHint}>The specific event that activates this trigger.</p>
               </div>
-            )}
-          </>
-        )}
+            </>
+          ) : (
+            <>
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="trigger-cron">
+                  Schedule
+                </label>
+                <div className={styles.inputWrapper}>
+                  <input
+                    id="trigger-cron"
+                    name="cron"
+                    className={`${styles.input} ${styles.inputMono} ${styles.inputCron}`}
+                    type="text"
+                    placeholder="0 2 * * *"
+                    value={cron}
+                    onChange={(event) => setCron(event.target.value)}
+                    required
+                  />
+                </div>
+                <p className={styles.fieldHint}>A cron expression defining when the trigger fires.</p>
+              </div>
 
-        {webhook ? null : incoming ? (
-          <>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="trigger-connection">
-                Connection
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="trigger-timezone">
+                  Timezone
+                </label>
+                <div className={styles.inputWrapper}>
+                  <select
+                    id="trigger-timezone"
+                    name="timezone"
+                    className={`${styles.input} ${styles.select}`}
+                    value={timezone}
+                    onChange={(event) => setTimezone(event.target.value)}
+                  >
+                    {TIMEZONES.map((zone) => (
+                      <option key={zone} value={zone}>
+                        {zone}
+                      </option>
+                    ))}
+                  </select>
+                  <img src={chevronDown12Icon} alt="" width={12} height={12} />
+                </div>
+                <p className={styles.fieldHint}>The timezone used to resolve the cron schedule.</p>
+              </div>
+            </>
+          )}
+
+          <div className={styles.field}>
+            {/* A condition is a definition too, and reading it is how somebody decides. */}
+            <span className={styles.labelRow}>
+              <label className={styles.label} htmlFor="trigger-condition">
+                Condition
               </label>
-              <div className={styles.inputWrapper}>
-                <select
-                  id="trigger-connection"
-                  name="connectionId"
-                  className={`${styles.input} ${styles.select}`}
-                  value={connectionId}
-                  onChange={(event) => setConnectionId(event.target.value)}
-                  required
+              {conditionId !== '' && (
+                <Link
+                  className={styles.jump}
+                  to={`/workspace/${workspaceId}/conditions/${conditionId}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  title="Opens the condition in a new tab"
                 >
-                  <option value="" disabled>
-                    Select connection...
-                  </option>
-                  {connections.map((connection) => (
-                    <option key={connection.id} value={connection.id}>
-                      {connection.name}
-                    </option>
-                  ))}
-                </select>
-                <img src={chevronDown12Icon} alt="" width={12} height={12} />
-              </div>
-              <p className={styles.fieldHint}>Select the connection that will trigger this event.</p>
-            </div>
-
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="trigger-action">
-                Action
-              </label>
-              <div className={styles.inputWrapper}>
-                <select
-                  id="trigger-action"
-                  name="action"
-                  className={`${styles.input} ${styles.select}`}
-                  value={action}
-                  onChange={(event) => setAction(event.target.value as TriggerAction)}
-                >
-                  {TRIGGER_ACTIONS.filter((candidate) => deliverable.includes(candidate)).map((candidate) => (
-                    <option key={candidate} value={candidate}>
-                      {TRIGGER_ACTION_LABEL[candidate]}
-                    </option>
-                  ))}
-                </select>
-                <img src={chevronDown12Icon} alt="" width={12} height={12} />
-              </div>
-              <p className={styles.fieldHint}>The specific event that activates this trigger.</p>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="trigger-cron">
-                Schedule
-              </label>
-              <div className={styles.inputWrapper}>
-                <input
-                  id="trigger-cron"
-                  name="cron"
-                  className={`${styles.input} ${styles.inputMono} ${styles.inputCron}`}
-                  type="text"
-                  placeholder="0 2 * * *"
-                  value={cron}
-                  onChange={(event) => setCron(event.target.value)}
-                  required
-                />
-              </div>
-              <p className={styles.fieldHint}>A cron expression defining when the trigger fires.</p>
-            </div>
-
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="trigger-timezone">
-                Timezone
-              </label>
-              <div className={styles.inputWrapper}>
-                <select
-                  id="trigger-timezone"
-                  name="timezone"
-                  className={`${styles.input} ${styles.select}`}
-                  value={timezone}
-                  onChange={(event) => setTimezone(event.target.value)}
-                >
-                  {TIMEZONES.map((zone) => (
-                    <option key={zone} value={zone}>
-                      {zone}
-                    </option>
-                  ))}
-                </select>
-                <img src={chevronDown12Icon} alt="" width={12} height={12} />
-              </div>
-              <p className={styles.fieldHint}>The timezone used to resolve the cron schedule.</p>
-            </div>
-          </>
-        )}
-
-        <div className={styles.field}>
-          {/* A condition is a definition too, and reading it is how somebody decides. */}
-          <span className={styles.labelRow}>
-            <label className={styles.label} htmlFor="trigger-condition">
-              Condition
-            </label>
-            {conditionId !== '' && (
-              <Link
-                className={styles.jump}
-                to={`/workspace/${workspaceId}/conditions/${conditionId}`}
-                target="_blank"
-                rel="noreferrer"
-                title="Opens the condition in a new tab"
-              >
-                Open definition &#8599;
-              </Link>
-            )}
-          </span>
-          <div className={styles.inputWrapper}>
-            <select
+                  Open definition &#8599;
+                </Link>
+              )}
+            </span>
+            <DefinitionPicker
               id="trigger-condition"
-              name="condition"
-              className={`${styles.input} ${styles.select}`}
               value={conditionId}
-              onChange={(event) => setConditionId(event.target.value)}
-            >
-              <option value="">Fire on everything</option>
-              {conditions.map((condition) => (
-                <option key={condition.id} value={condition.id}>
-                  {condition.name}
-                </option>
-              ))}
-            </select>
-            <img src={chevronDown12Icon} alt="" width={12} height={12} />
-          </div>
-          <p className={styles.fieldHint}>
-            Asked before anything starts, so an event it turns down leaves no run behind.
-          </p>
-        </div>
-
-        <IconField
-          value={icon}
-          onChange={setIcon}
-          hint="Nodes drawn from this trigger start with it; each node can change its own."
-        />
-
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="trigger-payload">
-            Payload
-          </label>
-          <div className={`${styles.inputWrapper} ${styles.inputWrapperTall}`}>
-            <textarea
-              id="trigger-payload"
-              name="payload"
-              className={`${styles.input} ${styles.textarea} ${styles.inputMono}`}
-              placeholder={'{ "format": "compact" }'}
-              value={payload}
-              onChange={(event) => setPayload(event.target.value)}
+              options={conditionOptions}
+              onChoose={(picked) => {
+                // The row is an instruction rather than an answer: nothing is
+                // stored until the dialog it opens comes back with a real id.
+                if (picked === NEW_CONDITION) setMakingCondition(true);
+                else setConditionId(picked);
+              }}
+              placeholder="Fire on everything"
+              searchPlaceholder="Search conditions…"
+              create={NEW_CONDITION_ROW}
             />
+            <p className={styles.fieldHint}>
+              Asked before anything starts, so an event it turns down leaves no run behind.
+            </p>
           </div>
-          <p className={styles.fieldHint}>
-            {incoming
-              ? 'JSON added underneath the event, for values the event does not carry.'
-              : webhook
-                ? 'JSON added underneath the request, for values the caller does not send.'
-                : 'JSON handed to the run. The clock carries no data, so this is what the workflow works on.'}
-          </p>
-        </div>
-      </div>
 
-      {error !== null && (
-        <p className={styles.error} role="alert">
-          {error}
-        </p>
+          <IconField
+            value={icon}
+            onChange={setIcon}
+            hint="Nodes drawn from this trigger start with it; each node can change its own."
+          />
+
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="trigger-payload">
+              Payload
+            </label>
+            <div className={`${styles.inputWrapper} ${styles.inputWrapperTall}`}>
+              <textarea
+                id="trigger-payload"
+                name="payload"
+                className={`${styles.input} ${styles.textarea} ${styles.inputMono}`}
+                placeholder={'{ "format": "compact" }'}
+                value={payload}
+                onChange={(event) => setPayload(event.target.value)}
+              />
+            </div>
+            <p className={styles.fieldHint}>
+              {incoming
+                ? 'JSON added underneath the event, for values the event does not carry.'
+                : webhook
+                  ? 'JSON added underneath the request, for values the caller does not send.'
+                  : 'JSON handed to the run. The clock carries no data, so this is what the workflow works on.'}
+            </p>
+          </div>
+        </div>
+
+        {error !== null && (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+        )}
+
+        <div className={styles.actions}>
+          {onCancel !== undefined && (
+            <button type="button" className={styles.ghost} onClick={onCancel} disabled={submitting}>
+              Cancel
+            </button>
+          )}
+          <button type="submit" className={styles.filled} disabled={!complete || submitting}>
+            {submitting ? 'Saving…' : editing ? 'Save Changes' : 'Create Trigger'}
+          </button>
+        </div>
+      </form>
+
+      {/*
+        Beside the form rather than inside it, and only while open.
+        A form nested in a form is not something a browser will keep apart: the
+        inner dialog's submit would bubble into this one's handler and save the
+        trigger somebody is still filling in.
+      */}
+      {makingCondition && (
+        <ConditionDialog
+          open
+          workspaceId={workspaceId}
+          condition={null}
+          onClose={() => setMakingCondition(false)}
+          onSaved={(made) => {
+            // Into this form's own list as well as into the field: this is a
+            // settings page as often as it is a dialog, and nothing is going to
+            // fetch the conditions again while it stays open.
+            setConditions((current) => [...current, made]);
+            setConditionId(made.id);
+            setMakingCondition(false);
+          }}
+        />
       )}
 
-      <div className={styles.actions}>
-        {onCancel !== undefined && (
-          <button type="button" className={styles.ghost} onClick={onCancel} disabled={submitting}>
-            Cancel
-          </button>
-        )}
-        <button type="submit" className={styles.filled} disabled={!complete || submitting}>
-          {submitting ? 'Saving…' : editing ? 'Save Changes' : 'Create Trigger'}
-        </button>
-      </div>
-    </form>
+      {makingObject && (
+        <NameDialog
+          open
+          title="Create Object"
+          message="Name the shape a caller has to send. Its fields are written in Objects."
+          nameLabel="Object Name"
+          namePlaceholder="e.g. BuildFinished"
+          descriptionPlaceholder="What this describes"
+          submitLabel="Create Object"
+          onClose={() => setMakingObject(false)}
+          onSubmit={async (called, description) => {
+            const made = await createObject(workspaceId, { name: called, description });
+            setObjects((current) => [...current, made]);
+            setObjectId(made.id);
+            setMakingObject(false);
+          }}
+        />
+      )}
+    </>
   );
 }
