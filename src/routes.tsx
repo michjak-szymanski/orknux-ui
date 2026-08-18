@@ -81,6 +81,7 @@ export const PAGE_ELEMENTS: Record<PagePath, PageElement> = {
   '/workspace/:workspaceId/settings': (session, onSignOut) => <WorkspaceSettingsPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/executions/:executionId': (session, onSignOut) => <ExecutionDetailPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/actions/:actionId': (session, onSignOut) => <WorkspaceActionsPage session={session} onSignOut={onSignOut} />,
+  '/workspace/:workspaceId/functions/new': (session, onSignOut) => <FunctionEditorPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/functions/:functionId': (session, onSignOut) => <FunctionEditorPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/conditions/:conditionId': (session, onSignOut) => <WorkspaceConditionsPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/triggers/:triggerId': (session, onSignOut) => <TriggerSettingsPage session={session} onSignOut={onSignOut} />,

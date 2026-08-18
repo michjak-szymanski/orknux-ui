@@ -5,10 +5,12 @@ import type { ValueType } from '../../api/actions';
 import {
   RETURN_TYPES,
   VALUE_TYPES,
+  createFunction,
   deleteFunction,
   fetchFunction,
   timeAgo,
   namesObject,
+  starterSource,
   tsType,
   updateFunction,
   validateFunctionSource,
@@ -60,16 +62,49 @@ function said(reason: string, line: number | null): string {
  * errors of its own, but the answer that matters is whether the parser which will
  * run this accepts it, and that one lives in the sandbox.
  */
+/**
+ * A name as a declaration can spell it.
+ *
+ * A function may be called anything - "Ticket reference", with a space in it -
+ * and a declaration may not. Only the stub uses this: what the function is
+ * called is its name, and the identifier in the code is nobody's business once
+ * there is code.
+ */
+function identifier(name: string): string {
+  const cleaned = name.trim().replace(/[^A-Za-z0-9_$]/g, '');
+  return cleaned === '' || /^[0-9]/.test(cleaned) ? 'newFunction' : cleaned;
+}
+
 export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPageProps) {
   const { workspaceId = '', functionId = '' } = useParams();
   const navigate = useNavigate();
+  /*
+   * No id in the path: this page is writing a function that does not exist yet.
+   *
+   * The same page either way, deliberately. Creating one used to be a second,
+   * thinner form - no code column, no way to take a parameter off again, no
+   * saying which object a parameter or the return means - so the first thing
+   * anybody did after creating a function was open it here and finish the job.
+   * One form does both, and it is the one that can do everything.
+   */
+  const creating = functionId === '';
 
   const [fn, setFn] = useState<WorkspaceFunction | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   /** The left column: what somebody writes. */
   const [source, setSource] = useState('');
-  const [returnType, setReturnType] = useState<ValueType>('OBJECT');
+  /*
+   * Map, not object, until something says otherwise.
+   *
+   * The stub returns a structure with no declared shape, which is what map
+   * means, and it is what a new function goes on returning until somebody
+   * decides otherwise. Starting at object would start every new function with a
+   * choice already made and not yet answered - an object needs to name one, so
+   * the first save would be refused for a shape nobody asked for. A function
+   * that is opened rather than written has its own answer, which arrives with it.
+   */
+  const [returnType, setReturnType] = useState<ValueType>('MAP');
   const [params, setParams] = useState<FunctionParam[]>([]);
   /** The workspace's variables this function is handed, by id and in order. */
   const [externals, setExternals] = useState<string[]>([]);
@@ -109,6 +144,9 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
   const objectNameOf = (objectId: string | null | undefined): string | null =>
     objects.find((held) => held.id === objectId)?.name ?? null;
 
+  /** What to call it at the top: its name, or what it is going to be. */
+  const called = creating ? (name.trim() === '' ? 'New function' : name.trim()) : (fn?.name ?? '…');
+
   const [caret, setCaret] = useState({ line: 1, column: 1 });
   const [status, setStatus] = useState<{ ok: boolean; message: string }>({ ok: true, message: 'No errors' });
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -123,6 +161,15 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
   savingRef.current = saving;
   /** False until the loaded function has been seen once, so opening one changes nothing. */
   const synced = useRef(false);
+  /**
+   * The last stub this page printed, or null before it has printed one.
+   *
+   * How it knows the code is somebody's own: not by listening for typing - the
+   * editor reports a change when the stub itself is put in, which would make
+   * every new function look written-in the instant it opened - but by comparing.
+   * What is in the column either is the stub that was printed, or it is theirs.
+   */
+  const printed = useRef<string | null>(null);
 
   useEffect(() => {
     if (functionId === '') return;
@@ -186,8 +233,10 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
    * opens it would mark the editor dirty without them touching anything.
    */
   useEffect(() => {
-    if (fn === null) return;
-    if (!synced.current) {
+    if (fn === null && !creating) return;
+    // Nothing has been opened when one is being written, so there is nothing to
+    // leave alone: the first change is somebody's own and belongs in the code.
+    if (!creating && !synced.current) {
       synced.current = true;
       return;
     }
@@ -196,7 +245,28 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
       if (next !== current) setSaved(false);
       return next;
     });
-  }, [fn, declarations]);
+  }, [fn, creating, declarations]);
+
+  /*
+   * What a new function says before anybody writes anything.
+   *
+   * Reprinted from the panel as it changes, so the name, the parameters and the
+   * externals are already in the declaration when somebody starts typing. It
+   * stops the moment they do: from then on the code is theirs, and only the
+   * parameter list is kept in step, exactly as for a function that already
+   * exists.
+   */
+  useEffect(() => {
+    if (!creating) return;
+    if (printed.current !== null && source !== printed.current) return;
+    const next = starterSource(
+      identifier(name),
+      declarations,
+      params.filter((param) => param.name.trim() !== '').map((param) => param.name.trim()),
+    );
+    printed.current = next;
+    if (next !== source) setSource(next);
+  }, [creating, name, declarations, params, source]);
 
 
   /*
@@ -319,7 +389,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
         return;
       }
 
-      const updated = await updateFunction(functionId, {
+      const details = {
         name: name.trim(),
         description,
         source: emitted.javascript,
@@ -328,10 +398,20 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
         returnObjectId: namesObject(returnType) ? returnObjectId : null,
         params: params.filter((param) => param.name.trim() !== ''),
         externalVariableIds: externals,
-      });
-      setFn(updated);
+      };
+
+      const stored = creating
+        ? await createFunction({ workspaceId, ...details })
+        : await updateFunction(functionId, details);
+      setFn(stored);
       setStatus({ ok: true, message: 'No errors' });
       setSaved(true);
+      /*
+       * The same page, now with somewhere to go back to. Replaced rather than
+       * pushed: Back from a function that exists should be the list, not the
+       * empty form it was written in, which would create a second one.
+       */
+      if (creating) navigate(`/workspace/${workspaceId}/functions/${stored.id}`, { replace: true });
     } catch (cause) {
       setStatus({ ok: false, message: cause instanceof Error ? cause.message : 'Could not save.' });
     } finally {
@@ -372,22 +452,31 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                 Functions
               </Link>
               <span className={styles.crumbSeparator}>/</span>
-              <span className={styles.crumbCurrent}>{fn?.name ?? '…'}</span>
+              <span className={styles.crumbCurrent}>{called}</span>
             </p>
             <div className={styles.headerRow}>
               <div className={styles.titleGroup}>
-                <h1 className={styles.title}>{fn?.name ?? '…'}</h1>
-                <span className={styles.activeBadge}>Active</span>
+                <h1 className={styles.title}>{called}</h1>
+                {/* Nothing is active until it has been saved once. */}
+                {!creating && <span className={styles.activeBadge}>Active</span>}
               </div>
               <div className={styles.headerActions}>
-                <button type="button" className={styles.deleteButton} onClick={handleDelete}>
-                  <TrashIcon />
-                </button>
+                {!creating && (
+                  <button type="button" className={styles.deleteButton} onClick={handleDelete}>
+                    <TrashIcon />
+                  </button>
+                )}
                 <button type="button" className={styles.ghostButton} onClick={handleValidate}>
                   Validate
                 </button>
-                <button type="button" className={styles.saveButton} onClick={handleSave} disabled={saving}>
-                  {saving ? 'Saving…' : 'Save Changes'}
+                <button
+                  type="button"
+                  className={styles.saveButton}
+                  onClick={handleSave}
+                  // A function has to be called something before it can be made.
+                  disabled={saving || (creating && name.trim() === '')}
+                >
+                  {saving ? 'Saving…' : creating ? 'Create Function' : 'Save Changes'}
                 </button>
               </div>
             </div>
@@ -406,7 +495,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                   here immediately — which is the point of having it.
                 */}
                 <span className={styles.signature} title="What this function is handed, in order">
-                  {fn?.name ?? 'function'}
+                  {creating ? identifier(name) : (fn?.name ?? 'function')}
                   {signature}
                 </span>
                 {/*
@@ -762,8 +851,13 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
               <div className={styles.metadata}>
                 <p className={styles.metadataLabel}>Last modified</p>
                 <p className={styles.metadataValue}>
-                  {fn === null ? '…' : timeAgo(fn.lastModifiedAt)} by{' '}
-                  <strong>{fn?.lastModifiedBy ?? '…'}</strong>
+                  {creating || fn === null ? (
+                    'Not saved yet'
+                  ) : (
+                    <>
+                      {timeAgo(fn.lastModifiedAt)} by <strong>{fn.lastModifiedBy}</strong>
+                    </>
+                  )}
                 </p>
               </div>
             </aside>

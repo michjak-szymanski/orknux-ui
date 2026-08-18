@@ -159,6 +159,8 @@ export const PAGES = [
   // which one, so these are deliberately not offered. ----
   { path: '/workspace/:workspaceId/executions/:executionId', access: 'signed-in', goTo: false },
   { path: '/workspace/:workspaceId/actions/:actionId', access: 'signed-in', goTo: false },
+  /* Before the one with an id in it: `new` is a page, not a function called new. */
+  { path: '/workspace/:workspaceId/functions/new', access: 'signed-in', goTo: false },
   { path: '/workspace/:workspaceId/functions/:functionId', access: 'signed-in', goTo: false },
   { path: '/workspace/:workspaceId/conditions/:conditionId', access: 'signed-in', goTo: false },
   { path: '/workspace/:workspaceId/triggers/:triggerId', access: 'signed-in', goTo: false },

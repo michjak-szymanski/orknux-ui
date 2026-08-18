@@ -332,7 +332,17 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-8);
-  align-self: flex-start;
+  /*
+   * As tall as the editor beside it, and scrolled inside itself.
+   *
+   * It used to take whatever height its contents wanted, and a function with a
+   * few parameters wanted more than the page had - so the panel ran past the
+   * bottom of the window and printed itself over the attribution bar, which the
+   * page has no way to scroll to. What is too tall now scrolls in the panel.
+   */
+  align-self: stretch;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .panelSection {
@@ -404,6 +414,20 @@
 
 .selectWrapper select {
   appearance: none;
+}
+
+/*
+ * What a choice above means, said under it.
+ *
+ * It had no rule at all and read at the page's own size, in the page's own
+ * colour - an explanation printed as loudly as the thing it explains, which is
+ * the one thing a hint must not be.
+ */
+.paramHint {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-text-muted);
 }
 
 .paramList {

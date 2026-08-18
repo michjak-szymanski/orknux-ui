@@ -296,6 +296,31 @@ export function withParameters(source: string, names: string[]): string {
   return source.slice(0, found.from) + wanted + source.slice(found.to);
 }
 
+/**
+ * The code a function starts from, before there is a function to ask for it.
+ *
+ * The server prints this stub for anything created without code of its own, and
+ * that is still where a stored one comes from. This is the same stub printed a
+ * moment earlier: a function being written in the editor has no id yet, so
+ * nothing on the server can be asked, and a code column with no declaration in
+ * it leaves the details panel nothing to keep in step.
+ *
+ * `declarations` are annotated - `ticket: Ticket` - and in the order the sandbox
+ * hands them over, externals last. `returned` is only the declared ones: an
+ * external is a workspace value, often a secret, and a stub that handed one to
+ * the next node would be making that choice for somebody.
+ */
+export function starterSource(name: string, declarations: string[], returned: string[]): string {
+  const gives = returned.length === 0 ? '{}' : `{ ${returned.join(', ')} }`;
+  return [
+    `export default async function ${name}(${declarations.join(', ')}) {`,
+    '  // What this returns is handed to the next node.',
+    `  return ${gives};`,
+    '}',
+    '',
+  ].join('\n');
+}
+
 export async function updateFunction(
   id: string,
   input: {

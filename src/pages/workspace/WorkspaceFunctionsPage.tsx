@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import type { PageOf } from '../../api/client';
 import {
-  createFunction,
   duplicateFunction,
   fetchWorkspaceFunctions,
   timeAgo,
@@ -15,7 +14,6 @@ import copyIcon from '../../assets/copy.svg';
 import settingsIcon from '../../assets/settings-14.svg';
 import { AppShell } from '../../components/AppShell';
 import { CompactPagination } from '../../components/CompactPagination';
-import { CreateFunctionDialog } from '../../components/CreateFunctionDialog';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
@@ -37,7 +35,6 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
   /** The function being copied, so the row buttons can be held while it happens. */
   const [copying, setCopying] = useState<string | null>(null);
 
@@ -94,7 +91,18 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
             <h1 className={styles.title}>Functions</h1>
             <p className={styles.subtitle}>Named JavaScript functions callable from workflow actions.</p>
           </div>
-          <button type="button" className={styles.createFunction} onClick={() => setCreating(true)}>
+          {/*
+            Straight to the editor, the way duplicating one goes.
+
+            It used to open a form of its own that could say less than the editor
+            it handed you to a moment later - no code, no removing a parameter, no
+            naming the object a parameter meant. There is one form now.
+          */}
+          <button
+            type="button"
+            className={styles.createFunction}
+            onClick={() => navigate(`/workspace/${workspaceId}/functions/new`)}
+          >
             + Create Function
           </button>
         </header>
@@ -170,24 +178,6 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
         </div>
       </section>
 
-      <CreateFunctionDialog
-        open={creating}
-        workspaceId={workspaceId}
-        onClose={() => setCreating(false)}
-        onCreated={async (name, description, returnType, params, externalVariableIds) => {
-          const created = await createFunction({
-            workspaceId,
-            name,
-            description,
-            returnType,
-            params,
-            externalVariableIds,
-          });
-          setCreating(false);
-          // A new function is empty, so the editor is where it is useful.
-          navigate(`/workspace/${workspaceId}/functions/${created.id}`);
-        }}
-      />
     </AppShell>
   );
 }
