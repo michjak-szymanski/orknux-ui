@@ -22,7 +22,13 @@ import type {
 } from '../api/actions';
 import { fetchWorkspaceConditions } from '../api/conditions';
 import type { Condition } from '../api/conditions';
-import { fetchWorkspaceFunctions } from '../api/functions';
+import {
+  NEW_FUNCTION,
+  NEW_FUNCTION_NAME,
+  createFunction,
+  fetchWorkspaceFunctions,
+  validFunctionName,
+} from '../api/functions';
 import type { WorkspaceFunction } from '../api/functions';
 import { fetchWorkspaceConnections } from '../api/integrations';
 import type { WorkspaceConnection } from '../api/integrations';
@@ -68,6 +74,14 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
   const [method, setMethod] = useState('GET');
   const [headers, setHeaders] = useState('');
   const [functionId, setFunctionId] = useState('');
+  /**
+   * What to call the function this action is about to bring into existence.
+   *
+   * Only read when the picker is on "New function". An action is very often the
+   * reason a function is wanted at all, and the alternative was leaving a
+   * half-filled dialog to go and make one on another screen.
+   */
+  const [newFunctionName, setNewFunctionName] = useState(NEW_FUNCTION_NAME);
   const [mappings, setMappings] = useState<ArgumentMapping[]>([]);
   const [conditionExpression, setConditionExpression] = useState('');
   const [conditionId, setConditionId] = useState('');
@@ -101,6 +115,7 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
       setMethod(action?.method ?? 'GET');
       setHeaders(action?.headers ?? '');
       setFunctionId(action?.functionId ?? '');
+      setNewFunctionName(NEW_FUNCTION_NAME);
       setMappings(action?.mappings ?? []);
       setConditionExpression(action?.conditionExpression ?? '');
       setConditionId(action?.conditionId ?? '');
@@ -144,14 +159,20 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
   // Empty by default: an argument nobody fills in is taken from the field of
   // that name, which is what a workflow wants nearly every time.
   useEffect(() => {
-    if (subtype !== 'FUNCTION' || chosenFunction === null) return;
+    if (subtype !== 'FUNCTION') return;
+    if (chosenFunction === null) {
+      // A function still being named takes nothing, so the rows belonging to
+      // whatever was picked before it would otherwise be saved against it.
+      if (functionId === NEW_FUNCTION) setMappings([]);
+      return;
+    }
     setMappings((current) =>
       chosenFunction.params.map((param) => ({
         argument: param.name,
         expression: current.find((mapping) => mapping.argument === param.name)?.expression ?? '',
       })),
     );
-  }, [subtype, chosenFunction]);
+  }, [subtype, chosenFunction, functionId]);
 
   function changeType(next: ActionType) {
     setType(next);
@@ -165,7 +186,7 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
       : subtype === 'HTTP_REQUEST'
         ? url.trim() !== ''
         : subtype === 'FUNCTION'
-          ? functionId !== ''
+          ? functionId !== '' && (functionId !== NEW_FUNCTION || validFunctionName(newFunctionName))
           : subtype === 'INLINE_CONDITION'
             ? conditionExpression.trim() !== ''
             : subtype === 'CONDITION'
@@ -178,29 +199,45 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
 
     setSubmitting(true);
     setError(null);
-    const settings = {
-      name: name.trim(),
-      subtype,
-      connectionId: subtype === 'OUTGOING_CONNECTION' ? connectionId : null,
-      connectionAction: subtype === 'OUTGOING_CONNECTION' ? connectionAction : null,
-      content: subtype === 'OUTGOING_CONNECTION' ? content : null,
-      target: subtype === 'OUTGOING_CONNECTION' ? target : null,
-      targetName: subtype === 'OUTGOING_CONNECTION' ? targetName : null,
-      url: subtype === 'HTTP_REQUEST' ? url.trim() : null,
-      method: subtype === 'HTTP_REQUEST' ? method : null,
-      headers: subtype === 'HTTP_REQUEST' ? headers : null,
-      functionId: subtype === 'FUNCTION' ? functionId : null,
-      mappings: subtype === 'FUNCTION' ? mappings : [],
-      conditionExpression: subtype === 'INLINE_CONDITION' ? conditionExpression.trim() : null,
-      conditionId: subtype === 'CONDITION' ? conditionId : null,
-      timeoutSeconds: subtype === 'CONDITION' || subtype === 'INLINE_CONDITION' ? Number(timeoutSeconds) : null,
-      retryIntervalSeconds:
-        subtype === 'CONDITION' || subtype === 'INLINE_CONDITION' ? Number(retryIntervalSeconds) : null,
-      durationSeconds: subtype === 'TIME' ? Number(durationSeconds) : null,
-      icon,
-    };
 
     try {
+      /*
+       * Named in the picker, made here, before the action that points at it.
+       *
+       * An action holding the id of something that does not exist is a broken
+       * action, so the function goes in first and the action gets a real id or
+       * nothing at all. It starts from the server's stub, which runs and returns
+       * a map - enough for a workflow to be drawn through it, with the code
+       * written afterwards in the function editor.
+       */
+      let chosen = functionId;
+      if (subtype === 'FUNCTION' && functionId === NEW_FUNCTION) {
+        chosen = (await createFunction({ workspaceId, name: newFunctionName.trim() })).id;
+      }
+
+      const settings = {
+        name: name.trim(),
+        subtype,
+        connectionId: subtype === 'OUTGOING_CONNECTION' ? connectionId : null,
+        connectionAction: subtype === 'OUTGOING_CONNECTION' ? connectionAction : null,
+        content: subtype === 'OUTGOING_CONNECTION' ? content : null,
+        target: subtype === 'OUTGOING_CONNECTION' ? target : null,
+        targetName: subtype === 'OUTGOING_CONNECTION' ? targetName : null,
+        url: subtype === 'HTTP_REQUEST' ? url.trim() : null,
+        method: subtype === 'HTTP_REQUEST' ? method : null,
+        headers: subtype === 'HTTP_REQUEST' ? headers : null,
+        functionId: subtype === 'FUNCTION' ? chosen : null,
+        mappings: subtype === 'FUNCTION' ? mappings : [],
+        conditionExpression: subtype === 'INLINE_CONDITION' ? conditionExpression.trim() : null,
+        conditionId: subtype === 'CONDITION' ? conditionId : null,
+        timeoutSeconds:
+          subtype === 'CONDITION' || subtype === 'INLINE_CONDITION' ? Number(timeoutSeconds) : null,
+        retryIntervalSeconds:
+          subtype === 'CONDITION' || subtype === 'INLINE_CONDITION' ? Number(retryIntervalSeconds) : null,
+        durationSeconds: subtype === 'TIME' ? Number(durationSeconds) : null,
+        icon,
+      };
+
       const saved = editing
         ? await updateAction(action.id, settings)
         : await createAction({ workspaceId, type, ...settings });
@@ -485,6 +522,10 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                     <option value="" disabled>
                       Select function...
                     </option>
+                    {/* Above the list rather than under it: a workspace's functions
+                        fill a hundred rows, and the way to make one should not be
+                        the row you have to scroll to find. */}
+                    <option value={NEW_FUNCTION}>+ New function</option>
                     {functions.map((candidate) => (
                       <option key={candidate.id} value={candidate.id}>
                         {candidate.name}
@@ -493,6 +534,28 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                   </select>
                   <img src={chevronDown12Icon} alt="" width={12} height={12} />
                 </div>
+                {functionId === NEW_FUNCTION && (
+                  <>
+                    <div className={styles.inputWrapper}>
+                      <input
+                        id="action-new-function"
+                        className={`${styles.input} ${styles.inputMono}`}
+                        type="text"
+                        aria-label="New function name"
+                        placeholder={NEW_FUNCTION_NAME}
+                        value={newFunctionName}
+                        // Selected on focus, as the function editor does it: the box
+                        // arrives with a name in it, so typing over it is one gesture.
+                        onFocus={(event) => event.target.select()}
+                        onChange={(event) => setNewFunctionName(event.target.value)}
+                      />
+                    </div>
+                    <p className={styles.fieldHint}>
+                      Created with this action, taking nothing and returning a map. Open it in Functions to
+                      write what it does.
+                    </p>
+                  </>
+                )}
               </div>
 
               <div className={styles.field}>

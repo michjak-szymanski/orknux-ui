@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 import type { ValueType } from '../../api/actions';
 import {
+  NEW_FUNCTION_NAME,
   RETURN_TYPES,
   VALUE_TYPES,
   createFunction,
@@ -72,12 +73,9 @@ function said(reason: string, line: number | null): string {
  * called is its name, and the identifier in the code is nobody's business once
  * there is code.
  */
-/** What a function is called before anybody calls it anything. */
-const STARTING_NAME = 'newFunction';
-
 function identifier(name: string): string {
   const cleaned = name.trim().replace(/[^A-Za-z0-9_$]/g, '');
-  return cleaned === '' || /^[0-9]/.test(cleaned) ? 'newFunction' : cleaned;
+  return cleaned === '' || /^[0-9]/.test(cleaned) ? NEW_FUNCTION_NAME : cleaned;
 }
 
 export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPageProps) {
@@ -105,7 +103,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
    * and it is selected the first time the field is focused so typing over it
    * takes one gesture rather than a clear and a type.
    */
-  const [name, setName] = useState(functionId === '' ? STARTING_NAME : '');
+  const [name, setName] = useState(functionId === '' ? NEW_FUNCTION_NAME : '');
   const [renamed, setRenamed] = useState(false);
   const [description, setDescription] = useState('');
   /** The left column: what somebody writes. */
@@ -399,11 +397,15 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
   /*
    * What a new function says before anybody writes anything.
    *
-   * Reprinted from the panel as it changes, so the name, the parameters and the
-   * externals are already in the declaration when somebody starts typing. It
-   * stops the moment they do: from then on the code is theirs, and only the
-   * parameter list is kept in step, exactly as for a function that already
-   * exists.
+   * Reprinted from the panel as it changes, so the name, the parameters, the
+   * externals and the return type are already in the code when somebody starts
+   * typing. It stops the moment they do: from then on the code is theirs, and
+   * only the parameter list is kept in step, exactly as for a function that
+   * already exists.
+   *
+   * The return type is in here because choosing nothing has to take the return
+   * statement out again, and choosing a type back has to put it back - a panel
+   * that only ever adds is a panel you have to correct by hand.
    */
   useEffect(() => {
     if (!creating) return;
@@ -412,10 +414,11 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
       identifier(name),
       declarations,
       params.filter((param) => param.name.trim() !== '').map((param) => param.name.trim()),
+      returnType,
     );
     printed.current = next;
     if (next !== source) setSource(next);
-  }, [creating, name, declarations, params, source]);
+  }, [creating, name, declarations, params, returnType, source]);
 
 
   /*
@@ -802,7 +805,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                       // Only the name nobody has chosen yet, and only once: an
                       // existing name is text somebody wants to edit, not
                       // replace.
-                      if (creating && !renamed && name === STARTING_NAME) event.target.select();
+                      if (creating && !renamed && name === NEW_FUNCTION_NAME) event.target.select();
                     }}
                     onChange={(event) => {
                       setName(event.target.value);

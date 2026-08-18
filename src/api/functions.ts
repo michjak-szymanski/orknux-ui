@@ -309,11 +309,27 @@ export function withParameters(source: string, names: string[]): string {
  * hands them over, externals last. `returned` is only the declared ones: an
  * external is a workspace value, often a secret, and a stub that handed one to
  * the next node would be making that choice for somebody.
+ *
+ * `returnType` decides whether there is a return at all. A stub that ended
+ * `return { ticket };` under a return type of nothing described a function that
+ * does not exist, and made the first thing anybody did after choosing nothing
+ * deleting a line the editor had written a moment earlier.
  */
-export function starterSource(name: string, declarations: string[], returned: string[]): string {
+export function starterSource(
+  name: string,
+  declarations: string[],
+  returned: string[],
+  returnType: ValueType,
+): string {
+  const opening = `export default async function ${name}(${declarations.join(', ')}) {`;
+
+  if (returnType === 'NONE') {
+    return [opening, '  // Nothing goes on from here; this runs for what it does.', '}', ''].join('\n');
+  }
+
   const gives = returned.length === 0 ? '{}' : `{ ${returned.join(', ')} }`;
   return [
-    `export default async function ${name}(${declarations.join(', ')}) {`,
+    opening,
     '  // What this returns is handed to the next node.',
     `  return ${gives};`,
     '}',
@@ -365,6 +381,61 @@ export const VALUE_TYPES: ValueType[] = ['STRING', 'NUMBER', 'BOOLEAN', 'OBJECT'
  * argument — so the return list is its own.
  */
 export const RETURN_TYPES: ValueType[] = [...VALUE_TYPES, 'NONE'];
+
+/**
+ * What a picker holds while a function is being named rather than chosen.
+ *
+ * A stored id is a number the server printed, so a word can never be one, and
+ * comparing against it needs no second flag alongside the selected value. The
+ * function it stands for is created when the form around the picker is saved,
+ * which is the only moment there is a name worth creating anything from.
+ */
+export const NEW_FUNCTION = 'new';
+
+/**
+ * What a function is called before anybody says otherwise.
+ *
+ * An empty Name field with a disabled Create button underneath is a puzzle, so
+ * both the editor and the pickers start from a name that would be accepted, and
+ * select it for typing over. Shared so the two never propose different words for
+ * the same thing.
+ */
+export const NEW_FUNCTION_NAME = 'newFunction';
+
+/**
+ * Whether the server would take this as a function's name.
+ *
+ * A function is called by name inside the sandbox, so the server insists on a
+ * JavaScript identifier and refuses anything else. The same rule is checked here
+ * so a picker can say what is wrong while somebody is still typing, rather than
+ * spending their save on finding out.
+ */
+export function validFunctionName(name: string): boolean {
+  return /^[A-Za-z_$][A-Za-z0-9_$]{0,63}$/.test(name.trim());
+}
+
+/**
+ * A boolean function that says no, for a picker holding nothing but a name.
+ *
+ * Both halves are written out rather than compiled. The body is one `return` of a
+ * literal, which is the same text in either language, so there is nothing for a
+ * compiler to do - the same reason a duplicate is copied rather than recompiled.
+ *
+ * It has to be written at all because the server's own stub returns an empty
+ * object, and an empty object is truthy. A webhook guarded by a function nobody
+ * has written yet would let every caller through, and a condition nobody has
+ * written yet would answer yes to everything. Neither is a default anybody chose.
+ */
+export function refusingFunction(name: string): { source: string; typescript: string } {
+  const body = [
+    `export default async function ${name}() {`,
+    '  // Says no to everything until somebody writes what it should let through.',
+    '  return false;',
+    '}',
+    '',
+  ].join('\n');
+  return { source: body, typescript: body };
+}
 
 /**
  * How a value's shape is written in TypeScript.

@@ -16,7 +16,14 @@ import {
   valuesLabel,
 } from '../api/conditions';
 import type { Condition, ConditionCheck, ConditionProperty, ConditionType } from '../api/conditions';
-import { fetchWorkspaceFunctions } from '../api/functions';
+import {
+  NEW_FUNCTION,
+  NEW_FUNCTION_NAME,
+  createFunction,
+  fetchWorkspaceFunctions,
+  refusingFunction,
+  validFunctionName,
+} from '../api/functions';
 import type { WorkspaceFunction } from '../api/functions';
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
 import { IconField } from './IconField';
@@ -68,6 +75,15 @@ export function ConditionDialog({
   const [check, setCheck] = useState<ConditionCheck>(CHECKS_BY_PROPERTY.MESSAGE_AUTHOR[0]);
   const [negate, setNegate] = useState(false);
   const [functionId, setFunctionId] = useState('');
+  /**
+   * What to call the function this condition is about to bring into existence.
+   *
+   * Only read when the picker is on "New function". A condition whose whole job
+   * is to ask one question usually needs a function nobody has written yet, and
+   * sending somebody to the Functions screen to write it loses the half-filled
+   * form they are standing in.
+   */
+  const [newFunctionName, setNewFunctionName] = useState(NEW_FUNCTION_NAME);
   const [values, setValues] = useState<string[]>([]);
   const [members, setMembers] = useState<string[]>([]);
   const [draftValue, setDraftValue] = useState('');
@@ -94,6 +110,7 @@ export function ConditionDialog({
       setCheck(condition?.check ?? CHECKS_BY_PROPERTY[startingProperty][0]);
       setNegate(condition?.negate ?? false);
       setFunctionId(condition?.functionId ?? preset?.functionId ?? '');
+      setNewFunctionName(NEW_FUNCTION_NAME);
       setValues(condition?.values ?? []);
       setMembers(condition?.members ?? []);
       setIcon(condition?.icon ?? null);
@@ -175,6 +192,9 @@ export function ConditionDialog({
       }
     } else if (type === 'FUNCTION') {
       if (functionId === '') missing.push('Choose the function to call.');
+      else if (functionId === NEW_FUNCTION && !validFunctionName(newFunctionName)) {
+        missing.push('Name the new function as a script can call it: a letter, then letters or digits.');
+      }
     } else if (label !== null) {
       const needed = check === 'BETWEEN' ? 2 : 1;
       if (values.length < needed) {
@@ -187,7 +207,7 @@ export function ConditionDialog({
     }
 
     return missing;
-  }, [name, isComposite, members, type, functionId, label, check, values, draftValue]);
+  }, [name, isComposite, members, type, functionId, newFunctionName, label, check, values, draftValue]);
 
   const complete = blockers.length === 0;
 
@@ -210,19 +230,43 @@ export function ConditionDialog({
 
     setSubmitting(true);
     setError(null);
-    const settings = {
-      name: name.trim(),
-      type,
-      property: isComposite || type === 'FUNCTION' ? null : property,
-      check: isComposite || type === 'FUNCTION' ? null : check,
-      negate,
-      functionId: type === 'FUNCTION' ? functionId : null,
-      values: isComposite || type === 'FUNCTION' ? [] : values,
-      members: isComposite ? members : [],
-      icon,
-    };
 
     try {
+      /*
+       * Named in the picker, made here, before the condition that points at it.
+       *
+       * A condition holding the id of something that does not exist is a broken
+       * condition, so the function goes in first and the condition gets a real id
+       * or nothing at all. What it starts as says no to everything, which is a
+       * condition that is simply never met until somebody opens it in the function
+       * editor and writes the question.
+       *
+       * Boolean, because a question is the only thing a condition can ask.
+       */
+      let chosen = functionId;
+      if (type === 'FUNCTION' && functionId === NEW_FUNCTION) {
+        const called = newFunctionName.trim();
+        const made = await createFunction({
+          workspaceId,
+          name: called,
+          returnType: 'BOOLEAN',
+          ...refusingFunction(called),
+        });
+        chosen = made.id;
+      }
+
+      const settings = {
+        name: name.trim(),
+        type,
+        property: isComposite || type === 'FUNCTION' ? null : property,
+        check: isComposite || type === 'FUNCTION' ? null : check,
+        negate,
+        functionId: type === 'FUNCTION' ? chosen : null,
+        values: isComposite || type === 'FUNCTION' ? [] : values,
+        members: isComposite ? members : [],
+        icon,
+      };
+
       const saved = editing
         ? await updateCondition(condition.id, settings)
         : await createCondition({ workspaceId, ...settings });
@@ -365,6 +409,10 @@ export function ConditionDialog({
                   <option value="" disabled>
                     Select function...
                   </option>
+                  {/* Above the list rather than under it: a workspace's functions
+                      fill a hundred rows, and the way to make one should not be
+                      the row you have to scroll to find. */}
+                  <option value={NEW_FUNCTION}>+ New function</option>
                   {functions.map((candidate) => (
                     <option key={candidate.id} value={candidate.id}>
                       {candidate.name}
@@ -373,10 +421,33 @@ export function ConditionDialog({
                 </select>
                 <img src={chevronDown12Icon} alt="" width={12} height={12} />
               </div>
-              <p className={styles.fieldHint}>
-                Only functions that return a boolean can answer a condition. It is handed what the run is
-                carrying.
-              </p>
+              {functionId === NEW_FUNCTION ? (
+                <>
+                  <div className={styles.inputWrapper}>
+                    <input
+                      id="condition-new-function"
+                      className={`${styles.input} ${styles.inputMono}`}
+                      type="text"
+                      aria-label="New function name"
+                      placeholder={NEW_FUNCTION_NAME}
+                      value={newFunctionName}
+                      // Selected on focus, as the function editor does it: the box
+                      // arrives with a name in it, so typing over it is one gesture.
+                      onFocus={(event) => event.target.select()}
+                      onChange={(event) => setNewFunctionName(event.target.value)}
+                    />
+                  </div>
+                  <p className={styles.fieldHint}>
+                    Created with this condition, saying no to everything. Open it in Functions to write
+                    the question it should be asking.
+                  </p>
+                </>
+              ) : (
+                <p className={styles.fieldHint}>
+                  Only functions that return a boolean can answer a condition. It is handed what the run is
+                  carrying.
+                </p>
+              )}
             </div>
           )}
 
