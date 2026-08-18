@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import { commentOnIssue, createIssue, deleteIssue, fetchIssue, updateIssue } from '../../api/issues';
+import {
+  commentOnIssue,
+  createIssue,
+  deleteIssue,
+  editIssueComment,
+  fetchIssue,
+  updateIssue,
+} from '../../api/issues';
 import type { Assignee, Issue, IssueStatus } from '../../api/issues';
 import type { SessionUser } from '../../api/session';
 import { timeAgo } from '../../api/tools';
@@ -10,6 +17,8 @@ import { AppShell } from '../../components/AppShell';
 import { AssigneePicker } from '../../components/AssigneePicker';
 import { BackLink } from '../../components/BackLink';
 import { Loader } from '../../components/Loader';
+import { Markdown } from '../../components/Markdown';
+import { MarkdownEditor } from '../../components/MarkdownEditor';
 import { TrashIcon } from '../../components/TrashIcon';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
@@ -42,9 +51,18 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
   const [assignee, setAssignee] = useState<Assignee | null>(null);
   const [status, setStatus] = useState<IssueStatus>('OPEN');
   const [comment, setComment] = useState('');
+  /** Whether the description is being written rather than read. */
+  const [writing, setWriting] = useState(false);
+  /** The comment being changed, and what it is being changed to. */
+  const [editing, setEditing] = useState<{ id: string; content: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // A new issue is written from the first keystroke, not read.
+  useEffect(() => {
+    if (creating) setWriting(true);
+  }, [creating]);
 
   useEffect(() => {
     if (creating) return;
@@ -57,6 +75,9 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
           return;
         }
         setIssue(found);
+        // An issue that says nothing opens ready to be written in; one that
+        // says something opens as what it says.
+        setWriting((found.description ?? '') === '');
         setTitle(found.title);
         setDescription(found.description ?? '');
         setLabels(found.labels);
@@ -108,6 +129,20 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
       setStatus(held.status);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not change the status.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  /** Saving a change to a comment; only the author is offered this. */
+  async function saveComment() {
+    if (editing === null || saving) return;
+    setSaving(true);
+    try {
+      setIssue(await editIssueComment(editing.id, editing.content));
+      setEditing(null);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not change the comment.');
     } finally {
       setSaving(false);
     }
@@ -205,17 +240,43 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
 
           <div className={styles.split}>
             <div className={styles.main}>
-              <label className={styles.label} htmlFor="issue-description">
-                Description
-              </label>
-              <textarea
-                id="issue-description"
-                className={styles.description}
-                value={description}
-                rows={10}
-                placeholder="What happens, and what should happen instead."
-                onChange={(event) => setDescription(event.target.value)}
-              />
+              <span className={styles.labelRow}>
+                <span className={styles.label}>Description</span>
+                {!creating && (
+                  <button type="button" className={styles.textButton} onClick={() => setWriting(!writing)}>
+                    {writing ? 'Preview' : 'Edit'}
+                  </button>
+                )}
+              </span>
+              {writing ? (
+                <MarkdownEditor
+                  value={description}
+                  onChange={setDescription}
+                  workspaceId={workspaceId}
+                  rows={10}
+                  ariaLabel="Description"
+                  placeholder="What happens, and what should happen instead."
+                />
+              ) : (
+                /* What was written, as it reads. Clicking it writes again,
+                   because the thing somebody wants after reading their own
+                   description is usually to change it. */
+                <div
+                  className={styles.rendered}
+                  role="button"
+                  tabIndex={0}
+                  onDoubleClick={() => setWriting(true)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') setWriting(true);
+                  }}
+                >
+                  {description.trim() === '' ? (
+                    <p className={styles.nothing}>Nothing written yet.</p>
+                  ) : (
+                    <Markdown>{description}</Markdown>
+                  )}
+                </div>
+              )}
 
               {!creating && (
                 <section className={styles.comments}>
@@ -230,20 +291,59 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
                       <div className={styles.commentBody}>
                         <p className={styles.commentHead}>
                           <strong>{said.author}</strong> commented {timeAgo(said.createdAt)}
+                          {/* Said, not hidden: a comment that changed says so. */}
+                          {said.editedAt !== null && <span className={styles.edited}> · edited</span>}
+                          {said.mine && editing?.id !== said.id && (
+                            <button
+                              type="button"
+                              className={styles.textButton}
+                              onClick={() => setEditing({ id: said.id, content: said.content })}
+                            >
+                              Edit
+                            </button>
+                          )}
                         </p>
-                        <p className={styles.commentText}>{said.content}</p>
+
+                        {editing?.id === said.id ? (
+                          <div className={styles.commentEditor}>
+                            <MarkdownEditor
+                              value={editing.content}
+                              onChange={(next) => setEditing({ id: said.id, content: next })}
+                              workspaceId={workspaceId}
+                              rows={4}
+                              ariaLabel="Edit this comment"
+                            />
+                            <div className={styles.composerActions}>
+                              <button type="button" className={styles.ghost} onClick={() => setEditing(null)}>
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                className={styles.save}
+                                onClick={() => void saveComment()}
+                                disabled={saving || editing.content.trim() === ''}
+                              >
+                                Save
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className={styles.commentText}>
+                            <Markdown>{said.content}</Markdown>
+                          </div>
+                        )}
                       </div>
                     </article>
                   ))}
 
                   <div className={styles.composer}>
-                    <textarea
-                      className={styles.commentInput}
+                    <MarkdownEditor
                       value={comment}
+                      onChange={setComment}
+                      workspaceId={workspaceId}
                       rows={3}
+                      ariaLabel="Add a comment"
                       placeholder="Say something…"
-                      aria-label="Add a comment"
-                      onChange={(event) => setComment(event.target.value)}
                     />
                     <div className={styles.composerActions}>
                       {/* Closing and commenting are the two things anybody does here. */}

@@ -24,6 +24,10 @@ export interface IssueComment {
   author: string;
   content: string;
   createdAt: string;
+  /** Null until somebody changes it. */
+  editedAt: string | null;
+  /** Whether the person reading this wrote it, and so may change it. */
+  mine: boolean;
 }
 
 export interface Issue {
@@ -62,7 +66,7 @@ const FULL_FIELDS = `
   id workspaceId number title description status reporter
   assignee { kind id name hint }
   labels
-  comments { id author content createdAt }
+  comments { id author content createdAt editedAt mine }
   createdAt lastModifiedAt lastModifiedBy
 `;
 
@@ -149,6 +153,14 @@ export async function deleteIssue(id: string): Promise<boolean> {
     { id },
   );
   return data.deleteIssue;
+}
+
+export async function editIssueComment(id: string, content: string): Promise<Issue> {
+  const data = await graphql<{ editIssueComment: Issue }>(
+    `mutation ($id: ID!, $content: String!) { editIssueComment(id: $id, content: $content) { ${FULL_FIELDS} } }`,
+    { id, content },
+  );
+  return data.editIssueComment;
 }
 
 export async function commentOnIssue(id: string, content: string): Promise<Issue> {

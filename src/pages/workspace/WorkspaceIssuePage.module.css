@@ -317,3 +317,49 @@
   font-size: var(--text-md);
   color: var(--color-danger);
 }
+
+.labelRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+
+/* A word that acts, where a button would be too loud: Edit, Preview, Cancel. */
+.textButton {
+  margin-left: var(--space-8);
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: var(--text-xs);
+  color: var(--color-accent-brand);
+  cursor: pointer;
+}
+
+.textButton:hover {
+  text-decoration: underline;
+}
+
+/* Written markdown, as it reads. */
+.rendered {
+  min-height: 120px;
+  padding: var(--space-12);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: text;
+}
+
+.edited {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.commentEditor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
