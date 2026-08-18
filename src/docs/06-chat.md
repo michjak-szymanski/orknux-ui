@@ -7,6 +7,9 @@ reloaded.
 Whether an installation has a chat at all is an administrator's decision; see
 Administration.
 
+![A conversation: the chats held on the left, the model answering above, and the
+composer beneath](/screens/chat.png)
+
 ## Choosing what answers
 
 The dropdown above the composer picks the model. Picking an agent instead gives
@@ -36,6 +39,36 @@ because that is what transcription servers actually decode.
 
 The microphone appears only once the workspace has a transcription model.
 
+## Talking to it
+
+**Voice** in the title bar holds the conversation out loud: it listens, sends
+what it heard, reads the answer back, and listens again — no key pressed
+between turns.
+
+The panel is one large circle, and the circle is the state:
+
+| It looks like | It is |
+| --- | --- |
+| Moving with your voice | **Listening** — speak, and it answers when you stop |
+| Breathing on its own | **Thinking** — the model has your turn |
+| Ringing outward | **Speaking** — reading the answer back |
+
+A turn ends when you stop talking: about a second of quiet, once it has heard
+speech, is taken as your turn ending — nothing is sent while a room is merely
+quiet. A turn that runs past thirty seconds is sent anyway.
+
+Tapping the circle interrupts: while it is speaking, it stops and listens;
+while it is listening, it takes what you have said so far as the whole turn.
+
+The transcript stays beside the panel, and a spoken conversation lands in it
+exactly as a typed one does — same chat, same history — so the conversation can
+be read back afterwards rather than only remembered. What it made of your last
+turn is shown under the circle, where a mishearing is obvious.
+
+Voice is offered only where the workspace has both a transcription model and a
+speech model. A turn that fails — nothing transcribed, a provider that will not
+answer — says so and goes back to listening rather than ending the conversation.
+
 ## Listening instead of reading
 
 The speaker under an answer reads it aloud, using the workspace's text-to-speech
@@ -58,12 +91,15 @@ attachments, so there is nothing a viewer could show.
 
 ## The AI button
 
-![Workspace settings, where the quick chat's model and whether it may make changes are chosen](/screens/workspace-settings.png)
+![The quick chat, open over a page and answering about what is on it](/screens/quick-chat.png)
 
-Bottom right of every page, a small panel that answers about **what you are
-looking at**. It is told which page you have open, so "why did this fail" on a
+Bottom right of every page except this one, a small panel that answers about
+**what you are looking at**. Not here, because a second conversation floating
+over the one you already have open is two boxes to type a question into. It is told which page you have open, so "why did this fail" on a
 run page means that run, and it can look up the workspace's workflows, runs and
 agents to answer.
+
+![Workspace settings, where the quick chat's model and whether it may make changes are chosen](/screens/workspace-settings.png)
 
 It reads and nothing else, unless the workspace says otherwise — **Let it make
 changes** under Settings. Off, it says plainly that it cannot. On, it can act on

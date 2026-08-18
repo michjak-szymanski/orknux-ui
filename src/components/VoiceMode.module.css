@@ -1,0 +1,203 @@
+/*
+ * The voice panel: one big circle, and as little else as possible.
+ *
+ * It sits beside the transcript rather than over it — a conversation held by
+ * voice is still a conversation somebody wants to scroll back through, so the
+ * chat stays where it was and this takes a column of its own.
+ */
+.panel {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-16);
+  width: 320px;
+  padding: var(--space-24);
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.title {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.close {
+  padding: var(--space-4) var(--space-10);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.close:hover {
+  color: var(--color-text-primary);
+}
+
+/*
+ * The circle.
+ *
+ * A button, because interrupting is the thing somebody reaches for mid-turn,
+ * and the largest target on the panel should be the one that does it.
+ */
+.orb {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 208px;
+  height: 208px;
+  margin-top: var(--space-24);
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.core {
+  width: 132px;
+  height: 132px;
+  border-radius: var(--radius-full);
+  background: radial-gradient(circle at 40% 35%, var(--color-accent-brand), var(--color-surface-raised) 78%);
+  box-shadow: 0 0 32px -8px var(--color-accent-brand);
+  /* Grows with what the microphone hears; --level is set on the element. */
+  transform: scale(calc(1 + var(--level, 0) * 0.22));
+  transition: transform 90ms linear;
+}
+
+.ring {
+  position: absolute;
+  width: 132px;
+  height: 132px;
+  border: 1px solid var(--color-accent-brand);
+  border-radius: var(--radius-full);
+  opacity: 0.35;
+}
+
+/* Listening: the ring follows the voice rather than a clock. */
+.listening .ring {
+  transform: scale(calc(1.06 + var(--level, 0) * 0.42));
+  opacity: calc(0.2 + var(--level, 0) * 0.5);
+  transition: transform 90ms linear, opacity 90ms linear;
+}
+
+/* Thinking: nothing is coming in, so the movement is its own. */
+.thinking .core {
+  animation: breathe 1.6s ease-in-out infinite;
+}
+
+.thinking .ring {
+  animation: breathe 1.6s ease-in-out infinite 0.2s;
+}
+
+/* Speaking: the ring leaves the circle, the way sound does. */
+.speaking .ring {
+  animation: outward 1.8s ease-out infinite;
+}
+
+.speaking .core {
+  animation: breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+@keyframes outward {
+  0% {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/*
+ * Motion is how this says what it is doing, so it cannot simply be switched
+ * off: what remains is a steady difference in brightness per state.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .thinking .core,
+  .thinking .ring,
+  .speaking .core,
+  .speaking .ring {
+    animation: none;
+  }
+
+  .core,
+  .ring {
+    transition: none;
+  }
+
+  .thinking .core {
+    opacity: 0.7;
+  }
+
+  .speaking .ring {
+    opacity: 0.6;
+  }
+}
+
+.caption {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-lg);
+  color: var(--color-text-primary);
+}
+
+.hint {
+  margin: 0;
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* The last thing it made of what was said, so a mishearing is obvious. */
+.heard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  margin: auto 0 0;
+  padding: var(--space-12);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.heardLabel {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.error {
+  width: 100%;
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+}

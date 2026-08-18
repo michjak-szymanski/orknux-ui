@@ -49,6 +49,7 @@ import trashIcon from '../../assets/trash-grey.svg';
 import volume2Icon from '../../assets/volume-2.svg';
 import { AppShell } from '../../components/AppShell';
 import { VoiceMeter } from '../../components/VoiceMeter';
+import { VoiceMode } from '../../components/VoiceMode';
 import { Loader } from '../../components/Loader';
 import { Markdown } from '../../components/Markdown';
 import { setSidebarCollapsed, useSidebarCollapsed } from '../../session/sidebar';
@@ -299,6 +300,13 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
   const [hears, setHears] = useState(false);
   /** Whether a speech model is set, which is what puts a speaker under an answer. */
   const [reads, setReads] = useState(false);
+  /*
+   * Whether this chat is being held out loud.
+   *
+   * Needs both halves — something to hear with and something to answer with —
+   * so it is offered only where the workspace has set both models.
+   */
+  const [voice, setVoice] = useState(false);
 
   useEffect(() => {
     if (workspaceId === null) return;
@@ -546,6 +554,42 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
       hush();
       setError(cause instanceof Error ? cause.message : 'That could not be read aloud.');
     }
+  }
+
+  /**
+   * One spoken turn: what was heard goes to the model, and the answer comes
+   * back as text for the panel to read aloud.
+   *
+   * The same stream as the composer's, so a conversation held by voice lands in
+   * the transcript exactly as a typed one does — same chat, same history, and
+   * the answer grows on screen while it is still being spoken.
+   */
+  async function handleVoiceTurn(text: string): Promise<string> {
+    if (currentId === null) return '';
+
+    setMessages((present) => [...present, { role: 'user', content: text }, { role: 'assistant', content: '' }]);
+    setError(null);
+
+    let answer = '';
+    let failure: string | null = null;
+    await streamChatMessage(currentId, text, {
+      onChunk: (piece) => {
+        answer += piece;
+        setMessages((present) => {
+          const grown = [...present];
+          const last = grown.length - 1;
+          grown[last] = { ...grown[last], content: grown[last].content + piece };
+          return grown;
+        });
+      },
+      onDone: (millis) => setLastMillis(millis),
+      onError: (reason) => {
+        failure = reason;
+      },
+    });
+    if (failure !== null) throw new Error(failure);
+    await loadSessions(currentId);
+    return answer;
   }
 
   async function handleSend(event: FormEvent) {
@@ -876,10 +920,23 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
           </p>
         </div>
       ) : (
+        <div className={styles.chatRow}>
         <div className={styles.chat}>
           <header className={styles.titleBar}>
             <h1 className={styles.chatTitle}>{current.title}</h1>
             <div className={styles.titleActions}>
+              {hears && reads && (
+                <button
+                  type="button"
+                  className={voice ? `${styles.iconButton} ${styles.iconButtonOn}` : styles.iconButton}
+                  onClick={() => setVoice((on) => !on)}
+                  aria-pressed={voice}
+                  title={voice ? 'Leave voice mode' : 'Talk instead of typing'}
+                  aria-label={voice ? 'Leave voice mode' : 'Enter voice mode'}
+                >
+                  <img src={volume2Icon} alt="" width={14} height={14} />
+                </button>
+              )}
               <button
                 type="button"
                 className={styles.iconButton}
@@ -1289,6 +1346,14 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
               </button>
             </div>
           </form>
+        </div>
+        {voice && workspaceId !== null && (
+          <VoiceMode
+            workspaceId={workspaceId}
+            onSay={handleVoiceTurn}
+            onClose={() => setVoice(false)}
+          />
+        )}
         </div>
       )}
       {/* The title bar's search focuses the sidebar's box, which is the one that filters. */}

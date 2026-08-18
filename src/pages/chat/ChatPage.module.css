@@ -256,14 +256,24 @@
 
 /* ---- The chat itself ---- */
 
+/*
+ * The conversation, and beside it the voice panel when there is one. The row
+ * carries the negative margin now, so the panel reaches the edges the chat did.
+ */
+.chatRow {
+  display: flex;
+  flex: 1 0 0;
+  min-height: 0;
+  /* The shell pads its content; this screen manages its own. */
+  margin: calc(var(--space-32) * -1);
+}
+
 .chat {
   display: flex;
   flex: 1 0 0;
   flex-direction: column;
-  width: 100%;
+  min-width: 0;
   min-height: 0;
-  /* The shell pads its content; this screen manages its own. */
-  margin: calc(var(--space-32) * -1);
 }
 
 .titleBar {
@@ -283,6 +293,11 @@
   color: var(--color-text-primary);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.iconButtonOn {
+  background: var(--color-accent-brand);
+  color: var(--color-accent-foreground);
 }
 
 .titleActions {
