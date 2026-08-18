@@ -192,3 +192,13 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Where the change went: the editor has it, this panel only says so. */
+.inEditor {
+  margin: var(--space-8) 0 0;
+  padding: var(--space-6) var(--space-10);
+  background: var(--color-accent-brand-soft);
+  border-radius: var(--radius-4);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}

@@ -26,6 +26,7 @@ import { VARIABLE_TYPE_LABEL, fetchVariables } from '../../api/variables';
 import type { Variable } from '../../api/variables';
 import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
+import { CodeDiff } from '../../components/CodeDiff';
 import { CodeEditor } from '../../components/CodeEditor';
 import type { CodeEditorHandle } from '../../components/CodeEditor';
 import { compile, declareObjects } from '../../components/monaco';
@@ -165,6 +166,17 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
   const [status, setStatus] = useState<{ ok: boolean; message: string }>({ ok: true, message: 'No errors' });
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  /**
+   * A change the assistant is offering for this function, if one is open.
+   *
+   * Claimed off the quick chat: the panel announces a suggestion with a
+   * cancelable event, and a page already showing the function it is for takes
+   * it - the diff belongs where the code is, in the editor's own terms, not in
+   * a chat column three hundred pixels wide. While one is held the code column
+   * shows the change against what is on screen, and the two buttons above it
+   * are the only things that touch anything.
+   */
+  const [offered, setOffered] = useState<{ note: string | null; code: string } | null>(null);
   /*
    * Whether the function open here was made a moment ago.
    *
@@ -225,6 +237,57 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
         setLoadError(cause instanceof Error ? cause.message : 'Could not load the function.');
       });
   }, [functionId]);
+
+  useEffect(() => {
+    function onSuggested(event: Event) {
+      const held = (event as CustomEvent<{ functionId: string; note: string | null; code: string }>).detail;
+      if (held?.functionId !== functionId) return;
+      // Claimed: the chat shows a pointer here instead of its own card.
+      event.preventDefault();
+      setOffered({ note: held.note, code: held.code });
+    }
+    window.addEventListener('orknux:function-suggestion', onSuggested);
+    return () => window.removeEventListener('orknux:function-suggestion', onSuggested);
+  }, [functionId]);
+
+  /** What happened to the offer, said back into the conversation it came from. */
+  function settleOffer(said: string) {
+    setOffered(null);
+    window.dispatchEvent(new CustomEvent('orknux:function-suggestion-settled', { detail: { said } }));
+  }
+
+  /**
+   * Accepting compiles here, exactly as Save does, and for the same reason:
+   * what runs is stored beside the TypeScript it came from, and this is the
+   * only place with a compiler. A proposal that will not compile is refused
+   * with the compiler's reason, and the assistant is told it - its next
+   * attempt should be at the actual problem.
+   */
+  async function acceptOffer() {
+    if (offered === null || saving) return;
+    setSaving(true);
+    try {
+      const emitted = await compile(offered.code);
+      if (!emitted.ok) {
+        const reason = emitted.line === null ? emitted.reason : `line ${emitted.line}: ${emitted.reason}`;
+        setStatus({ ok: false, message: `The suggestion would not compile — ${reason}` });
+        settleOffer(`I tried to accept it and it would not compile — ${reason}. It was not saved.`);
+        return;
+      }
+      const stored = await updateFunction(functionId, { source: emitted.javascript, typescript: offered.code });
+      setFn(stored);
+      setSource(offered.code);
+      setSaved(true);
+      setStatus({ ok: true, message: 'The suggested change is saved.' });
+      settleOffer('I accepted the change and it is saved.');
+    } catch (cause) {
+      const reason = cause instanceof Error ? cause.message : 'It could not be saved.';
+      setStatus({ ok: false, message: reason });
+      settleOffer(`I tried to accept it and it could not be saved — ${reason}`);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   /*
    * Somebody accepted a change to this function in the panel beside it.
@@ -615,18 +678,53 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                 compile of exactly what was saved — is a property of the save, not
                 something a reader has to check by eye.
               */}
+              {/*
+                The change on offer, above the diff it describes. Accept and
+                Reject live up here rather than in the chat: the person reading
+                the diff is looking at this column, and the answer belongs where
+                the question is.
+              */}
+              {offered !== null && (
+                <div className={styles.suggestionBar}>
+                  <span className={styles.suggestionNote}>
+                    {offered.note !== null && offered.note !== ''
+                      ? offered.note
+                      : 'The assistant suggests this change.'}
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.saveButton}
+                    onClick={() => void acceptOffer()}
+                    disabled={saving}
+                  >
+                    {saving ? 'Saving…' : 'Accept'}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.ghostButton}
+                    onClick={() => settleOffer('I rejected the change. The function is unchanged.')}
+                    disabled={saving}
+                  >
+                    Reject
+                  </button>
+                </div>
+              )}
               <div className={styles.codeArea}>
-                <CodeEditor
-                  ref={editor}
-                  value={source}
-                  language="typescript"
-                  ariaLabel="Function source"
-                  onChange={(next) => {
-                    setSource(next);
-                    setSaved(false);
-                  }}
-                  onCaretChange={(line, column) => setCaret({ line, column })}
-                />
+                {offered === null ? (
+                  <CodeEditor
+                    ref={editor}
+                    value={source}
+                    language="typescript"
+                    ariaLabel="Function source"
+                    onChange={(next) => {
+                      setSource(next);
+                      setSaved(false);
+                    }}
+                    onCaretChange={(line, column) => setCaret({ line, column })}
+                  />
+                ) : (
+                  <CodeDiff original={source} modified={offered.code} ariaLabel="Suggested change" />
+                )}
               </div>
 
               <footer className={styles.editorFooter}>

@@ -81,7 +81,7 @@ export function QuickChat({ workspacePath }: QuickChatProps) {
    * disappears the moment it is accepted leaves somebody scrolling back for
    * what they just agreed to.
    */
-  const [offers, setOffers] = useState<Record<number, QuickChatSuggestion>>({});
+  const [offers, setOffers] = useState<Record<number, { suggestion: QuickChatSuggestion; inEditor: boolean }>>({});
   const [error, setError] = useState<string | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -157,7 +157,19 @@ export function QuickChat({ workspacePath }: QuickChatProps) {
       setSaid(grown);
       if (answer.suggestion !== undefined) {
         const suggestion = answer.suggestion;
-        setOffers((held) => ({ ...held, [grown.length - 1]: suggestion }));
+        /*
+         * Offered to the editor first. A page showing the function claims the
+         * event, and then the diff is drawn there - in the editor's own terms,
+         * where the code is - and this panel only points at it. Unclaimed, the
+         * change is shown here, because a suggestion can be made from any page
+         * and it still has to land somewhere.
+         */
+        const announced = new CustomEvent('orknux:function-suggestion', {
+          detail: suggestion,
+          cancelable: true,
+        });
+        const unclaimed = window.dispatchEvent(announced);
+        setOffers((held) => ({ ...held, [grown.length - 1]: { suggestion, inEditor: !unclaimed } }));
       }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'That could not be answered.');
@@ -165,6 +177,21 @@ export function QuickChat({ workspacePath }: QuickChatProps) {
       setAsking(false);
     }
   }
+
+  /*
+   * The editor settling an offer this panel handed it.
+   *
+   * Re-bound every render on purpose: `send` closes over the conversation as
+   * it stands, and answering into last render's conversation would drop turns.
+   */
+  useEffect(() => {
+    function onSettled(event: Event) {
+      const said = (event as CustomEvent<{ said: string }>).detail?.said;
+      if (typeof said === 'string') void send(said);
+    }
+    window.addEventListener('orknux:function-suggestion-settled', onSettled);
+    return () => window.removeEventListener('orknux:function-suggestion-settled', onSettled);
+  });
 
   /** Enter sends, Shift+Enter is a new line — the way the Chat page does it. */
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -206,9 +233,12 @@ export function QuickChat({ workspacePath }: QuickChatProps) {
                 <div key={index} className={styles.answered}>
                   <Markdown>{turn.content}</Markdown>
                   {/* Under the answer that offered it, where it was explained. */}
-                  {offers[index] !== undefined && (
-                    <CodeSuggestion suggestion={offers[index]} onSettled={(detail) => void send(detail)} />
-                  )}
+                  {offers[index] !== undefined &&
+                    (offers[index].inEditor ? (
+                      <p className={styles.inEditor}>The change is shown in the editor, against the code it would change.</p>
+                    ) : (
+                      <CodeSuggestion suggestion={offers[index].suggestion} onSettled={(detail) => void send(detail)} />
+                    ))}
                 </div>
               ),
             )}
