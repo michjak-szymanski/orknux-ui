@@ -34,11 +34,10 @@ function labelFor(pathname: string): string | null {
   });
 
   const exact = matches.find((page) => page.goTo !== false);
-  if (exact?.goTo !== undefined && exact.goTo !== false) return exact.goTo.label;
+  if (exact?.goTo) return exact.goTo.label;
 
   // Nothing with a label of its own: walk up to the list it came from.
   for (let depth = parts.length - 1; depth > 0; depth -= 1) {
-    const above = '/' + parts.slice(0, depth).join('/');
     const found = PAGES.find((page) => {
       const shape = page.path.split('/').filter(Boolean);
       if (shape.length !== depth) return false;

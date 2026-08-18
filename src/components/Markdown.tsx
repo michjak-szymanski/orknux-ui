@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import type { ComponentProps } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import bash from 'highlight.js/lib/languages/bash';
@@ -59,13 +60,16 @@ export interface MarkdownProps {
  * provider, and a prompt can ask for anything at all, so it renders as markup
  * only for the constructs markdown itself defines.
  */
+/** The plugin list, exactly as the renderer that takes it declares it. */
+type RehypePlugins = ComponentProps<typeof ReactMarkdown>['rehypePlugins'];
+
 export function Markdown({ children, highlight }: MarkdownProps) {
   /*
    * Rebuilt only when the term changes. A fresh array on every render would have
    * react-markdown reparse the document on every keystroke, which for a manual
    * page is the whole document.
    */
-  const rehypePlugins = useMemo(
+  const rehypePlugins = useMemo<RehypePlugins>(
     () => [
       /*
        * Colouring a fenced block, but only one that says what it is.
@@ -77,7 +81,7 @@ export function Markdown({ children, highlight }: MarkdownProps) {
        * that names its language gets coloured; a block that does not is left
        * exactly as it was written, which is what output wants.
        */
-      [rehypeHighlight, { detect: false, languages: LANGUAGES }] as const,
+      [rehypeHighlight, { detect: false, languages: LANGUAGES }],
       ...(highlight?.trim() ? [rehypeMarkMatches(highlight)] : []),
     ],
     [highlight],
