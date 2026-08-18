@@ -44,6 +44,26 @@ function asProperty(row: Row): ObjectPropertyInput {
   return { name: row.name, kind: parts[0] as PropertyKind };
 }
 
+/**
+ * What the last check found, or null when nothing has been checked.
+ *
+ * Null is a state of its own rather than an optimistic green, because the
+ * footer used to open on `Schema compile healthy` before anything had been
+ * asked: reassuring text that no check stood behind, and that stayed green
+ * while the rows underneath it were edited into something the server would
+ * refuse. The dot now only reports a round trip that examined these rows.
+ */
+interface Status {
+  ok: boolean;
+  message: string;
+}
+
+/** Grey, green or red, in that order of confidence. */
+function indicatorTone(status: Status | null): string {
+  if (status === null) return styles.indicatorIdle;
+  return status.ok ? styles.indicatorOk : styles.indicatorBad;
+}
+
 /** And back again, so a saved object reopens on the value it was saved with. */
 function asRow(property: WorkflowObject['properties'][number]): Row {
   if (property.kind === 'ARRAY') {
@@ -73,7 +93,7 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
   const [rows, setRows] = useState<Row[]>([]);
   /** Everything nameable, so a property can point at another shape. */
   const [others, setOthers] = useState<WorkflowObject[]>([]);
-  const [status, setStatus] = useState<{ ok: boolean; message: string }>({ ok: true, message: 'Schema compile healthy' });
+  const [status, setStatus] = useState<Status | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -86,6 +106,7 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
     setDescription(loaded.description ?? '');
     setRows(loaded.properties.map(asRow));
     setSaved(true);
+    setStatus(null);
   }
 
   useEffect(() => {
@@ -110,6 +131,8 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
   function edit(index: number, change: Partial<Row>) {
     setRows((current) => current.map((row, at) => (at === index ? { ...row, ...change } : row)));
     setSaved(false);
+    // The rows the last check looked at are gone, and so is what it found.
+    setStatus(null);
   }
 
   async function handleValidate() {
@@ -133,6 +156,10 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
           properties: rows.map(asProperty),
         }),
       );
+      // A save the server accepted has already been through the rules Validate
+      // asks for - it resolves every reference on the way in and refuses the
+      // rest - so this green stands on a round trip rather than on hope.
+      setStatus({ ok: true, message: 'Saved, so every type resolves.' });
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : 'Could not save the object.');
     } finally {
@@ -271,6 +298,7 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
                       onClick={() => {
                         setRows((current) => current.filter((_, at) => at !== index));
                         setSaved(false);
+                        setStatus(null);
                       }}
                     >
                       <TrashIcon />
@@ -286,16 +314,14 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
                   onClick={() => {
                     setRows((current) => [...current, { name: '', type: 'STRING' }]);
                     setSaved(false);
+                    setStatus(null);
                   }}
                 >
                   + Add Property
                 </button>
                 <span className={styles.statusLeft}>
-                  <span
-                    className={`${styles.indicator} ${status.ok ? styles.indicatorOk : styles.indicatorBad}`}
-                    aria-hidden="true"
-                  />
-                  {status.message}
+                  <span className={`${styles.indicator} ${indicatorTone(status)}`} aria-hidden="true" />
+                  {status?.message ?? 'Not checked yet.'}
                 </span>
               </footer>
             </section>
