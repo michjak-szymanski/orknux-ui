@@ -175,7 +175,26 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
       <header className={styles.titleBar}>
         <div className={styles.titleBlock}>
           <h1 className={styles.title}>Plugins</h1>
-          <p className={styles.subtitle}>JavaScript plugins loaded into this installation</p>
+          <p className={styles.subtitle}>
+            JavaScript plugins loaded into this installation.{' '}
+            {/*
+              Said here because this is where somebody stands when they need it.
+              A plugin is one file, and the library that produces it - the class
+              to extend and the tool that bundles a project into that one file -
+              lives elsewhere and is otherwise something you would have to know
+              about already.
+            */}
+            Write one against{' '}
+            <a
+              className={styles.subtitleLink}
+              href="https://github.com/michjak-szymanski/orknux-extension"
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              @orknux/plugin
+            </a>
+            , which bundles a project into the single file this page takes.
+          </p>
         </div>
         {/*
          * The real input is hidden and driven by the button: a file input styles

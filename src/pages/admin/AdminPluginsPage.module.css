@@ -330,3 +330,13 @@
 .urlInput::placeholder {
   color: var(--color-text-muted);
 }
+
+/* A link inside the page's own sentence, which should read as one. */
+.subtitleLink {
+  color: var(--color-accent-brand);
+  text-decoration: none;
+}
+
+.subtitleLink:hover {
+  text-decoration: underline;
+}
