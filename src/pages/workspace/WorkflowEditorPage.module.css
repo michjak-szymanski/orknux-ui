@@ -362,9 +362,24 @@
 
 .portRow {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-4);
+}
+
+/*
+ * One field per line.
+ *
+ * Wrapped side by side they read as a sentence — `eventType commentAuthor` —
+ * and which of them is which takes a second look. A node's fields are a list,
+ * so they are listed.
+ */
+.portChips {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+  min-width: 0;
 }
 
 .portArrow {

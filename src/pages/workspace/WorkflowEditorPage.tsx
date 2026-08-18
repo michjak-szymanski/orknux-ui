@@ -368,11 +368,13 @@ function GraphNodeView({ data, selected }: NodeProps) {
                 <span className={styles.portArrow} aria-hidden="true">
                   ↓
                 </span>
-                {node.inputs?.map((port) => (
-                  <span className={styles.portChip} key={`in-${port.name}`} title={`Needs ${port.display}`}>
-                    {port.name}
-                  </span>
-                ))}
+                <span className={styles.portChips}>
+                  {node.inputs?.map((port) => (
+                    <span className={styles.portChip} key={`in-${port.name}`} title={`Needs ${port.display}`}>
+                      {port.name}
+                    </span>
+                  ))}
+                </span>
               </div>
             )}
             {(node.outputs?.length ?? 0) > 0 && (
@@ -380,15 +382,17 @@ function GraphNodeView({ data, selected }: NodeProps) {
                 <span className={`${styles.portArrow} ${styles.portArrowOut}`} aria-hidden="true">
                   ↑
                 </span>
-                {node.outputs?.map((port) => (
-                  <span
-                    className={`${styles.portChip} ${styles.portChipOut}`}
-                    key={`out-${port.name}`}
-                    title={`Gives ${port.display}`}
-                  >
-                    {port.name}
-                  </span>
-                ))}
+                <span className={styles.portChips}>
+                  {node.outputs?.map((port) => (
+                    <span
+                      className={`${styles.portChip} ${styles.portChipOut}`}
+                      key={`out-${port.name}`}
+                      title={`Gives ${port.display}`}
+                    >
+                      {port.name}
+                    </span>
+                  ))}
+                </span>
               </div>
             )}
           </div>
