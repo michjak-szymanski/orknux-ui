@@ -298,6 +298,9 @@
   border: 0;
   font-family: inherit;
   text-align: left;
+  /* A link now, so the underline a browser puts on one is taken off again: the
+     row reads as a row, and the colour on hover is what says it opens. */
+  text-decoration: none;
   cursor: pointer;
 }
 

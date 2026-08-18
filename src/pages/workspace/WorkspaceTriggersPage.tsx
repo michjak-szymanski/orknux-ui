@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 
 import type { PageOf } from '../../api/client';
 import type { SessionUser } from '../../api/session';
@@ -47,13 +47,15 @@ function when(at: string): string {
 /** What starts this workspace's workflows. */
 export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersPageProps) {
   const { workspaceId = '' } = useParams();
-  const navigate = useNavigate();
 
-  /** A trigger that exists is edited on its own page; the row is the way in. */
-  const settings = useCallback(
-    (trigger: Trigger) => navigate(`/workspace/${workspaceId}/triggers/${trigger.id}`),
-    [navigate, workspaceId],
-  );
+  /**
+   * A trigger that exists is edited on its own page; the row is the way in.
+   *
+   * A real link rather than a click that navigates, so the page it opens can be
+   * middle-clicked into a tab of its own, copied, or opened beside the list -
+   * which is what somebody comparing two triggers is trying to do.
+   */
+  const settingsPath = (trigger: Trigger) => `/workspace/${workspaceId}/triggers/${trigger.id}`;
 
   const [triggers, setTriggers] = useState<PageOf<Trigger> | null>(null);
   const [page, setPage] = useState(1);
@@ -177,14 +179,13 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
           {triggers?.content.map((trigger) => (
             <Fragment key={trigger.id}>
             <div className={styles.row}>
-              <button
-                type="button"
+              <Link
                 className={`${styles.colName} ${styles.name} ${styles.nameButton}`}
-                onClick={() => settings(trigger)}
+                to={settingsPath(trigger)}
                 title={`Settings for ${trigger.name}`}
               >
                 {trigger.name}
-              </button>
+              </Link>
               <span className={`${styles.colType} ${styles.muted}`}>{TRIGGER_TYPE_LABEL[trigger.type]}</span>
               <span className={`${styles.colSource} ${styles.muted}`}>{trigger.source}</span>
               <span
@@ -237,15 +238,14 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
                 </button>
               </span>
               <span className={styles.colActions}>
-                <button
-                  type="button"
+                <Link
                   className={styles.rowAction}
-                  onClick={() => settings(trigger)}
+                  to={settingsPath(trigger)}
                   aria-label={`Settings for ${trigger.name}`}
                   title={`Settings for ${trigger.name}`}
                 >
                   <img src={settingsIcon} alt="" width={14} height={14} />
-                </button>
+                </Link>
               </span>
             </div>
 

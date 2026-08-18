@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { PointerEvent as ReactPointerEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Background,
   BackgroundVariant,
@@ -65,6 +65,7 @@ import type { FieldOption } from '../../components/FieldPicker';
 import { Icon, IconPickerDialog } from '../../components/IconPicker';
 import { TrashIcon } from '../../components/TrashIcon';
 import { WorkflowConfirmDialog } from '../../components/WorkflowConfirmDialog';
+import { matches, useSaveShortcut } from '../../session/shortcut';
 import { shellUser } from '../../session/user';
 import styles from './WorkflowEditorPage.module.css';
 
@@ -514,6 +515,19 @@ function GraphNodeView({ data, selected }: NodeProps) {
 }
 
 const nodeTypes = { graphNode: GraphNodeView };
+
+/**
+ * Whether this click is the browser's to deal with rather than the editor's.
+ *
+ * Ctrl, Cmd, Shift, Alt or a button other than the first means a new tab, a new
+ * window or a download: the editor is not being left at all, so there is nothing
+ * to store on the way out and nothing to take off the screen. Everything else is
+ * the plain click, which saves the graph first and then follows the link in
+ * place.
+ */
+function opensAway(event: ReactMouseEvent): boolean {
+  return event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0;
+}
 
 export function WorkflowEditorPage(props: WorkflowEditorPageProps) {
   // The canvas hooks need the provider above them.
@@ -1213,6 +1227,20 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [graphShape, workspaceId, workflowId]);
 
+  /**
+   * The keystroke that saves, as somebody has it set.
+   *
+   * The same setting every other editor obeys rather than one of the editor's
+   * own: a graph and a function are both work in progress, and a save that
+   * needed different fingers depending on which one is open is a shortcut
+   * nobody would trust.
+   */
+  const save = useSaveShortcut();
+
+  /** Read by the keyboard handler, which must not start a second save. */
+  const busyRef = useRef(busy);
+  busyRef.current = busy;
+
   /** @returns whether the graph is now on the server. */
   async function handleSave(): Promise<boolean> {
     setBusy(true);
@@ -1236,6 +1264,31 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     }
   }
 
+  /*
+   * Saving from the keyboard.
+   *
+   * Bound on the window in the capture phase, so it works wherever the caret is:
+   * the panel is full of inputs, and a graph edited through them is exactly the
+   * graph somebody wants stored without reaching for the mouse. `preventDefault`
+   * is most of the reason it is worth binding at all - the default for the usual
+   * choice is the browser offering to save the page as a file.
+   *
+   * `busy` is read from a ref rather than closed over, so holding the key down
+   * cannot start a second save on top of the one in flight.
+   */
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (!matches(event, save)) return;
+      event.preventDefault();
+      if (!busyRef.current) void handleSave();
+    }
+
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+    // handleSave reads the graph as it stands now, so the listener is rebound
+    // every render rather than left holding an older canvas.
+  });
+
   /**
    * Following a link to a definition saves the graph first. The link is one
    * click away from work that only exists on screen, and coming back to find a
@@ -1246,6 +1299,27 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   async function leaveFor(destination: string) {
     if (unsaved && !(await handleSave())) return;
     navigate(destination);
+  }
+
+  /**
+   * What a link out of the editor does when it is clicked.
+   *
+   * Every one of these is a real anchor, so it can be middle-clicked,
+   * ctrl-clicked or copied like any other link - a definition somebody wants to
+   * read beside the graph should not have to be reached by leaving the graph.
+   * A modified click is handed straight back to the browser: react-router leaves
+   * those alone too, and the new tab it opens has taken nothing off this screen.
+   *
+   * A plain click is the one that has to be intercepted. Preventing the default
+   * stops react-router following the link at once, so the graph is stored, and
+   * accepted, before the editor goes anywhere.
+   */
+  function leavingFor(destination: string) {
+    return (event: ReactMouseEvent<HTMLAnchorElement>) => {
+      if (opensAway(event)) return;
+      event.preventDefault();
+      void leaveFor(destination);
+    };
   }
 
   /*
@@ -1295,32 +1369,32 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     >
       <div className={styles.toolbar}>
         <div className={styles.toolbarLeft}>
-          <button
-            type="button"
+          <Link
+            to={`/workspace/${workspaceId}`}
             className={styles.backButton}
-            onClick={() => void leaveFor(`/workspace/${workspaceId}`)}
+            onClick={leavingFor(`/workspace/${workspaceId}`)}
             aria-label="Back to workflows"
           >
             <img src={arrowLeftIcon} alt="" width={14} height={14} />
-          </button>
-          <button
-            type="button"
+          </Link>
+          <Link
+            to={`/workspace/${workspaceId}`}
             className={styles.crumbLink}
-            onClick={() => void leaveFor(`/workspace/${workspaceId}`)}
+            onClick={leavingFor(`/workspace/${workspaceId}`)}
           >
             Workflows
-          </button>
+          </Link>
           <span className={styles.crumbSeparator}>/</span>
           <span className={styles.workflowName}>{name}</span>
-          <button
-            type="button"
+          <Link
+            to={`/workspace/${workspaceId}/workflows/${workflowId}/settings`}
             className={styles.renameButton}
-            onClick={() => void leaveFor(`/workspace/${workspaceId}/workflows/${workflowId}/settings`)}
+            onClick={leavingFor(`/workspace/${workspaceId}/workflows/${workflowId}/settings`)}
             aria-label="Rename workflow"
             title="Rename workflow"
           >
             <img src={pencilIcon} alt="" width={14} height={14} />
-          </button>
+          </Link>
           <span className={status === 'PUBLISHED' ? `${styles.badge} ${styles.badgeLive}` : styles.badge}>
             {status === 'PUBLISHED' ? 'Published' : 'Draft'}
           </span>
@@ -1358,8 +1432,26 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           >
             Discard
           </button>
-          <button type="button" className={styles.ghostButton} onClick={() => void handleSave()} disabled={busy}>
-            {busy ? 'Working…' : 'Save'}
+          {/*
+            The keystroke is written on the button that does the same thing,
+            because that is the only way anybody finds out it exists without
+            being told. Read from the setting the handler obeys, so somebody who
+            changed it in Preferences is shown what they chose.
+          */}
+          <button
+            type="button"
+            className={styles.ghostButton}
+            onClick={() => void handleSave()}
+            disabled={busy}
+            title={`Save the workflow (${save}). Change the keystroke in Preferences.`}
+          >
+            {busy ? (
+              'Working…'
+            ) : (
+              <>
+                Save <kbd className={styles.shortcutKey}>{save}</kbd>
+              </>
+            )}
           </button>
           {/*
             Violet while there is something to publish, quiet once there is not:
@@ -1484,13 +1576,13 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                           New
                         </button>
                         {draft.agentId !== null && (
-                          <button
-                            type="button"
+                          <Link
+                            to={`/workspace/${workspaceId}/agents/${draft.agentId}/settings`}
                             className={styles.definitionLink}
-                            onClick={() => leaveFor(`/workspace/${workspaceId}/agents/${draft.agentId}/settings`)}
+                            onClick={leavingFor(`/workspace/${workspaceId}/agents/${draft.agentId}/settings`)}
                           >
                             Open definition
-                          </button>
+                          </Link>
                         )}
                       </span>
                     </span>
@@ -1532,13 +1624,13 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                         </button>
                         {/* Where the node points, so the definition is one click away. */}
                         {draft.triggerId !== null && (
-                          <button
-                            type="button"
+                          <Link
+                            to={`/workspace/${workspaceId}/triggers/${draft.triggerId}`}
                             className={styles.definitionLink}
-                            onClick={() => leaveFor(`/workspace/${workspaceId}/triggers/${draft.triggerId}`)}
+                            onClick={leavingFor(`/workspace/${workspaceId}/triggers/${draft.triggerId}`)}
                           >
                             Open definition
-                          </button>
+                          </Link>
                         )}
                       </span>
                     </span>
@@ -1575,13 +1667,13 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                           New
                         </button>
                         {draft.actionId !== null && (
-                          <button
-                            type="button"
+                          <Link
+                            to={`/workspace/${workspaceId}/actions/${draft.actionId}`}
                             className={styles.definitionLink}
-                            onClick={() => leaveFor(`/workspace/${workspaceId}/actions/${draft.actionId}`)}
+                            onClick={leavingFor(`/workspace/${workspaceId}/actions/${draft.actionId}`)}
                           >
                             Open definition
-                          </button>
+                          </Link>
                         )}
                       </span>
                     </span>
@@ -1623,13 +1715,13 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                           New
                         </button>
                         {draft.objectId !== null && (
-                          <button
-                            type="button"
+                          <Link
+                            to={`/workspace/${workspaceId}/objects/${draft.objectId}`}
                             className={styles.definitionLink}
-                            onClick={() => leaveFor(`/workspace/${workspaceId}/objects/${draft.objectId}`)}
+                            onClick={leavingFor(`/workspace/${workspaceId}/objects/${draft.objectId}`)}
                           >
                             Open definition
-                          </button>
+                          </Link>
                         )}
                       </span>
                     </span>
@@ -1925,13 +2017,13 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                           New
                         </button>
                         {draft.conditionId !== null && (
-                          <button
-                            type="button"
+                          <Link
+                            to={`/workspace/${workspaceId}/conditions/${draft.conditionId}`}
                             className={styles.definitionLink}
-                            onClick={() => leaveFor(`/workspace/${workspaceId}/conditions/${draft.conditionId}`)}
+                            onClick={leavingFor(`/workspace/${workspaceId}/conditions/${draft.conditionId}`)}
                           >
                             Open definition
-                          </button>
+                          </Link>
                         )}
                       </span>
                     </span>
