@@ -47,9 +47,11 @@ import searchIcon from '../../assets/search.svg';
 // action among several, and the confirm is where the warning belongs.
 import trashIcon from '../../assets/trash-grey.svg';
 import volume2Icon from '../../assets/volume-2.svg';
+import xIcon from '../../assets/x.svg';
 import { AppShell } from '../../components/AppShell';
 import { VoiceMeter } from '../../components/VoiceMeter';
 import { VoiceMode } from '../../components/VoiceMode';
+import type { VoiceModeHandle, VoicePhase } from '../../components/VoiceMode';
 import { Loader } from '../../components/Loader';
 import { Markdown } from '../../components/Markdown';
 import { setSidebarCollapsed, useSidebarCollapsed } from '../../session/sidebar';
@@ -307,6 +309,16 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
    * so it is offered only where the workspace has set both models.
    */
   const [voice, setVoice] = useState(false);
+  /*
+   * Which of the three things voice mode is doing, so the button can say so.
+   *
+   * Held here rather than read out of the panel, because the button lives in
+   * the title bar and the panel is off to the side: a control that looks the
+   * same whether it is listening, thinking or talking is a control that says
+   * nothing.
+   */
+  const [voicePhase, setVoicePhase] = useState<VoicePhase>('listening');
+  const voiceControls = useRef<VoiceModeHandle>(null);
 
   useEffect(() => {
     if (workspaceId === null) return;
@@ -930,16 +942,73 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
             <h1 className={styles.chatTitle}>{current.title}</h1>
             <div className={styles.titleActions}>
               {hears && reads && (
-                <button
-                  type="button"
-                  className={voice ? `${styles.iconButton} ${styles.iconButtonOn}` : styles.iconButton}
-                  onClick={() => setVoice((on) => !on)}
-                  aria-pressed={voice}
-                  title={voice ? 'Leave voice mode' : 'Talk instead of typing'}
-                  aria-label={voice ? 'Leave voice mode' : 'Enter voice mode'}
-                >
-                  <img src={volume2Icon} alt="" width={14} height={14} />
-                </button>
+                <>
+                  {/*
+                    One control, three states, and it does something different
+                    in each: entering when it is off, cutting the answer short
+                    while it is talking, and ending a turn early while it is
+                    listening. Leaving is the X beside it - having the same
+                    button both interrupt and leave meant one of those happening
+                    when the other was meant.
+                  */}
+                  <button
+                    type="button"
+                    className={
+                      voice
+                        ? `${styles.iconButton} ${styles.iconButtonOn} ${styles[`voice${voicePhase}`]}`
+                        : styles.iconButton
+                    }
+                    onClick={() => (voice ? voiceControls.current?.interrupt() : setVoice(true))}
+                    aria-pressed={voice}
+                    title={
+                      !voice
+                        ? 'Talk instead of typing'
+                        : voicePhase === 'speaking'
+                          ? 'Speaking - press to cut in'
+                          : voicePhase === 'thinking'
+                            ? 'Thinking'
+                            : 'Listening - press when you have finished'
+                    }
+                    aria-label={
+                      !voice
+                        ? 'Enter voice mode'
+                        : voicePhase === 'speaking'
+                          ? 'Stop speaking and listen'
+                          : voicePhase === 'thinking'
+                            ? 'Thinking'
+                            : 'Finish speaking'
+                    }
+                  >
+                    {voice && voicePhase === 'thinking' ? (
+                      // Three dots rather than an icon: there is nothing to
+                      // hear and nothing to say, and a still icon reads as
+                      // stuck rather than working.
+                      <span className={styles.voiceDots} aria-hidden="true">
+                        <span />
+                        <span />
+                        <span />
+                      </span>
+                    ) : (
+                      <img
+                        src={voice && voicePhase === 'listening' ? micIcon : volume2Icon}
+                        alt=""
+                        width={14}
+                        height={14}
+                      />
+                    )}
+                  </button>
+                  {voice && (
+                    <button
+                      type="button"
+                      className={styles.iconButton}
+                      onClick={() => setVoice(false)}
+                      title="Leave voice mode"
+                      aria-label="Leave voice mode"
+                    >
+                      <img src={xIcon} alt="" width={14} height={14} />
+                    </button>
+                  )}
+                </>
               )}
               <button
                 type="button"
@@ -1353,8 +1422,10 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
         </div>
         {voice && workspaceId !== null && (
           <VoiceMode
+            ref={voiceControls}
             workspaceId={workspaceId}
             onSay={handleVoiceTurn}
+            onPhase={setVoicePhase}
             onClose={() => setVoice(false)}
           />
         )}

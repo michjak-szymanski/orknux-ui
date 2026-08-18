@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import type { Ref } from 'react';
 
 import { speak } from '../api/speech';
 import { transcribe } from '../api/transcription';
@@ -31,6 +32,21 @@ export interface VoiceModeProps {
    */
   onSay: (text: string, onProgress: (soFar: string) => void) => Promise<string>;
   onClose: () => void;
+  /**
+   * Told whenever listening becomes thinking becomes speaking.
+   *
+   * The panel shows the phase in its own circle, but the button in the title
+   * bar is what somebody is looking at when the panel is off to the side - and
+   * a control that looks the same whether it is listening or talking is a
+   * control that says nothing.
+   */
+  onPhase?: (phase: VoicePhase) => void;
+  /** Cuts the answer short and goes back to listening, from outside this panel. */
+  ref?: Ref<VoiceModeHandle>;
+}
+
+export interface VoiceModeHandle {
+  interrupt: () => void;
 }
 
 /** Loud enough to be somebody talking rather than a room being quiet. */
@@ -62,7 +78,7 @@ const SENTENCE_END = /[.!?…]["')\]]*(?=\s)|\n/g;
  */
 const SHORTEST_TO_SPEAK = 24;
 
-export function VoiceMode({ workspaceId, onSay, onClose }: VoiceModeProps) {
+export function VoiceMode({ workspaceId, onSay, onClose, onPhase, ref }: VoiceModeProps) {
   const [phase, setPhase] = useState<VoicePhase>('listening');
   const [level, setLevel] = useState(0);
   const [heard, setHeard] = useState<string | null>(null);
@@ -373,6 +389,19 @@ export function VoiceMode({ workspaceId, onSay, onClose }: VoiceModeProps) {
    * is to interrupt: while it is talking, stop and listen; while it is
    * listening, take what has been said so far as the whole turn.
    */
+  /*
+   * The phase, told to whoever is showing it elsewhere.
+   *
+   * An effect rather than a call beside each setPhase: there are five places
+   * the phase changes, and one of them forgetting to report would be a button
+   * that quietly stops matching what is happening.
+   */
+  useEffect(() => {
+    onPhase?.(phase);
+  }, [phase, onPhase]);
+
+  useImperativeHandle(ref, () => ({ interrupt }));
+
   function interrupt() {
     if (phase === 'speaking') {
       // The generation moves, so a clip already asked for is not played at

@@ -47,13 +47,33 @@ src/styles/      design tokens
   declares `light`, which is what makes the browser's own furniture — scrollbars,
   form controls, the flash before first paint — follow the theme. It is the one
   surface the colour tokens cannot reach, so hiding scrollbars is not the fix.
-- **An editor is a textarea over a coloured copy.** No editor component ships
-  here: `highlightJs` and `highlightMarkdown` tokenize to HTML, a `<pre>` renders
-  it underneath, and a transparent textarea on top draws only the caret and the
-  selection. Both must share every property that decides where a glyph lands —
-  font, size, line-height, padding, wrapping, tab-size — or the caret drifts from
-  the text. Keep palettes to colour alone: a bold run can measure differently and
-  drag the rest of the line out of alignment.
+- **Code is edited in Monaco; prose is not.** `CodeEditor` wraps Monaco for
+  functions, tools and plugins, and `components/monaco.ts` sets it up once for
+  the whole application — two workers, and a theme built from the same values
+  `tokens.css` holds, because an editor nearly the colour of the panel around it
+  looks like a bug. It replaced a textarea over a highlighted copy, which worked
+  until it had to do anything an editor does: Tab moved focus out of the box,
+  there was nothing to complete with, and every metric of the two layers had to be
+  kept in step by hand.
+- **That older arrangement is still what the skill editor is**, because markdown
+  wants no language service. `highlightMarkdown` tokenizes to HTML, a `<pre>`
+  renders it underneath, and a transparent textarea on top draws only the caret
+  and the selection. The two must share every property that decides where a glyph
+  lands — font, size, line-height, padding, wrapping, tab-size — or the caret
+  drifts from the text, and a palette has to be colour alone: a bold run measures
+  differently and drags the rest of the line out of alignment.
+- **A page is added in two files or it is added in neither.** `src/navigation.ts`
+  holds `PAGES` (the path, who may see it, how Go to names it) and
+  `src/routes.tsx` maps each path to a component. `PAGE_ELEMENTS` is an exact
+  record over those paths, so half a page is a compile error rather than a route
+  that silently does nothing. `App.tsx` hand-writes only `/login` and the
+  catch-all; do not add routes to it.
+- **A keyboard shortcut is a setting.** `src/session/shortcut.ts` is the one place
+  a binding is defined, remembered in `localStorage` and read through
+  `useSyncExternalStore`; the Preferences page records a new keystroke and offers
+  a reset. A new shortcut goes there and is offered there — a binding hardcoded
+  into a page is one nobody can change and one that collides with somebody's
+  screen reader.
 - **What a model writes is rendered markdown, not text.** `Markdown` wraps
   `react-markdown` with GFM and `remark-breaks` — the last because a chat is not a
   document and a model that answers on ten lines means ten lines. Raw HTML stays
@@ -97,3 +117,16 @@ setter and dispatch an `input` event.
 The editor tracks its own selection: `selected` passed through node props is
 ignored, and `onSelectionChange` fires with an empty list often enough to clear
 state you keep alongside it. React Flow's own selection wins when there is one.
+
+**Undo is whole-graph snapshots, not a command log.** A step is nodes, edges and
+the fingerprint the dirty check uses, pushed after a half-second pause so typing
+a name is one step rather than one per letter. Restoring a step has to re-seed
+the side panel's draft as well, or the panel writes the fields it was holding
+back over the node that was just restored — which reads as undo not working. The
+stack is cleared on load and on Discard, so redo cannot walk forward into a graph
+that was thrown away, and `Ctrl+Z` inside a text box is left to the browser.
+
+**A node carries its orientation.** Which side its input and output sit on is the
+node's own, saved with it, so a graph can run down the screen and turn along the
+way. Anything that lays out or draws an edge has to read it rather than assume
+left to right.

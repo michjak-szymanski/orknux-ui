@@ -2,7 +2,8 @@
 
 A workflow is a graph: a trigger at the top, nodes underneath it, and edges
 saying what runs after what. It runs when its trigger fires, and only while it
-is enabled.
+is enabled. What it runs then is the copy that was published, which is not
+always the graph you are looking at; see Draft and published, below.
 
 ## The editor
 
@@ -19,6 +20,35 @@ right.
 - **Icons** can be given to any node. A node made from a definition inherits
   the definition's icon.
 - Nodes **resize**, and long text wraps rather than spilling.
+
+### Working in it
+
+- **Undo** and **redo** step back and forward through what you have drawn:
+  `Ctrl`+`Z` and `Ctrl`+`Shift`+`Z`, with `Ctrl`+`Y` heard for redo as well.
+  They are ignored while a caret is in a text box, where the browser's own undo
+  is the right one.
+- **Save** is `Ctrl`+`S`, and the button says which key it is listening for.
+- A node can be **turned**: **Facing** in its panel, or `R` on the canvas. It
+  moves where the lines join the node - left to right, top to bottom, right to
+  left, bottom to top - and changes nothing about what runs. A long chain simply
+  reads better down a screen than off the side of one. Each node is turned on
+  its own, so a graph can bend where it needs to.
+- Pickers are **typed into** rather than scrolled. Agents, triggers, actions,
+  objects, conditions, functions and connections all narrow as you type, with
+  the arrows to move and Enter to take.
+- Beside each picker is **New**, which opens the builder in a panel down the
+  left rather than over the canvas: what you are making and the graph you are
+  making it for stay on screen together. A trigger, an action, a condition, an
+  object and an agent can each be made this way, and what you make is chosen
+  into the node as soon as it exists.
+- Anything that navigates is a **link**. Clicking one saves the graph and goes;
+  `Ctrl`, `Cmd`, `Shift` or the middle button opens it in a new tab and leaves
+  what you were doing where it was.
+
+![The builder, open down the left: what is being made, and the graph it is being
+made for, on screen together](/screens/node-builder.png)
+
+Every one of those keystrokes is yours to change, in Preferences.
 
 ## Kinds of node
 
@@ -70,6 +100,32 @@ granted one by one — naming a secret is not enough to reach it.
 **Objects** are the shapes that travel between nodes: named fields with types,
 which an object node fills in and later nodes read field by field.
 
+## Sending mail
+
+A workflow can send email, and it takes two things: a connection that knows the
+mail server, and a **Send Email** action that says what to send.
+
+The connection is made under the workspace's Integrations, as **Email (SMTP)**.
+It holds the host, the **Security** it speaks (STARTTLS, TLS, or none at all),
+the port, and the **From Address** every mail sent through it comes from. A
+login is optional: leave the username empty and it sends without authenticating.
+The password is encrypted where it is stored, like every other credential here.
+**Test Connection** opens a session and authenticates without sending anything,
+so a wrong password is found before a workflow finds it.
+
+The action takes **To**, **Subject**, **Body**, **Cc** and **Reply To**. To and
+Cc each take several addresses, separated by commas or semicolons. The body is
+plain text. What is written on the definition is where each node starts, and a
+node may say something different, which is how one Send Email serves several
+workflows.
+
+The from-address is the connection's and is not a parameter: a provider that has
+not authorised an address will refuse the message however good the password is.
+
+A node with nothing to send - no recipients, or neither a subject nor a body -
+is skipped rather than failed. A server that refuses the message fails the step,
+and the failure says whether trying again is worth anything.
+
 ## Values and references
 
 Every parameter is either **written** or **referenced**. There are no
@@ -89,6 +145,41 @@ workspace's objects, or define the fields inline, and write or reference each
 field. What comes out is one value under the node's output name, which the next
 node can read field by field.
 
+## Draft and published
+
+Saving and publishing are two different acts, and the difference decides what an
+event actually runs.
+
+- **Save** writes the draft. The draft is the graph on your screen, and editing
+  a published workflow puts it back into draft.
+- **Publish** takes a copy of the draft and stores it. That copy is what runs
+  from then on, and it does not change again until it is published again.
+
+What runs which:
+
+| Started by | Runs |
+| --- | --- |
+| A trigger, a schedule, a webhook | the published copy |
+| The API, and an assistant over MCP | the published copy |
+| **Run**, pressed by a person | the draft |
+
+Run uses the draft because that is what pressing it means: the graph on my
+screen, now. Everything else uses the published copy, because a half-finished
+edit saved at five o'clock should not be what answers a webhook at six.
+
+A workflow that has **never been published has nothing to run**. Its trigger
+fires, finds no published copy, and the firing is recorded as a failure in the
+trigger's history. The badge beside the workflow's name in the editor says
+**Draft** or **Published**, and **Publish** stays lit while there is anything
+left to publish - a graph that was never published, or one edited since it was.
+
+Publishing saves first, so what is published is always what is on screen. A
+graph with no nodes in it is refused: *Add at least one node before publishing*.
+
+There is one published copy per workflow and publishing replaces it. There is no
+history to browse and nothing to roll back to, so the way back to a graph you
+preferred is the editor's own **Discard**, before it is published over.
+
 ## Running
 
 ![The executions list: every run, how it ended, how long it took and what started it](/screens/executions.png)
@@ -106,6 +197,11 @@ went](/screens/execution-detail.png)
 
 Opening a run shows the graph as it ran, each node carrying its own outcome and
 timing, with the log underneath.
+
+Running one again is a fresh run on the same input, and it is a person pressing
+a button: it is recorded as manual, and it uses the draft rather than the graph
+that ran the first time. That is the point of it - something failed, you changed
+the graph, and you want the same event put through what you have now.
 
 Runs are carried out by Temporal, so a run that fails part-way is retried
 according to the workflow's settings rather than silently lost. Administrators

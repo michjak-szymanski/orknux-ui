@@ -37,14 +37,18 @@ between the three parts of the product:
 - **Admin** — the organisation: its workspaces, its connections, and what this
   installation allows. Administrators only.
 
+Each workspace also keeps a tracker of what is wrong with its work; see Issues.
+The bell beside your name is where anything that concerns you on one of them
+turns up, whichever workspace it happened in.
+
 ## Finding things
 
 ![The command palette, open on a letter: pages, and the things the workspace
 holds, in one list](/screens/command-palette.png)
 
 The box in the middle of the top bar is the command palette. Open it with your
-Go To shortcut — `Ctrl`/`Cmd` + `K` unless you have changed it in Preferences —
-type a few letters, and press Enter.
+Go To shortcut — `Ctrl`+`Q` unless you have changed it in Preferences — type a
+few letters, and press Enter.
 
 It knows every page in the current workspace and the admin ones, and it knows
 what the workspace *holds*: a trigger, a function, an agent, a variable and the
@@ -61,7 +65,9 @@ is, so two things with similar names can be told apart before you press Enter.
    for the next node to read.
 4. Watch the **Things to fix** panel. It refreshes as you edit and lists what is
    still missing — an unset parameter, a node with nothing feeding it.
-5. Enable the workflow. Every run then shows up under **Executions**, with the
+5. **Publish** it. Publishing takes a copy of the graph, and that copy is what a
+   trigger runs; a workflow nobody has published has nothing to run.
+6. Enable the workflow. Every run then shows up under **Executions**, with the
    graph, the steps, and what each one passed on.
 
 ## Your own preferences
@@ -70,3 +76,11 @@ is, so two things with similar names can be told apart before you press Enter.
 
 Preferences belong to the person signed in rather than to any workspace —
 the theme among them — so they follow you into every workspace you can see.
+
+Every keystroke this application listens for is set here too: **Go To**,
+**Save**, **Format**, **Turn Node**, **Undo** and **Redo**. Each is changed by
+pressing the keys you want rather than by picking from a list, because which
+keys are free depends on your browser and your machine and not on this
+application. All of them but Turn Node have to carry a modifier: a bare letter
+would fire while somebody was typing, and turning a node is only ever heard on
+the canvas.

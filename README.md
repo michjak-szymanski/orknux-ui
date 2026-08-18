@@ -51,18 +51,18 @@ docker compose run --rm dev npm run typecheck  # tsc -b
 docker compose run --rm dev npm run build      # production bundle into dist/
 ```
 
-The UI talks only to orknux-server, which in turn reaches orknux-connector and
-orknux-workflow. In the orknux-server checkout:
+The UI talks only to orknux-server, which in turn reaches its connection and
+execution modules. In the orknux-server checkout:
 
 ```
-docker compose up -d              # postgres, openldap and temporal
-./mvnw spring-boot:run -pl app    # http://localhost:8080
+docker compose up -d                 # postgres, openldap and temporal
+./mvnw spring-boot:run -pl app -am   # http://localhost:8080
 ```
 
-The dev server proxies `/api` and `/graphql` to it (override with `ORKNUX_SERVER_URL`),
+The dev server proxies `/api`, `/graphql` and `/mcp` to it (override with `ORKNUX_SERVER_URL`),
 so the browser stays on one origin and the session cookie is first-party.
 Sign in with a directory user from `docker/ldap/bootstrap.ldif` — `alice` / `password`
-sees everything, `bob` / `password` only the workspaces his groups grant.
+sees everything, `bob` / `password` only the workspaces a role of his opens.
 
 # Objectives
 - React Flow for visualizing and editing ai workflows
@@ -73,26 +73,42 @@ sees everything, `bob` / `password` only the workspaces his groups grant.
 ## UI structure
 We have five distinct kinds of pages
 - login page (for an admin or workspace access)
-- admin management page (where admin settings can be adjusted, including workspace listing, allows to create workflow templates)
-- workspace management page (connections to Slack, GH, Jira, etc, agent definitions, models, tools and skills)
+- admin management page (where admin settings can be adjusted, including workspace listing, the roles that open a workspace, and the people this installation knows)
+- workspace management page (connections to Slack, GH, Jira, mail, etc, agent definitions, models, tools and skills)
 - workflow edit page (React Flow -> allows editing agentic workflows, and a workflow is built as a graph PER workspace)
 - chat, where a person talks to one of the workspace's models directly
 
 Preferences sits outside all of them: it belongs to the person rather than to any
-workspace, so it has no sidebar.
+workspace, so it has no sidebar. So does the manual, which is served from inside
+the app at `/docs`.
+
+**Where the routes live.** There is one registry rather than a router full of
+hand-written elements: `src/navigation.ts` holds `PAGES` — the path, who may see
+it, and how it is named in Go to — and `src/routes.tsx` maps each of those paths
+to a component. `PAGE_ELEMENTS` is typed as an exact record over the paths in
+`PAGES`, so a page added to one file and not the other is a compile error rather
+than a route that quietly does nothing. `src/App.tsx` writes out only `/login`
+and the catch-all.
 
 ## Admin page
 
 Administrators only; everyone else is sent to their first workspace, or to a "no workspaces
-yet" page when their directory groups grant none.
+yet" page when no role of theirs opens one.
 
 | route                                | page                                                         |
 |--------------------------------------|--------------------------------------------------------------|
 | `/admin`                             | Workspaces, with create / rename / delete                    |
 | `/admin/audit`                       | Admin audit log, filtered and paged                          |
+| `/admin/users`                       | Everybody this installation knows                            |
+| `/admin/users/new`                   | Add an internal user                                         |
+| `/admin/users/:userId`               | One user: their roles, their password, their access tokens   |
+| `/admin/roles`                       | The roles a workspace can be opened by, and which of them administer |
 | `/admin/integrations`                | Default connections assigned to new workspaces               |
+| `/admin/plugins`                     | Plugins loaded into this installation                        |
 | `/admin/monitoring`                  | Health of the server and its dependencies, and both versions |
-| `/admin/workspaces/:workspaceId/settings` | Workspace settings, including the LDAP group            |
+| `/admin/doctor`                      | Whether this installation is configured correctly, which is not the same question |
+| `/admin/settings`                    | Installation settings: whether there is a chat, whether files may be attached |
+| `/admin/workspaces/:workspaceId/settings` | Workspace settings, including the roles that open it    |
 
 And outside any section:
 
@@ -100,8 +116,11 @@ And outside any section:
 |----------------|---------------------------------------------------------|
 | `/login`       | Sign in                                                 |
 | `/chat`        | Chats with the workspace's models                       |
-| `/preferences` | The signed-in person's own settings, including the theme |
-| `/no-workspaces` | Shown when someone's directory groups grant none       |
+| `/chat/:chatId` | One chat                                               |
+| `/docs`        | The manual, served from inside the app                  |
+| `/docs/:page`  | One page of it                                          |
+| `/preferences` | The signed-in person's own settings: the theme, and every rebindable shortcut |
+| `/no-workspaces` | Shown when no role of theirs opens one                |
 
 ## Workspace pages
 
@@ -110,13 +129,26 @@ And outside any section:
 | `/workspace/:workspaceId`                                    | Workflows                     |
 | `/workspace/:workspaceId/executions`                         | Runs of the workspace's workflows  |
 | `/workspace/:workspaceId/executions/:executionId`            | One run: graph, log, node panel |
+| `/workspace/:workspaceId/issues`                             | The workspace's issue tracker  |
+| `/workspace/:workspaceId/issues/new`                         | File an issue                 |
+| `/workspace/:workspaceId/issues/:number`                     | One issue, by its number: comments, files, assignee |
 | `/workspace/:workspaceId/actions`                            | The workspace's action catalogue   |
+| `/workspace/:workspaceId/actions/:actionId`                  | One action in the catalogue   |
 | `/workspace/:workspaceId/functions`                          | The workspace's JavaScript functions |
+| `/workspace/:workspaceId/functions/new`                      | Write a function              |
 | `/workspace/:workspaceId/functions/:functionId`              | One function: editor and properties |
 | `/workspace/:workspaceId/conditions`                         | The workspace's condition catalogue |
+| `/workspace/:workspaceId/conditions/:conditionId`            | One condition in the catalogue |
 | `/workspace/:workspaceId/triggers`                           | The workspace's trigger catalogue  |
+| `/workspace/:workspaceId/triggers/:triggerId`                | One trigger: its event, its payload, and what a webhook needs |
 | `/workspace/:workspaceId/agents`                             | Agents, and their settings    |
 | `/workspace/:workspaceId/agents/:agentId/settings`           | One agent: model, tools, skills |
+| `/workspace/:workspaceId/objects`                            | The shapes this workspace's workflows pass around |
+| `/workspace/:workspaceId/objects/:objectId`                  | One object: its properties    |
+| `/workspace/:workspaceId/variables`                          | The workspace's own values and secrets |
+| `/workspace/:workspaceId/memory`                             | Memory catalogs, and the notes in them |
+| `/workspace/:workspaceId/memory/new`                         | Write a memory                |
+| `/workspace/:workspaceId/memory/:memoryId`                   | One memory: markdown editor   |
 | `/workspace/:workspaceId/tools`                              | The workspace's tools         |
 | `/workspace/:workspaceId/tools/:toolId`                      | One tool: JavaScript editor   |
 | `/workspace/:workspaceId/skills`                             | The workspace's skills        |
@@ -129,10 +161,36 @@ And outside any section:
 | `/workspace/:workspaceId/integrations`                       | MCP servers and connections   |
 | `/workspace/:workspaceId/integrations/servers/:serverId`     | MCP server settings           |
 | `/workspace/:workspaceId/integrations/connections/:connectionId`       | Connection settings           |
+| `/workspace/:workspaceId/settings`                           | What the workspace decides for itself, such as its companion model |
 | `/workspace/:workspaceId/workflows/:workflowId/editor`       | The React Flow editor         |
 | `/workspace/:workspaceId/workflows/:workflowId/settings`     | Workflow settings             |
-| `/workspace/:workspaceId/actions/:actionId`                  | One action in the catalogue   |
-| `/workspace/:workspaceId/conditions/:conditionId`            | One condition in the catalogue |
+
+# Worth knowing
+
+**Save, Publish and Run are three different things.** Saving writes the draft.
+Publishing takes a copy of it on the server, and that copy is what a trigger, a
+schedule or the API runs — so an event arriving while somebody is halfway through
+drawing runs the last published graph rather than a half-drawn one. Run in the
+editor uses the draft, because that is the graph on the screen. Publish stays lit
+while there is a draft to publish, which is the only signal that the graph
+somebody is looking at is not the graph that is live.
+
+**The canvas.** Undo and redo are whole-graph snapshots taken on a half-second
+pause, so typing a name is one step rather than one per letter, fifty deep;
+restoring one also re-seeds the side panel, or the stale panel writes its fields
+back over the node that was just restored. A node can be turned, so a graph can
+run down the screen instead of off the side of it, and it is per node rather than
+per graph. A condition draws two ways out, and both can be named — "Escalate" and
+"File it" read better than Yes and No.
+
+**The shell.** Go to searches the pages and the workspace's own things —
+workflows, actions, agents, issues and the rest — and opens what was chosen. The
+bell beside it counts what has happened on the issues that concern you: looking
+does not clear it, and reading it does.
+
+**Shortcuts are rebindable**, on the Preferences page, and are remembered in the
+browser rather than against the account. Go to, Save, Format, Turn node, Undo and
+Redo each have one.
 
 # Licence
 

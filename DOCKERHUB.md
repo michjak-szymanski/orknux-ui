@@ -2,7 +2,9 @@
 
 The interface for [`orknux/orknux-server`](https://hub.docker.com/r/orknux/orknux-server):
 the workflow editor, the run history, the workspace's agents, models, tools and
-skills, chat, and the administration screens.
+skills, its issue tracker, chat, and the administration screens. The manual is
+part of the bundle and is served at `/docs`, so an installation with no way out
+to the internet still has it.
 
 Static files served by nginx, with the API forwarded to the server — so the
 browser stays on one origin and the session cookie is first-party.

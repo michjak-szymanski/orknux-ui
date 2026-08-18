@@ -31,6 +31,51 @@ The built-in **Administrators** role cannot be edited or removed: an
 installation that could delete its way out of having an administrator is one
 nobody can get back into.
 
+## Users
+
+![Everybody this installation knows, and where each of them came from](/screens/users.png)
+
+Two kinds of person appear here, and the badge on the row says which.
+
+- **External** users come from your organisation's provider. They are recorded
+  the first time they sign in, and nothing about them is edited here: the
+  provider is what says who they are.
+- **Internal** users are made here, for somebody the provider does not know - a
+  contractor, a service, a person who needs one workspace and nothing else.
+  Administrators only, and only this kind can be created.
+
+![One user: the roles they hold, a password if they need one, and the tokens
+they carry](/screens/user.png)
+
+An internal user cannot sign in until somebody gives them a **password**, set on
+their page and at least twelve characters long. Setting a new one replaces it
+without asking for the old one, because an administrator doing this is how
+somebody who is locked out gets back in. Changing your own password does ask for
+the current one.
+
+Internal users are tried before the directory when somebody signs in, so an
+installation that authenticates everybody else through a single sign-on provider
+still lets them in. Their roles then work exactly as anybody else's do.
+
+## Access tokens
+
+A token is a way of being a user without a browser: it is what an agent, a
+script or the MCP endpoint uses. They are made on a user's page under **Access
+Tokens**, named for what they are for, and the secret is shown once.
+
+- It begins `orkx_`, so one that has leaked is recognisable on sight in a log or
+  a paste.
+- Only a hash of it is stored, which is why there is no way to see it again.
+- It is sent as `Authorization: Bearer orkx_…`, and that is what reaches both
+  the API and the MCP endpoint.
+- It carries its owner's roles and nothing else. There are no scopes and no
+  narrower grant: a token is that user by another door.
+- It does not expire. Revoking is how one ends, and each row says when it was
+  last used - or that it never has been - so one nobody needs is easy to find.
+
+Tokens belong to internal users. A token for somebody the provider vouches for
+would outlive whatever the provider later decides about them.
+
 ## Audit logs
 
 ![The audit log: who changed what, and when](/screens/audit.png)

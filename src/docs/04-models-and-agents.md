@@ -107,14 +107,40 @@ http://your-orknux/mcp/{workspaceId}
 ```
 
 It speaks JSON-RPC over HTTP POST, and it authenticates the way everything else
-here does: sign in first (`POST /api/session`, or a bearer token where the
-installation uses OIDC) and send the session with the request. What you may see
-through it is what you may see in this interface — the same check, on the same
-workspace — and what you may change is what you could already change by hand.
-Being reachable by an agent grants nothing extra.
+here does: sign in first (`POST /api/session`) and send the session with the
+request, or send an access token as `Authorization: Bearer orkx_…`, which is the
+usual way in for something with no browser to keep a cookie in. Tokens are made
+on a user's page; see Administration. What you may see through it is what you may
+see in this interface — the same check, on the same workspace — and what you may
+change is what you could already change by hand. Being reachable by an agent
+grants nothing extra.
 
 Everything with a page of its own comes back with its address, so an agent that
 mentions a run can link you to it.
+
+### The tracker, over MCP
+
+The workspace's issues are offered here too: list them, filtered by assignee, by
+state, by labels or by a search; read one with its comments; comment on it; move
+it between open and closed; and change its title, description or labels. An issue
+is addressed by the number people say, so #4 to an assistant is #4 on the page.
+
+### Waiting to be told
+
+One tool answers slowly on purpose. `orknux_news` gives whoever is asking what
+has happened on the issues that concern them since they last read: assigned,
+closed, reopened, commented on, or their name written somewhere. It also takes a
+number of seconds to **wait** for. Given one, it holds the call open until
+something happens or the time runs out, up to five minutes.
+
+That is what lets an assistant be told rather than have to keep asking. Reading
+marks it read and no place-marker comes back, so something that forgets
+everything between one session and the next neither repeats a week of events nor
+silently skips them.
+
+An issue can be assigned to an agent as easily as to a person, and the same tool
+takes the agent's name, so an agent can be asked to read what it has been sent
+rather than what its owner has.
 
 The workspace's own MCP servers, listed under Integrations, are a different
 thing entirely: those are servers somebody registered for agents to call *out*

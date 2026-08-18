@@ -96,6 +96,10 @@ const found = await gql(`{
   tools: workspaceTools(workspaceId: "${ws}") { content { id name } }
   skills: workspaceSkills(workspaceId: "${ws}") { content { id name } }
   providers: modelProviders(workspaceId: "${ws}") { id name }
+  issues: workspaceIssues(workspaceId: "${ws}", size: 100) {
+    content { number title attachments { id } comments { id } }
+  }
+  users { id username type }
 }`);
 
 const byName = (list, name) => list.find((item) => item.name === name) ?? list[0];
@@ -106,6 +110,18 @@ const tool = byName(found.tools.content, 'lookupCustomer');
 const skill = byName(found.skills.content, 'When to escalate');
 const run = found.executions.content[0];
 const provider = found.providers[0];
+/*
+ * An issue is chosen by what it can show rather than by its number: the page
+ * the manual points at is the one about comments and attachments, so it has to
+ * be an issue that has both. Numbers move as a tracker is used, and a hard
+ * number would eventually photograph whatever happened to land on it.
+ */
+const illustrated =
+  found.issues.content.find((issue) => issue.attachments.length > 0 && issue.comments.length > 0) ??
+  found.issues.content.find((issue) => issue.comments.length > 0) ??
+  found.issues.content[0];
+/* The one kind of user whose page has a password and tokens on it. */
+const internal = found.users.find((user) => user.type === 'INTERNAL') ?? found.users[0];
 
 /**
  * What to photograph.
@@ -129,7 +145,40 @@ const SHOTS = [
   { name: 'editor', path: `/workspace/${ws}/workflows/${flagship.id}/editor`, waitFor: '.react-flow__node', editor: true },
   { name: 'executions', path: `/workspace/${ws}/executions` },
   run && { name: 'execution-detail', path: `/workspace/${ws}/executions/${run.id}` },
+  /*
+   * The builder, open beside the graph rather than over it, which is the whole
+   * point of it. Nothing is created and nothing is saved: the form is opened,
+   * photographed and left, and the next shot navigates away from it.
+   */
+  {
+    name: 'node-builder',
+    path: `/workspace/${ws}/workflows/${flagship.id}/editor`,
+    waitFor: '.react-flow__node',
+    editor: true,
+    prepare: async (page) => {
+      // `New` beside whichever picker the selected node has, which is the one
+      // control that opens a builder. Exact text, or it matches "New Issue".
+      await page.locator('button', { hasText: /^New$/ }).first().click();
+      await page.waitForSelector('dialog[open]', { timeout: 10_000 });
+      await page.waitForTimeout(400);
+    },
+  },
   { name: 'triggers', path: `/workspace/${ws}/triggers` },
+  /*
+   * All rather than Open, which is what the page opens on: a tracker being read
+   * for the first time should show what the three states look like beside each
+   * other, and a picture of an empty Open list teaches nothing.
+   */
+  {
+    name: 'issues',
+    path: `/workspace/${ws}/issues?status=all`,
+    waitFor: 'a[href*="/issues/"]',
+  },
+  illustrated && {
+    name: 'issue',
+    path: `/workspace/${ws}/issues/${illustrated.number}`,
+    waitFor: 'textarea[aria-label="Add a comment"]',
+  },
   { name: 'agents', path: `/workspace/${ws}/agents` },
   responder && { name: 'agent-settings', path: `/workspace/${ws}/agents/${responder.id}/settings` },
   { name: 'models', path: `/workspace/${ws}/models` },
@@ -204,6 +253,8 @@ const SHOTS = [
     },
   },
   { name: 'admin-workspaces', path: '/admin' },
+  { name: 'users', path: '/admin/users' },
+  internal && { name: 'user', path: `/admin/users/${internal.id}` },
   {
     name: 'doctor',
     path: '/admin/doctor',
@@ -239,7 +290,54 @@ const SHOTS = [
   { name: 'roles', path: '/admin/roles' },
   { name: 'monitoring', path: '/admin/monitoring' },
   { name: 'admin-settings', path: '/admin/settings' },
-  { name: 'preferences', path: '/preferences' },
+  // By a setting rather than by the page having text in it: this one lays its
+  // content out beside `main` rather than inside it, so the default wait never
+  // sees anything and times out on a page that was ready immediately.
+  { name: 'preferences', path: '/preferences', waitFor: '#palette-shortcut' },
+  /*
+   * Last, and not by accident.
+   *
+   * Opening the bell is what marks its notifications seen, and the panel only
+   * ever lists the ones still waiting - so a capture that let that mutation
+   * through would empty the thing it had just photographed, and every run after
+   * this one would take a picture of "Nothing waiting". The refusal is a route
+   * on this page, which is why this shot goes at the end: nothing after it has
+   * to reason about a request being intercepted.
+   *
+   * This is the second and last place where the capture does not simply look at
+   * the product. The other is `doctor`, above.
+   */
+  {
+    name: 'notifications',
+    path: `/workspace/${ws}/issues`,
+    prepare: async (page) => {
+      await page.route('**/graphql', async (route) => {
+        if ((route.request().postData() ?? '').includes('readMyNotifications')) {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ data: { readMyNotifications: 0 } }),
+          });
+          return;
+        }
+        await route.continue();
+      });
+      await page.click('button[aria-label^="Notifications"]');
+      // The panel appears before its contents do, so the wait is for a row.
+      const rows = 'div[role="dialog"][aria-label="Notifications"] a';
+      try {
+        await page.waitForSelector(rows, { timeout: 10_000 });
+      } catch {
+        /*
+         * Nothing waiting. Not a failure - the panel is still the panel - but
+         * it is a picture of an empty box, so it is said out loud rather than
+         * quietly shipped as documentation of the feature.
+         */
+        console.warn('  notifications: nothing is waiting, so the panel is empty');
+      }
+      await page.waitForTimeout(400);
+    },
+  },
 ].filter(Boolean);
 
 /*

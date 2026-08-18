@@ -34,6 +34,16 @@ Webhook authentication is chosen per trigger.
   return a boolean. `true` fires the trigger; anything else is answered `401`,
   and the refusal is written to the trigger's history.
 
+## What a trigger runs
+
+A trigger starts the workflow's **published** copy. Editing and saving a graph
+does not change what fires tonight; publishing does. See Workflows.
+
+A workflow that has never been published cannot be started by a trigger at all.
+The firing still happens and is still recorded, saying it started none of the
+workflows it was for - which is the thing to look for when a schedule appears to
+be doing nothing.
+
 ## History
 
 Every trigger keeps a history: when it fired, what set it off, and what came of
