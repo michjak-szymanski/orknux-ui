@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { ISSUE_STATUS_LABEL, fetchIssueLabels, fetchIssues } from '../../api/issues';
 import type { Issue, IssueOrder, IssuePage, IssueStatus } from '../../api/issues';
@@ -84,11 +84,63 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
 
   const [issues, setIssues] = useState<IssuePage | null>(null);
   const [labels, setLabels] = useState<string[]>([]);
-  const [status, setStatus] = useState<IssueStatus | null>('OPEN');
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [order, setOrder] = useState<IssueOrder>('NUMBER');
-  const [ascending, setAscending] = useState(false);
+
+  /*
+   * The filters live in the address, not in this component.
+   *
+   * A tracker is a thing people send each other: "the open p1 ones" is a link
+   * if the filters are in the URL and a sentence of instructions if they are
+   * not. It also means a refresh, a back button and a restored tab all come
+   * back to the list somebody was looking at rather than to Open, newest
+   * first - which is what made refreshing feel like losing your place.
+   *
+   * The search box keeps its own copy while it is being typed in, because a
+   * history entry per keystroke would make Back walk letter by letter.
+   */
+  const [params, setParams] = useSearchParams();
+  /*
+   * "All" is written down as a word rather than left out.
+   *
+   * Absent has to mean Open, since that is what somebody arriving expects to
+   * see - so absent cannot also mean every state, and asking for all of them
+   * has to say so.
+   */
+  const wanted = params.get('status');
+  const status: IssueStatus | null = wanted === null ? 'OPEN' : wanted === 'all' ? null : (wanted as IssueStatus);
+  const search = params.get('q') ?? '';
+  const page = Number(params.get('page') ?? '1') || 1;
+  const order = (params.get('order') as IssueOrder | null) ?? 'NUMBER';
+  const ascending = params.get('dir') === 'asc';
+  const [typed, setTyped] = useState(search);
+
+  /**
+   * Writes the filters back into the address.
+   *
+   * Replacing rather than pushing: changing a filter is not somewhere you
+   * went, and a Back button that walks through every filter you tried is a
+   * Back button nobody can use to leave the page.
+   */
+  function filterBy(changes: Record<string, string | null>, andPage = true) {
+    /*
+     * Built from whatever the address holds at the moment it is written, not
+     * from what it held when this render started. Two filters changed in quick
+     * succession - a state and then a sort - would otherwise each build on the
+     * same stale copy, and the first change would vanish when the second
+     * landed.
+     */
+    setParams(
+      (held) => {
+        const next = new URLSearchParams(held);
+        for (const [key, value] of Object.entries(changes)) {
+          if (value === null) next.delete(key);
+          else next.set(key, value);
+        }
+        if (andPage) next.delete('page');
+        return next;
+      },
+      { replace: true },
+    );
+  }
   const [pageSize, setPageSize] = useState(() => {
     const held = Number(window.localStorage.getItem(PAGE_SIZE_KEY));
     return PAGE_SIZES.includes(held) ? held : DEFAULT_PAGE_SIZE;
@@ -118,6 +170,22 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
 
   /** When the list last came back, so a glance away does not refetch. */
   const loadedAt = useRef(0);
+
+  /*
+   * The typed search reaches the address once typing pauses.
+   *
+   * Kept apart from the fetch below on purpose: this decides what the list is,
+   * and the fetch reacts to that - so the address and the list can never
+   * disagree about what is being shown.
+   */
+  useEffect(() => {
+    if (typed === search) return;
+    const timer = window.setTimeout(() => filterBy({ q: typed.trim() === '' ? null : typed }), SEARCH_PAUSE_MS);
+    return () => window.clearTimeout(timer);
+    // filterBy reads the current params, and re-running on those would fight
+    // the typing it is debouncing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [typed, search]);
 
   useEffect(() => {
     if (workspaceId === '') return;
@@ -220,10 +288,7 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
                 key={filter.label}
                 type="button"
                 className={status === filter.status ? styles.tabActive : styles.tab}
-                onClick={() => {
-                  setStatus(filter.status);
-                  setPage(1);
-                }}
+                onClick={() => filterBy({ status: filter.status ?? 'all' })}
               >
                 {filter.label}
               </button>
@@ -235,13 +300,10 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
             <input
               className={styles.search}
               type="search"
-              value={search}
+              value={typed}
               placeholder="Search titles, descriptions and labels…"
               aria-label="Search issues"
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setPage(1);
-              }}
+              onChange={(event) => setTyped(event.target.value)}
             />
           </div>
 
@@ -253,10 +315,7 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
               id="issue-order"
               className={styles.sortSelect}
               value={order}
-              onChange={(event) => {
-                setOrder(event.target.value as IssueOrder);
-                setPage(1);
-              }}
+              onChange={(event) => filterBy({ order: event.target.value })}
             >
               {ORDERS.map((one) => (
                 <option key={one.order} value={one.order}>
@@ -272,10 +331,7 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
             <button
               type="button"
               className={styles.sortDirection}
-              onClick={() => {
-                setAscending((was) => !was);
-                setPage(1);
-              }}
+              onClick={() => filterBy({ dir: ascending ? 'desc' : 'asc' })}
               title={ascending ? 'Ascending - press for descending' : 'Descending - press for ascending'}
               aria-label={ascending ? 'Sorted ascending' : 'Sorted descending'}
             >
@@ -296,7 +352,7 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
                 // The page somebody is on means something different at a
                 // different size, and the first page is the one that always
                 // exists.
-                setPage(1);
+                filterBy({});
               }}
             >
               {PAGE_SIZES.map((size) => (
@@ -317,8 +373,9 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
                 type="button"
                 className={search.trim() === label ? styles.labelChipActive : styles.labelChip}
                 onClick={() => {
-                  setSearch(search.trim() === label ? '' : label);
-                  setPage(1);
+                  const wanted = search.trim() === label ? '' : label;
+                  setTyped(wanted);
+                  filterBy({ q: wanted === '' ? null : wanted });
                 }}
               >
                 {label}
@@ -370,6 +427,23 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
                     <span className={styles.issueTitle}>{issue.title}</span>
                   </span>
                   <span className={styles.rowMeta}>
+                    {/*
+                      Said in words as well as in the dot. A colour is a legend
+                      somebody has to have learnt, and the one thing a row is
+                      most often scanned for should not depend on remembering
+                      what amber meant.
+                    */}
+                    <span
+                      className={
+                        issue.status === 'OPEN'
+                          ? styles.stateOpen
+                          : issue.status === 'IN_PROGRESS'
+                            ? styles.stateProgress
+                            : styles.stateClosed
+                      }
+                    >
+                      {ISSUE_STATUS_LABEL[issue.status]}
+                    </span>
                     #{issue.number} opened by {issue.reporter} · {timeAgo(issue.lastModifiedAt)}
                   </span>
                 </span>
@@ -401,7 +475,7 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
             pageSize={pageSize}
             totalItems={issues.totalElements}
             unit="issues"
-            onPageChange={setPage}
+            onPageChange={(wanted) => filterBy({ page: String(wanted) }, false)}
           />
         )}
       </section>
