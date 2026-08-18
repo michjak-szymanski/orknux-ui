@@ -24,18 +24,37 @@
   gap: var(--space-8);
 }
 
+/*
+ * A step that works has to look like it works.
+ *
+ * These were muted text with no border - captions that happened to be
+ * clickable - so Next with pages behind it read as the end of the list, and a
+ * saved function got reported missing off the back of it. This is the second
+ * pagination to need the same fix; the other one is Pagination.module.css,
+ * and the lesson is the same: the disabled state must be the exception, not
+ * the twin.
+ */
 .step {
-  padding: 0;
-  background: none;
-  border: 0;
+  padding: var(--space-4) var(--space-10);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
   font-size: var(--text-sm);
   line-height: 18px;
-  color: var(--color-text-muted);
+  color: var(--color-text-primary);
   cursor: pointer;
 }
 
+.step:hover:not(:disabled) {
+  border-color: var(--color-text-muted);
+  background: var(--color-surface);
+}
+
 .step:disabled {
-  opacity: 0.5;
+  background: none;
+  border-color: transparent;
+  opacity: 0.4;
+  color: var(--color-text-muted);
   cursor: not-allowed;
 }
 
