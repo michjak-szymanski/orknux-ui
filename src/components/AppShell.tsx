@@ -13,6 +13,7 @@ import { useInstallation } from '../session/installation';
 import { setSidebarCollapsed, useSidebarCollapsed } from '../session/sidebar';
 import { Attribution } from './Attribution';
 import { CommandPalette } from './CommandPalette';
+import { NotificationBell } from './NotificationBell';
 import { QuickChat } from './QuickChat';
 import styles from './AppShell.module.css';
 
@@ -141,6 +142,8 @@ export function AppShell({
           showChat={installation?.chatEnabled === true}
         />
 
+        {/* Beside the name it belongs to, which is where everybody looks for it. */}
+        <NotificationBell />
         <UserMenu user={user} onSignOut={onSignOut} />
       </header>
 

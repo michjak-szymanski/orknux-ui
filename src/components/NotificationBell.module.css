@@ -1,0 +1,129 @@
+.bell {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-6);
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--color-surface-raised);
+  border-color: var(--color-border);
+}
+
+.button img {
+  opacity: 0.75;
+}
+
+/*
+ * The number sits on the bell rather than beside it, because the pair has to
+ * read as one thing at a glance - and it is a count, not a total: past nine
+ * the exact figure changes nothing about what somebody does next.
+ */
+.count {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 16px;
+  padding: 0 3px;
+  background: var(--color-accent-brand);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 10px;
+  line-height: 16px;
+  color: #09090b;
+  text-align: center;
+}
+
+/*
+ * Over the page rather than in the flow, and anchored to the right: it hangs
+ * from a bell in the top bar, and a panel that pushed the header wider would
+ * move everything somebody was about to click.
+ */
+.panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  width: 340px;
+  max-height: 420px;
+  margin-top: var(--space-6);
+  padding: var(--space-6);
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.notice {
+  margin: 0;
+  padding: var(--space-12);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-8);
+  border-radius: var(--radius-4);
+  text-decoration: none;
+}
+
+.item:hover {
+  background: var(--color-surface-raised);
+}
+
+.itemHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+
+.kind {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  color: var(--color-accent-brand);
+  text-transform: uppercase;
+}
+
+.when {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.title {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.by {
+  overflow: hidden;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
