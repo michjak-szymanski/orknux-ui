@@ -175,6 +175,24 @@ function named(data: NodeData): NodeData {
   return { ...data, mappings: data.mappings.filter((mapping) => mapping.name.trim() !== '') };
 }
 
+/**
+ * The panel's fields, with one name held at what it was.
+ *
+ * While a field's name is being typed, the node keeps the name the field had
+ * and takes the new one when the input is left. Following the typing itself
+ * meant the chip renamed letter by letter through a server round trip and
+ * vanished outright while a rename backspaced through empty - a node that
+ * blinks and jumps under the cursor. Nothing about the field is lost: the
+ * panel has the live name, and the canvas is a picture of it, a beat behind.
+ */
+function withHeldName(data: NodeData, held: { index: number; was: string } | null): NodeData {
+  if (held === null) return data;
+  return {
+    ...data,
+    mappings: data.mappings.map((mapping, at) => (at === held.index ? { ...mapping, name: held.was } : mapping)),
+  };
+}
+
 /** Enough to see what a line is for; the panel has the rest. */
 const FIELDS_ON_A_LINE = 4;
 
@@ -492,6 +510,8 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   const [status, setStatus] = useState<WorkflowStatus>('DRAFT');
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [draft, setDraft] = useState<NodeData | null>(null);
+  /** The field whose name is mid-edit, if any, and the name it had. */
+  const [fieldEdit, setFieldEdit] = useState<{ index: number; was: string } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -796,7 +816,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
    */
   useEffect(() => {
     if (selectedKey === null || draft === null) return;
-    const shown = named(draft);
+    const shown = named(withHeldName(draft, fieldEdit));
     const timer = window.setTimeout(() => {
     setNodes((current) =>
       current.map((node) => {
@@ -827,7 +847,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     );
     }, CANVAS_PAUSE_MS);
     return () => window.clearTimeout(timer);
-  }, [draft, selectedKey, setNodes]);
+  }, [draft, fieldEdit, selectedKey, setNodes]);
 
   /**
    * An agent node takes two, and takes them from nowhere else: an agent has no
@@ -982,22 +1002,34 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
 
   function toGraph(): { nodes: GraphNode[]; edges: { source: string; target: string }[] } {
     return {
-      nodes: nodes.map((node) => ({
-        key: node.id,
-        kind: (node.data as NodeData).kind,
-        name: (node.data as NodeData).name,
-        description: (node.data as NodeData).description,
-        agentId: (node.data as NodeData).agentId,
-        triggerId: (node.data as NodeData).triggerId,
-        actionId: (node.data as NodeData).actionId,
-        conditionId: (node.data as NodeData).conditionId,
-        objectId: (node.data as NodeData).objectId,
-        outputName: (node.data as NodeData).outputName,
-        icon: (node.data as NodeData).icon,
-        mappings: (node.data as NodeData).mappings,
-        x: node.position.x,
-        y: node.position.y,
-      })),
+      nodes: nodes.map((node) => {
+        /*
+         * The panel is the truth of the node it is editing; the canvas is a
+         * picture of it, a beat behind - held back on purpose while a field's
+         * name is typed. Saving from the picture could save the beat before,
+         * so the selected node is read from the panel.
+         */
+        const data =
+          node.id === selectedKey && draft !== null
+            ? { ...(node.data as NodeData), ...named(draft) }
+            : (node.data as NodeData);
+        return {
+          key: node.id,
+          kind: data.kind,
+          name: data.name,
+          description: data.description,
+          agentId: data.agentId,
+          triggerId: data.triggerId,
+          actionId: data.actionId,
+          conditionId: data.conditionId,
+          objectId: data.objectId,
+          outputName: data.outputName,
+          icon: data.icon,
+          mappings: data.mappings,
+          x: node.position.x,
+          y: node.position.y,
+        };
+      }),
       edges: edges.map((edge) => ({ source: edge.source, target: edge.target })),
     };
   }
@@ -1531,6 +1563,10 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                                     value={mapping.name}
                                     aria-label={`Name of field ${index + 1}`}
                                     spellCheck={false}
+                                    // While this is focused, the node keeps the
+                                    // name the field had; leaving applies it.
+                                    onFocus={() => setFieldEdit({ index, was: mapping.name })}
+                                    onBlur={() => setFieldEdit(null)}
                                     /*
                                       A field is pointed at by one name, so anything
                                       that could not be one is refused as it is typed.
