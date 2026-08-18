@@ -37,6 +37,7 @@ import type {
   GraphProblem,
   MappingMode,
   NodeKind,
+  NodeOrientation,
   NodeMapping,
   WorkflowStatus,
 } from '../../api/graph';
@@ -102,6 +103,14 @@ interface NodeData extends Record<string, unknown> {
   outputName: string | null;
   /** Which icon the canvas draws on this node; empty leaves the plain node. */
   icon: string | null;
+  /**
+   * Which way round the node faces on the canvas.
+   *
+   * Layout, not meaning: it moves where the handles sit and changes nothing
+   * about what runs. Null is the left-to-right every node had before, so an
+   * existing graph keeps its shape.
+   */
+  orientation?: NodeOrientation | null;
   /**
    * What this node passes on. Seeded from the action when one is picked and the
    * node's own from then on — editing it here never writes to the definition,
@@ -280,6 +289,48 @@ export interface LabelOffset {
 }
 
 const NO_OFFSET: LabelOffset = { x: 0, y: 0 };
+
+/**
+ * Where a node's input and output sit, for each way round it can face.
+ *
+ * A graph could only be drawn left to right, which is fine for four nodes and
+ * wrong for a screen: a long chain runs off the side while the space below it
+ * stays empty. Turning a node moves its handles and nothing else, so the lines
+ * still leave the output and arrive at the input - they just do it downwards.
+ */
+const FACING: Record<NodeOrientation, { input: Position; output: Position }> = {
+  LEFT_TO_RIGHT: { input: Position.Left, output: Position.Right },
+  TOP_TO_BOTTOM: { input: Position.Top, output: Position.Bottom },
+  RIGHT_TO_LEFT: { input: Position.Right, output: Position.Left },
+  BOTTOM_TO_TOP: { input: Position.Bottom, output: Position.Top },
+};
+
+/** In the order pressing the button walks through them. */
+const FACINGS: NodeOrientation[] = ['LEFT_TO_RIGHT', 'TOP_TO_BOTTOM', 'RIGHT_TO_LEFT', 'BOTTOM_TO_TOP'];
+
+/**
+ * Two handles on one edge, spaced along it.
+ *
+ * A condition leaves by two doors, and which way they are spread depends on
+ * which edge they are on: down a side, across a top. Given as a percentage so
+ * a node resized by hand keeps them evenly placed.
+ */
+/** The next way round, so pressing until it looks right is one gesture. */
+function turned(from: NodeOrientation | null): NodeOrientation {
+  const at = FACINGS.indexOf(from ?? 'LEFT_TO_RIGHT');
+  return FACINGS[(at + 1) % FACINGS.length];
+}
+
+function alongEdge(side: Position, at: string): { top?: string; left?: string } {
+  return side === Position.Left || side === Position.Right ? { top: at } : { left: at };
+}
+
+const FACING_LABEL: Record<NodeOrientation, string> = {
+  LEFT_TO_RIGHT: 'Left to right',
+  TOP_TO_BOTTOM: 'Top to bottom',
+  RIGHT_TO_LEFT: 'Right to left',
+  BOTTOM_TO_TOP: 'Bottom to top',
+};
 
 /**
  * A line, and what it carries written beside it — one field per row.
@@ -485,6 +536,7 @@ const KIND_CLASS: Record<NodeKind, string> = {
 function GraphNodeView({ data, selected }: NodeProps) {
   const node = data as NodeData;
   const hasInput = node.kind !== 'TRIGGER';
+  const facing = FACING[node.orientation ?? 'LEFT_TO_RIGHT'];
 
   return (
     <div className={selected ? `${styles.node} ${styles.nodeSelected}` : styles.node}>
@@ -494,8 +546,12 @@ function GraphNodeView({ data, selected }: NodeProps) {
         reads better with one node wider than the rest.
       */}
       <NodeResizer isVisible={selected} minWidth={220} minHeight={96} />
+      {/*
+        A condition's two ways out have to be spaced along whichever edge they
+        leave by, or turning the node stacks them on top of each other.
+      */}
       <span className={`${styles.accentBar} ${styles[KIND_CLASS[node.kind]]}`} aria-hidden="true" />
-      {hasInput && <Handle className={styles.handle} type="target" position={Position.Left} />}
+      {hasInput && <Handle className={styles.handle} type="target" position={facing.input} />}
       {/*
         A condition leaves by one of two doors, and each says which answer it
         is. Everything else has the one way out it always had - a node that
@@ -507,21 +563,21 @@ function GraphNodeView({ data, selected }: NodeProps) {
             id="yes"
             className={`${styles.handle} ${styles.handleYes}`}
             type="source"
-            position={Position.Right}
-            style={{ top: '35%' }}
+            position={facing.output}
+            style={alongEdge(facing.output, '35%')}
           />
           <span className={`${styles.branchLabel} ${styles.branchYes}`}>{node.yesLabel ?? 'Yes'}</span>
           <Handle
             id="no"
             className={`${styles.handle} ${styles.handleNo}`}
             type="source"
-            position={Position.Right}
-            style={{ top: '70%' }}
+            position={facing.output}
+            style={alongEdge(facing.output, '70%')}
           />
           <span className={`${styles.branchLabel} ${styles.branchNo}`}>{node.noLabel ?? 'No'}</span>
         </>
       ) : (
-        <Handle className={styles.handle} type="source" position={Position.Right} />
+        <Handle className={styles.handle} type="source" position={facing.output} />
       )}
 
       <div className={styles.nodeContent}>
@@ -976,6 +1032,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
               objectId: node.objectId ?? null,
               outputName: node.outputName ?? null,
               icon: node.icon ?? null,
+              orientation: node.orientation ?? null,
               mappings: node.mappings ?? [],
             },
           })),
@@ -1102,6 +1159,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
            * different name. Now the default is real.
            */
           outputName: kind === 'AGENT' ? 'reply' : null,
+          orientation: null,
           icon: null,
           mappings: [],
         },
@@ -1139,6 +1197,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           data.objectId === draft.objectId &&
           data.outputName === draft.outputName &&
           data.icon === draft.icon &&
+          data.orientation === draft.orientation &&
           data.yesLabel === draft.yesLabel &&
           data.noLabel === draft.noLabel &&
           sameMappings(data.mappings, shown.mappings);
@@ -1361,6 +1420,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           objectId: data.objectId,
           outputName: data.outputName,
           icon: data.icon,
+          orientation: data.orientation ?? null,
           yesLabel: data.yesLabel ?? null,
           noLabel: data.noLabel ?? null,
           mappings: data.mappings,
@@ -1538,6 +1598,25 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       event.preventDefault();
       if (asked === 'back') undo();
       else redo();
+    }
+
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  });
+
+  /**
+   * R turns the selected node, because turning is something somebody does four
+   * times in a row and reaching for the panel each time is three reaches too
+   * many. Bare, with no modifier: every modified R belongs to the browser -
+   * Ctrl+R reloads - and a caret in a text box is somebody typing the letter.
+   */
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key.toLowerCase() !== 'r') return;
+      if (event.ctrlKey || event.metaKey || event.altKey || typingText(event.target)) return;
+      if (draft === null) return;
+      event.preventDefault();
+      setDraft({ ...draft, orientation: turned(draft.orientation ?? null) });
     }
 
     window.addEventListener('keydown', onKey, true);
@@ -2348,6 +2427,32 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                       Browse…
                     </button>
                   </div>
+                </div>
+
+                <div className={styles.field}>
+                  <span className={styles.label}>Facing</span>
+                  {/*
+                    One button that walks round rather than four options: a
+                    node has four ways to face and pressing until it looks
+                    right is how somebody actually uses this, while four radio
+                    buttons would take four times the room in a panel that is
+                    already the narrow half of the screen.
+                  */}
+                  <div className={styles.inputWrapper}>
+                    <span className={styles.iconName}>{FACING_LABEL[draft.orientation ?? 'LEFT_TO_RIGHT']}</span>
+                    <button
+                      type="button"
+                      className={styles.parameterSync}
+                      onClick={() => setDraft({ ...draft, orientation: turned(draft.orientation ?? null) })}
+                      title="Turn the node (R)"
+                    >
+                      Turn
+                    </button>
+                  </div>
+                  <p className={styles.parameterHint}>
+                    Where the lines join it. Nothing about what runs; a long chain reads better down a screen than
+                    off the side of one.
+                  </p>
                 </div>
 
                 {(draft.kind === 'AGENT' || draft.kind === 'ACTION' || draft.kind === 'OBJECT') && (

@@ -3,6 +3,15 @@ import { graphql } from './client';
 export type WorkflowStatus = 'DRAFT' | 'PUBLISHED';
 export type NodeKind = 'TRIGGER' | 'AGENT' | 'ACTION' | 'CONDITION' | 'OBJECT';
 
+
+/**
+ * Which side of a node its input and output sit on.
+ *
+ * Layout only - it moves the handles and nothing else - so a graph can run
+ * down a screen instead of off the side of it.
+ */
+export type NodeOrientation = 'LEFT_TO_RIGHT' | 'TOP_TO_BOTTOM' | 'RIGHT_TO_LEFT' | 'BOTTOM_TO_TOP';
+
 export interface GraphNode {
   /** Stable within a workflow; what edges refer to. */
   key: string;
@@ -29,6 +38,8 @@ export interface GraphNode {
   outputName?: string | null;
   /** Which icon the canvas draws on this node; a name from the interface's own set. */
   icon?: string | null;
+  /** Which way round the node faces; null is the left-to-right it always was. */
+  orientation?: NodeOrientation | null;
   /**
    * What a condition node's two ways out are called.
    *
@@ -113,7 +124,7 @@ const GRAPH_FIELDS = `
   description
   status
   nodes {
-    key kind name description agentId triggerId actionId conditionId objectId outputName icon
+    key kind name description agentId triggerId actionId conditionId objectId outputName icon orientation
     yesLabel noLabel x y
     mappings { name expression mode sourceNodeKey }
     inputs { name type display }
