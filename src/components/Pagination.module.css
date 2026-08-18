@@ -41,12 +41,28 @@
   color: var(--color-text-secondary);
 }
 
+/*
+ * A button that works has to look different from one that does not.
+ *
+ * Both used to be grey text on a grey surface, half a shade apart: Next with
+ * pages behind it read as Next at the end of the list, and the list read as
+ * having no more pages - which is how a saved function was reported missing.
+ * Live buttons carry the primary colour and answer the pointer; the disabled
+ * one is the pale exception rather than the twin.
+ */
 .pageButton {
+  color: var(--color-text-primary);
   cursor: pointer;
 }
 
+.pageButton:hover:not(:disabled):not(.pageButtonActive) {
+  border-color: var(--color-text-muted);
+  background: var(--color-surface);
+}
+
 .pageButton:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
+  color: var(--color-text-muted);
   cursor: not-allowed;
 }
 
