@@ -92,15 +92,29 @@
   border-color: var(--color-text-muted);
 }
 
+/*
+ * The same height as Save beside it.
+ *
+ * The bin is drawn in a 32px box, so a button sized around it came out at 50px
+ * against Save's 32 - half again as tall, which is what "not proportional"
+ * looked like. The icon is scaled to the line it sits on and the padding
+ * matches its neighbours.
+ */
 .delete {
   display: flex;
   align-items: center;
-  padding: var(--space-8) var(--space-10);
+  justify-content: center;
+  padding: var(--space-8) var(--space-12);
   background: none;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-6);
   color: var(--color-danger);
   cursor: pointer;
+}
+
+.delete svg {
+  width: 16px;
+  height: 16px;
 }
 
 .delete:hover {

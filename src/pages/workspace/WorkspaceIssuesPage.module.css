@@ -165,7 +165,14 @@
   flex-direction: column;
 }
 
+/*
+ * The whole row opens the issue, so the whole row is a link - and a link is
+ * underlined, which drew a rule under every title and every meta line and made
+ * the list read as a page of hyperlinks. The row is a row; the hover says it
+ * can be clicked.
+ */
 .row {
+  text-decoration: none;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, auto) 40px;
   align-items: center;
