@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { fetchIssueLabels, fetchIssues } from '../../api/issues';
@@ -24,6 +24,16 @@ const PAGE_SIZE = 10;
 
 /** How long typing has to pause before the list is asked. */
 const SEARCH_PAUSE_MS = 300;
+
+/**
+ * How old the list has to be before coming back to the window asks again.
+ *
+ * Half a minute, because the cost of asking is a request nobody sees and the
+ * cost of not asking is reading a state that has moved on - but a glance at
+ * another window and back is not news, and treating it as news is what made
+ * this feel like a page reload.
+ */
+const STALE_AFTER_MS = 30_000;
 
 /** Open first, because that is what somebody arriving is looking at. */
 const FILTERS: { label: string; status: IssueStatus | null }[] = [
@@ -66,10 +76,27 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
   const [asked, setAsked] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
+  /*
+   * Whether the next fetch is somebody asking or the page catching up.
+   *
+   * Catching up must not look like loading: blanking the list and showing
+   * "Loading…" every time the window is touched turns a quiet refresh into a
+   * flash of nothing, and the list somebody was reading jumps. Held on a ref
+   * rather than in state so that setting it cannot itself cause a render.
+   */
+  const quietly = useRef(false);
+
+  /** When the list last came back, so a glance away does not refetch. */
+  const loadedAt = useRef(0);
+
   useEffect(() => {
     if (workspaceId === '') return;
     let current = true;
-    setLoading(true);
+    if (quietly.current) {
+      quietly.current = false;
+    } else {
+      setLoading(true);
+    }
     const timer = window.setTimeout(() => {
       fetchIssues(workspaceId, {
         status: status ?? undefined,
@@ -82,6 +109,7 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
           setIssues(found);
           setError(null);
           setLoading(false);
+          loadedAt.current = Date.now();
         })
         .catch((cause: unknown) => {
           if (!current) return;
@@ -95,9 +123,21 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
     };
   }, [workspaceId, status, search, page, asked]);
 
+  /*
+   * Coming back to the window catches the list up, quietly and not always.
+   *
+   * Two events say the same thing - a tab shown and a window focused - and
+   * both fire for a glance at another window and back. Asking every time made
+   * switching tabs feel like reloading the page, which is what it looked like:
+   * the list blanked. So it is only worth asking if the answer could have aged,
+   * and the asking never shows.
+   */
   useEffect(() => {
     function again() {
-      if (document.visibilityState === 'visible') setAsked((count) => count + 1);
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - loadedAt.current < STALE_AFTER_MS) return;
+      quietly.current = true;
+      setAsked((count) => count + 1);
     }
     window.addEventListener('focus', again);
     document.addEventListener('visibilitychange', again);

@@ -28,9 +28,9 @@ services:
 
 ## Settings
 
-| Variable | Default | |
-| --- | --- | --- |
-| `ORKNUX_SERVER_URL` | `http://orknux-server:8080` | Where `/api`, `/graphql` and `/mcp` are forwarded. The name has to resolve **when the container starts** — nginx looks it up once, so a server that is not up yet stops this container from starting. That is deliberate: an interface that starts without a back end serves a sign-in screen that cannot sign anybody in. |
+| Variable | What it does | Default | Required |
+| --- | --- | --- | --- |
+| `ORKNUX_SERVER_URL` | Where `/api`, `/graphql` and `/mcp` are forwarded. The name has to resolve **when the container starts** — nginx looks it up once, so a server that is not up yet stops this container from starting. That is deliberate: an interface that starts without a back end serves a sign-in screen that cannot sign anybody in. | `http://orknux-server:8080` | **Yes** unless the server is reachable at exactly that name |
 
 That is the only setting. Everything else — who may see what, which models exist,
 whether chat is on — belongs to the server and is configured there.
