@@ -4,6 +4,8 @@ const KEY = 'orknux.paletteShortcut';
 const SAVE_KEY = 'orknux.saveShortcut';
 const FORMAT_KEY = 'orknux.formatShortcut';
 const TURN_KEY = 'orknux.turnShortcut';
+const UNDO_KEY = 'orknux.undoShortcut';
+const REDO_KEY = 'orknux.redoShortcut';
 
 /** What opens the palette when nothing has been chosen. */
 export const DEFAULT_SHORTCUT = 'Ctrl+Q';
@@ -35,6 +37,16 @@ export const DEFAULT_FORMAT_SHORTCUT = 'Ctrl+Shift+F';
  * caret is in a box, where R is somebody typing the letter.
  */
 export const DEFAULT_TURN_SHORTCUT = 'R';
+
+/**
+ * What steps back and forward when nothing has been chosen.
+ *
+ * Ctrl+Z and Ctrl+Shift+Z, which every machine already answers to. Ctrl+Y is
+ * honoured for redo as well and is not rebindable: it is the other habit, and
+ * taking it away from somebody who has it would be a change nobody asked for.
+ */
+export const DEFAULT_UNDO_SHORTCUT = 'Ctrl+Z';
+export const DEFAULT_REDO_SHORTCUT = 'Ctrl+Shift+Z';
 
 /**
  * Which keystroke opens the command palette, written the way it is shown:
@@ -97,6 +109,8 @@ const palette = remembered(KEY, DEFAULT_SHORTCUT);
 const saving = remembered(SAVE_KEY, DEFAULT_SAVE_SHORTCUT);
 const formatting = remembered(FORMAT_KEY, DEFAULT_FORMAT_SHORTCUT);
 const turning = remembered(TURN_KEY, DEFAULT_TURN_SHORTCUT);
+const undoing = remembered(UNDO_KEY, DEFAULT_UNDO_SHORTCUT);
+const redoing = remembered(REDO_KEY, DEFAULT_REDO_SHORTCUT);
 
 export function paletteShortcut(): Shortcut {
   return palette.get();
@@ -144,6 +158,30 @@ export function setTurnShortcut(next: Shortcut): void {
 
 export function useTurnShortcut(): Shortcut {
   return turning.use();
+}
+
+export function undoShortcut(): Shortcut {
+  return undoing.get();
+}
+
+export function setUndoShortcut(next: Shortcut): void {
+  undoing.set(next);
+}
+
+export function useUndoShortcut(): Shortcut {
+  return undoing.use();
+}
+
+export function redoShortcut(): Shortcut {
+  return redoing.get();
+}
+
+export function setRedoShortcut(next: Shortcut): void {
+  redoing.set(next);
+}
+
+export function useRedoShortcut(): Shortcut {
+  return redoing.use();
 }
 
 /** One key, named as somebody would read it rather than as the browser sends it. */

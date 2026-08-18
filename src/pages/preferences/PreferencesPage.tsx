@@ -12,14 +12,20 @@ import {
   describe,
   DEFAULT_FORMAT_SHORTCUT,
   DEFAULT_TURN_SHORTCUT,
+  DEFAULT_UNDO_SHORTCUT,
+  DEFAULT_REDO_SHORTCUT,
   DEFAULT_SAVE_SHORTCUT,
   setFormatShortcut,
   setTurnShortcut,
+  setUndoShortcut,
+  setRedoShortcut,
   setPaletteShortcut,
   setSaveShortcut,
   usable,
   useFormatShortcut,
   useTurnShortcut,
+  useUndoShortcut,
+  useRedoShortcut,
   usePaletteShortcut,
   useSaveShortcut,
 } from '../../session/shortcut';
@@ -42,12 +48,14 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
   const save = useSaveShortcut();
   const format = useFormatShortcut();
   const turn = useTurnShortcut();
+  const undo = useUndoShortcut();
+  const redo = useRedoShortcut();
   /**
    * Which shortcut the next keystroke belongs to, or null while none is being
    * recorded. Not a boolean: there are three of these now, and they share the one
    * listener — one per shortcut would fight over the same keypress.
    */
-  const [recording, setRecording] = useState<'palette' | 'save' | 'format' | 'turn' | null>(null);
+  const [recording, setRecording] = useState<'palette' | 'save' | 'format' | 'turn' | 'undo' | 'redo' | null>(null);
   const [refused, setRefused] = useState<string | null>(null);
 
   /*
@@ -87,6 +95,8 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
       if (recording === 'palette') setPaletteShortcut(said);
       else if (recording === 'save') setSaveShortcut(said);
       else if (recording === 'turn') setTurnShortcut(said);
+      else if (recording === 'undo') setUndoShortcut(said);
+      else if (recording === 'redo') setRedoShortcut(said);
       else setFormatShortcut(said);
       setRecording(null);
       setRefused(null);
@@ -315,6 +325,66 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                     instead of off the side of it. A bare letter is allowed here, unlike the others:
                     this one is only heard on the canvas, never while typing.
                   </>
+                )}
+              </p>
+            </div>
+
+            <div className={styles.setting}>
+              <span className={styles.settingLabel} id="undo-shortcut">
+                Undo Shortcut
+              </span>
+              <div className={styles.options}>
+                <button
+                  type="button"
+                  className={recording === 'undo' ? styles.optionCurrent : styles.option}
+                  onClick={() => {
+                    setRefused(null);
+                    setRecording((held) => (held === 'undo' ? null : 'undo'));
+                  }}
+                >
+                  {recording === 'undo' ? 'Press any keys…' : undo}
+                </button>
+                {undo !== DEFAULT_UNDO_SHORTCUT && recording !== 'undo' && (
+                  <button type="button" className={styles.option} onClick={() => setUndoShortcut(DEFAULT_UNDO_SHORTCUT)}>
+                    Reset
+                  </button>
+                )}
+              </div>
+              <p className={styles.settingNote}>
+                {recording === 'undo' ? (
+                  <>Press the combination you want. Escape leaves it as it is.</>
+                ) : (
+                  <>Steps back through what you have drawn on the workflow canvas. Ignored while a caret is in a text box, where the browser&apos;s own undo is the right one.</>
+                )}
+              </p>
+            </div>
+
+            <div className={styles.setting}>
+              <span className={styles.settingLabel} id="redo-shortcut">
+                Redo Shortcut
+              </span>
+              <div className={styles.options}>
+                <button
+                  type="button"
+                  className={recording === 'redo' ? styles.optionCurrent : styles.option}
+                  onClick={() => {
+                    setRefused(null);
+                    setRecording((held) => (held === 'redo' ? null : 'redo'));
+                  }}
+                >
+                  {recording === 'redo' ? 'Press any keys…' : redo}
+                </button>
+                {redo !== DEFAULT_REDO_SHORTCUT && recording !== 'redo' && (
+                  <button type="button" className={styles.option} onClick={() => setRedoShortcut(DEFAULT_REDO_SHORTCUT)}>
+                    Reset
+                  </button>
+                )}
+              </div>
+              <p className={styles.settingNote}>
+                {recording === 'redo' ? (
+                  <>Press the combination you want. Escape leaves it as it is.</>
+                ) : (
+                  <>Steps forward again. Ctrl+Y is heard as well, whatever is chosen here, because it is the other habit people arrive with.</>
                 )}
               </p>
             </div>

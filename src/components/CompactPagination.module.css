@@ -67,3 +67,25 @@
   line-height: 18px;
   color: var(--color-text-primary);
 }
+
+/* Part of the sentence it changes, so it reads at the same weight as the rest. */
+.perPage {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.perPageSelect {
+  padding: 1px var(--space-4);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font: inherit;
+  font-size: inherit;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.perPageSelect:hover {
+  border-color: var(--color-text-muted);
+}

@@ -67,7 +67,13 @@ import type { FieldOption } from '../../components/FieldPicker';
 import { Icon, IconPickerDialog } from '../../components/IconPicker';
 import { TrashIcon } from '../../components/TrashIcon';
 import { WorkflowConfirmDialog } from '../../components/WorkflowConfirmDialog';
-import { matches, useSaveShortcut, useTurnShortcut } from '../../session/shortcut';
+import {
+  matches,
+  useRedoShortcut,
+  useSaveShortcut,
+  useTurnShortcut,
+  useUndoShortcut,
+} from '../../session/shortcut';
 import { shellUser } from '../../session/user';
 import styles from './WorkflowEditorPage.module.css';
 
@@ -1525,6 +1531,8 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
    */
   const save = useSaveShortcut();
   const turnKey = useTurnShortcut();
+  const undoKey = useUndoShortcut();
+  const redoKey = useRedoShortcut();
 
   /** Read by the keyboard handler, which must not start a second save. */
   const busyRef = useRef(busy);
@@ -1593,9 +1601,13 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
    */
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
-      const key = event.key.toLowerCase();
-      const asked = key === 'z' ? (event.shiftKey ? 'forward' : 'back') : key === 'y' && !event.shiftKey ? 'forward' : null;
+      /*
+       * Ctrl+Y is honoured for redo whatever has been chosen, and is not
+       * offered as a setting: it is the other habit somebody may arrive with,
+       * and taking it away would be a change nobody asked for.
+       */
+      const habit = (event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'y';
+      const asked = matches(event, undoKey) ? 'back' : matches(event, redoKey) || habit ? 'forward' : null;
       if (asked === null || typingText(event.target)) return;
       event.preventDefault();
       if (asked === 'back') undo();

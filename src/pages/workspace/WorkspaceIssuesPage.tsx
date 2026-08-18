@@ -262,6 +262,16 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
       showAdmin={session.admin}
       onSignOut={onSignOut}
       sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="issues" />}
+      /*
+       * The list scrolls inside the frame rather than growing it.
+       *
+       * Without this the page simply gets taller: the filters, the search and
+       * the paging scroll away with the rows, so a tracker with fifty issues on
+       * a page means scrolling back to the top to change anything. Four other
+       * pages already ask for this; the tracker is the one that needed it most
+       * and did not have it.
+       */
+      scrollContent
     >
       <section className={styles.card}>
         <header className={styles.header}>
@@ -338,29 +348,6 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
               {ascending ? '↑' : '↓'}
             </button>
 
-            <label className={styles.sortLabel} htmlFor="issue-page-size">
-              Show
-            </label>
-            <select
-              id="issue-page-size"
-              className={styles.sortSelect}
-              value={pageSize}
-              onChange={(event) => {
-                const chosen = Number(event.target.value);
-                setPageSize(chosen);
-                window.localStorage.setItem(PAGE_SIZE_KEY, String(chosen));
-                // The page somebody is on means something different at a
-                // different size, and the first page is the one that always
-                // exists.
-                filterBy({});
-              }}
-            >
-              {PAGE_SIZES.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
           </div>
         </div>
 
@@ -469,13 +456,29 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
             ))}
         </div>
 
-        {issues !== null && issues.totalElements > pageSize && (
+        {/*
+          Shown whenever there is anything at all, not only when there is a
+          second page. The line says how many there are, which is worth reading
+          on its own - and it now carries the size control, which would
+          otherwise disappear exactly when somebody had just chosen a size big
+          enough to fit everything, leaving no way to choose a smaller one.
+        */}
+        {issues !== null && issues.totalElements > 0 && (
           <CompactPagination
             page={page}
             pageSize={pageSize}
             totalItems={issues.totalElements}
             unit="issues"
             onPageChange={(wanted) => filterBy({ page: String(wanted) }, false)}
+            pageSizes={PAGE_SIZES}
+            onPageSizeChange={(chosen) => {
+              setPageSize(chosen);
+              window.localStorage.setItem(PAGE_SIZE_KEY, String(chosen));
+              // The page somebody is on means something different at a
+              // different size, and the first page is the one that always
+              // exists.
+              filterBy({});
+            }}
           />
         )}
       </section>

@@ -22,7 +22,8 @@ export type EntityKind =
   | 'Memory'
   | 'Model'
   | 'Skill'
-  | 'Tool';
+  | 'Tool'
+  | 'Issue';
 
 export interface NamedEntity {
   kind: EntityKind;
@@ -102,6 +103,33 @@ const QUERIES: { kind: EntityKind; query: string; read: (data: any) => NamedEnti
   named('Function', 'workspaceFunctions'),
   named('Agent', 'workspaceAgents'),
   named('Object', 'workspaceObjects'),
+  {
+    /*
+     * Issues, by their title and by their number.
+     *
+     * Addressed by the number people say rather than by the row id, like every
+     * other route into the tracker - and the number is offered as a second name
+     * so that typing `12` finds #12, which is how somebody refers to one out
+     * loud.
+     *
+     * Open ones first and only a page of them: a palette is for finding what is
+     * being worked on, and a tracker's closed issues outnumber its open ones
+     * without ever being what somebody is reaching for.
+     */
+    kind: 'Issue',
+    query: `query PaletteIssues($workspaceId: ID!, $size: Int!) {
+      workspaceIssues(workspaceId: $workspaceId, size: $size, status: OPEN) {
+        content { number title }
+      }
+    }`,
+    read: (data) =>
+      data.workspaceIssues.content.map((one: { number: number; title: string }) => ({
+        kind: 'Issue' as const,
+        id: String(one.number),
+        name: one.title,
+        also: `#${one.number}`,
+      })),
+  },
   named('Skill', 'workspaceSkills'),
   named('Tool', 'workspaceTools'),
   {

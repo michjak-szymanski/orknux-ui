@@ -16,6 +16,7 @@ import filterIcon from '../assets/filter.svg';
 import lockKeyholeIcon from '../assets/lock-keyhole.svg';
 import memoryIcon from '../assets/memory.svg';
 import searchIcon from '../assets/search.svg';
+import bugIcon from '../assets/bug.svg';
 import toolIcon from '../assets/tool.svg';
 import { matches, usePaletteShortcut } from '../session/shortcut';
 import styles from './CommandPalette.module.css';
@@ -63,6 +64,7 @@ const KIND_ICON: Record<EntityKind, string> = {
   Model: databaseIcon,
   Skill: bookIcon,
   Tool: toolIcon,
+  Issue: bugIcon,
 };
 
 /** How many are worth showing at once; the rest are found by typing more. */
@@ -77,6 +79,8 @@ const SHOWN = 10;
  */
 const EDIT_PATH: Record<EntityKind, (workspace: string, id: string) => string> = {
   Workflow: (workspace, id) => `${workspace}/workflows/${id}/editor`,
+  // By the number people say, which is what the tracker's own addresses use.
+  Issue: (workspace, number) => `${workspace}/issues/${number}`,
   Trigger: (workspace, id) => `${workspace}/triggers/${id}`,
   Action: (workspace, id) => `${workspace}/actions/${id}`,
   Condition: (workspace, id) => `${workspace}/conditions/${id}`,
