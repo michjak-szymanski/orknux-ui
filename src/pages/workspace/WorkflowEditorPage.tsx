@@ -151,6 +151,29 @@ const AGENT_PARAMETERS = ['prompt', 'systemPrompt'];
 /** How long a graph has to stop changing before it is worth asking about. */
 const PREVIEW_PAUSE_MS = 400;
 
+/**
+ * How long the panel waits before the canvas follows what is being typed.
+ *
+ * The canvas keeping up is the point of the live edit, but keeping up with
+ * every keystroke made a node redraw its fields six times while a name was
+ * typed - chips appearing, disappearing and resizing the box under the
+ * cursor. Long enough to be after a word, short enough to feel immediate.
+ */
+const CANVAS_PAUSE_MS = 250;
+
+/**
+ * The node's own version of what the panel holds.
+ *
+ * A field with no name is not a field yet: it cannot be pointed at, the server
+ * cannot work out a port for it, and drawn on the node it is an empty chip.
+ * It stays in the panel, where somebody is in the middle of naming it, and it
+ * is left out of everything downstream of that - which is what stops an empty
+ * one being saved and coming back.
+ */
+function named(data: NodeData): NodeData {
+  return { ...data, mappings: data.mappings.filter((mapping) => mapping.name.trim() !== '') };
+}
+
 /** Enough to see what a line is for; the panel has the rest. */
 const FIELDS_ON_A_LINE = 4;
 
@@ -772,6 +795,8 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
    */
   useEffect(() => {
     if (selectedKey === null || draft === null) return;
+    const shown = named(draft);
+    const timer = window.setTimeout(() => {
     setNodes((current) =>
       current.map((node) => {
         if (node.id !== selectedKey) return node;
@@ -786,7 +811,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           data.objectId === draft.objectId &&
           data.outputName === draft.outputName &&
           data.icon === draft.icon &&
-          sameMappings(data.mappings, draft.mappings);
+          sameMappings(data.mappings, shown.mappings);
         if (same) return node;
         setSaved(false);
         /*
@@ -796,9 +821,11 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
          * them. They came back on the next save, which made an edit look like it
          * had removed a field until the graph was saved.
          */
-        return { ...node, data: { ...data, ...draft } };
+        return { ...node, data: { ...data, ...shown } };
       }),
     );
+    }, CANVAS_PAUSE_MS);
+    return () => window.clearTimeout(timer);
   }, [draft, selectedKey, setNodes]);
 
   /**
@@ -934,8 +961,18 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
 
   function applyDraft() {
     if (selectedKey === null || draft === null) return;
+    const shown = named(draft);
     setNodes((current) =>
-      current.map((node) => (node.id === selectedKey ? { ...node, data: { ...draft } } : node)),
+      current.map((node) =>
+        /*
+         * Merged, for the reason the live edit above is merged: the ports the
+         * server worked out are on the node and are not the panel's to know.
+         * Replacing the data wholesale dropped them, so Update Node took the
+         * fields off the node until the next save put them back - which is
+         * exactly what it looked like: a button that deleted your work.
+         */
+        node.id === selectedKey ? { ...node, data: { ...(node.data as NodeData), ...shown } } : node,
+      ),
     );
     setSaved(false);
     setJustUpdated(true);
