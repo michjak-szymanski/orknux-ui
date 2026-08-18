@@ -4,7 +4,18 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { fetchRoles } from '../../api/roles';
 import type { Role } from '../../api/roles';
 import type { SessionUser } from '../../api/session';
-import { createUser, fetchUser, initialsOf, updateUser } from '../../api/users';
+import {
+  createUser,
+  createUserToken,
+  deleteUserToken,
+  fetchUser,
+  fetchUserTokens,
+  initialsOf,
+  setUserPassword,
+  updateUser,
+} from '../../api/users';
+import type { UserToken } from '../../api/users';
+import { timeAgo } from '../../api/tools';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
@@ -41,6 +52,14 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  /** Whether they can sign in at all, which is not the same as existing. */
+  const [hasPassword, setHasPassword] = useState(false);
+  const [password, setPassword] = useState('');
+  const [passwordSaid, setPasswordSaid] = useState<string | null>(null);
+  const [tokens, setTokens] = useState<UserToken[]>([]);
+  const [tokenName, setTokenName] = useState('');
+  /** Shown once, and then never again by anybody. */
+  const [minted, setMinted] = useState<string | null>(null);
 
   useEffect(() => {
     fetchRoles()
@@ -64,7 +83,11 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
         } else {
           setUsername(found.username);
           setDisplayName(found.displayName);
+          setHasPassword(found.hasPassword);
           setChosen(new Set(found.roles.map((role) => role.id)));
+          fetchUserTokens(userId)
+            .then(setTokens)
+            .catch(() => setTokens([]));
         }
       })
       .catch((cause: unknown) => {
@@ -93,6 +116,38 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
       }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not save the user.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function savePassword() {
+    if (saving || password.length < 12) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const held = await setUserPassword(userId, password);
+      setHasPassword(held.hasPassword);
+      setPassword('');
+      setPasswordSaid('Set. They can sign in with it now.');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not set the password.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function mintToken() {
+    if (saving || tokenName.trim() === '') return;
+    setSaving(true);
+    setError(null);
+    try {
+      const made = await createUserToken(tokenName.trim(), userId);
+      setTokens([...tokens, made.token]);
+      setMinted(made.secret);
+      setTokenName('');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not make the token.');
     } finally {
       setSaving(false);
     }
@@ -208,6 +263,105 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
                 ))
               )}
             </fieldset>
+
+            {/*
+              Credentials, once the user exists. Made first and given a way in
+              second: most never need one, since an identity that only ever
+              receives work does not sign in.
+            */}
+            {!creating && (
+              <>
+                <div className={styles.field}>
+                  <span className={styles.label}>Password</span>
+                  <p className={styles.hint}>
+                    {hasPassword
+                      ? 'They can sign in with a password. Setting a new one replaces it.'
+                      : 'They cannot sign in. Setting a password lets them.'}
+                  </p>
+                  <div className={styles.row}>
+                    <input
+                      className={styles.input}
+                      type="password"
+                      value={password}
+                      placeholder="At least 12 characters"
+                      aria-label="New password"
+                      autoComplete="new-password"
+                      onChange={(event) => {
+                        setPassword(event.target.value);
+                        setPasswordSaid(null);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className={styles.save}
+                      onClick={() => void savePassword()}
+                      disabled={saving || password.length < 12}
+                    >
+                      {hasPassword ? 'Replace' : 'Set'}
+                    </button>
+                  </div>
+                  {passwordSaid !== null && <p className={styles.done}>{passwordSaid}</p>}
+                </div>
+
+                <div className={styles.field}>
+                  <span className={styles.label}>Access Tokens</span>
+                  <p className={styles.hint}>
+                    A token is this user by another door: it carries their roles and nothing more. Sent as an
+                    Authorization: Bearer header.
+                  </p>
+
+                  {tokens.map((token) => (
+                    <div key={token.id} className={styles.token}>
+                      <span className={styles.tokenName}>{token.name}</span>
+                      <span className={styles.tokenWhen}>
+                        {token.lastUsedAt === null ? 'never used' : 'used ' + timeAgo(token.lastUsedAt)}
+                      </span>
+                      <button
+                        type="button"
+                        className={styles.textButton}
+                        onClick={() => {
+                          void deleteUserToken(token.id).then(() =>
+                            setTokens(tokens.filter((held) => held.id !== token.id)),
+                          );
+                        }}
+                      >
+                        Revoke
+                      </button>
+                    </div>
+                  ))}
+
+                  <div className={styles.row}>
+                    <input
+                      className={styles.input}
+                      type="text"
+                      value={tokenName}
+                      placeholder="What is it for?"
+                      aria-label="Token name"
+                      onChange={(event) => setTokenName(event.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className={styles.save}
+                      onClick={() => void mintToken()}
+                      disabled={saving || tokenName.trim() === ''}
+                    >
+                      Make Token
+                    </button>
+                  </div>
+
+                  {/* The one time it is ever on screen. */}
+                  {minted !== null && (
+                    <div className={styles.secret}>
+                      <p className={styles.secretHead}>Copy it now - it is not shown again.</p>
+                      <code className={styles.secretValue}>{minted}</code>
+                      <button type="button" className={styles.textButton} onClick={() => setMinted(null)}>
+                        Done
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </section>
       )}

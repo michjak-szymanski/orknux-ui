@@ -25,11 +25,24 @@ export interface AppUser {
   roles: RoleRef[];
   /** False for anybody the identity provider defines. */
   editable: boolean;
+  /** Whether they can sign in, which is not the same as existing. */
+  hasPassword: boolean;
   lastModifiedAt: string;
   lastModifiedBy: string;
 }
 
-const USER_FIELDS = 'id username displayName type roles { id name } editable lastModifiedAt lastModifiedBy';
+const USER_FIELDS =
+  'id username displayName type roles { id name } editable hasPassword lastModifiedAt lastModifiedBy';
+
+/** A token, as it is listed: never its secret, which is shown once. */
+export interface UserToken {
+  id: string;
+  name: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+}
+
+const TOKEN_FIELDS = 'id name createdAt lastUsedAt';
 
 export async function fetchUsers(search?: string): Promise<AppUser[]> {
   const data = await graphql<{ users: AppUser[] }>(
@@ -68,6 +81,56 @@ export async function updateUser(
     { id, input },
   );
   return data.updateUser;
+}
+
+export async function setUserPassword(id: string, password: string): Promise<AppUser> {
+  const data = await graphql<{ setUserPassword: AppUser }>(
+    `mutation ($id: ID!, $password: String!) { setUserPassword(id: $id, password: $password) { ${USER_FIELDS} } }`,
+    { id, password },
+  );
+  return data.setUserPassword;
+}
+
+export async function changeMyPassword(currentPassword: string, newPassword: string): Promise<boolean> {
+  const data = await graphql<{ changeMyPassword: boolean }>(
+    `mutation ($currentPassword: String!, $newPassword: String!) {
+       changeMyPassword(currentPassword: $currentPassword, newPassword: $newPassword)
+     }`,
+    { currentPassword, newPassword },
+  );
+  return data.changeMyPassword;
+}
+
+export async function fetchMyTokens(): Promise<UserToken[]> {
+  const data = await graphql<{ myTokens: UserToken[] }>(`query { myTokens { ${TOKEN_FIELDS} } }`);
+  return data.myTokens;
+}
+
+export async function fetchUserTokens(id: string): Promise<UserToken[]> {
+  const data = await graphql<{ userTokens: UserToken[] }>(
+    `query ($id: ID!) { userTokens(id: $id) { ${TOKEN_FIELDS} } }`,
+    { id },
+  );
+  return data.userTokens;
+}
+
+/** The secret comes back exactly once: whatever shows it must not lose it. */
+export async function createUserToken(name: string, id?: string): Promise<{ token: UserToken; secret: string }> {
+  const data = await graphql<{ createUserToken: { token: UserToken; secret: string } }>(
+    `mutation ($id: ID, $name: String!) {
+       createUserToken(id: $id, name: $name) { secret token { ${TOKEN_FIELDS} } }
+     }`,
+    { id: id ?? null, name },
+  );
+  return data.createUserToken;
+}
+
+export async function deleteUserToken(id: string): Promise<boolean> {
+  const data = await graphql<{ deleteUserToken: boolean }>(
+    `mutation ($id: ID!) { deleteUserToken(id: $id) }`,
+    { id },
+  );
+  return data.deleteUserToken;
 }
 
 /**
