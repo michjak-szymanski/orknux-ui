@@ -16,6 +16,7 @@ import remarkBreaks from 'remark-breaks';
 import remarkGfm from 'remark-gfm';
 
 import styles from './Markdown.module.css';
+import { rehypeIssueLinks } from './issueLinks';
 import { rehypeMarkMatches } from './searchMatches';
 
 /**
@@ -34,6 +35,16 @@ const LANGUAGES = { bash, java, javascript, json, kotlin, python, sql, typescrip
 export interface MarkdownProps {
   /** What the model wrote, in the markdown it wrote it in. */
   children: string;
+  /**
+   * Where `#12` in the prose points, when it points anywhere.
+   *
+   * A tracker's own shorthand only works if it is a link: people write "see
+   * #12" because that is how it is said out loud, and then it is a number
+   * somebody has to copy into a URL by hand. Given a workspace, those become
+   * links; given none - the chat, the manual - they stay as written, because
+   * `#1` in an answer about HTTP status codes is not an issue.
+   */
+  issuesIn?: string;
   /**
    * A term to mark wherever it appears in the prose. Left out everywhere nothing
    * is being searched for, which is every use of this but the documentation.
@@ -63,7 +74,7 @@ export interface MarkdownProps {
 /** The plugin list, exactly as the renderer that takes it declares it. */
 type RehypePlugins = ComponentProps<typeof ReactMarkdown>['rehypePlugins'];
 
-export function Markdown({ children, highlight }: MarkdownProps) {
+export function Markdown({ children, highlight, issuesIn }: MarkdownProps) {
   /*
    * Rebuilt only when the term changes. A fresh array on every render would have
    * react-markdown reparse the document on every keystroke, which for a manual
@@ -83,8 +94,9 @@ export function Markdown({ children, highlight }: MarkdownProps) {
        */
       [rehypeHighlight, { detect: false, languages: LANGUAGES }],
       ...(highlight?.trim() ? [rehypeMarkMatches(highlight)] : []),
+      ...(issuesIn === undefined ? [] : [rehypeIssueLinks(issuesIn)]),
     ],
-    [highlight],
+    [highlight, issuesIn],
   );
 
   return (
@@ -93,13 +105,25 @@ export function Markdown({ children, highlight }: MarkdownProps) {
         remarkPlugins={[remarkGfm, remarkBreaks]}
         rehypePlugins={rehypePlugins}
         components={{
-          // Anything the model links to is somewhere else entirely, so it opens
-          // there and cannot reach back into this page.
-          a: ({ children: text, ...props }) => (
-            <a {...props} target="_blank" rel="noreferrer noopener">
-              {text}
-            </a>
-          ),
+          /*
+           * Anything the model links to is somewhere else entirely, so it opens
+           * there and cannot reach back into this page.
+           *
+           * A link into this application is the exception, and there is only
+           * one kind: the `#12` an issue's own prose mentions. That one behaves
+           * like every other link in the interface - a plain click goes there,
+           * and a ctrl-click still opens a tab, because it is a real anchor.
+           */
+          a: ({ children: text, ...props }) => {
+            const here = typeof props.href === 'string' && props.href.startsWith('/');
+            return here ? (
+              <a {...props}>{text}</a>
+            ) : (
+              <a {...props} target="_blank" rel="noreferrer noopener">
+                {text}
+              </a>
+            );
+          },
         }}
       >
         {children}

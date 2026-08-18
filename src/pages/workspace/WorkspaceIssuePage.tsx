@@ -490,7 +490,7 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
                   {description.trim() === '' ? (
                     <p className={styles.nothing}>Nothing written yet.</p>
                   ) : (
-                    <Markdown>{description}</Markdown>
+                    <Markdown issuesIn={workspaceId}>{description}</Markdown>
                   )}
                 </div>
               )}
@@ -587,7 +587,7 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
                           </div>
                         ) : (
                           <div className={styles.commentText}>
-                            <Markdown>{said.content}</Markdown>
+                            <Markdown issuesIn={workspaceId}>{said.content}</Markdown>
                           </div>
                         )}
 
