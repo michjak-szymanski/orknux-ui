@@ -167,6 +167,73 @@ const PREVIEW_PAUSE_MS = 400;
 const CANVAS_PAUSE_MS = 250;
 
 /**
+ * How long a change has to settle before it is a step to come back to.
+ *
+ * A step per change would mean pressing Ctrl+Z once per letter to get back to a
+ * name typed in one go, and once per frame to get back from a drag. Longer than
+ * the pause the canvas itself waits on, so what was typed in the panel is on the
+ * node before the step that holds it is taken - a step taken any sooner would
+ * record the graph from before the edit reached it, and undoing would look like
+ * it had done nothing.
+ */
+const HISTORY_PAUSE_MS = 500;
+
+/**
+ * How far back the editor can go.
+ *
+ * Each step holds a copy of the whole graph, so a stack with no end to it is an
+ * editor that grows for as long as the tab is open. Fifty is further back than
+ * anybody walks in one sitting, and the oldest is dropped rather than the newest
+ * refused.
+ */
+const HISTORY_STEPS = 50;
+
+/** The whole graph as it stood, kept so it can be put back. */
+interface Step {
+  nodes: Node<NodeData>[];
+  edges: Edge[];
+  /** What of it counted as an edit, so two steps can be told apart cheaply. */
+  shape: string;
+}
+
+/**
+ * The graph reduced to what somebody would call an edit.
+ *
+ * Which node is selected and the ports the server worked out are left out on
+ * purpose: clicking a node is not something anybody asks to have undone, and a
+ * preview landing is the server answering rather than anybody typing. A step
+ * taken for either would be a Ctrl+Z that changes nothing on screen, and the
+ * one before it - the edit actually being reached for - would need a second
+ * press. Positions are in, because moving a node is exactly the kind of thing
+ * somebody wants back.
+ */
+function editShape(nodes: Node<NodeData>[], edges: Edge[]): string {
+  return JSON.stringify({
+    nodes: nodes.map((node) => {
+      const { inputs: _inputs, outputs: _outputs, ...data } = node.data as NodeData;
+      return [node.id, node.position.x, node.position.y, node.width ?? null, node.height ?? null, data];
+    }),
+    edges: edges.map((edge) => [edge.id, edge.source, edge.target, edge.sourceHandle ?? null]),
+  });
+}
+
+/**
+ * Whether the caret is somewhere the browser's own undo is the better one.
+ *
+ * Inside a text box Ctrl+Z means the letters just typed, and the browser does
+ * that better than this could: it puts the caret back where it was, and undoes
+ * only the box. Nothing is lost by leaving it to do so - every box here is
+ * controlled, so what it puts back arrives as an ordinary edit and reaches the
+ * canvas like any other typing. Stepping the whole graph back from under
+ * somebody mid-word would be the wrong undo in the one place they are looking.
+ * A code editor's own hidden textarea counts as one of these too.
+ */
+function typingText(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.isContentEditable || target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement;
+}
+
+/**
  * The node's own version of what the panel holds.
  *
  * A field with no name is not a field yet: it cannot be pointed at, the server
@@ -754,6 +821,119 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [objects, setObjects] = useState<WorkflowObject[]>([]);
 
+  /*
+   * Where the graph has been, so Ctrl+Z can put it back.
+   *
+   * Copies of the whole graph rather than a list of what was done to it. A node
+   * is edited from the panel, moved on the canvas and wired by its handles, and
+   * describing each of those as something to reverse would be three vocabularies
+   * to keep in step with the editor for ever. All an undo has to achieve is that
+   * the graph reads as it did, which a copy of it says outright.
+   *
+   * `settled` is the graph as the last step left it. What is on screen runs
+   * ahead of it while something is being typed or dragged and becomes a step of
+   * its own once it stops changing, which is what keeps a name from costing one
+   * step per letter. Kept in refs: nothing on screen depends on the stacks
+   * except the two buttons, and those read the count below.
+   */
+  const back = useRef<Step[]>([]);
+  const forward = useRef<Step[]>([]);
+  const settled = useRef<Step | null>(null);
+  /** How far each way there is to go, for the buttons that say so. */
+  const [steps, setSteps] = useState({ back: 0, forward: 0 });
+
+  useEffect(() => {
+    const now: Step = { nodes, edges, shape: editShape(nodes, edges) };
+    /*
+     * The first graph to arrive is where the history starts. Anything that is
+     * not an edit - a preview landing, a node being selected - moves what the
+     * next step is measured against without becoming one, so the copy held here
+     * stays the newest picture of a graph nobody has changed.
+     */
+    if (settled.current === null || settled.current.shape === now.shape) {
+      settled.current = now;
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      back.current = [...back.current, settled.current as Step].slice(-HISTORY_STEPS);
+      // Editing after going back starts another way forward, and what was ahead
+      // was the one not taken.
+      forward.current = [];
+      settled.current = now;
+      setSteps({ back: back.current.length, forward: 0 });
+    }, HISTORY_PAUSE_MS);
+    return () => window.clearTimeout(timer);
+  }, [nodes, edges]);
+
+  /**
+   * Puts a step back on the canvas, and the panel with it.
+   *
+   * The panel is the truth of the node it is editing, so a graph restored under
+   * a panel still holding the fields from before would have them written
+   * straight back over it a quarter of a second later - the undo would appear
+   * to work and then reverse itself. Re-seeding from what was just restored is
+   * what makes the panel show what the graph now holds.
+   *
+   * Which node is selected is kept as it is rather than taken from the step: a
+   * step remembers what happened to be selected when it was taken, and undoing
+   * a move should not also move the panel to whatever node was being looked at
+   * then. A node coming back from a deletion is the exception - if the panel is
+   * still pointed at it, it comes back selected, which is where it was.
+   */
+  function goTo(step: Step) {
+    const chosen = new Map(nodes.map((node) => [node.id, node.selected ?? false]));
+    const put = step.nodes.map((node) => ({ ...node, selected: chosen.get(node.id) ?? node.id === selectedKey }));
+    setNodes(put);
+    setEdges(step.edges);
+    settled.current = { nodes: put, edges: step.edges, shape: step.shape };
+
+    const node = put.find((candidate) => candidate.id === selectedKey);
+    if (node === undefined) {
+      setSelectedKey(null);
+      setDraft(null);
+    } else {
+      // Without the ports, for the reason the selection effect gives.
+      const { inputs: _inputs, outputs: _outputs, ...its } = node.data as NodeData;
+      setDraft(its as NodeData);
+    }
+    // The held name belongs to a field of the draft that has just been replaced.
+    setFieldEdit(null);
+    // The server holds neither this nor what it was undone from.
+    setSaved(false);
+  }
+
+  function undo() {
+    const now: Step = { nodes, edges, shape: editShape(nodes, edges) };
+    /*
+     * Whatever has happened since the last step becomes one first. Ctrl+Z
+     * pressed before a change has settled would otherwise reach past it to the
+     * edit before, undoing two things at once and leaving no way to the one in
+     * between.
+     */
+    if (settled.current !== null && settled.current.shape !== now.shape) {
+      back.current = [...back.current, settled.current].slice(-HISTORY_STEPS);
+      settled.current = now;
+    }
+
+    const step = back.current[back.current.length - 1];
+    if (step === undefined) return;
+    back.current = back.current.slice(0, -1);
+    forward.current = [...forward.current, settled.current ?? now];
+    setSteps({ back: back.current.length, forward: forward.current.length });
+    goTo(step);
+  }
+
+  function redo() {
+    const step = forward.current[forward.current.length - 1];
+    if (step === undefined) return;
+    forward.current = forward.current.slice(0, -1);
+    const now: Step = settled.current ?? { nodes, edges, shape: editShape(nodes, edges) };
+    back.current = [...back.current, now].slice(-HISTORY_STEPS);
+    setSteps({ back: back.current.length, forward: forward.current.length });
+    goTo(step);
+  }
+
   /**
    * The saved graph, put on the canvas.
    *
@@ -765,6 +945,17 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     if (workspaceId === '' || workflowId === '') return;
     fetchWorkflowGraph(workspaceId, workflowId)
       .then((graph) => {
+        /*
+         * A loaded graph has no history. Opening the editor is the obvious one,
+         * but Discard is the same act, and steps kept across it would walk
+         * forward into the graph that was just thrown away - putting back the
+         * nodes the button was pressed to be rid of. Cleared before the graph
+         * arrives, so the first step is measured against what the server holds.
+         */
+        back.current = [];
+        forward.current = [];
+        settled.current = null;
+        setSteps({ back: 0, forward: 0 });
         setName(graph.name);
         setStatus(graph.status);
         setNodes(
@@ -1031,6 +1222,42 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   ]);
 
   /**
+   * A node takes the name of whatever it points at, until it is given one.
+   *
+   * A graph of nodes called Action and LLM Agent says only what kind each one
+   * is, which the accent bar and the label above the name say already - so the
+   * one line with room to say what the node does says nothing. The definition
+   * has a name somebody has already written and chosen to reuse, and that is
+   * the name worth reading on the canvas.
+   *
+   * The same rule the icon follows, and the same limit: only a node still
+   * carrying the name it was made with takes one. A name that has been typed
+   * here is the node's, and picking a different definition afterwards leaves it
+   * exactly as it is.
+   */
+  useEffect(() => {
+    if (draft === null || draft.name !== NODE_KIND_LABEL[draft.kind]) return;
+
+    const chosen =
+      draft.kind === 'ACTION'
+        ? (actions.find((one) => one.id === draft.actionId)?.name ?? null)
+        : draft.kind === 'TRIGGER'
+          ? (triggers.find((one) => one.id === draft.triggerId)?.name ?? null)
+          : draft.kind === 'CONDITION'
+            ? (conditions.find((one) => one.id === draft.conditionId)?.name ?? null)
+            : draft.kind === 'OBJECT'
+              ? (objects.find((one) => one.id === draft.objectId)?.name ?? null)
+              : (agents.find((one) => one.id === draft.agentId)?.name ?? null);
+    // A definition named after the kind it is - an action called Action - would
+    // otherwise be written back over an identical name for ever.
+    if (chosen === null || chosen.trim() === '' || chosen === draft.name) return;
+
+    setDraft((held) =>
+      held === null || held.name !== NODE_KIND_LABEL[held.kind] ? held : { ...held, name: chosen },
+    );
+  }, [draft, actions, triggers, conditions, agents, objects]);
+
+  /**
    * Picking a saved shape seeds the fields it has.
    *
    * The shape decides which fields there are — one it does not have is dropped,
@@ -1289,6 +1516,34 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     // every render rather than left holding an older canvas.
   });
 
+  /*
+   * Going back and forward from the keyboard.
+   *
+   * Bound the way saving is - on the window, in the capture phase, rebound every
+   * render so it reads the graph as it stands - but not from the same setting.
+   * Ctrl+Z is not a preference anywhere: it is the keystroke every application
+   * on the machine already answers to, and offering to change it would invite
+   * somebody to make undo something other than undo. Both spellings of forward
+   * are taken because both are somebody's habit.
+   *
+   * A caret in a text box is handed to the browser instead, for the reason
+   * `typingText` gives.
+   */
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+      const key = event.key.toLowerCase();
+      const asked = key === 'z' ? (event.shiftKey ? 'forward' : 'back') : key === 'y' && !event.shiftKey ? 'forward' : null;
+      if (asked === null || typingText(event.target)) return;
+      event.preventDefault();
+      if (asked === 'back') undo();
+      else redo();
+    }
+
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  });
+
   /**
    * Following a link to a definition saves the graph first. The link is one
    * click away from work that only exists on screen, and coming back to find a
@@ -1423,6 +1678,30 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
             title="Remove workflow from workspace"
           >
             <TrashIcon />
+          </button>
+          {/*
+            The keystrokes are written on the buttons for the reason the save
+            one is: nobody finds out a shortcut exists without being told. Grey
+            while there is nowhere to go, which is also how somebody learns the
+            editor has been remembering at all.
+          */}
+          <button
+            type="button"
+            className={styles.ghostButton}
+            onClick={() => undo()}
+            disabled={steps.back === 0}
+            title="Undo (Ctrl+Z)"
+          >
+            Undo
+          </button>
+          <button
+            type="button"
+            className={styles.ghostButton}
+            onClick={() => redo()}
+            disabled={steps.forward === 0}
+            title="Redo (Ctrl+Shift+Z)"
+          >
+            Redo
           </button>
           <button
             type="button"
