@@ -111,13 +111,29 @@ export function ConditionDialog({
 
     // Only functions that answer a question can be a condition.
     fetchWorkspaceFunctions(workspaceId, 0, PAGE_SIZE)
-      .then((page) => setFunctions(page.content.filter((fn) => fn.returnType === 'BOOLEAN')))
+      .then((page) => {
+        const asking = page.content.filter((fn) => fn.returnType === 'BOOLEAN');
+        setFunctions(asking);
+
+        /*
+         * Named after the function it was opened for.
+         *
+         * Somebody arriving from a function to wrap it has already said what
+         * this is about, and an empty Name asks them to say it a second time.
+         * Only when nothing has been typed: what is in the box is theirs from
+         * the moment they touch it, and the functions arrive a moment after the
+         * dialog opens.
+         */
+        if (preset === null) return;
+        const wrapped = asking.find((fn) => fn.id === preset.functionId);
+        if (wrapped !== undefined) setName((present) => (present === '' ? wrapped.name : present));
+      })
       .catch(() => setFunctions([]));
 
     fetchWorkspaceConditions(workspaceId, 0, PAGE_SIZE)
       .then((page) => setOthers(page.content.filter((other) => other.id !== condition?.id)))
       .catch(() => setOthers([]));
-  }, [open, workspaceId, condition]);
+  }, [open, workspaceId, condition, preset]);
 
   const isComposite = composite(type);
   const properties = PROPERTIES_BY_TYPE[type];

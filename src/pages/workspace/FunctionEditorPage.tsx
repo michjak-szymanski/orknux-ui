@@ -70,6 +70,9 @@ function said(reason: string, line: number | null): string {
  * called is its name, and the identifier in the code is nobody's business once
  * there is code.
  */
+/** What a function is called before anybody calls it anything. */
+const STARTING_NAME = 'newFunction';
+
 function identifier(name: string): string {
   const cleaned = name.trim().replace(/[^A-Za-z0-9_$]/g, '');
   return cleaned === '' || /^[0-9]/.test(cleaned) ? 'newFunction' : cleaned;
@@ -90,7 +93,18 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
   const creating = functionId === '';
 
   const [fn, setFn] = useState<WorkspaceFunction | null>(null);
-  const [name, setName] = useState('');
+  /*
+   * A new function arrives already called something.
+   *
+   * The page said "New function" at the top and left the Name field empty, so
+   * the one thing on screen that was a name was the one thing that would not be
+   * saved - and Create Function stayed disabled until somebody typed. It is a
+   * name a script can be called by, because the server refuses anything else,
+   * and it is selected the first time the field is focused so typing over it
+   * takes one gesture rather than a clear and a type.
+   */
+  const [name, setName] = useState(functionId === '' ? STARTING_NAME : '');
+  const [renamed, setRenamed] = useState(false);
   const [description, setDescription] = useState('');
   /** The left column: what somebody writes. */
   const [source, setSource] = useState('');
@@ -588,8 +602,15 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                     className={`${styles.input} ${styles.inputMono}`}
                     type="text"
                     value={name}
+                    onFocus={(event) => {
+                      // Only the name nobody has chosen yet, and only once: an
+                      // existing name is text somebody wants to edit, not
+                      // replace.
+                      if (creating && !renamed && name === STARTING_NAME) event.target.select();
+                    }}
                     onChange={(event) => {
                       setName(event.target.value);
+                      setRenamed(true);
                       setSaved(false);
                     }}
                   />
