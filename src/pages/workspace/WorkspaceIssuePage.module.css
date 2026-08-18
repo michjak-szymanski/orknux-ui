@@ -459,3 +459,126 @@
 .filedLink:hover {
   text-decoration: underline;
 }
+
+/*
+ * What is attached, between the description and the conversation.
+ *
+ * Its own block rather than a line in the sidebar: a screenshot is part of what
+ * the issue says, and the sidebar is for what the issue is - status, assignee,
+ * labels.
+ */
+.files {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding-top: var(--space-16);
+  border-top: 1px solid var(--color-border);
+}
+
+.attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+.attachment {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-4) var(--space-8);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+/*
+ * The thumbnail, which opens the picture and is nothing else.
+ *
+ * A button rather than a link because it goes nowhere: the picture opens over
+ * the issue, and a link would offer a new tab on middle-click that lands on a
+ * bare image with the issue left behind.
+ */
+.thumbButton {
+  display: flex;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-4);
+  cursor: pointer;
+}
+
+.thumb {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-4);
+  object-fit: cover;
+}
+
+/*
+ * The filename, which is a button for a picture and a link for anything else.
+ * `font` is inherited explicitly so the button form does not arrive in the
+ * browser's own.
+ */
+.attachmentName {
+  max-width: 260px;
+  padding: 0;
+  overflow: hidden;
+  background: none;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+a.attachmentName:hover,
+button.attachmentName:hover {
+  text-decoration: underline;
+}
+
+button.attachmentName {
+  cursor: pointer;
+}
+
+/* Size, who attached it, when: the three things asked of a file on an issue. */
+.attachmentMeta {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.attachmentRemove {
+  padding: 0;
+  background: none;
+  border: 0;
+  font-size: var(--text-base);
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.attachmentRemove:hover {
+  color: var(--color-text-primary);
+}
+
+/*
+ * The file picker itself, which nobody sees: the button beside it opens it.
+ *
+ * Hidden the way the chat's is - taken out of the layout and left in the tree,
+ * rather than removed with `display: none` - so that the click a button
+ * forwards to it lands on an element the browser still has.
+ */
+.hiddenPicker {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}

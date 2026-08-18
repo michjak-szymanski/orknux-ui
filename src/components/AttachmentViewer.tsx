@@ -19,6 +19,15 @@ export interface AttachmentViewerProps {
   onClose: () => void;
   /** Asks for a different one — the arrows, and the arrow keys. */
   onOpen: (id: string) => void;
+  /**
+   * Where a picture is read from.
+   *
+   * A chat's files and an issue's are different rows in different tables, so
+   * they are served by different addresses; everything else about looking at
+   * one is the same, and a second copy of this viewer would be a second place
+   * to fix the preloading.
+   */
+  urlOf?: (id: string) => string;
 }
 
 /**
@@ -33,7 +42,13 @@ export interface AttachmentViewerProps {
  * open and returns where it was on close, and it draws in the top layer, so no
  * z-index here can be wrong about the sidebar.
  */
-export function AttachmentViewer({ images, openId, onClose, onOpen }: AttachmentViewerProps) {
+export function AttachmentViewer({
+  images,
+  openId,
+  onClose,
+  onOpen,
+  urlOf = attachmentUrl,
+}: AttachmentViewerProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   const at = images.findIndex((image) => image.id === openId);
@@ -60,9 +75,9 @@ export function AttachmentViewer({ images, openId, onClose, onOpen }: Attachment
 
     [-1, 1].forEach((by) => {
       const neighbour = images[(at + by + images.length) % images.length];
-      new Image().src = attachmentUrl(neighbour.id);
+      new Image().src = urlOf(neighbour.id);
     });
-  }, [at, images]);
+  }, [at, images, urlOf]);
 
   /** Wraps, so the arrows never dead-end on the first or last picture. */
   function step(by: number) {
@@ -118,7 +133,7 @@ export function AttachmentViewer({ images, openId, onClose, onOpen }: Attachment
 
             <a
               className={styles.barButton}
-              href={attachmentUrl(showing.id)}
+              href={urlOf(showing.id)}
               download={showing.filename}
               title={`Download ${showing.filename}`}
             >
@@ -160,7 +175,7 @@ export function AttachmentViewer({ images, openId, onClose, onOpen }: Attachment
             <img
               key={showing.id}
               className={styles.picture}
-              src={attachmentUrl(showing.id)}
+              src={urlOf(showing.id)}
               alt={showing.filename}
             />
 

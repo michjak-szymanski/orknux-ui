@@ -29,6 +29,24 @@ export interface Assignee {
   hint: string;
 }
 
+/**
+ * A file on an issue, or on a comment.
+ *
+ * The same storage the chat's attachments use, and the same switch governs both
+ * - which is why the size and the type read the same way here. What differs is
+ * only where it hangs: an issue, or one thing said about it.
+ */
+export interface IssueAttachment {
+  id: string;
+  filename: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadedBy: string;
+  uploadedAt: string;
+  /** Whether the person reading this attached it, and so may remove it. */
+  mine: boolean;
+}
+
 export interface IssueComment {
   id: string;
   author: string;
@@ -36,6 +54,8 @@ export interface IssueComment {
   createdAt: string;
   /** Null until somebody changes it. */
   editedAt: string | null;
+  /** What came with it. */
+  attachments: IssueAttachment[];
   /** Whether the person reading this wrote it, and so may change it. */
   mine: boolean;
 }
@@ -51,6 +71,8 @@ export interface Issue {
   reporter: string;
   assignee: Assignee | null;
   labels: string[];
+  /** What is on the issue itself; a comment's files are on the comment. */
+  attachments: IssueAttachment[];
   comments: IssueComment[];
   createdAt: string;
   lastModifiedAt: string;
@@ -72,11 +94,14 @@ export interface IssuePage {
 const ROW_FIELDS =
   'id workspaceId number title status reporter assignee { kind id name hint } labels lastModifiedAt lastModifiedBy';
 
+const ATTACHMENT_FIELDS = 'id filename contentType sizeBytes uploadedBy uploadedAt mine';
+
 const FULL_FIELDS = `
   id workspaceId number title description status reporter
   assignee { kind id name hint }
   labels
-  comments { id author content createdAt editedAt mine }
+  attachments { ${ATTACHMENT_FIELDS} }
+  comments { id author content createdAt editedAt mine attachments { ${ATTACHMENT_FIELDS} } }
   createdAt lastModifiedAt lastModifiedBy
 `;
 
@@ -193,12 +218,73 @@ export async function editIssueComment(id: string, content: string): Promise<Iss
   return data.editIssueComment;
 }
 
-export async function commentOnIssue(id: string, content: string): Promise<Issue> {
+export async function commentOnIssue(
+  id: string,
+  content: string,
+  attachmentIds: string[] = [],
+): Promise<Issue> {
   const data = await graphql<{ commentOnIssue: Issue }>(
-    `mutation ($id: ID!, $content: String!) { commentOnIssue(id: $id, content: $content) { ${FULL_FIELDS} } }`,
-    { id, content },
+    `mutation ($id: ID!, $content: String!, $attachmentIds: [ID!]) {
+       commentOnIssue(id: $id, content: $content, attachmentIds: $attachmentIds) { ${FULL_FIELDS} }
+     }`,
+    { id, content, attachmentIds },
   );
   return data.commentOnIssue;
+}
+
+/**
+ * Uploads files against the workspace, before there is anything to hang them on.
+ *
+ * REST, because what crosses is bytes: a multipart form is what a browser makes
+ * of a file picker. Uploaded as they are picked rather than when the issue is
+ * saved, so a large screenshot travels while the report is still being written -
+ * which is also why the answer has to be tied to something afterwards.
+ */
+export async function uploadIssueAttachments(
+  workspaceId: string,
+  files: File[],
+): Promise<IssueAttachment[]> {
+  const form = new FormData();
+  files.forEach((file) => form.append('files', file, file.name));
+
+  const answer = await fetch(`/api/workspaces/${workspaceId}/issue-attachments`, {
+    method: 'POST',
+    body: form,
+    credentials: 'include',
+  });
+
+  const said = (await answer.json().catch(() => null)) as
+    | { attachments?: IssueAttachment[]; error?: string; message?: string }
+    | null;
+  if (!answer.ok) {
+    throw new Error(said?.error ?? said?.message ?? 'Those files could not be uploaded.');
+  }
+  return said?.attachments ?? [];
+}
+
+/** Says which issue the uploaded files belong to; sent once it has been filed. */
+export async function attachToIssue(id: string, attachmentIds: string[]): Promise<Issue> {
+  const data = await graphql<{ attachToIssue: Issue }>(
+    `mutation ($id: ID!, $attachmentIds: [ID!]!) {
+       attachToIssue(id: $id, attachmentIds: $attachmentIds) { ${FULL_FIELDS} }
+     }`,
+    { id, attachmentIds },
+  );
+  return data.attachToIssue;
+}
+
+/** Takes one off again. Only whoever attached it may, administrators included. */
+export async function removeIssueAttachment(id: string): Promise<boolean> {
+  const data = await graphql<{ removeIssueAttachment: boolean }>(
+    `mutation ($id: ID!) { removeIssueAttachment(id: $id) }`,
+    { id },
+  );
+  return data.removeIssueAttachment;
+}
+
+/** Where the browser reads one from; checked against the workspace on the way. */
+export function issueAttachmentUrl(id: string): string {
+  return `/api/issue-attachments/${id}`;
 }
 
 /** What each kind is called where one is shown beside a name. */

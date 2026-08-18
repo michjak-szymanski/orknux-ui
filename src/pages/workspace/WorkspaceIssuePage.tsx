@@ -1,28 +1,35 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
+import { formatSize, isShowable } from '../../api/attachments';
 import {
   ISSUE_STATUS_LABEL,
+  attachToIssue,
   commentOnIssue,
   createIssue,
   deleteIssue,
   editIssueComment,
   fetchIssue,
   fetchIssueLabels,
+  issueAttachmentUrl,
+  removeIssueAttachment,
   updateIssue,
+  uploadIssueAttachments,
 } from '../../api/issues';
-import type { Assignee, Issue, IssueStatus } from '../../api/issues';
+import type { Assignee, Issue, IssueAttachment, IssueStatus } from '../../api/issues';
 import type { SessionUser } from '../../api/session';
 import { timeAgo } from '../../api/tools';
 import { initialsOf } from '../../api/users';
 import { AppShell } from '../../components/AppShell';
 import { AssigneePicker } from '../../components/AssigneePicker';
+import { AttachmentViewer } from '../../components/AttachmentViewer';
 import { BackLink } from '../../components/BackLink';
 import { Loader } from '../../components/Loader';
 import { Markdown } from '../../components/Markdown';
 import { MarkdownEditor } from '../../components/MarkdownEditor';
 import { TrashIcon } from '../../components/TrashIcon';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { useInstallation } from '../../session/installation';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceIssuePage.module.css';
 
@@ -96,6 +103,33 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  /*
+   * Whether this installation carries files at all.
+   *
+   * The same switch the chat reads, because it is the same disk: an operator
+   * who has said no has said it once. Off means no control rather than a
+   * control that fails - though files already on an issue stay readable, since
+   * turning uploads off is not the same as taking somebody's evidence away.
+   */
+  const installation = useInstallation();
+  const attachmentsAllowed = installation?.attachmentsEnabled === true;
+  /*
+   * Files uploaded against the workspace that have nowhere to be yet.
+   *
+   * A new issue has no id until it is filed, so what is picked before then is
+   * held here and tied to the issue the moment it exists. Uploaded as it is
+   * picked rather than on save, so a screenshot travels while the report is
+   * still being written.
+   */
+  const [pending, setPending] = useState<IssueAttachment[]>([]);
+  /** The same, for the comment being written: tied when the comment is posted. */
+  const [commentFiles, setCommentFiles] = useState<IssueAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
+  /** Which picture is open over the page, or null when none is. */
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const issueFilesRef = useRef<HTMLInputElement>(null);
+  const commentFilesRef = useRef<HTMLInputElement>(null);
+
   // A new issue is written from the first keystroke, not read.
   useEffect(() => {
     if (creating) setWriting(true);
@@ -151,6 +185,12 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
       };
       if (creating) {
         const made = await createIssue({ workspaceId, ...details });
+        // The files went up before there was an issue to put them on; this is
+        // the moment there is one.
+        if (pending.length > 0) {
+          await attachToIssue(made.id, pending.map((file) => file.id));
+          setPending([]);
+        }
         if (fileAnother) {
           /*
            * Cleared back to an empty form rather than reloaded: the point is
@@ -226,12 +266,70 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
     if (said === '' || creating || saving || issue === null) return;
     setSaving(true);
     try {
-      setIssue(await commentOnIssue(issue.id, said));
+      setIssue(await commentOnIssue(issue.id, said, commentFiles.map((file) => file.id)));
       setComment('');
+      setCommentFiles([]);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not add the comment.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  /**
+   * Uploads what was picked, and puts it where it belongs.
+   *
+   * An issue that exists takes its files immediately - there is no "save" step
+   * to lose them in, and a file that is on the screen but not on the issue is
+   * the kind of thing somebody discovers a week later. One that does not exist
+   * yet keeps them beside the form until it is filed.
+   */
+  async function upload(files: FileList | null, going: 'issue' | 'comment') {
+    if (files === null || files.length === 0 || workspaceId === '') return;
+
+    setUploading(true);
+    setError(null);
+    try {
+      const held = await uploadIssueAttachments(workspaceId, Array.from(files));
+      if (going === 'comment') {
+        setCommentFiles((current) => [...current, ...held]);
+      } else if (!creating && issue !== null) {
+        setIssue(await attachToIssue(issue.id, held.map((file) => file.id)));
+      } else {
+        setPending((current) => [...current, ...held]);
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Those files could not be uploaded.');
+    } finally {
+      setUploading(false);
+      // Cleared so the same file can be picked twice in a row.
+      const picker = going === 'comment' ? commentFilesRef.current : issueFilesRef.current;
+      if (picker !== null) picker.value = '';
+    }
+  }
+
+  /**
+   * Takes a file off again, wherever it is showing.
+   *
+   * The server refuses this for anybody but whoever attached it, so the button
+   * is only offered to them - but the issue is read again afterwards rather
+   * than edited in place, because a file may have been on a comment and
+   * unpicking that here would be this page keeping its own account of what the
+   * issue holds.
+   */
+  async function detach(id: string) {
+    setError(null);
+    try {
+      await removeIssueAttachment(id);
+      setPending((current) => current.filter((file) => file.id !== id));
+      setCommentFiles((current) => current.filter((file) => file.id !== id));
+      if (previewId === id) setPreviewId(null);
+      if (!creating) {
+        const again = await fetchIssue(workspaceId, Number(number));
+        if (again !== null) setIssue(again);
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not remove the attachment.');
     }
   }
 
@@ -244,6 +342,21 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
     setLabels([...labels, wanted]);
     setLabelDraft('');
   }
+
+  /*
+   * What is on the issue itself: its own files once it exists, and what is
+   * waiting for it while it does not.
+   */
+  const issueFiles = creating ? pending : (issue?.attachments ?? []);
+  /*
+   * Every picture on the page, in the order they are read in, so the viewer's
+   * arrows walk the issue rather than only the chip that was clicked.
+   */
+  const pictures = [
+    ...issueFiles,
+    ...(issue?.comments.flatMap((said) => said.attachments) ?? []),
+    ...commentFiles,
+  ].filter((file) => isShowable(file.contentType));
 
   return (
     <AppShell
@@ -382,6 +495,47 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
                 </div>
               )}
 
+              {/*
+                What came with the issue, under what it says.
+
+                Shown even when uploads have been switched off, because turning
+                them off stops new files rather than taking away the evidence on
+                issues that already have some.
+              */}
+              {(attachmentsAllowed || issueFiles.length > 0) && (
+                <section className={styles.files}>
+                  <span className={styles.labelRow}>
+                    <span className={styles.label}>Attachments</span>
+                    {attachmentsAllowed && (
+                      <button
+                        type="button"
+                        className={styles.textButton}
+                        disabled={uploading}
+                        onClick={() => issueFilesRef.current?.click()}
+                      >
+                        {uploading ? 'Uploading…' : 'Attach files'}
+                      </button>
+                    )}
+                  </span>
+                  {issueFiles.length === 0 ? (
+                    <p className={styles.nothing}>
+                      Nothing attached yet. A screenshot is worth a paragraph of description.
+                    </p>
+                  ) : (
+                    <Attachments files={issueFiles} onOpen={setPreviewId} onRemove={(id) => void detach(id)} />
+                  )}
+                  <input
+                    ref={issueFilesRef}
+                    className={styles.hiddenPicker}
+                    type="file"
+                    multiple
+                    onChange={(event) => void upload(event.target.files, 'issue')}
+                    aria-hidden="true"
+                    tabIndex={-1}
+                  />
+                </section>
+              )}
+
               {!creating && (
                 <section className={styles.comments}>
                   <h2 className={styles.commentsTitle}>Comments</h2>
@@ -436,11 +590,27 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
                             <Markdown>{said.content}</Markdown>
                           </div>
                         )}
+
+                        {said.attachments.length > 0 && (
+                          <Attachments
+                            files={said.attachments}
+                            onOpen={setPreviewId}
+                            onRemove={(id) => void detach(id)}
+                          />
+                        )}
                       </div>
                     </article>
                   ))}
 
                   <div className={styles.composer}>
+                    {/* What is going with the comment, above the box it is going from. */}
+                    {commentFiles.length > 0 && (
+                      <Attachments
+                        files={commentFiles}
+                        onOpen={setPreviewId}
+                        onRemove={(id) => void detach(id)}
+                      />
+                    )}
                     <MarkdownEditor
                       value={comment}
                       onChange={setComment}
@@ -450,6 +620,25 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
                       placeholder="Say something…"
                     />
                     <div className={styles.composerActions}>
+                      {attachmentsAllowed && (
+                        <button
+                          type="button"
+                          className={styles.textButton}
+                          disabled={uploading}
+                          onClick={() => commentFilesRef.current?.click()}
+                        >
+                          {uploading ? 'Uploading…' : 'Attach files'}
+                        </button>
+                      )}
+                      <input
+                        ref={commentFilesRef}
+                        className={styles.hiddenPicker}
+                        type="file"
+                        multiple
+                        onChange={(event) => void upload(event.target.files, 'comment')}
+                        aria-hidden="true"
+                        tabIndex={-1}
+                      />
                       {/* Closing and commenting are the two things anybody does here. */}
                       <button
                         type="button"
@@ -585,6 +774,97 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
           </div>
         </section>
       )}
+
+      {/*
+        A picture opens over the issue rather than in a tab: a tab loses the
+        issue it belongs to, and somebody checking a screenshot wants to look
+        and carry on reading. Its own address, because an issue's files and a
+        chat's are different rows served by different endpoints.
+      */}
+      <AttachmentViewer
+        images={pictures}
+        openId={previewId}
+        onClose={() => setPreviewId(null)}
+        onOpen={setPreviewId}
+        urlOf={issueAttachmentUrl}
+      />
     </AppShell>
+  );
+}
+
+interface AttachmentsProps {
+  files: IssueAttachment[];
+  /** Opens a picture in the viewer. */
+  onOpen: (id: string) => void;
+  onRemove: (id: string) => void;
+}
+
+/**
+ * A row of files, as chips.
+ *
+ * A picture shows itself and opens in the viewer; anything else downloads. Not
+ * a matter of taste - the server hands back everything that is not a picture as
+ * an octet-stream marked `attachment`, so there is nothing a viewer could put
+ * on the screen.
+ *
+ * Who attached it and when are on the chip rather than behind a hover, because
+ * on an issue they are half the point: "the screenshot from before the fix" is
+ * only answerable when the date is showing.
+ *
+ * The remove button appears on your own only. The server refuses anybody
+ * else's, the way it refuses editing somebody else's comment, and a button
+ * whose whole purpose is to produce a refusal is worse than no button.
+ */
+function Attachments({ files, onOpen, onRemove }: AttachmentsProps) {
+  return (
+    <div className={styles.attachments}>
+      {files.map((file) => (
+        <span key={file.id} className={styles.attachment}>
+          {isShowable(file.contentType) && (
+            <button
+              type="button"
+              className={styles.thumbButton}
+              onClick={() => onOpen(file.id)}
+              title={`Open ${file.filename}`}
+            >
+              <img className={styles.thumb} src={issueAttachmentUrl(file.id)} alt="" />
+            </button>
+          )}
+          {isShowable(file.contentType) ? (
+            <button
+              type="button"
+              className={styles.attachmentName}
+              onClick={() => onOpen(file.id)}
+              title={`Open ${file.filename}`}
+            >
+              {file.filename}
+            </button>
+          ) : (
+            <a
+              className={styles.attachmentName}
+              href={issueAttachmentUrl(file.id)}
+              download={file.filename}
+              title={`Download ${file.filename}`}
+            >
+              {file.filename}
+            </a>
+          )}
+          <span className={styles.attachmentMeta}>
+            {formatSize(file.sizeBytes)} · {file.uploadedBy} · {timeAgo(file.uploadedAt)}
+          </span>
+          {file.mine && (
+            <button
+              type="button"
+              className={styles.attachmentRemove}
+              onClick={() => onRemove(file.id)}
+              aria-label={`Remove ${file.filename}`}
+              title="Remove"
+            >
+              ×
+            </button>
+          )}
+        </span>
+      ))}
+    </div>
   );
 }
