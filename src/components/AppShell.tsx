@@ -195,8 +195,12 @@ export function AppShell({
         mean: a page that forgot to include it would be the one page somebody
         had a question about. It shows itself only where the workspace has
         chosen a model for it.
+
+        Except in the chat, where it would be a second, smaller conversation
+        floating over the one already open — two boxes to type a question into,
+        one of which keeps no history.
       */}
-      <QuickChat workspacePath={workspacePath ?? workspaceFallback} />
+      {section !== 'chat' && <QuickChat workspacePath={workspacePath ?? workspaceFallback} />}
 
       {/*
         The attribution the licence asks to be kept visible. In the shell rather

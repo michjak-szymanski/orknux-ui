@@ -572,6 +572,9 @@
 .attributionBar {
   display: flex;
   flex: none;
+  /* Anchored to the token the quick chat clears itself against, so the two
+     cannot drift apart; still free to grow if the line wraps when narrow. */
+  min-height: var(--attribution-bar-height);
   align-items: center;
   justify-content: flex-end;
   padding: var(--space-4) var(--space-16);

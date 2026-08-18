@@ -121,6 +121,14 @@
   --control-height: 40px;
   --top-nav-height: 64px;
   --sidebar-width: 240px;
+  /*
+   * The attribution strip along the bottom of the shell: its own padding, the
+   * compact padding of the line inside it, one line of --text-xs, and the top
+   * border. Named because anything pinned to the bottom of the window has to
+   * stay off it — the strip is the one thing on screen a licence term asks to
+   * remain visible.
+   */
+  --attribution-bar-height: 41px;
 }
 
 /*
