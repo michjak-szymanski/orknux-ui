@@ -704,3 +704,37 @@
   font-size: var(--text-sm);
   color: var(--color-text-primary);
 }
+
+/* The same bar, wearing the reason the accept did not land. */
+.suggestionBarFailed {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-16);
+  background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/*
+ * The wand looks like what it does.
+ *
+ * It sat in a ghost button and read as one more grey control; the thing it
+ * summons is the one colourful act on the page, so the button says so - a
+ * violet-to-brand wash, and a glow when the pointer finds it.
+ */
+.wandButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--space-10);
+  background: linear-gradient(135deg, #7c5cff 0%, var(--color-accent-brand) 100%);
+  border: 0;
+  border-radius: var(--radius-6);
+  cursor: pointer;
+  transition: box-shadow 120ms ease, transform 120ms ease;
+}
+
+.wandButton:hover {
+  box-shadow: 0 0 12px rgba(124, 92, 255, 0.55);
+  transform: translateY(-1px);
+}

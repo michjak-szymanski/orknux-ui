@@ -178,6 +178,8 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
    * are the only things that touch anything.
    */
   const [offered, setOffered] = useState<{ note: string | null; code: string } | null>(null);
+  /** Why the last accept did not land, shown in the bar it was pressed in. */
+  const [offerFailed, setOfferFailed] = useState<string | null>(null);
   /*
    * Whether the function open here was made a moment ago.
    *
@@ -246,6 +248,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
       // Claimed: the chat shows a pointer here instead of its own card.
       event.preventDefault();
       setOffered({ note: held.note, code: held.code });
+      setOfferFailed(null);
     }
     window.addEventListener('orknux:function-suggestion', onSuggested);
     return () => window.removeEventListener('orknux:function-suggestion', onSuggested);
@@ -254,6 +257,21 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
   /** What happened to the offer, said back into the conversation it came from. */
   function settleOffer(said: string) {
     setOffered(null);
+    setOfferFailed(null);
+    window.dispatchEvent(new CustomEvent('orknux:function-suggestion-settled', { detail: { said } }));
+  }
+
+  /**
+   * A failed accept keeps the diff on screen.
+   *
+   * Closing it on failure took the change away in the same breath as the
+   * error, so the next suggestion arrived into an empty column and Accept was
+   * pressed on code nobody had re-read. The change stays, with the reason it
+   * did not land above it; the person rejects it, or accepts the next offer
+   * knowingly when it replaces this one. The model is still told at once.
+   */
+  function failOffer(shown: string, said: string) {
+    setOfferFailed(shown);
     window.dispatchEvent(new CustomEvent('orknux:function-suggestion-settled', { detail: { said } }));
   }
 
@@ -271,8 +289,10 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
       const emitted = await compile(offered.code);
       if (!emitted.ok) {
         const reason = emitted.line === null ? emitted.reason : `line ${emitted.line}: ${emitted.reason}`;
-        setStatus({ ok: false, message: `The suggestion would not compile — ${reason}` });
-        settleOffer(`I tried to accept it and it would not compile — ${reason}. It was not saved.`);
+        failOffer(
+          `This would not compile — ${reason}`,
+          `I tried to accept it and it would not compile — ${reason}. It was not saved.`,
+        );
         return;
       }
       const stored = await updateFunction(functionId, { source: emitted.javascript, typescript: offered.code });
@@ -283,8 +303,10 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
       settleOffer('I accepted the change and it is saved.');
     } catch (cause) {
       const reason = cause instanceof Error ? cause.message : 'It could not be saved.';
-      setStatus({ ok: false, message: reason });
-      settleOffer(`I tried to accept it and it could not be saved — ${reason}`);
+      failOffer(
+        `The save was refused — ${reason}`,
+        `I tried to accept it and it could not be saved — ${reason}. It was not saved.`,
+      );
     } finally {
       setSaving(false);
     }
@@ -615,10 +637,10 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                 */}
                 <button
                   type="button"
-                  className={styles.ghostButton}
+                  className={styles.wandButton}
                   onClick={() =>
                     window.dispatchEvent(
-                      new CustomEvent('orknux:quick-chat', { detail: { opener: 'Can you help with that?' } }),
+                      new CustomEvent('orknux:quick-chat', { detail: { opener: 'Can you help me with that?' } }),
                     )
                   }
                   aria-label="Ask the assistant for help with this function"
@@ -705,11 +727,12 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                 the question is.
               */}
               {offered !== null && (
-                <div className={styles.suggestionBar}>
+                <div className={offerFailed === null ? styles.suggestionBar : styles.suggestionBarFailed}>
                   <span className={styles.suggestionNote}>
-                    {offered.note !== null && offered.note !== ''
-                      ? offered.note
-                      : 'The assistant suggests this change.'}
+                    {offerFailed ??
+                      (offered.note !== null && offered.note !== ''
+                        ? offered.note
+                        : 'The assistant suggests this change.')}
                   </span>
                   <button
                     type="button"
