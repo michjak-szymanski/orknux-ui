@@ -30,6 +30,15 @@ export interface GraphNode {
   /** Which icon the canvas draws on this node; a name from the interface's own set. */
   icon?: string | null;
   /**
+   * What a condition node's two ways out are called.
+   *
+   * Null means the default - Yes and No - which is what most conditions want.
+   * "Escalate" and "File it" is what makes a graph legible at a glance, so the
+   * words belong to the node rather than to the edges leaving it.
+   */
+  yesLabel?: string | null;
+  noLabel?: string | null;
+  /**
    * What this node passes, decided here rather than on the definition. Seeded
    * from the action when one is picked; editing it touches only this node.
    */
@@ -73,9 +82,18 @@ export interface GraphPort {
   display: string;
 }
 
+/** Which way out of a condition an edge leaves by. */
+export type EdgeBranch = 'YES' | 'NO';
+
 export interface GraphEdge {
   source: string;
   target: string;
+  /**
+   * The answer this edge carries, or absent for every edge that is not
+   * leaving a condition - which is most of them, and every edge drawn before
+   * branches existed.
+   */
+  branch?: EdgeBranch | null;
 }
 
 export interface WorkflowGraph {
@@ -95,12 +113,13 @@ const GRAPH_FIELDS = `
   description
   status
   nodes {
-    key kind name description agentId triggerId actionId conditionId objectId outputName icon x y
+    key kind name description agentId triggerId actionId conditionId objectId outputName icon
+    yesLabel noLabel x y
     mappings { name expression mode sourceNodeKey }
     inputs { name type display }
     outputs { name type display }
   }
-  edges { source target }
+  edges { source target branch }
   problems { severity nodeKey message }
 `;
 

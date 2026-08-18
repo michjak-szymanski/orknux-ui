@@ -888,3 +888,55 @@ select.input {
 .edgeLabelMore {
   color: var(--color-text-muted);
 }
+
+/*
+ * The two ways out of a condition.
+ *
+ * Named beside the handle they belong to rather than on the line leaving it:
+ * a graph is read by looking at the nodes, and a label that lives on an edge
+ * moves whenever the edge does. Green for the answer that carries on, muted
+ * for the one that goes another way - the same pair the run's log uses.
+ */
+.branchLabel {
+  position: absolute;
+  right: -6px;
+  padding: 1px var(--space-4);
+  transform: translateX(100%);
+  border-radius: var(--radius-4);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 14px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.branchYes {
+  top: calc(35% - 8px);
+  background: var(--color-accent-brand-soft);
+  color: var(--color-accent-brand);
+}
+
+.branchNo {
+  top: calc(70% - 8px);
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+}
+
+.handleYes {
+  background: var(--color-accent-brand);
+}
+
+.handleNo {
+  background: var(--color-text-muted);
+}
+
+/* The two names, side by side, because they are one decision. */
+.branchNames {
+  display: flex;
+  gap: var(--space-8);
+}
+
+.branchInput {
+  flex: 1 1 0;
+  min-width: 0;
+}

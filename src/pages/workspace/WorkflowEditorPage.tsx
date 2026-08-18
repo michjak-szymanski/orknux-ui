@@ -76,6 +76,9 @@ export interface WorkflowEditorPageProps {
 /** What each canvas node carries; React Flow keeps it under `data`. */
 interface NodeData extends Record<string, unknown> {
   kind: NodeKind;
+  /** What a condition's two ways out are called; null means Yes and No. */
+  yesLabel?: string | null;
+  noLabel?: string | null;
   name: string;
   description: string | null;
   /** The agent an agent node instances; it supplies the model and instructions. */
@@ -389,7 +392,33 @@ function GraphNodeView({ data, selected }: NodeProps) {
       <NodeResizer isVisible={selected} minWidth={220} minHeight={96} />
       <span className={`${styles.accentBar} ${styles[KIND_CLASS[node.kind]]}`} aria-hidden="true" />
       {hasInput && <Handle className={styles.handle} type="target" position={Position.Left} />}
-      <Handle className={styles.handle} type="source" position={Position.Right} />
+      {/*
+        A condition leaves by one of two doors, and each says which answer it
+        is. Everything else has the one way out it always had - a node that
+        asks nothing has nothing to answer.
+      */}
+      {node.kind === 'CONDITION' ? (
+        <>
+          <Handle
+            id="yes"
+            className={`${styles.handle} ${styles.handleYes}`}
+            type="source"
+            position={Position.Right}
+            style={{ top: '35%' }}
+          />
+          <span className={`${styles.branchLabel} ${styles.branchYes}`}>{node.yesLabel ?? 'Yes'}</span>
+          <Handle
+            id="no"
+            className={`${styles.handle} ${styles.handleNo}`}
+            type="source"
+            position={Position.Right}
+            style={{ top: '70%' }}
+          />
+          <span className={`${styles.branchLabel} ${styles.branchNo}`}>{node.noLabel ?? 'No'}</span>
+        </>
+      ) : (
+        <Handle className={styles.handle} type="source" position={Position.Right} />
+      )}
 
       <div className={styles.nodeContent}>
         <div className={styles.metaRow}>
@@ -698,6 +727,8 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
               kind: node.kind,
               name: node.name,
               description: node.description,
+              yesLabel: node.yesLabel ?? null,
+              noLabel: node.noLabel ?? null,
               agentId: node.agentId,
               triggerId: node.triggerId,
               actionId: node.actionId,
@@ -713,9 +744,15 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
         setPorts(Object.fromEntries(graph.nodes.map((node) => [node.key, { inputs: node.inputs, outputs: node.outputs }])));
         setEdges(
           graph.edges.map((edge) => ({
-            id: `${edge.source}->${edge.target}`,
+            /*
+             * The branch is in the id as well as on the handle: two edges
+             * between the same pair of nodes - one for each answer - are a
+             * shape somebody will draw, and they would otherwise share an id.
+             */
+            id: `${edge.source}-${edge.branch ?? 'plain'}->${edge.target}`,
             source: edge.source,
             target: edge.target,
+            sourceHandle: edge.branch === 'YES' ? 'yes' : edge.branch === 'NO' ? 'no' : null,
           })),
         );
         // Freshly loaded is in step with the server, which is what `saved`
@@ -783,7 +820,13 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   const onConnect = useCallback(
     (connection: Connection) => {
       setEdges((current) =>
-        addEdge({ ...connection, id: `${connection.source}->${connection.target}` }, current),
+        addEdge(
+          {
+            ...connection,
+            id: `${connection.source}-${connection.sourceHandle ?? 'plain'}->${connection.target}`,
+          },
+          current,
+        ),
       );
       setSaved(false);
     },
@@ -844,6 +887,8 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           data.objectId === draft.objectId &&
           data.outputName === draft.outputName &&
           data.icon === draft.icon &&
+          data.yesLabel === draft.yesLabel &&
+          data.noLabel === draft.noLabel &&
           sameMappings(data.mappings, shown.mappings);
         if (same) return node;
         setSaved(false);
@@ -1037,12 +1082,19 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           objectId: data.objectId,
           outputName: data.outputName,
           icon: data.icon,
+          yesLabel: data.yesLabel ?? null,
+          noLabel: data.noLabel ?? null,
           mappings: data.mappings,
           x: node.position.x,
           y: node.position.y,
         };
       }),
-      edges: edges.map((edge) => ({ source: edge.source, target: edge.target })),
+      edges: edges.map((edge) => ({
+        source: edge.source,
+        target: edge.target,
+        // The handle it leaves from is the answer it carries.
+        branch: edge.sourceHandle === 'yes' ? 'YES' : edge.sourceHandle === 'no' ? 'NO' : null,
+      })),
     };
   }
 
@@ -1081,7 +1133,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
             data.mappings,
           ];
         }),
-        edges: edges.map((edge) => [edge.source, edge.target]),
+        edges: edges.map((edge) => [edge.source, edge.target, edge.sourceHandle]),
       }),
     [nodes, edges],
   );
@@ -1765,6 +1817,38 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                   </div>
                 )}
 
+
+                {draft.kind === 'CONDITION' && (
+                  <div className={styles.field}>
+                    <span className={styles.label}>Ways out</span>
+                    {/*
+                      What the two branches are called on this node. "Is it
+                      urgent" reads better as Escalate and File it, and those
+                      words are most of what makes a graph legible - so they
+                      belong to the node rather than to the edges leaving it.
+                    */}
+                    <div className={styles.branchNames}>
+                      <input
+                        className={`${styles.input} ${styles.branchInput}`}
+                        value={draft.yesLabel ?? ''}
+                        placeholder="Yes"
+                        aria-label="What the yes branch is called"
+                        onChange={(event) => setDraft({ ...draft, yesLabel: event.target.value || null })}
+                      />
+                      <input
+                        className={`${styles.input} ${styles.branchInput}`}
+                        value={draft.noLabel ?? ''}
+                        placeholder="No"
+                        aria-label="What the no branch is called"
+                        onChange={(event) => setDraft({ ...draft, noLabel: event.target.value || null })}
+                      />
+                    </div>
+                    <p className={styles.parameterHint}>
+                      Two lines leave a condition: the upper handle for the answer that holds, the lower
+                      for the one that does not. Either may be left unconnected.
+                    </p>
+                  </div>
+                )}
 
                 {draft.kind === 'CONDITION' && (
                   <div className={styles.field}>
