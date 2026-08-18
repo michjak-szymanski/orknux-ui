@@ -885,7 +885,18 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           actionId: null,
           conditionId: null,
           objectId: null,
-          outputName: null,
+          /*
+           * An agent starts with its answer named.
+           *
+           * Everything else means something useful unnamed - an action's own
+           * outputs stand, an object's fields go on - but an agent answers in
+           * prose, and unnamed prose is a thing no later node can point at. The
+           * box used to show `reply` as a placeholder, which reads as a value
+           * that is already there: the node declared nothing, showed nothing on
+           * the canvas, and only started working once somebody typed a
+           * different name. Now the default is real.
+           */
+          outputName: kind === 'AGENT' ? 'reply' : null,
           icon: null,
           mappings: [],
         },
@@ -1978,7 +1989,10 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                         id="node-output-name"
                         className={`${styles.input} ${styles.parameterValue}`}
                         value={draft.outputName ?? ''}
-                        placeholder={draft.kind === 'AGENT' ? 'reply' : 'result'}
+                        // Not a name it already has: for an agent an empty box
+                        // means the answer goes nowhere addressable, and a
+                        // placeholder spelling a plausible name said otherwise.
+                        placeholder={draft.kind === 'AGENT' ? 'not named' : 'result'}
                         spellCheck={false}
                         /*
                          * A field is pointed at by one name, so anything that
