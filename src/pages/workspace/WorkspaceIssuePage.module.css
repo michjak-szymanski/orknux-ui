@@ -189,17 +189,31 @@
   border-radius: var(--radius-6);
 }
 
+/*
+ * Who said it, set apart from what they said.
+ *
+ * Four pixels put the byline almost on top of the first line of the comment,
+ * so the two read as one paragraph starting with somebody's name.
+ */
 .commentHead {
-  margin: 0 0 var(--space-4);
+  margin: 0 0 var(--space-10);
   font-size: var(--text-xs);
   color: var(--color-text-muted);
 }
 
+/*
+ * Rendered markdown, not preformatted text.
+ *
+ * This kept `white-space: pre-wrap` from when a comment was plain text, so
+ * every blank line in the source survived *on top of* the margin the renderer
+ * already puts between blocks - two paragraphs sat a line and a half apart,
+ * and a list drifted. The renderer handles line breaks; this only sets the
+ * type.
+ */
 .commentText {
   margin: 0;
   font-size: var(--text-md);
   color: var(--color-text-primary);
-  white-space: pre-wrap;
 }
 
 .nothing {
