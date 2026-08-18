@@ -1030,12 +1030,23 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   }, [selectedKey, draft?.actionId, draft?.kind, workspaceId]);
 
   /*
-   * Both buttons light up for the same reason: there is something on screen the
-   * server has not been told about. A node's fields already apply as they are
-   * typed — the effect above puts them straight into the graph — so what is
-   * pending is never the panel, it is the save.
+   * There is something on screen the server has not been told about. A node's
+   * fields already apply as they are typed — the effect above puts them
+   * straight into the graph — so what is unsaved is never the panel, it is the
+   * graph.
    */
-  const pending = !saved;
+  const unsaved = !saved;
+
+  /*
+   * Whether pressing Publish would do anything: either there are edits the
+   * server has not seen, or it has seen them and they are still a draft.
+   *
+   * These were one flag, and saving turned it off — so the button that makes a
+   * change live went quiet the moment the change was stored, which reads as
+   * "nothing left to do" at exactly the point where the one thing left to do is
+   * publish it.
+   */
+  const unpublished = unsaved || status !== 'PUBLISHED';
 
   function toGraph(): { nodes: GraphNode[]; edges: { source: string; target: string }[] } {
     return {
@@ -1186,9 +1197,27 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
    * leaving anyway would discard exactly what could not be stored.
    */
   async function leaveFor(destination: string) {
-    if (pending && !(await handleSave())) return;
+    if (unsaved && !(await handleSave())) return;
     navigate(destination);
   }
+
+  /*
+   * Closing the tab with edits on the canvas asks first.
+   *
+   * Every way out of the editor inside the app stores the draft on the way -
+   * the only copy of a graph should not be a picture on a screen somebody is
+   * about to walk away from. The browser will not let a page save on its way
+   * out, so this is the one exit that has to ask instead, in the one way a
+   * page is allowed to: the browser's own question, with its own words.
+   */
+  useEffect(() => {
+    if (!unsaved) return;
+    function onLeaving(event: BeforeUnloadEvent) {
+      event.preventDefault();
+    }
+    window.addEventListener('beforeunload', onLeaving);
+    return () => window.removeEventListener('beforeunload', onLeaving);
+  }, [unsaved]);
 
   async function handlePublish() {
     setBusy(true);
@@ -1222,12 +1251,16 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           <button
             type="button"
             className={styles.backButton}
-            onClick={() => navigate(`/workspace/${workspaceId}`)}
+            onClick={() => void leaveFor(`/workspace/${workspaceId}`)}
             aria-label="Back to workflows"
           >
             <img src={arrowLeftIcon} alt="" width={14} height={14} />
           </button>
-          <button type="button" className={styles.crumbLink} onClick={() => navigate(`/workspace/${workspaceId}`)}>
+          <button
+            type="button"
+            className={styles.crumbLink}
+            onClick={() => void leaveFor(`/workspace/${workspaceId}`)}
+          >
             Workflows
           </button>
           <span className={styles.crumbSeparator}>/</span>
@@ -1235,7 +1268,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           <button
             type="button"
             className={styles.renameButton}
-            onClick={() => navigate(`/workspace/${workspaceId}/workflows/${workflowId}/settings`)}
+            onClick={() => void leaveFor(`/workspace/${workspaceId}/workflows/${workflowId}/settings`)}
             aria-label="Rename workflow"
             title="Rename workflow"
           >
@@ -1288,7 +1321,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           */}
           <button
             type="button"
-            className={pending ? styles.publishButton : styles.publishButtonQuiet}
+            className={unpublished ? styles.publishButton : styles.publishButtonQuiet}
             onClick={() => void handlePublish()}
             disabled={busy}
           >
