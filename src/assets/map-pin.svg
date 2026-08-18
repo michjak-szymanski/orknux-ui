@@ -1,0 +1,6 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="map-pin">
+<path d="M13 6.9C13 10.7 8 15 8 15C8 15 3 10.7 3 6.9C3 4.2 5.2 2 8 2C10.8 2 13 4.2 13 6.9Z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="8" cy="6.9" r="1.8" stroke="white" stroke-width="1.6"/>
+</g>
+</svg>

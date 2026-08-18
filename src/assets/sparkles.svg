@@ -1,0 +1,6 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="sparkles">
+<path d="M6 1.8L7.1 4.9L10.2 6L7.1 7.1L6 10.2L4.9 7.1L1.8 6L4.9 4.9L6 1.8Z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M12 9.2L12.7 11L14.5 11.7L12.7 12.4L12 14.2L11.3 12.4L9.5 11.7L11.3 11L12 9.2Z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

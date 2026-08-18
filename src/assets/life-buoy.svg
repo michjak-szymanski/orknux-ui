@@ -1,0 +1,10 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="life-buoy">
+<circle cx="8" cy="8" r="6" stroke="white" stroke-width="1.7"/>
+<circle cx="8" cy="8" r="2.4" stroke="white" stroke-width="1.7"/>
+<path d="M3.8 3.8L6.3 6.3" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M9.7 9.7L12.2 12.2" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M12.2 3.8L9.7 6.3" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M6.3 9.7L3.8 12.2" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>
