@@ -577,7 +577,8 @@
   min-height: var(--attribution-bar-height);
   align-items: center;
   justify-content: flex-end;
-  padding: var(--space-4) var(--space-16);
+  /* Short of the right, where the quick chat's launcher sits. */
+  padding: var(--space-4) var(--quick-chat-clearance) var(--space-4) var(--space-16);
   background: var(--color-bg);
   border-top: 1px solid var(--color-border);
 }

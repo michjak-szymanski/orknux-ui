@@ -5,7 +5,7 @@ import alertTriangleIcon from '../assets/alert-triangle.svg';
 import trash2Icon from '../assets/trash-2.svg';
 import styles from './Dialog.module.css';
 
-export type WorkflowConfirmKind = 'disable' | 'remove';
+export type WorkflowConfirmKind = 'disable' | 'remove' | 'discard';
 
 export interface WorkflowConfirmDialogProps {
   /** The workflow name to confirm against, or null when closed. */
@@ -70,6 +70,16 @@ export function WorkflowConfirmDialog({ workflowName, kind, onClose, onConfirm }
       ),
       button: submitting ? 'Removing…' : 'Remove',
     },
+    discard: {
+      title: 'Discard changes',
+      message: (
+        <>
+          Put {name} back as it was last saved? Everything since — nodes, wiring, what each one passes — is
+          lost, and there is no way back from this one.
+        </>
+      ),
+      button: submitting ? 'Discarding…' : 'Discard',
+    },
   };
 
   const { title, message, button } = copy[kind];
@@ -82,8 +92,8 @@ export function WorkflowConfirmDialog({ workflowName, kind, onClose, onConfirm }
         </header>
 
         <div className={styles.warning}>
-          <span className={kind === 'disable' ? styles.warningBadgeAmber : styles.warningBadge}>
-            <img src={kind === 'disable' ? alertTriangleIcon : trash2Icon} alt="" width={18} height={18} />
+          <span className={kind === 'remove' ? styles.warningBadge : styles.warningBadgeAmber}>
+            <img src={kind === 'remove' ? trash2Icon : alertTriangleIcon} alt="" width={18} height={18} />
           </span>
           <p className={styles.warningMessage}>{message}</p>
         </div>
@@ -100,7 +110,7 @@ export function WorkflowConfirmDialog({ workflowName, kind, onClose, onConfirm }
           </button>
           <button
             type="button"
-            className={kind === 'disable' ? styles.amber : styles.destructive}
+            className={kind === 'remove' ? styles.destructive : styles.amber}
             onClick={handleConfirm}
             disabled={submitting}
             autoFocus

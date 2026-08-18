@@ -616,7 +616,14 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [objects, setObjects] = useState<WorkflowObject[]>([]);
 
-  useEffect(() => {
+  /**
+   * The saved graph, put on the canvas.
+   *
+   * Named because two things ask for it: opening the editor, and discarding —
+   * which is the same act, since what is on the server is what "as it was"
+   * means.
+   */
+  const loadGraph = useCallback(() => {
     if (workspaceId === '' || workflowId === '') return;
     fetchWorkflowGraph(workspaceId, workflowId)
       .then((graph) => {
@@ -660,6 +667,10 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
         setLoadError(cause instanceof Error ? cause.message : 'Could not load the workflow.');
       });
   }, [workspaceId, workflowId, setNodes, setEdges]);
+
+  useEffect(() => {
+    loadGraph();
+  }, [loadGraph]);
 
   // The catalogues a trigger node and an action node pick from.
   useEffect(() => {
@@ -1291,6 +1302,49 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                   </div>
                 )}
 
+                {/*
+                  The shape comes before the fields it decides. A saved shape fixes
+                  which fields there are, so meeting the list first means reading
+                  contents before knowing whether they are this node's to edit.
+                */}
+                {draft.kind === 'OBJECT' && (
+                  <div className={styles.field}>
+                    <span className={styles.labelRow}>
+                      <label className={styles.label} htmlFor="node-object">
+                        Shape
+                      </label>
+                      {draft.objectId !== null && (
+                        <button
+                          type="button"
+                          className={styles.definitionLink}
+                          onClick={() => leaveFor(`/workspace/${workspaceId}/objects/${draft.objectId}`)}
+                        >
+                          Open definition
+                        </button>
+                      )}
+                    </span>
+                    <div className={styles.inputWrapper}>
+                      <select
+                        id="node-object"
+                        className={`${styles.input} ${styles.select}`}
+                        value={draft.objectId ?? ''}
+                        onChange={(event) => setDraft({ ...draft, objectId: event.target.value || null })}
+                      >
+                        <option value="">Custom &mdash; this node&apos;s own fields</option>
+                        {objects.map((shape) => (
+                          <option key={shape.id} value={shape.id}>
+                            {shape.name} &middot; {shape.propertyCount} fields
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <p className={styles.parameterHint}>
+                      A saved shape fixes which fields there are; this node decides what goes in them.
+                      Custom means the fields are this node&apos;s own.
+                    </p>
+                  </div>
+                )}
+
                 {((draft.kind === 'ACTION' && draft.actionId !== null) ||
                   draft.kind === 'AGENT' ||
                   draft.kind === 'OBJECT') && (
@@ -1509,43 +1563,6 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                   </div>
                 )}
 
-                {draft.kind === 'OBJECT' && (
-                  <div className={styles.field}>
-                    <span className={styles.labelRow}>
-                      <label className={styles.label} htmlFor="node-object">
-                        Shape
-                      </label>
-                      {draft.objectId !== null && (
-                        <button
-                          type="button"
-                          className={styles.definitionLink}
-                          onClick={() => leaveFor(`/workspace/${workspaceId}/objects/${draft.objectId}`)}
-                        >
-                          Open definition
-                        </button>
-                      )}
-                    </span>
-                    <div className={styles.inputWrapper}>
-                      <select
-                        id="node-object"
-                        className={`${styles.input} ${styles.select}`}
-                        value={draft.objectId ?? ''}
-                        onChange={(event) => setDraft({ ...draft, objectId: event.target.value || null })}
-                      >
-                        <option value="">Custom &mdash; this node&apos;s own fields</option>
-                        {objects.map((shape) => (
-                          <option key={shape.id} value={shape.id}>
-                            {shape.name} &middot; {shape.propertyCount} fields
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <p className={styles.parameterHint}>
-                      A saved shape fixes which fields there are; this node decides what goes in them.
-                      Custom means the fields are this node&apos;s own.
-                    </p>
-                  </div>
-                )}
 
                 {draft.kind === 'CONDITION' && (
                   <div className={styles.field}>

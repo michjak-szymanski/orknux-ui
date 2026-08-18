@@ -7,8 +7,12 @@
 .launcher {
   position: fixed;
   right: var(--space-24);
-  /* Above the attribution strip, not on top of it. */
-  bottom: calc(var(--attribution-bar-height) + var(--space-16));
+  /*
+   * Down in the corner, level with the attribution strip rather than floating
+   * above it: sitting higher, it covered the page instead — and the strip now
+   * ends short of the right, so the two share the row without overlapping.
+   */
+  bottom: var(--space-6);
   z-index: 40;
   display: flex;
   align-items: center;
@@ -46,14 +50,14 @@
   right: var(--space-24);
   /* Clear of the button, which stays reachable while this is open, and so of
      the attribution strip the button now sits above. */
-  bottom: calc(var(--attribution-bar-height) + var(--space-16) + 60px);
+  bottom: calc(var(--space-6) + 60px);
   z-index: 40;
   display: flex;
   flex-direction: column;
   width: 380px;
   max-width: calc(100vw - var(--space-32));
   height: 460px;
-  max-height: calc(100vh - 140px - var(--attribution-bar-height));
+  max-height: calc(100vh - 140px);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-12);

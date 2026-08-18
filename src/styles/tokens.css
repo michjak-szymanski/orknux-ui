@@ -129,6 +129,13 @@
    * remain visible.
    */
   --attribution-bar-height: 41px;
+  /*
+   * How much of the bottom-right corner the quick chat's launcher wants: its own
+   * width, plus the gap it keeps from the edge, plus a gap from whatever is
+   * beside it. The attribution strip ends this far short of the right so the two
+   * sit side by side rather than one over the other.
+   */
+  --quick-chat-clearance: 112px;
 }
 
 /*
