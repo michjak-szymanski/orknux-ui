@@ -405,6 +405,13 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
       showAdmin={session.admin}
       onSignOut={onSignOut}
       sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="executions" />}
+      /*
+       * A run is a long page - a summary, a graph, and a step for every node -
+       * so it scrolls inside the frame rather than growing it. Growing pushed
+       * everything below the fold, the attribution bar included, which is the
+       * one thing on the page that has to stay where it is.
+       */
+      scrollContent
     >
       {/* Outside the columns: the header belongs to the page, so the cards and
           the node panel both start under it rather than the panel starting level

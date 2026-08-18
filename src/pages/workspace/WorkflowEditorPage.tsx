@@ -18,6 +18,7 @@ import {
   useEdgesState,
   useNodesState,
   useReactFlow,
+  useUpdateNodeInternals,
   useStore,
 } from '@xyflow/react';
 import type { Connection, Edge, EdgeProps, Node, NodeProps } from '@xyflow/react';
@@ -558,7 +559,9 @@ function GraphNodeView({ data, selected }: NodeProps) {
         leave by, or turning the node stacks them on top of each other.
       */}
       <span className={`${styles.accentBar} ${styles[KIND_CLASS[node.kind]]}`} aria-hidden="true" />
-      {hasInput && <Handle className={styles.handle} type="target" position={facing.input} />}
+      {hasInput && (
+        <Handle className={`${styles.handle} ${styles.handleIn}`} type="target" position={facing.input} />
+      )}
       {/*
         A condition leaves by one of two doors, and each says which answer it
         is. Everything else has the one way out it always had - a node that
@@ -584,7 +587,7 @@ function GraphNodeView({ data, selected }: NodeProps) {
           <span className={`${styles.branchLabel} ${styles.branchNo}`}>{node.noLabel ?? 'No'}</span>
         </>
       ) : (
-        <Handle className={styles.handle} type="source" position={facing.output} />
+        <Handle className={`${styles.handle} ${styles.handleOut}`} type="source" position={facing.output} />
       )}
 
       <div className={styles.nodeContent}>
@@ -712,6 +715,15 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   );
   const navigate = useNavigate();
   const { updateNode } = useReactFlow();
+  /*
+   * React Flow measures a node's handles once and remembers where they are.
+   *
+   * Turning a node moves them in the markup, so the dots move on screen - and
+   * every line still leaves and arrives where the handles used to be, because
+   * nothing told the library to look again. The result is a node that appears
+   * to have turned and cannot be wired as though it had.
+   */
+  const remeasure = useUpdateNodeInternals();
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<NodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -1223,6 +1235,20 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     }, CANVAS_PAUSE_MS);
     return () => window.clearTimeout(timer);
   }, [draft, fieldEdit, selectedKey, setNodes]);
+
+  /*
+   * A turned node has to be measured again.
+   *
+   * React Flow finds a node's handles once and remembers where they are, so
+   * moving them in the markup moved the dots and nothing else: every line went
+   * on leaving and arriving where the handles had been, and a node that looked
+   * turned could not be wired as one. This is the one thing that tells it to
+   * look again, and it is cheap enough to do on every turn.
+   */
+  useEffect(() => {
+    if (selectedKey === null || draft === null) return;
+    remeasure(selectedKey);
+  }, [selectedKey, draft?.orientation, remeasure]);
 
   /**
    * An agent node takes two, and takes them from nowhere else: an agent has no

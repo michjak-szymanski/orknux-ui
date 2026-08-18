@@ -430,11 +430,30 @@
   color: var(--color-accent-brand);
 }
 
+/*
+ * The two dots were the same dot, so which end of a node you were looking at
+ * was something to work out from where it sat - and on a turned node, where
+ * left is no longer input, there was nothing to work it out from.
+ *
+ * An input is hollow and an output is filled: a socket and a plug. Shape
+ * rather than colour, because colour is already saying which branch a
+ * condition's two ways out are, and a legend with two meanings is no legend.
+ */
 .handle {
   width: 12px;
   height: 12px;
   background: var(--color-surface-raised);
   border: 2px solid var(--color-border);
+}
+
+.handleIn {
+  background: var(--color-background);
+  border-color: var(--color-text-muted);
+}
+
+.handleOut {
+  background: var(--color-text-muted);
+  border-color: var(--color-text-muted);
 }
 
 /* ---- React Flow chrome ---- */
