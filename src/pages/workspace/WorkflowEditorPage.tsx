@@ -1237,6 +1237,44 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                   </div>
                 </div>
 
+                {draft.kind === 'AGENT' && (
+                  <div className={styles.field}>
+                    <span className={styles.labelRow}>
+                      <label className={styles.label} htmlFor="node-agent">
+                        Agent
+                      </label>
+                      {draft.agentId !== null && (
+                        <button
+                          type="button"
+                          className={styles.definitionLink}
+                          onClick={() => leaveFor(`/workspace/${workspaceId}/agents/${draft.agentId}/settings`)}
+                        >
+                          Open definition
+                        </button>
+                      )}
+                    </span>
+                    <div className={styles.inputWrapper}>
+                      <select
+                        id="node-agent"
+                        className={`${styles.input} ${styles.select}`}
+                        value={draft.agentId ?? ''}
+                        onChange={(event) => setDraft({ ...draft, agentId: event.target.value || null })}
+                      >
+                        <option value="">—</option>
+                        {agents.map((agent) => (
+                          <option key={agent.id} value={agent.id}>
+                            {agent.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {/* The agent brings its own, so the node chooses no model. */}
+                    <p className={styles.parameterHint}>
+                      The agent supplies the model it answers on, its instructions, and the catalogs it was granted.
+                    </p>
+                  </div>
+                )}
+
                 {draft.kind === 'TRIGGER' && (
                   <div className={styles.field}>
                     <span className={styles.labelRow}>
@@ -1601,44 +1639,6 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                         ))}
                       </select>
                     </div>
-                  </div>
-                )}
-
-                {draft.kind === 'AGENT' && (
-                  <div className={styles.field}>
-                    <span className={styles.labelRow}>
-                      <label className={styles.label} htmlFor="node-agent">
-                        Agent
-                      </label>
-                      {draft.agentId !== null && (
-                        <button
-                          type="button"
-                          className={styles.definitionLink}
-                          onClick={() => leaveFor(`/workspace/${workspaceId}/agents/${draft.agentId}/settings`)}
-                        >
-                          Open definition
-                        </button>
-                      )}
-                    </span>
-                    <div className={styles.inputWrapper}>
-                      <select
-                        id="node-agent"
-                        className={`${styles.input} ${styles.select}`}
-                        value={draft.agentId ?? ''}
-                        onChange={(event) => setDraft({ ...draft, agentId: event.target.value || null })}
-                      >
-                        <option value="">—</option>
-                        {agents.map((agent) => (
-                          <option key={agent.id} value={agent.id}>
-                            {agent.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    {/* The agent brings its own, so the node chooses no model. */}
-                    <p className={styles.parameterHint}>
-                      The agent supplies the model it answers on, its instructions, and the catalogs it was granted.
-                    </p>
                   </div>
                 )}
 
