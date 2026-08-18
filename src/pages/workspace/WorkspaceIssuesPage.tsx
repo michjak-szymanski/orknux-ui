@@ -54,6 +54,16 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  /*
+   * Bumped to ask again.
+   *
+   * The list only fetched when a filter changed, so an issue closed
+   * anywhere else - another tab, the API, an assistant - left this page
+   * showing a state that was hours old and looked like nothing had
+   * happened. Coming back to the window is exactly when somebody expects
+   * to see what changed while they were away.
+   */
+  const [asked, setAsked] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -83,7 +93,19 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
       current = false;
       window.clearTimeout(timer);
     };
-  }, [workspaceId, status, search, page]);
+  }, [workspaceId, status, search, page, asked]);
+
+  useEffect(() => {
+    function again() {
+      if (document.visibilityState === 'visible') setAsked((count) => count + 1);
+    }
+    window.addEventListener('focus', again);
+    document.addEventListener('visibilitychange', again);
+    return () => {
+      window.removeEventListener('focus', again);
+      document.removeEventListener('visibilitychange', again);
+    };
+  }, []);
 
   useEffect(() => {
     if (workspaceId === '') return;
@@ -196,7 +218,7 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
               <Link
                 key={issue.id}
                 className={styles.row}
-                to={`/workspace/${workspaceId}/issues/${issue.id}`}
+                to={`/workspace/${workspaceId}/issues/${issue.number}`}
               >
                 <span className={styles.rowMain}>
                   <span className={styles.rowTitle}>

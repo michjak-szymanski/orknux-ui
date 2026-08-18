@@ -92,10 +92,19 @@ export async function fetchIssues(
   return data.workspaceIssues;
 }
 
-export async function fetchIssue(id: string): Promise<Issue | null> {
+/**
+  * One issue, by the number people say.
+  *
+  * Not by its row id. "#4" is what the page shows and what somebody types in a
+  * message, so it is what the address carries - an address holding the id
+  * instead showed `/issues/17` above a page titled `#15`.
+  */
+export async function fetchIssue(workspaceId: string, number: number): Promise<Issue | null> {
   const data = await graphql<{ workspaceIssue: Issue | null }>(
-    `query ($id: ID!) { workspaceIssue(id: $id) { ${FULL_FIELDS} } }`,
-    { id },
+    `query ($workspaceId: ID!, $number: Int!) {
+       workspaceIssue(workspaceId: $workspaceId, number: $number) { ${FULL_FIELDS} }
+     }`,
+    { workspaceId, number },
   );
   return data.workspaceIssue;
 }

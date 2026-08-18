@@ -102,7 +102,7 @@ export const PAGES = [
     goTo: { label: 'Issues', where: 'Workspace', icon: alertTriangleIcon },
   },
   { path: '/workspace/:workspaceId/issues/new', access: 'signed-in', goTo: false },
-  { path: '/workspace/:workspaceId/issues/:issueId', access: 'signed-in', goTo: false },
+  { path: '/workspace/:workspaceId/issues/:number', access: 'signed-in', goTo: false },
   {
     path: '/workspace/:workspaceId/conditions',
     access: 'signed-in',

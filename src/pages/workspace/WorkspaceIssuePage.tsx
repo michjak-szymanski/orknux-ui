@@ -39,9 +39,16 @@ export interface WorkspaceIssuePageProps {
  * than a thinner thing they have to leave to finish.
  */
 export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePageProps) {
-  const { workspaceId = '', issueId = '' } = useParams();
+  /*
+   * The address carries the number, not the row id.
+   *
+   * "#4" is what this page shows and what somebody types in a message, so
+   * `/issues/4` has to be that issue. Mutations still take the id, which is
+   * why the loaded issue is what they are given.
+   */
+  const { workspaceId = '', number = '' } = useParams();
   const navigate = useNavigate();
-  const creating = issueId === '';
+  const creating = number === '';
 
   const [issue, setIssue] = useState<Issue | null>(null);
   const [title, setTitle] = useState('');
@@ -67,7 +74,7 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
   useEffect(() => {
     if (creating) return;
     let current = true;
-    fetchIssue(issueId)
+    fetchIssue(workspaceId, Number(number))
       .then((found) => {
         if (!current) return;
         if (found === null) {
@@ -90,7 +97,7 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
     return () => {
       current = false;
     };
-  }, [creating, issueId]);
+  }, [creating, workspaceId, number]);
 
   async function save() {
     if (saving || title.trim() === '') return;
@@ -107,9 +114,9 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
       };
       if (creating) {
         const made = await createIssue({ workspaceId, ...details });
-        navigate(`/workspace/${workspaceId}/issues/${made.id}`, { replace: true });
-      } else {
-        setIssue(await updateIssue(issueId, details));
+        navigate(`/workspace/${workspaceId}/issues/${made.number}`, { replace: true });
+      } else if (issue !== null) {
+        setIssue(await updateIssue(issue.id, details));
       }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not save the issue.');
@@ -122,9 +129,10 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
   async function toggleStatus() {
     if (creating || saving) return;
     const wanted: IssueStatus = status === 'OPEN' ? 'CLOSED' : 'OPEN';
+    if (issue === null) return;
     setSaving(true);
     try {
-      const held = await updateIssue(issueId, { status: wanted });
+      const held = await updateIssue(issue.id, { status: wanted });
       setIssue(held);
       setStatus(held.status);
     } catch (cause) {
@@ -150,10 +158,10 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
 
   async function comment_() {
     const said = comment.trim();
-    if (said === '' || creating || saving) return;
+    if (said === '' || creating || saving || issue === null) return;
     setSaving(true);
     try {
-      setIssue(await commentOnIssue(issueId, said));
+      setIssue(await commentOnIssue(issue.id, said));
       setComment('');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not add the comment.');
@@ -215,7 +223,8 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
                   aria-label="Delete this issue"
                   title="Delete"
                   onClick={() => {
-                    void deleteIssue(issueId).then(() => navigate(`/workspace/${workspaceId}/issues`));
+                    if (issue === null) return;
+                    void deleteIssue(issue.id).then(() => navigate(`/workspace/${workspaceId}/issues`));
                   }}
                 >
                   <TrashIcon />

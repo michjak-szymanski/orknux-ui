@@ -75,7 +75,7 @@ export const PAGE_ELEMENTS: Record<PagePath, PageElement> = {
   '/workspace/:workspaceId/issues': (session, onSignOut) => <WorkspaceIssuesPage session={session} onSignOut={onSignOut} />,
   /* Before the one with an id in it: `new` is a page, not an issue called new. */
   '/workspace/:workspaceId/issues/new': (session, onSignOut) => <WorkspaceIssuePage session={session} onSignOut={onSignOut} />,
-  '/workspace/:workspaceId/issues/:issueId': (session, onSignOut) => <WorkspaceIssuePage session={session} onSignOut={onSignOut} />,
+  '/workspace/:workspaceId/issues/:number': (session, onSignOut) => <WorkspaceIssuePage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/functions': (session, onSignOut) => <WorkspaceFunctionsPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/agents': (session, onSignOut) => <AgentsPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/objects': (session, onSignOut) => <WorkspaceObjectsPage session={session} onSignOut={onSignOut} />,
