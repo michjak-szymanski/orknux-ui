@@ -122,7 +122,20 @@ export async function deleteCondition(id: string): Promise<boolean> {
   return data.deleteCondition;
 }
 
-export const CONDITION_TYPES: ConditionType[] = ['SLACK', 'JIRA', 'TIME', 'FUNCTION', 'ANY_OF', 'ALL_OF'];
+/**
+ * The types a condition may be offered as.
+ *
+ * JIRA is deliberately absent, for the same reason WORKSPACEMATE is below: it
+ * asks about an issue's priority, status or type, and nothing in the product
+ * delivers a Jira issue for it to read. There is no Jira trigger and no
+ * incoming Jira connection, so the evaluator looks for a `priority` field on an
+ * event that never arrives and the condition can only ever answer no. Offering
+ * it meant offering a test that cannot be met.
+ *
+ * It stays in the type, the label and the properties, so a condition already
+ * saved as one still opens, still reads, and still lists its own choices.
+ */
+export const CONDITION_TYPES: ConditionType[] = ['SLACK', 'TIME', 'FUNCTION', 'ANY_OF', 'ALL_OF'];
 
 export const CONDITION_TYPE_LABEL: Record<ConditionType, string> = {
   SLACK: 'Slack',

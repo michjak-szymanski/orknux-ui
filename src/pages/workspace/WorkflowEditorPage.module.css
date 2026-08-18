@@ -572,6 +572,16 @@
   width: 100%;
 }
 
+/*
+ * The links a picker carries: one to make a definition, one to open the one
+ * chosen. Held together so the label keeps the left however many there are.
+ */
+.labelLinks {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-12);
+}
+
 .definitionLink {
   padding: 0;
   background: none;

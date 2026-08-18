@@ -264,11 +264,14 @@ export function ConditionDialog({
                 value={type}
                 onChange={(event) => changeType(event.target.value as ConditionType)}
               >
-                {CONDITION_TYPES.map((candidate) => (
-                  <option key={candidate} value={candidate}>
-                    {CONDITION_TYPE_LABEL[candidate]}
-                  </option>
-                ))}
+                {/* A type no longer offered still belongs to the condition that has it. */}
+                {(CONDITION_TYPES.includes(type) ? CONDITION_TYPES : [type, ...CONDITION_TYPES]).map(
+                  (candidate) => (
+                    <option key={candidate} value={candidate}>
+                      {CONDITION_TYPE_LABEL[candidate]}
+                    </option>
+                  ),
+                )}
               </select>
               <img src={chevronDown12Icon} alt="" width={12} height={12} />
             </div>

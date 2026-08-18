@@ -54,7 +54,11 @@ import type { Trigger } from '../../api/triggers';
 import { removeWorkflow } from '../../api/workflows';
 import arrowLeftIcon from '../../assets/arrow-left.svg';
 import pencilIcon from '../../assets/pencil.svg';
+import { ActionDialog } from '../../components/ActionDialog';
 import { AppShell } from '../../components/AppShell';
+import { ConditionDialog } from '../../components/ConditionDialog';
+import { CreateAgentDialog } from '../../components/CreateAgentDialog';
+import { CreateTriggerDialog } from '../../components/CreateTriggerDialog';
 import { FieldPicker } from '../../components/FieldPicker';
 import type { FieldOption } from '../../components/FieldPicker';
 import { Icon, IconPickerDialog } from '../../components/IconPicker';
@@ -470,6 +474,14 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   const [saved, setSaved] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [browsingIcons, setBrowsingIcons] = useState(false);
+  const [discarding, setDiscarding] = useState(false);
+  /*
+   * Which definition is being made from the panel, if any.
+   *
+   * A node kind rather than a boolean per picker: only one node is selected, so
+   * only one of these dialogs can be open, and the kind says which.
+   */
+  const [creating, setCreating] = useState<NodeKind | null>(null);
   const [triggers, setTriggers] = useState<Trigger[]>([]);
   const [justUpdated, setJustUpdated] = useState(false);
   const [problems, setProblems] = useState<GraphProblem[]>([]);
@@ -1126,6 +1138,14 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           >
             <TrashIcon />
           </button>
+          <button
+            type="button"
+            className={styles.ghostButton}
+            onClick={() => setDiscarding(true)}
+            disabled={busy}
+          >
+            Discard
+          </button>
           <button type="button" className={styles.ghostButton} onClick={() => void handleSave()} disabled={busy}>
             {busy ? 'Working…' : 'Save'}
           </button>
@@ -1243,15 +1263,24 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                       <label className={styles.label} htmlFor="node-agent">
                         Agent
                       </label>
-                      {draft.agentId !== null && (
+                      <span className={styles.labelLinks}>
                         <button
                           type="button"
                           className={styles.definitionLink}
-                          onClick={() => leaveFor(`/workspace/${workspaceId}/agents/${draft.agentId}/settings`)}
+                          onClick={() => setCreating('AGENT')}
                         >
-                          Open definition
+                          New
                         </button>
-                      )}
+                        {draft.agentId !== null && (
+                          <button
+                            type="button"
+                            className={styles.definitionLink}
+                            onClick={() => leaveFor(`/workspace/${workspaceId}/agents/${draft.agentId}/settings`)}
+                          >
+                            Open definition
+                          </button>
+                        )}
+                      </span>
                     </span>
                     <div className={styles.inputWrapper}>
                       <select
@@ -1281,16 +1310,25 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                       <label className={styles.label} htmlFor="node-trigger">
                         Trigger
                       </label>
-                      {/* Where the node points, so the definition is one click away. */}
-                      {draft.triggerId !== null && (
+                      <span className={styles.labelLinks}>
                         <button
                           type="button"
                           className={styles.definitionLink}
-                          onClick={() => leaveFor(`/workspace/${workspaceId}/triggers/${draft.triggerId}`)}
+                          onClick={() => setCreating('TRIGGER')}
                         >
-                          Open definition
+                          New
                         </button>
-                      )}
+                        {/* Where the node points, so the definition is one click away. */}
+                        {draft.triggerId !== null && (
+                          <button
+                            type="button"
+                            className={styles.definitionLink}
+                            onClick={() => leaveFor(`/workspace/${workspaceId}/triggers/${draft.triggerId}`)}
+                          >
+                            Open definition
+                          </button>
+                        )}
+                      </span>
                     </span>
                     <div className={styles.inputWrapper}>
                       <select
@@ -1316,15 +1354,24 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                       <label className={styles.label} htmlFor="node-action">
                         Action
                       </label>
-                      {draft.actionId !== null && (
+                      <span className={styles.labelLinks}>
                         <button
                           type="button"
                           className={styles.definitionLink}
-                          onClick={() => leaveFor(`/workspace/${workspaceId}/actions/${draft.actionId}`)}
+                          onClick={() => setCreating('ACTION')}
                         >
-                          Open definition
+                          New
                         </button>
-                      )}
+                        {draft.actionId !== null && (
+                          <button
+                            type="button"
+                            className={styles.definitionLink}
+                            onClick={() => leaveFor(`/workspace/${workspaceId}/actions/${draft.actionId}`)}
+                          >
+                            Open definition
+                          </button>
+                        )}
+                      </span>
                     </span>
                     <div className={styles.inputWrapper}>
                       <select
@@ -1612,15 +1659,24 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                       <label className={styles.label} htmlFor="node-condition">
                         Condition
                       </label>
-                      {draft.conditionId !== null && (
+                      <span className={styles.labelLinks}>
                         <button
                           type="button"
                           className={styles.definitionLink}
-                          onClick={() => leaveFor(`/workspace/${workspaceId}/conditions/${draft.conditionId}`)}
+                          onClick={() => setCreating('CONDITION')}
                         >
-                          Open definition
+                          New
                         </button>
-                      )}
+                        {draft.conditionId !== null && (
+                          <button
+                            type="button"
+                            className={styles.definitionLink}
+                            onClick={() => leaveFor(`/workspace/${workspaceId}/conditions/${draft.conditionId}`)}
+                          >
+                            Open definition
+                          </button>
+                        )}
+                      </span>
                     </span>
                     <div className={styles.inputWrapper}>
                       <select
@@ -1772,6 +1828,78 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           await removeWorkflow(workflowId);
           setRemoving(false);
           navigate(`/workspace/${workspaceId}`);
+        }}
+      />
+
+      {/*
+        A way back to the last save.
+
+        The canvas is the only copy of what has been drawn since, so this asks
+        first, and then reloads rather than undoing: what the server holds is
+        what the graph was, whatever the panel has been doing to it since.
+      */}
+      <WorkflowConfirmDialog
+        workflowName={discarding ? name : null}
+        kind="discard"
+        onClose={() => setDiscarding(false)}
+        onConfirm={async () => {
+          setSelectedKey(null);
+          setDraft(null);
+          setDiscarding(false);
+          loadGraph();
+        }}
+      />
+
+      {/*
+        Making a definition without leaving the graph.
+
+        Each of these is the dialog its own page uses, so a trigger made here is
+        made exactly as it would be there. What is added is picked straight away:
+        somebody who reached for New wanted this node to use it.
+      */}
+      <CreateTriggerDialog
+        open={creating === 'TRIGGER'}
+        workspaceId={workspaceId}
+        onClose={() => setCreating(null)}
+        onCreated={(trigger) => {
+          setTriggers((all) => [trigger, ...all]);
+          setDraft((current) => (current === null ? current : { ...current, triggerId: trigger.id }));
+          setCreating(null);
+        }}
+      />
+
+      <ActionDialog
+        open={creating === 'ACTION'}
+        workspaceId={workspaceId}
+        action={null}
+        onClose={() => setCreating(null)}
+        onSaved={(action) => {
+          setActions((all) => [action, ...all]);
+          setDraft((current) => (current === null ? current : { ...current, actionId: action.id }));
+          setCreating(null);
+        }}
+      />
+
+      <ConditionDialog
+        open={creating === 'CONDITION'}
+        workspaceId={workspaceId}
+        condition={null}
+        onClose={() => setCreating(null)}
+        onSaved={(condition) => {
+          setConditions((all) => [condition, ...all]);
+          setDraft((current) => (current === null ? current : { ...current, conditionId: condition.id }));
+          setCreating(null);
+        }}
+      />
+
+      <CreateAgentDialog
+        open={creating === 'AGENT'}
+        workspaceId={workspaceId}
+        onClose={() => setCreating(null)}
+        onCreated={(agent) => {
+          setAgents((all) => [agent, ...all]);
+          setDraft((current) => (current === null ? current : { ...current, agentId: agent.id }));
+          setCreating(null);
         }}
       />
     </AppShell>
