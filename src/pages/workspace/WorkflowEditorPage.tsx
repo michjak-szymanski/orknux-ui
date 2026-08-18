@@ -47,7 +47,7 @@ import type { Action } from '../../api/actions';
 import type { Agent } from '../../api/agents';
 import { fetchWorkspaceConditions } from '../../api/conditions';
 import type { Condition } from '../../api/conditions';
-import { fetchWorkspaceObjects } from '../../api/objects';
+import { createObject, fetchWorkspaceObjects } from '../../api/objects';
 import type { WorkflowObject } from '../../api/objects';
 import { fetchWorkspaceTriggers } from '../../api/triggers';
 import type { Trigger } from '../../api/triggers';
@@ -58,6 +58,7 @@ import { ActionDialog } from '../../components/ActionDialog';
 import { AppShell } from '../../components/AppShell';
 import { ConditionDialog } from '../../components/ConditionDialog';
 import { CreateAgentDialog } from '../../components/CreateAgentDialog';
+import { NameDialog } from '../../components/NameDialog';
 import { CreateTriggerDialog } from '../../components/CreateTriggerDialog';
 import { FieldPicker } from '../../components/FieldPicker';
 import type { FieldOption } from '../../components/FieldPicker';
@@ -1439,15 +1440,24 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                       <label className={styles.label} htmlFor="node-object">
                         Shape
                       </label>
-                      {draft.objectId !== null && (
+                      <span className={styles.labelLinks}>
                         <button
                           type="button"
                           className={styles.definitionLink}
-                          onClick={() => leaveFor(`/workspace/${workspaceId}/objects/${draft.objectId}`)}
+                          onClick={() => setCreating('OBJECT')}
                         >
-                          Open definition
+                          New
                         </button>
-                      )}
+                        {draft.objectId !== null && (
+                          <button
+                            type="button"
+                            className={styles.definitionLink}
+                            onClick={() => leaveFor(`/workspace/${workspaceId}/objects/${draft.objectId}`)}
+                          >
+                            Open definition
+                          </button>
+                        )}
+                      </span>
                     </span>
                     <div className={styles.inputWrapper}>
                       <select
@@ -1925,6 +1935,33 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
         onSaved={(condition) => {
           setConditions((all) => [condition, ...all]);
           setDraft((current) => (current === null ? current : { ...current, conditionId: condition.id }));
+          setCreating(null);
+        }}
+      />
+
+      {/*
+        An object is named here and given its fields on its own page.
+
+        Unlike the other four, what this makes is empty: an object is a shape,
+        and a shape with no fields is a name and nothing else. It is still worth
+        making from here - the node points at it straight away, and Open
+        definition beside the picker is one click from filling it in - but it is
+        why this asks for a name rather than opening the object editor, which
+        would take the graph off the screen to do what a line of text can.
+      */}
+      <NameDialog
+        open={creating === 'OBJECT'}
+        title="Create Object"
+        message="An object names a shape, so a mapping can be offered rather than typed blind."
+        nameLabel="Name"
+        namePlaceholder="SlackMessage"
+        descriptionPlaceholder="Represents an incoming Slack message with metadata"
+        submitLabel="Create Object"
+        onClose={() => setCreating(null)}
+        onSubmit={async (name, description) => {
+          const made = await createObject(workspaceId, { name, description: description || undefined });
+          setObjects((all) => [made, ...all]);
+          setDraft((current) => (current === null ? current : { ...current, objectId: made.id }));
           setCreating(null);
         }}
       />
