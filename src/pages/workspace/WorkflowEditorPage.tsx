@@ -763,7 +763,19 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
 
   useEffect(() => {
     const node = nodes.find((candidate) => candidate.id === selectedKey);
-    setDraft(node === undefined ? null : { ...(node.data as NodeData) });
+    /*
+     * Copied without the ports. They are the server's answer about the node,
+     * not part of what the panel edits - and a draft that carried them carried
+     * them as they were at selection. Every edit then wrote that snapshot back
+     * over the node, and until the next preview corrected it, a renamed field
+     * flashed its old name: the ports from the moment the node was clicked.
+     */
+    if (node === undefined) {
+      setDraft(null);
+    } else {
+      const { inputs: _inputs, outputs: _outputs, ...its } = node.data as NodeData;
+      setDraft(its as NodeData);
+    }
     // Only re-seed the form when the selection changes, not on every drag.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedKey]);
