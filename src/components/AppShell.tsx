@@ -142,9 +142,18 @@ export function AppShell({
           showChat={installation?.chatEnabled === true}
         />
 
-        {/* Beside the name it belongs to, which is where everybody looks for it. */}
-        <NotificationBell />
-        <UserMenu user={user} onSignOut={onSignOut} />
+        {/*
+          The bell and the name are one item, not two.
+
+          This bar is a three-column grid - left, the centred search, right -
+          and a fourth child made a fourth cell, which pushed the user block
+          onto a row of its own underneath the header. They belong together
+          anyway: the bell is about the person whose name is beside it.
+        */}
+        <div className={styles.topRight}>
+          <NotificationBell />
+          <UserMenu user={user} onSignOut={onSignOut} />
+        </div>
       </header>
 
       <div className={styles.workspace}>

@@ -107,6 +107,14 @@
   color: var(--color-text-primary);
 }
 
+/* The right of the bar: the bell and the person it belongs to, as one cell. */
+.topRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  justify-self: end;
+}
+
 .userMenu {
   display: flex;
   align-items: center;
