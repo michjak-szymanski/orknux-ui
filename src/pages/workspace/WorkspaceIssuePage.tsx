@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type { ClipboardEvent as ReactClipboardEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { formatSize, isShowable } from '../../api/attachments';
@@ -285,12 +286,21 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
    * yet keeps them beside the form until it is filed.
    */
   async function upload(files: FileList | null, going: 'issue' | 'comment') {
-    if (files === null || files.length === 0 || workspaceId === '') return;
+    if (files === null || files.length === 0) return;
+    await attach(Array.from(files), going);
+    // Cleared so the same file can be picked twice in a row.
+    const picker = going === 'comment' ? commentFilesRef.current : issueFilesRef.current;
+    if (picker !== null) picker.value = '';
+  }
+
+  /** Where both ways of choosing a file end up: the picker, and a paste. */
+  async function attach(files: File[], going: 'issue' | 'comment') {
+    if (files.length === 0 || workspaceId === '') return;
 
     setUploading(true);
     setError(null);
     try {
-      const held = await uploadIssueAttachments(workspaceId, Array.from(files));
+      const held = await uploadIssueAttachments(workspaceId, files);
       if (going === 'comment') {
         setCommentFiles((current) => [...current, ...held]);
       } else if (!creating && issue !== null) {
@@ -302,10 +312,45 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
       setError(cause instanceof Error ? cause.message : 'Those files could not be uploaded.');
     } finally {
       setUploading(false);
-      // Cleared so the same file can be picked twice in a row.
-      const picker = going === 'comment' ? commentFilesRef.current : issueFilesRef.current;
-      if (picker !== null) picker.value = '';
     }
+  }
+
+  /**
+   * A screenshot pasted straight in, rather than saved to disk first.
+   *
+   * Taking a screenshot puts it on the clipboard; attaching it meant saving it
+   * to a folder, finding it in a file picker and deleting it afterwards, which
+   * is three steps to say "look at this". A pasted image has no name of its
+   * own, so it is given one from the clock - the alternative is a page of files
+   * all called image.png.
+   *
+   * Only images. A clipboard can hold anything, and text pasted into a comment
+   * is text somebody meant to paste: intercepting that would make an ordinary
+   * paste attach a file nobody asked for.
+   */
+  async function pasted(event: ReactClipboardEvent<HTMLTextAreaElement>, going: 'issue' | 'comment') {
+    const carried: DataTransferItem[] = Array.from(event.clipboardData?.items ?? []);
+    const images = carried.filter((item) => item.type.startsWith('image/'));
+    if (images.length === 0) return;
+
+    // Kept out of the box it was aimed at: an image pasted into a textarea
+    // would otherwise leave its file name behind as text.
+    event.preventDefault();
+
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const files = images
+      .map((item, at) => {
+        const file = item.getAsFile();
+        if (file === null) return null;
+        const kind = file.type.split('/')[1] ?? 'png';
+        return new File([file], `Pasted ${stamp}${images.length > 1 ? ` (${at + 1})` : ''}.${kind}`, {
+          type: file.type,
+        });
+      })
+      .filter((file): file is File => file !== null);
+    if (files.length === 0) return;
+
+    await attach(files, going);
   }
 
   /**
@@ -472,7 +517,8 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
                   workspaceId={workspaceId}
                   rows={10}
                   ariaLabel="Description"
-                  placeholder="What happens, and what should happen instead."
+                  placeholder="What happens, and what should happen instead. Paste a screenshot to attach it."
+                  onPaste={(event) => void pasted(event, 'issue')}
                 />
               ) : (
                 /* What was written, as it reads. Clicking it writes again,
@@ -617,7 +663,8 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
                       workspaceId={workspaceId}
                       rows={3}
                       ariaLabel="Add a comment"
-                      placeholder="Say something…"
+                      placeholder="Say something… paste a screenshot to attach it."
+                      onPaste={(event) => void pasted(event, 'comment')}
                     />
                     <div className={styles.composerActions}>
                       {attachmentsAllowed && (

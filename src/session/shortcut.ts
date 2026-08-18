@@ -3,6 +3,7 @@ import { useSyncExternalStore } from 'react';
 const KEY = 'orknux.paletteShortcut';
 const SAVE_KEY = 'orknux.saveShortcut';
 const FORMAT_KEY = 'orknux.formatShortcut';
+const TURN_KEY = 'orknux.turnShortcut';
 
 /** What opens the palette when nothing has been chosen. */
 export const DEFAULT_SHORTCUT = 'Ctrl+Q';
@@ -24,6 +25,16 @@ export const DEFAULT_SAVE_SHORTCUT = 'Ctrl+S';
  * some, and full-screen in others.
  */
 export const DEFAULT_FORMAT_SHORTCUT = 'Ctrl+Shift+F';
+
+/**
+ * What turns a node on the canvas when nothing has been chosen.
+ *
+ * Bare R, unlike the others: the graph is not a text field, so a letter on its
+ * own is free there, and turning is something somebody does four times in a row
+ * - a modifier on each press is three modifiers too many. It is ignored while a
+ * caret is in a box, where R is somebody typing the letter.
+ */
+export const DEFAULT_TURN_SHORTCUT = 'R';
 
 /**
  * Which keystroke opens the command palette, written the way it is shown:
@@ -85,6 +96,7 @@ function remembered(key: string, fallback: Shortcut) {
 const palette = remembered(KEY, DEFAULT_SHORTCUT);
 const saving = remembered(SAVE_KEY, DEFAULT_SAVE_SHORTCUT);
 const formatting = remembered(FORMAT_KEY, DEFAULT_FORMAT_SHORTCUT);
+const turning = remembered(TURN_KEY, DEFAULT_TURN_SHORTCUT);
 
 export function paletteShortcut(): Shortcut {
   return palette.get();
@@ -120,6 +132,18 @@ export function setFormatShortcut(next: Shortcut): void {
 
 export function useFormatShortcut(): Shortcut {
   return formatting.use();
+}
+
+export function turnShortcut(): Shortcut {
+  return turning.get();
+}
+
+export function setTurnShortcut(next: Shortcut): void {
+  turning.set(next);
+}
+
+export function useTurnShortcut(): Shortcut {
+  return turning.use();
 }
 
 /** One key, named as somebody would read it rather than as the browser sends it. */

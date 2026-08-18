@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type { ClipboardEvent as ReactClipboardEvent } from 'react';
 
 import { fetchAssignees } from '../api/issues';
 import type { Assignee } from '../api/issues';
@@ -12,6 +13,12 @@ export interface MarkdownEditorProps {
   placeholder?: string;
   ariaLabel: string;
   rows?: number;
+  /**
+   * What to do with a paste, where the page around this can do something with
+   * one - an issue attaches the screenshot on the clipboard. Left out
+   * everywhere else, and an ordinary text paste is untouched either way.
+   */
+  onPaste?: (event: ReactClipboardEvent<HTMLTextAreaElement>) => void;
 }
 
 /** What the toolbar does, in the order a hand reaches for it. */
@@ -49,6 +56,7 @@ export function MarkdownEditor({
   placeholder,
   ariaLabel,
   rows = 4,
+  onPaste,
 }: MarkdownEditorProps) {
   const area = useRef<HTMLTextAreaElement>(null);
   /** Where the @ that opened the list is, or null when nothing is being mentioned. */
@@ -155,6 +163,7 @@ export function MarkdownEditor({
         placeholder={placeholder}
         aria-label={ariaLabel}
         onChange={(event) => onType(event.target.value)}
+        onPaste={onPaste}
         onBlur={() => window.setTimeout(() => setMentioning(null), 150)}
       />
 

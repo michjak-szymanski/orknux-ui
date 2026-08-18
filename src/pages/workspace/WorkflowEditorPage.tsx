@@ -67,7 +67,7 @@ import type { FieldOption } from '../../components/FieldPicker';
 import { Icon, IconPickerDialog } from '../../components/IconPicker';
 import { TrashIcon } from '../../components/TrashIcon';
 import { WorkflowConfirmDialog } from '../../components/WorkflowConfirmDialog';
-import { matches, useSaveShortcut } from '../../session/shortcut';
+import { matches, useSaveShortcut, useTurnShortcut } from '../../session/shortcut';
 import { shellUser } from '../../session/user';
 import styles from './WorkflowEditorPage.module.css';
 
@@ -1524,6 +1524,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
    * nobody would trust.
    */
   const save = useSaveShortcut();
+  const turnKey = useTurnShortcut();
 
   /** Read by the keyboard handler, which must not start a second save. */
   const busyRef = useRef(busy);
@@ -1622,15 +1623,17 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   }, [creating]);
 
   /**
-   * R turns the selected node, because turning is something somebody does four
-   * times in a row and reaching for the panel each time is three reaches too
-   * many. Bare, with no modifier: every modified R belongs to the browser -
-   * Ctrl+R reloads - and a caret in a text box is somebody typing the letter.
+   * The turn keystroke, R until somebody changes it in Preferences.
+   *
+   * Turning is something somebody does four times in a row, and reaching for
+   * the panel each time is three reaches too many. A caret in a text box is
+   * somebody typing the letter, so this is only heard on the canvas - which is
+   * also what lets the default be a bare letter where nothing else can be.
    */
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (event.key.toLowerCase() !== 'r') return;
-      if (event.ctrlKey || event.metaKey || event.altKey || typingText(event.target)) return;
+      if (!matches(event, turnKey)) return;
+      if (typingText(event.target)) return;
       if (draft === null) return;
       event.preventDefault();
       setDraft({ ...draft, orientation: turned(draft.orientation ?? null) });

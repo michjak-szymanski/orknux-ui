@@ -11,12 +11,15 @@ import {
   DEFAULT_SHORTCUT,
   describe,
   DEFAULT_FORMAT_SHORTCUT,
+  DEFAULT_TURN_SHORTCUT,
   DEFAULT_SAVE_SHORTCUT,
   setFormatShortcut,
+  setTurnShortcut,
   setPaletteShortcut,
   setSaveShortcut,
   usable,
   useFormatShortcut,
+  useTurnShortcut,
   usePaletteShortcut,
   useSaveShortcut,
 } from '../../session/shortcut';
@@ -38,12 +41,13 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
   const shortcut = usePaletteShortcut();
   const save = useSaveShortcut();
   const format = useFormatShortcut();
+  const turn = useTurnShortcut();
   /**
    * Which shortcut the next keystroke belongs to, or null while none is being
    * recorded. Not a boolean: there are three of these now, and they share the one
    * listener — one per shortcut would fight over the same keypress.
    */
-  const [recording, setRecording] = useState<'palette' | 'save' | 'format' | null>(null);
+  const [recording, setRecording] = useState<'palette' | 'save' | 'format' | 'turn' | null>(null);
   const [refused, setRefused] = useState<string | null>(null);
 
   /*
@@ -67,13 +71,22 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
         setRefused(null);
         return;
       }
-      if (!usable(said)) {
+      /*
+       * A bare letter is refused everywhere except turning a node.
+       *
+       * The others fire wherever somebody is typing, so a letter alone would
+       * trigger them mid-word. Turning is only honoured on the canvas, where a
+       * letter is free - which is why R can be the default there and cannot be
+       * anywhere else.
+       */
+      if (recording !== 'turn' && !usable(said)) {
         setRefused(said);
         return;
       }
 
       if (recording === 'palette') setPaletteShortcut(said);
       else if (recording === 'save') setSaveShortcut(said);
+      else if (recording === 'turn') setTurnShortcut(said);
       else setFormatShortcut(said);
       setRecording(null);
       setRefused(null);
@@ -267,6 +280,40 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                     Lays out the code in the function editor, with the same language service that
                     completes and checks it. Prevented from reaching the browser, which has its own
                     ideas about this one.
+                  </>
+                )}
+              </p>
+            </div>
+
+            <div className={styles.setting}>
+              <span className={styles.settingLabel} id="turn-shortcut">
+                Turn Node Shortcut
+              </span>
+              <div className={styles.options}>
+                <button
+                  type="button"
+                  className={recording === 'turn' ? styles.optionCurrent : styles.option}
+                  onClick={() => {
+                    setRefused(null);
+                    setRecording((held) => (held === 'turn' ? null : 'turn'));
+                  }}
+                >
+                  {recording === 'turn' ? 'Press any keys…' : turn}
+                </button>
+                {turn !== DEFAULT_TURN_SHORTCUT && recording !== 'turn' && (
+                  <button type="button" className={styles.option} onClick={() => setTurnShortcut(DEFAULT_TURN_SHORTCUT)}>
+                    Reset
+                  </button>
+                )}
+              </div>
+              <p className={styles.settingNote}>
+                {recording === 'turn' ? (
+                  <>Press the combination you want. Escape leaves it as it is.</>
+                ) : (
+                  <>
+                    Turns the selected node on the workflow canvas, so a graph can run down the screen
+                    instead of off the side of it. A bare letter is allowed here, unlike the others:
+                    this one is only heard on the canvas, never while typing.
                   </>
                 )}
               </p>
