@@ -556,7 +556,6 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
    */
   const [creating, setCreating] = useState<NodeKind | null>(null);
   const [triggers, setTriggers] = useState<Trigger[]>([]);
-  const [justUpdated, setJustUpdated] = useState(false);
   const [problems, setProblems] = useState<GraphProblem[]>([]);
   /** What the server said each node needs and gives, from the last save or load. */
   const [ports, setPorts] = useState<Record<string, { inputs?: GraphPort[]; outputs?: GraphPort[] }>>({});
@@ -865,9 +864,10 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   /**
    * The panel edits the node as it is typed in, so the canvas keeps up: the
    * name changes as you type it, and picking a trigger or an action takes
-   * effect where it can be seen. Update Node then confirms rather than being
-   * the only thing that does anything — a button that looked inert was what
-   * this replaced.
+   * effect where it can be seen. There is no button to press afterwards: what
+   * the panel says is what the node is, and a graph is a draft until Publish
+   * makes it live - so a second confirmation between typing and saving was one
+   * step that never decided anything.
    */
   useEffect(() => {
     if (selectedKey === null || draft === null) return;
@@ -1036,26 +1036,6 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
    * pending is never the panel, it is the save.
    */
   const pending = !saved;
-
-  function applyDraft() {
-    if (selectedKey === null || draft === null) return;
-    const shown = named(draft);
-    setNodes((current) =>
-      current.map((node) =>
-        /*
-         * Merged, for the reason the live edit above is merged: the ports the
-         * server worked out are on the node and are not the panel's to know.
-         * Replacing the data wholesale dropped them, so Update Node took the
-         * fields off the node until the next save put them back - which is
-         * exactly what it looked like: a button that deleted your work.
-         */
-        node.id === selectedKey ? { ...node, data: { ...(node.data as NodeData), ...shown } } : node,
-      ),
-    );
-    setSaved(false);
-    setJustUpdated(true);
-    window.setTimeout(() => setJustUpdated(false), 1500);
-  }
 
   function toGraph(): { nodes: GraphNode[]; edges: { source: string; target: string }[] } {
     return {
@@ -1996,15 +1976,6 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                 </p>
               </div>
 
-              <div className={styles.panelFooter}>
-                <button
-                  type="button"
-                  className={pending ? styles.updateButtonPending : styles.updateButton}
-                  onClick={applyDraft}
-                >
-                  {justUpdated ? 'Updated ✓' : 'Update Node'}
-                </button>
-              </div>
             </>
           )}
         </aside>

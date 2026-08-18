@@ -556,13 +556,6 @@
   resize: none;
 }
 
-.panelFooter {
-  display: flex;
-  flex: 1 0 0;
-  flex-direction: column;
-  justify-content: flex-end;
-}
-
 /* A label with the way to what it names, on the same line. */
 .labelRow {
   display: flex;
@@ -692,24 +685,6 @@
   font-size: var(--text-xs);
   line-height: 16px;
   color: var(--color-text-muted);
-}
-
-.updateButton {
-  width: 100%;
-  padding: var(--space-8);
-  background: var(--color-border);
-  border: 0;
-  border-radius: var(--radius-6);
-  font-weight: 500;
-  font-size: var(--text-md);
-  color: var(--color-text-primary);
-  cursor: pointer;
-}
-
-/* Violet while the panel holds an edit the node has not taken. */
-.updateButtonPending {
-  composes: updateButton;
-  background: var(--color-accent-brand);
 }
 
 /* The chevron is decoration; the select reaches under it and takes the click. */
