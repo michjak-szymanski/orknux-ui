@@ -54,6 +54,13 @@ Everything else is in the address:
 So "the open p1 ones" is a link rather than a paragraph of instructions, and a
 refresh comes back to the list you were reading instead of to the top of Open.
 
+**New Issue** files one. If several are on your mind, tick **File another** and
+the form empties and stays put, keeping the assignee and the labels you had just
+set.
+
+The command palette knows the open issues too, by their title and by their
+number, so typing `12` there finds #12.
+
 ## One issue
 
 ![An issue: what is wrong, the file that shows it, and the conversation underneath](/screens/issue.png)
@@ -72,17 +79,18 @@ things somebody wants at a glance.
 - **Assignee** is one box over three kinds of thing: a **person**, one of the
   workspace's **agents**, or one of its **models**. Work handed to an agent is
   still work somebody can see the state of, which is the whole reason the same
-  box takes all three. Type to search it; nobody is a valid answer and is the
-  one it starts on.
+  box takes all three. Type to search it, and **No one** is both where it starts
+  and a valid answer.
 - **Labels** are typed in, with what the workspace already uses suggested
   underneath. They have no colours and no meaning of their own - `p1` is a
   convention this project keeps, not a field. A label exists because an issue
   carries it, so removing the last one that used it removes it from the list.
 - **Reporter** is whoever filed it, and is not editable.
 
-A `#12` written in a description or a comment becomes a link to #12. Only there,
-and only where it reads as an issue number: inside code it is left alone, and so
-is anything longer than five digits, because that is a colour.
+A `#12` written in a description or a comment becomes a link to #12. Only on an
+issue's own page, where a number after a hash is an issue and nothing else, and
+only where it reads as one: inside code it is left alone, and so is anything
+longer than five digits, which is a colour.
 
 ## Comments
 
@@ -121,7 +129,7 @@ buttons are not offered, and what has already been attached stays readable.
 
 ## Notifications
 
-![The bell: what has happened on the issues that concern you, across every workspace you can see](/screens/notifications.png)
+![The bell, open beside the account menu](/screens/notifications.png)
 
 The bell sits beside your name in the top bar, and carries a count of what is
 waiting.

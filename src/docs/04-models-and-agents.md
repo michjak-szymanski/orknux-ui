@@ -118,6 +118,10 @@ grants nothing extra.
 Everything with a page of its own comes back with its address, so an agent that
 mentions a run can link you to it.
 
+The workspace's own MCP servers, listed under Integrations, are a different
+thing entirely: those are servers somebody registered for agents to call *out*
+to. This is the way *in*.
+
 ### The tracker, over MCP
 
 The workspace's issues are offered here too: list them, filtered by assignee, by
@@ -141,10 +145,6 @@ silently skips them.
 An issue can be assigned to an agent as easily as to a person, and the same tool
 takes the agent's name, so an agent can be asked to read what it has been sent
 rather than what its owner has.
-
-The workspace's own MCP servers, listed under Integrations, are a different
-thing entirely: those are servers somebody registered for agents to call *out*
-to. This is the way *in*.
 
 ## Integrations
 

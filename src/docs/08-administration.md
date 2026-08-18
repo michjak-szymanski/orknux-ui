@@ -99,7 +99,9 @@ What this installation allows, for every workspace in it.
 - **Chat** — whether this installation has a chat at all. Off takes the tab
   away and refuses new messages; conversations already had are kept.
 - **Files in chats** — whether messages may carry attachments. Off takes the
-  button away; what has already been uploaded stays where it is.
+  button away; what has already been uploaded stays where it is. It governs the
+  files put on an issue as well, whatever the label says, and both use the same
+  storage and the same size limit.
 
 Below each switch, in grey, is what the operator set in the configuration file:
 where attachments are written, what storage they use, and how large one file may

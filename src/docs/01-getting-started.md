@@ -52,8 +52,9 @@ few letters, and press Enter.
 
 It knows every page in the current workspace and the admin ones, and it knows
 what the workspace *holds*: a trigger, a function, an agent, a variable and the
-catalog it is in are all reachable by name. Each row says what kind of thing it
-is, so two things with similar names can be told apart before you press Enter.
+catalog it is in are all reachable by name, and so is an open issue, by its
+title or by its number. Each row says what kind of thing it is, so two things
+with similar names can be told apart before you press Enter.
 
 ## Your first workflow
 
