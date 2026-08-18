@@ -232,7 +232,7 @@ function CarriedEdge({
   style,
   data,
 }: EdgeProps) {
-  const [path, labelX, labelY] = getBezierPath({
+  const [straight, labelX, labelY] = getBezierPath({
     sourceX,
     sourceY,
     sourcePosition,
@@ -253,6 +253,39 @@ function CarriedEdge({
    */
   const offset = (data?.offset as LabelOffset | undefined) ?? NO_OFFSET;
   const moveLabel = data?.onMoveLabel as ((edgeId: string, to: LabelOffset) => void) | undefined;
+
+  /*
+   * A moved label takes its line with it.
+   *
+   * The label used to slide away on its own, leaving the line where it was -
+   * so on a graph with more than a couple of them, nothing said which label
+   * belonged to which line, which is the one thing a label has to say. The
+   * line is now drawn through wherever the label has been put: in by the left
+   * of it, out by the right, each half the same curve React Flow would have
+   * drawn on its own.
+   *
+   * Only when it has been moved. An untouched label sits on its line already,
+   * and routing through it would bend a straight run for nothing.
+   */
+  const at = { x: labelX + offset.x, y: labelY + offset.y };
+  const moved = offset.x !== 0 || offset.y !== 0;
+  const [into] = getBezierPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX: at.x,
+    targetY: at.y,
+    targetPosition: Position.Left,
+  });
+  const [outOf] = getBezierPath({
+    sourceX: at.x,
+    sourceY: at.y,
+    sourcePosition: Position.Right,
+    targetX,
+    targetY,
+    targetPosition,
+  });
+  const path = moved ? `${into} ${outOf}` : straight;
   // The label sits in flow coordinates; a pointer moves in screen ones, and the
   // difference between them is exactly the zoom.
   const zoom = useStore((state) => state.transform[2]);
@@ -294,6 +327,9 @@ function CarriedEdge({
             style={{
               transform: `translate(-50%, -50%) translate(${labelX + offset.x}px, ${labelY + offset.y}px)`,
             }}
+            // Which line it belongs to, said in the markup: a label that has been
+            // dragged away is otherwise attributable only by eye.
+            data-edge={id}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={endDrag}

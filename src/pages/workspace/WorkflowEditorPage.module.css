@@ -818,6 +818,17 @@ select.input {
    * covering. `nodrag nopan` on the element keeps that from moving the canvas.
    */
   pointer-events: all;
+  /*
+   * And above the nodes, or it cannot be reached at all.
+   *
+   * A label sits where its line runs, which on a graph of any density is over
+   * a node - and React Flow gives every node a z-index of its own while a label
+   * had none, so the node won the hit test. Pressing what looked like a label
+   * picked up the node underneath and dragged that instead: the label stayed
+   * put, the node moved, and the line went with the node. It read as the drag
+   * being broken, which it was, though not in the label.
+   */
+  z-index: 5;
   cursor: grab;
   user-select: none;
   touch-action: none;
