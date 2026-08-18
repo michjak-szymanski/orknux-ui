@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Background,
@@ -17,6 +18,7 @@ import {
   useEdgesState,
   useNodesState,
   useReactFlow,
+  useStore,
 } from '@xyflow/react';
 import type { Connection, Edge, EdgeProps, Node, NodeProps } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -154,6 +156,14 @@ interface Carried {
   to: string;
 }
 
+/** How far a label has been dragged from where its line would have put it. */
+export interface LabelOffset {
+  x: number;
+  y: number;
+}
+
+const NO_OFFSET: LabelOffset = { x: 0, y: 0 };
+
 /**
  * A line, and what it carries written beside it — one field per row.
  *
@@ -185,14 +195,67 @@ function CarriedEdge({
   const shown = says.slice(0, FIELDS_ON_A_LINE);
   const rest = says.length - shown.length;
 
+  /*
+   * Where this label has been dragged to.
+   *
+   * A busy graph stacks labels on each other and over nodes, and the line they
+   * belong to is what decides where they land. Dragging moves the label alone:
+   * the edge, and what it says, are untouched by it.
+   */
+  const offset = (data?.offset as LabelOffset | undefined) ?? NO_OFFSET;
+  const moveLabel = data?.onMoveLabel as ((edgeId: string, to: LabelOffset) => void) | undefined;
+  // The label sits in flow coordinates; a pointer moves in screen ones, and the
+  // difference between them is exactly the zoom.
+  const zoom = useStore((state) => state.transform[2]);
+  const [drag, setDrag] = useState<{ x: number; y: number; from: LabelOffset } | null>(null);
+
+  const onPointerDown = (event: ReactPointerEvent<HTMLUListElement>) => {
+    if (moveLabel === undefined || event.button !== 0) return;
+    // Kept from the canvas underneath, which would otherwise pan instead.
+    event.stopPropagation();
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDrag({ x: event.clientX, y: event.clientY, from: offset });
+  };
+
+  const onPointerMove = (event: ReactPointerEvent<HTMLUListElement>) => {
+    if (drag === null || moveLabel === undefined) return;
+    event.stopPropagation();
+    moveLabel(id, {
+      x: drag.from.x + (event.clientX - drag.x) / zoom,
+      y: drag.from.y + (event.clientY - drag.y) / zoom,
+    });
+  };
+
+  const endDrag = (event: ReactPointerEvent<HTMLUListElement>) => {
+    if (drag === null) return;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    setDrag(null);
+  };
+
   return (
     <>
       <BaseEdge id={id} path={path} markerEnd={markerEnd} style={style} />
       {says.length > 0 && (
         <EdgeLabelRenderer>
           <ul
-            className={styles.edgeLabel}
-            style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
+            className={[styles.edgeLabel, drag !== null ? styles.edgeLabelDragging : '', 'nodrag', 'nopan']
+              .filter(Boolean)
+              .join(' ')}
+            style={{
+              transform: `translate(-50%, -50%) translate(${labelX + offset.x}px, ${labelY + offset.y}px)`,
+            }}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+            onDoubleClick={(event) => {
+              // Back to where the line would have put it — for a label dragged
+              // somewhere unhelpful and now hard to aim at.
+              event.stopPropagation();
+              moveLabel?.(id, NO_OFFSET);
+            }}
+            title={moveLabel === undefined ? undefined : 'Drag to move; double-click to put it back'}
           >
             {shown.map((one) => (
               <li className={styles.edgeLabelRow} key={`${one.from}->${one.to}`}>
@@ -348,6 +411,46 @@ export function WorkflowEditorPage(props: WorkflowEditorPageProps) {
 
 function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   const { workspaceId = '', workflowId = '' } = useParams();
+
+  /*
+   * Where each edge's label has been dragged to, per workflow.
+   *
+   * Kept in the browser rather than on the server, because the graph has
+   * nowhere to put it: an edge is a source and a target and nothing else. So
+   * this is one person's arrangement of their own view, and it behaves like
+   * one — it does not travel to anybody else looking at the same workflow.
+   */
+  const labelKey = `orknux.edge-labels.${workflowId}`;
+  const [labelOffsets, setLabelOffsets] = useState<Record<string, LabelOffset>>({});
+
+  useEffect(() => {
+    try {
+      const held = window.localStorage.getItem(labelKey);
+      setLabelOffsets(held === null ? {} : (JSON.parse(held) as Record<string, LabelOffset>));
+    } catch {
+      // Unreadable or turned off: the labels simply start where the lines put them.
+      setLabelOffsets({});
+    }
+  }, [labelKey]);
+
+  const moveLabel = useCallback(
+    (edgeId: string, to: LabelOffset) => {
+      setLabelOffsets((held) => {
+        const next = { ...held };
+        // Back at the line's own position is the absence of an offset, not an
+        // offset of nothing, so a reset leaves nothing behind to remember.
+        if (to.x === 0 && to.y === 0) delete next[edgeId];
+        else next[edgeId] = to;
+        try {
+          window.localStorage.setItem(labelKey, JSON.stringify(next));
+        } catch {
+          // A browser that will not remember is no reason to refuse the drag.
+        }
+        return next;
+      });
+    },
+    [labelKey],
+  );
   const navigate = useNavigate();
   const { updateNode } = useReactFlow();
 
@@ -464,7 +567,11 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     const carrying = edges.map((edge) => {
       const held = carried.get(`${edge.source}->${edge.target}`);
       if (held === undefined) return edge;
-      return { ...edge, type: 'carried', data: { says: held.says } };
+      return {
+        ...edge,
+        type: 'carried',
+        data: { says: held.says, offset: labelOffsets[edge.id], onMoveLabel: moveLabel },
+      };
     });
 
     const loose = [...carried.values()]
@@ -474,7 +581,11 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
         source: held.source,
         target: held.target,
         type: 'carried',
-        data: { says: held.says },
+        data: {
+          says: held.says,
+          offset: labelOffsets[`reads:${held.source}->${held.target}`],
+          onMoveLabel: moveLabel,
+        },
         style: { stroke: 'var(--color-accent-brand)', strokeDasharray: '6 4' },
         // Not the graph's, so not something a drag can move or a key can delete.
         selectable: false,
@@ -483,7 +594,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       }));
 
     return [...carrying, ...loose];
-  }, [edges, carried]);
+  }, [edges, carried, labelOffsets, moveLabel]);
 
   /**
    * Puts what the server said onto the nodes themselves, so the canvas can draw

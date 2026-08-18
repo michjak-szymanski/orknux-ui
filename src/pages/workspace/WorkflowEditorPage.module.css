@@ -813,7 +813,20 @@ select.input {
   font-size: var(--text-xs);
   line-height: 1.5;
   white-space: nowrap;
-  pointer-events: none;
+  /*
+   * Reachable, because a label can be dragged out of the way of whatever it is
+   * covering. `nodrag nopan` on the element keeps that from moving the canvas.
+   */
+  pointer-events: all;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.edgeLabelDragging {
+  cursor: grabbing;
+  /* Above the other labels while it is being moved between them. */
+  z-index: 1;
 }
 
 /* A bullet per row, so two fields read as two entries and not one phrase. */
