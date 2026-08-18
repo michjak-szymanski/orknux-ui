@@ -37,7 +37,15 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
   const [description, setDescription] = useState('');
   const [source, setSource] = useState('');
   const [caret, setCaret] = useState({ line: 1, column: 1 });
-  const [status, setStatus] = useState<{ ok: boolean; message: string }>({ ok: true, message: 'No errors' });
+/*
+   * Null until something has actually been checked.
+   *
+   * A green light that is simply the value the page opens with reports a check
+   * nobody ran, and one that survives an edit describes a version of this that
+   * no longer exists. Both are worse than showing nothing: an indicator is only
+   * worth having if it can be wrong.
+   */
+  const [status, setStatus] = useState<{ ok: boolean; message: string } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -228,6 +236,9 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                   onChange={(next) => {
                     setSource(next);
                     setSaved(false);
+                    // What was checked was the code as it was; this is not that
+                    // code any more.
+                    setStatus(null);
                   }}
                   onCaretChange={(line, column) => setCaret({ line, column })}
                 />
@@ -236,10 +247,10 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
               <footer className={styles.editorFooter}>
                 <span className={styles.statusLeft}>
                   <span
-                    className={`${styles.indicator} ${status.ok ? styles.indicatorOk : styles.indicatorBad}`}
+                    className={`${styles.indicator} ${status === null ? styles.indicatorIdle : status.ok ? styles.indicatorOk : styles.indicatorBad}`}
                     aria-hidden="true"
                   />
-                  {status.message}
+                  {status?.message ?? 'Not checked yet.'}
                 </span>
                 <span className={styles.caret}>
                   Ln {caret.line}, Col {caret.column}

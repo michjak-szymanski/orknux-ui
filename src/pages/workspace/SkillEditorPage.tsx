@@ -61,7 +61,15 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
       }),
     [content],
   );
-  const [status, setStatus] = useState<{ ok: boolean; message: string }>({ ok: true, message: 'Formatting valid' });
+/*
+   * Null until something has actually been checked.
+   *
+   * A green light that is simply the value the page opens with reports a check
+   * nobody ran, and one that survives an edit describes a version of this that
+   * no longer exists. Both are worse than showing nothing: an indicator is only
+   * worth having if it can be wrong.
+   */
+  const [status, setStatus] = useState<{ ok: boolean; message: string } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -249,6 +257,9 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
                   onChange={(event) => {
                     setContent(event.target.value);
                     setSaved(false);
+                    // What was checked was the text as it was; this is not that
+                    // text any more.
+                    setStatus(null);
                   }}
                   onScroll={(event) => {
                     // The coloured copy follows the text.
@@ -264,10 +275,10 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
               <footer className={styles.editorFooter}>
                 <span className={styles.statusLeft}>
                   <span
-                    className={`${styles.indicator} ${status.ok ? styles.indicatorOk : styles.indicatorBad}`}
+                    className={`${styles.indicator} ${status === null ? styles.indicatorIdle : status.ok ? styles.indicatorOk : styles.indicatorBad}`}
                     aria-hidden="true"
                   />
-                  {status.message}
+                  {status?.message ?? 'Not checked yet.'}
                 </span>
                 <span className={styles.caret}>Markdown</span>
               </footer>
