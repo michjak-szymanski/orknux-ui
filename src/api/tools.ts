@@ -14,7 +14,10 @@ export interface Tool {
   name: string;
   /** What the tool is for. An agent reads this to decide whether to call it. */
   description: string | null;
+  /** The JavaScript that runs. */
   source: string;
+  /** The TypeScript it was compiled from, which is what the editor opens. */
+  typescript: string;
   enabled: boolean;
   lastModifiedAt: string;
   lastModifiedBy: string;
@@ -28,7 +31,7 @@ export interface SourceValidation {
   column: number | null;
 }
 
-const TOOL_FIELDS = 'id workspaceId name description source enabled lastModifiedAt lastModifiedBy';
+const TOOL_FIELDS = 'id workspaceId name description source typescript enabled lastModifiedAt lastModifiedBy';
 
 export async function fetchWorkspaceTools(workspaceId: string, page = 0, size = 20): Promise<PageOf<Tool>> {
   const data = await graphql<{ workspaceTools: PageOf<Tool> }>(
@@ -54,8 +57,13 @@ export async function fetchTool(id: string): Promise<Tool | null> {
 export interface CreateToolInput {
   name: string;
   description?: string;
-  /** Left out for a new tool, which starts from a stub that parses. */
+  /**
+   * The compiled JavaScript. Sent together with `typescript` or not at all: a
+   * tool whose halves were written apart is one whose editor and sandbox
+   * disagree. Both left out starts the tool from a stub.
+   */
   source?: string;
+  typescript?: string;
 }
 
 export async function createTool(workspaceId: string, input: CreateToolInput): Promise<Tool> {
@@ -69,7 +77,9 @@ export async function createTool(workspaceId: string, input: CreateToolInput): P
 export interface UpdateToolInput {
   name?: string;
   description?: string;
+  /** The compiled JavaScript. Sent together with `typescript` or not at all. */
   source?: string;
+  typescript?: string;
 }
 
 export async function updateTool(id: string, input: UpdateToolInput): Promise<Tool> {

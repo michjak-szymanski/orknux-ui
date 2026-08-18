@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import type { SessionUser } from '../../api/session';
@@ -7,9 +7,11 @@ import type { Tool } from '../../api/tools';
 import codeIcon from '../../assets/code.svg';
 import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
+import { CodeEditor } from '../../components/CodeEditor';
+import type { CodeEditorHandle } from '../../components/CodeEditor';
+import { compile } from '../../components/monaco';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
-import { highlightJs } from './highlightJs';
 import styles from './EditorPage.module.css';
 
 export interface ToolEditorPageProps {
@@ -20,17 +22,15 @@ export interface ToolEditorPageProps {
 /**
  * One tool: the code on the left, what it is on the right.
  *
- * The editor is a textarea over a gutter of line numbers, the same one the
- * function editor uses — the project ships no editor library, and what this
- * needs is somewhere to type JavaScript that is checked by the parser that will
- * run it.
+ * Written in TypeScript, like a function: what an agent may call is code
+ * somebody has to read later, and types are how it says what it takes. The
+ * sandbox runs JavaScript, so saving compiles and stores both — what runs, and
+ * what was written.
  */
 export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
   const { workspaceId = '', toolId = '' } = useParams();
   const navigate = useNavigate();
-  const codeRef = useRef<HTMLTextAreaElement>(null);
-  const gutterRef = useRef<HTMLDivElement>(null);
-  const highlightRef = useRef<HTMLPreElement>(null);
+  const editor = useRef<CodeEditorHandle>(null);
 
   const [tool, setTool] = useState<Tool | null>(null);
   const [name, setName] = useState('');
@@ -63,36 +63,22 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
     setTool(found);
     setName(found.name);
     setDescription(found.description ?? '');
-    setSource(found.source);
-  }
-
-  const lines = useMemo(() => source.split('\n').length, [source]);
-
-  // The coloured copy sits under the textarea, which draws only its caret.
-  const highlighted = useMemo(
-    () =>
-      highlightJs(source, {
-        comment: styles.tokenComment,
-        string: styles.tokenString,
-        number: styles.tokenNumber,
-        keyword: styles.tokenKeyword,
-        callee: styles.tokenCallee,
-        property: styles.tokenProperty,
-      }),
-    [source],
-  );
-
-  function trackCaret() {
-    const textarea = codeRef.current;
-    if (textarea === null) return;
-    const upTo = textarea.value.slice(0, textarea.selectionStart);
-    const rows = upTo.split('\n');
-    setCaret({ line: rows.length, column: (rows[rows.length - 1]?.length ?? 0) + 1 });
+    setSource(found.typescript ?? found.source);
   }
 
   async function handleValidate() {
     try {
-      const checked = await validateToolSource(workspaceId, source);
+      const emitted = await compile(source);
+      if (!emitted.ok) {
+        setStatus({
+          ok: false,
+          message: emitted.line === null ? emitted.reason : `Line ${emitted.line}: ${emitted.reason}`,
+        });
+        return;
+      }
+
+      // The compiled JavaScript, because that is what the sandbox is handed.
+      const checked = await validateToolSource(workspaceId, emitted.javascript);
       setStatus(
         checked.valid
           ? { ok: true, message: 'No errors' }
@@ -115,11 +101,21 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
     setSaveError(null);
     setSaved(false);
     try {
+      const emitted = await compile(source);
+      if (!emitted.ok) {
+        setStatus({
+          ok: false,
+          message: emitted.line === null ? emitted.reason : `Line ${emitted.line}: ${emitted.reason}`,
+        });
+        return;
+      }
+
       apply(
         await updateTool(tool.id, {
           name: name.trim(),
           description: description.trim(),
-          source,
+          source: emitted.javascript,
+          typescript: source,
         }),
       );
       setSaved(true);
@@ -220,45 +216,21 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                   <img src={codeIcon} alt="" width={16} height={16} />
                   Editor
                 </span>
-                <span className={styles.formatBadge}>JavaScript</span>
+                <span className={styles.formatBadge}>TypeScript</span>
               </header>
 
               <div className={styles.codeArea}>
-                <div className={styles.gutter} ref={gutterRef} aria-hidden="true">
-                  {Array.from({ length: lines }, (_, index) => (
-                    <span key={index} className={styles.lineNumber}>
-                      {index + 1}
-                    </span>
-                  ))}
-                </div>
-                <div className={styles.codeStack}>
-                  <pre className={styles.highlight} aria-hidden="true" ref={highlightRef}>
-                    <code dangerouslySetInnerHTML={{ __html: highlighted }} />
-                  </pre>
-                  <textarea
-                    ref={codeRef}
-                    className={styles.code}
-                    value={source}
-                    spellCheck={false}
-                    aria-label="Tool source"
-                    onChange={(event) => {
-                      setSource(event.target.value);
-                      setSaved(false);
-                      trackCaret();
-                    }}
-                    onKeyUp={trackCaret}
-                    onClick={trackCaret}
-                    onScroll={(event) => {
-                      // The gutter and the coloured copy follow the text.
-                      const { scrollTop, scrollLeft } = event.currentTarget;
-                      if (gutterRef.current !== null) gutterRef.current.scrollTop = scrollTop;
-                      if (highlightRef.current !== null) {
-                        highlightRef.current.scrollTop = scrollTop;
-                        highlightRef.current.scrollLeft = scrollLeft;
-                      }
-                    }}
-                  />
-                </div>
+                <CodeEditor
+                  ref={editor}
+                  value={source}
+                  language="typescript"
+                  ariaLabel="Tool source"
+                  onChange={(next) => {
+                    setSource(next);
+                    setSaved(false);
+                  }}
+                  onCaretChange={(line, column) => setCaret({ line, column })}
+                />
               </div>
 
               <footer className={styles.editorFooter}>
