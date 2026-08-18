@@ -202,3 +202,25 @@
 .nameLink:hover {
   color: #c084fc;
 }
+
+/*
+ * The function somebody has just made, on the page they were sent back to.
+ *
+ * A list of five names is quick to read and slow to find yourself in when one
+ * of them is new. It fades: this says "here it is", not "this one is special".
+ */
+.rowMade {
+  border-left: 2px solid var(--color-accent-brand);
+  background: var(--color-accent-brand-soft);
+  animation: settle 2.5s ease-out forwards;
+}
+
+@keyframes settle {
+  0%,
+  40% {
+    background: var(--color-accent-brand-soft);
+  }
+  100% {
+    background: transparent;
+  }
+}

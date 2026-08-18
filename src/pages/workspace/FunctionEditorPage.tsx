@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import type { ValueType } from '../../api/actions';
 import {
@@ -165,6 +165,20 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
   const [status, setStatus] = useState<{ ok: boolean; message: string }>({ ok: true, message: 'No errors' });
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  /*
+   * Whether the function open here was made a moment ago.
+   *
+   * In the address rather than in state: creating one moves from
+   * `functions/new` to `functions/<id>`, which are two routes, so the page is
+   * unmounted and mounted again on the way and anything it was holding goes
+   * with it. What survives that is the URL.
+   */
+  const [query] = useSearchParams();
+  const made = query.get('made') !== null;
+  /** Where both ways back point: the list, and which row to look at on it. */
+  const backTo = made
+    ? `/workspace/${workspaceId}/functions?made=${functionId}`
+    : `/workspace/${workspaceId}/functions`;
   const [saved, setSaved] = useState(false);
   const save = useSaveShortcut();
   const format = useFormatShortcut();
@@ -460,7 +474,12 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
        * pushed: Back from a function that exists should be the list, not the
        * empty form it was written in, which would create a second one.
        */
-      if (creating) navigate(`/workspace/${workspaceId}/functions/${stored.id}`, { replace: true });
+      if (creating) {
+        // Remembered for the way back: the list is five to a page and sorted by
+        // name, so a function just made is very often not on the page the list
+        // opens at - and from there it looks like it was not made at all.
+        navigate(`/workspace/${workspaceId}/functions/${stored.id}?made=1`, { replace: true });
+      }
     } catch (cause) {
       setStatus({ ok: false, message: cause instanceof Error ? cause.message : 'Could not save.' });
     } finally {
@@ -496,8 +515,9 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
         <>
           <header className={styles.pageHeader}>
             <p className={styles.breadcrumb}>
-              <BackLink to={`/workspace/${workspaceId}/functions`} label="Functions" />
-              <Link className={styles.crumbLink} to={`/workspace/${workspaceId}/functions`}>
+              <BackLink to={backTo} label="Functions" />
+              {/* The same place as the arrow beside it, including which row. */}
+              <Link className={styles.crumbLink} to={backTo}>
                 Functions
               </Link>
               <span className={styles.crumbSeparator}>/</span>

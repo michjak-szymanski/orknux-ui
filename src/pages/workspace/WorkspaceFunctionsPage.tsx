@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import type { PageOf } from '../../api/client';
 import {
@@ -26,6 +26,15 @@ export interface WorkspaceFunctionsPageProps {
 
 const PAGE_SIZE = 5;
 
+/**
+ * Enough of a workspace's functions to find one among them.
+ *
+ * Asked for once, to work out which page a just-made function is on. A
+ * workspace with more than this has a function somewhere past the end of it,
+ * and then the list opens where it always did rather than somewhere wrong.
+ */
+const ALL_OF_THEM = 200;
+
 /** Named JavaScript functions callable from workflow actions. */
 export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunctionsPageProps) {
   const { workspaceId = '' } = useParams();
@@ -33,6 +42,18 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
 
   const [functions, setFunctions] = useState<PageOf<WorkspaceFunction> | null>(null);
   const [page, setPage] = useState(1);
+  /*
+   * A function just made, arriving from the editor as `?made=<id>`.
+   *
+   * The list is five to a page and sorted by name, so something created a
+   * moment ago is usually not on the page this opens at - and a list that does
+   * not show what you just made reads as a list that did not get it. Where it
+   * is gets worked out once, here, rather than by asking somebody to go
+   * looking through the pages for it.
+   */
+  const [query, setQuery] = useSearchParams();
+  const made = query.get('made');
+  const [findingMade, setFindingMade] = useState(made !== null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   /** The function being copied, so the row buttons can be held while it happens. */
@@ -76,6 +97,31 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
 
   useEffect(load, [load]);
 
+  /*
+   * Turn to the page the new one is on.
+   *
+   * One request for the whole list, only when arriving from a create, and only
+   * once: the position is a property of the sorted list, and the alternative -
+   * asking the server for the index of a row - is a query nothing else needs.
+   */
+  useEffect(() => {
+    if (made === null || workspaceId === '') return;
+    let current = true;
+    fetchWorkspaceFunctions(workspaceId, 0, ALL_OF_THEM)
+      .then((all) => {
+        if (!current) return;
+        const at = all.content.findIndex((fn) => fn.id === made);
+        if (at >= 0) setPage(Math.floor(at / PAGE_SIZE) + 1);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (current) setFindingMade(false);
+      });
+    return () => {
+      current = false;
+    };
+  }, [made, workspaceId]);
+
   return (
     <AppShell
       user={shellUser(session)}
@@ -116,14 +162,17 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
             <span className={styles.colActions}>Actions</span>
           </div>
 
-          {loading && <p className={styles.notice}><Loader /></p>}
+          {/* Also while the page a new one is on is being worked out, or the
+              list would show the wrong page for a moment and then jump. */}
+          {(loading || findingMade) && <p className={styles.notice}><Loader /></p>}
           {error !== null && <p className={`${styles.notice} ${styles.noticeError}`}>{error}</p>}
-          {!loading && error === null && functions?.content.length === 0 && (
+          {!loading && !findingMade && error === null && functions?.content.length === 0 && (
             <p className={styles.notice}>No functions yet.</p>
           )}
 
-          {functions?.content.map((fn) => (
-            <div key={fn.id} className={styles.row}>
+          {!findingMade &&
+            functions?.content.map((fn) => (
+            <div key={fn.id} className={fn.id === made ? `${styles.row} ${styles.rowMade}` : styles.row}>
               <Link
                 className={`${styles.colName} ${styles.name} ${styles.nameLink}`}
                 to={`/workspace/${workspaceId}/functions/${fn.id}`}
@@ -172,7 +221,12 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
             page={page}
             pageSize={PAGE_SIZE}
             totalItems={functions?.totalElements ?? 0}
-            onPageChange={setPage}
+            onPageChange={(next) => {
+              setPage(next);
+              // Turning a page by hand ends the arrival: the highlight belongs
+              // to the moment of coming back, not to the list from then on.
+              if (query.has('made')) setQuery({}, { replace: true });
+            }}
             unit="functions"
           />
         </div>
