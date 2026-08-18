@@ -103,7 +103,17 @@ function search(all: DocPage[], text: string): Hit[] {
   if (needle === '') return [];
 
   return all.flatMap((page) => {
-    const lines = page.body
+    /*
+     * The pictures come out first, and before the split rather than after it.
+     *
+     * An image is not a sentence: matched, it offers the reader a line that is
+     * nowhere on the page they are then sent to. Left in, its alt text arrives
+     * as `!The quick chat, open over…` — the link rule takes the brackets and
+     * leaves the bang — and one wrapped across two lines leaves its second
+     * half, `back](/screens/actions.png)`, looking like a broken manual.
+     */
+    const prose = page.body.replace(/!\[[^\]]*\]\([^)]*\)/g, '');
+    const lines = prose
       .split('\n')
       .map(plain)
       .filter(

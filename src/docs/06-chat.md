@@ -93,6 +93,9 @@ attachments, so there is nothing a viewer could show.
 
 ![The quick chat, open over a page and answering about what is on it](/screens/quick-chat.png)
 
+The **quick chat** — the button says AI, workspace settings calls it the Quick
+Chat Model, and it is the same thing.
+
 Bottom right of every page except this one, a small panel that answers about
 **what you are looking at**. Not here, because a second conversation floating
 over the one you already have open is two boxes to type a question into. It is told which page you have open, so "why did this fail" on a
