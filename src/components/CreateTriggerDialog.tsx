@@ -6,6 +6,14 @@ import type { TriggerFormStyles } from './TriggerForm';
 import styles from './Dialog.module.css';
 
 export interface CreateTriggerDialogProps {
+  /**
+   * Whether this stands over the page or beside it.
+   *
+   * A modal is right when what somebody is doing has nothing to do with what
+   * is behind it; making a component for the node they are editing is the
+   * opposite, so the workflow editor asks for a panel and keeps its graph.
+   */
+  placement?: 'modal' | 'panel';
   open: boolean;
   workspaceId: string;
   onClose: () => void;
@@ -49,21 +57,22 @@ const FORM_STYLES: TriggerFormStyles = {
  * its fields as it mounts, so the next Create Trigger starts empty without
  * anything having to empty it.
  */
-export function CreateTriggerDialog({ open, workspaceId, onClose, onCreated }: CreateTriggerDialogProps) {
+export function CreateTriggerDialog({ open, workspaceId, onClose, onCreated, placement = 'modal' }: CreateTriggerDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
     const dialog = dialogRef.current;
     if (dialog === null) return;
 
-    if (open && !dialog.open) dialog.showModal();
+    if (open && !dialog.open) if (placement === 'panel') dialog.show();
+      else dialog.showModal();
     else if (!open && dialog.open) dialog.close();
   }, [open]);
 
   return (
     <dialog
       ref={dialogRef}
-      className={`${styles.dialog} ${styles.dialogWide} ${styles.dialogWider}`}
+      className={`${styles.dialog} ${styles.dialogWide} ${styles.dialogWider} ${placement === 'panel' ? styles.dialogPanel : ''}`}
       onCancel={onClose}
       onClose={onClose}
     >

@@ -4,6 +4,14 @@ import type { FormEvent } from 'react';
 import styles from './Dialog.module.css';
 
 export interface NameDialogProps {
+  /**
+   * Whether this stands over the page or beside it.
+   *
+   * A modal is right when what somebody is doing has nothing to do with what
+   * is behind it; making a component for the node they are editing is the
+   * opposite, so the workflow editor asks for a panel and keeps its graph.
+   */
+  placement?: 'modal' | 'panel';
   open: boolean;
   title: string;
   /** One line under the title saying what is being made. */
@@ -33,8 +41,7 @@ export function NameDialog({
   descriptionPlaceholder,
   submitLabel,
   onClose,
-  onSubmit,
-}: NameDialogProps) {
+  onSubmit, placement = 'modal' }: NameDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   const [name, setName] = useState('');
@@ -51,7 +58,8 @@ export function NameDialog({
       setDescription('');
       setError(null);
       setSubmitting(false);
-      dialog.showModal();
+      if (placement === 'panel') dialog.show();
+      else dialog.showModal();
     } else if (!open && dialog.open) {
       dialog.close();
     }
@@ -72,7 +80,7 @@ export function NameDialog({
   }
 
   return (
-    <dialog ref={dialogRef} className={styles.dialog} onCancel={onClose} onClose={onClose}>
+    <dialog ref={dialogRef} className={`${styles.dialog} ${placement === 'panel' ? styles.dialogPanel : ''}`} onCancel={onClose} onClose={onClose}>
       <form className={styles.body} onSubmit={handleSubmit}>
         <header className={styles.header}>
           <h2 className={styles.title}>{title}</h2>

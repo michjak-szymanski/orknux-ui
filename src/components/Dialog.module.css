@@ -656,3 +656,32 @@ select.input {
 .jump:hover {
   text-decoration: underline;
 }
+
+/*
+ * The same builder, moved out of the middle of the screen.
+ *
+ * A modal is right when what somebody is doing has nothing to do with what is
+ * behind it. Making a component for the node they are editing is the opposite:
+ * the graph is the reason they are making it, and covering the graph to ask
+ * about it means answering from memory. So it stands down the left, about a
+ * third of the width, with the canvas still there to look at.
+ *
+ * A non-modal dialog keeps the rest of the page live, which is the point - and
+ * costs the backdrop and the automatic Escape, both of which the editor puts
+ * back deliberately.
+ */
+.dialogPanel {
+  position: fixed;
+  top: 56px;
+  bottom: 0;
+  left: 0;
+  width: min(34vw, 520px);
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  overflow-y: auto;
+  border-top: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: 0;
+}

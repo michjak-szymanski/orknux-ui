@@ -1604,6 +1604,22 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     return () => window.removeEventListener('keydown', onKey, true);
   });
 
+  /*
+   * Escape closes the builder panel.
+   *
+   * A modal dialog gets that from the browser; one shown beside the page does
+   * not, and losing it would be a form somebody can only leave by finding the
+   * right button - which is worse than the modal it replaced.
+   */
+  useEffect(() => {
+    if (creating === null) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') setCreating(null);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [creating]);
+
   /**
    * R turns the selected node, because turning is something somebody does four
    * times in a row and reaching for the panel each time is three reaches too
@@ -2580,11 +2596,17 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       {/*
         Making a definition without leaving the graph.
 
-        Each of these is the dialog its own page uses, so a trigger made here is
+        Each of these is the builder its own page uses, so a trigger made here is
         made exactly as it would be there. What is added is picked straight away:
         somebody who reached for New wanted this node to use it.
+
+        Shown as a panel down the left rather than as a modal over the middle.
+        The graph is the reason somebody is making the thing, and covering it to
+        ask about it means answering from memory - so the canvas stays visible
+        and about two thirds of the width stays usable while the form is open.
       */}
       <CreateTriggerDialog
+        placement="panel"
         open={creating === 'TRIGGER'}
         workspaceId={workspaceId}
         onClose={() => setCreating(null)}
@@ -2596,6 +2618,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       />
 
       <ActionDialog
+        placement="panel"
         open={creating === 'ACTION'}
         workspaceId={workspaceId}
         action={null}
@@ -2608,6 +2631,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       />
 
       <ConditionDialog
+        placement="panel"
         open={creating === 'CONDITION'}
         workspaceId={workspaceId}
         condition={null}
@@ -2630,6 +2654,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
         would take the graph off the screen to do what a line of text can.
       */}
       <NameDialog
+        placement="panel"
         open={creating === 'OBJECT'}
         title="Create Object"
         message="An object names a shape, so a mapping can be offered rather than typed blind."
@@ -2647,6 +2672,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       />
 
       <CreateAgentDialog
+        placement="panel"
         open={creating === 'AGENT'}
         workspaceId={workspaceId}
         onClose={() => setCreating(null)}

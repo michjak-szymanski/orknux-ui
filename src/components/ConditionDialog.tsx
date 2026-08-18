@@ -32,6 +32,14 @@ import { IconField } from './IconField';
 import styles from './Dialog.module.css';
 
 export interface ConditionDialogProps {
+  /**
+   * Whether this stands over the page or beside it.
+   *
+   * A modal is right when what somebody is doing has nothing to do with what
+   * is behind it; making a component for the node they are editing is the
+   * opposite, so the workflow editor asks for a panel and keeps its graph.
+   */
+  placement?: 'modal' | 'panel';
   open: boolean;
   workspaceId: string;
   /** Null creates one; a condition edits it. */
@@ -78,8 +86,7 @@ export function ConditionDialog({
   preset = null,
   onClose,
   onSaved,
-  onDeleted,
-}: ConditionDialogProps) {
+  onDeleted, placement = 'modal' }: ConditionDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   const [name, setName] = useState('');
@@ -139,7 +146,8 @@ export function ConditionDialog({
       setDraftValue('');
       setError(null);
       setSubmitting(false);
-      dialog.showModal();
+      if (placement === 'panel') dialog.show();
+      else dialog.showModal();
     } else if (!open && dialog.open) {
       dialog.close();
     }
@@ -332,7 +340,7 @@ export function ConditionDialog({
   }
 
   return (
-    <dialog ref={dialogRef} className={styles.dialog} onCancel={onClose} onClose={onClose}>
+    <dialog ref={dialogRef} className={`${styles.dialog} ${placement === 'panel' ? styles.dialogPanel : ''}`} onCancel={onClose} onClose={onClose}>
       <form className={styles.body} onSubmit={handleSubmit}>
         <header className={styles.header}>
           <h2 className={styles.title}>{editing ? 'Condition Settings' : 'Create Condition'}</h2>

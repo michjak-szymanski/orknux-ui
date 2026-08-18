@@ -39,6 +39,14 @@ import { IconField } from './IconField';
 import styles from './Dialog.module.css';
 
 export interface ActionDialogProps {
+  /**
+   * Whether this stands over the page or beside it.
+   *
+   * A modal is right when what somebody is doing has nothing to do with what
+   * is behind it; making a component for the node they are editing is the
+   * opposite, so the workflow editor asks for a panel and keeps its graph.
+   */
+  placement?: 'modal' | 'panel';
   open: boolean;
   workspaceId: string;
   /** Null creates one; an action edits it, with its type fixed. */
@@ -72,7 +80,7 @@ const NEW_CONDITION_ROW = { value: NEW_CONDITION, label: '+ New condition' };
  * The parameters at the bottom are not asked for — the server reads them off
  * these settings — so they appear as the form is filled in.
  */
-export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDeleted }: ActionDialogProps) {
+export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDeleted, placement = 'modal' }: ActionDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   const [name, setName] = useState('');
@@ -155,7 +163,8 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
       setIcon(action?.icon ?? null);
       setError(null);
       setSubmitting(false);
-      dialog.showModal();
+      if (placement === 'panel') dialog.show();
+      else dialog.showModal();
     } else if (!open && dialog.open) {
       dialog.close();
     }
@@ -347,7 +356,7 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
   return (
     <dialog
       ref={dialogRef}
-      className={`${styles.dialog} ${styles.dialogWide}`}
+      className={`${styles.dialog} ${styles.dialogWide} ${placement === 'panel' ? styles.dialogPanel : ''}`}
       onCancel={onClose}
       onClose={onClose}
     >
