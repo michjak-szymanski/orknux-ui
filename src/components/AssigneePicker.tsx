@@ -33,6 +33,14 @@ export function AssigneePicker({ workspaceId, chosen, onChoose, label = 'Assigne
   const [search, setSearch] = useState('');
   const [found, setFound] = useState<Assignee[]>([]);
   const [loading, setLoading] = useState(false);
+  /*
+   * Which row the arrows are on.
+   *
+   * -1 is "No one", which is the first row and a real answer rather than an
+   * empty state - somebody clearing an assignee is doing the same kind of
+   * thing as choosing one, and should be able to arrow to it.
+   */
+  const [at, setAt] = useState(-1);
   const box = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -44,6 +52,10 @@ export function AssigneePicker({ workspaceId, chosen, onChoose, label = 'Assigne
         .then((people) => {
           if (!current) return;
           setFound(people);
+          // Back to the top whenever the list changes under the cursor:
+          // keeping an index into a list that no longer has that row is how a
+          // search ends up choosing somebody nobody looked at.
+          setAt(people.length === 0 ? -1 : 0);
           setLoading(false);
         })
         .catch(() => {
@@ -66,7 +78,29 @@ export function AssigneePicker({ workspaceId, chosen, onChoose, label = 'Assigne
       if (box.current !== null && !box.current.contains(event.target as Node)) setOpen(false);
     }
     function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') setOpen(false);
+      if (event.key === 'Escape') {
+        setOpen(false);
+        return;
+      }
+
+      /*
+       * Up and down move, Enter takes what is under the cursor.
+       *
+       * Bound while the list is open and prevented, so the arrows move the
+       * list rather than the caret in the search box and Enter does not
+       * submit the form the picker sits in.
+       */
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        setAt((held) => (held + 1 > found.length - 1 ? -1 : held + 1));
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        setAt((held) => (held - 1 < -1 ? found.length - 1 : held - 1));
+      } else if (event.key === 'Enter') {
+        event.preventDefault();
+        onChoose(at === -1 ? null : found[at]);
+        setOpen(false);
+      }
     }
     document.addEventListener('mousedown', onDown);
     document.addEventListener('keydown', onKey);
@@ -74,7 +108,7 @@ export function AssigneePicker({ workspaceId, chosen, onChoose, label = 'Assigne
       document.removeEventListener('mousedown', onDown);
       document.removeEventListener('keydown', onKey);
     };
-  }, [open]);
+  }, [open, found, at, onChoose]);
 
   return (
     <div className={styles.picker} ref={box}>
@@ -121,7 +155,10 @@ export function AssigneePicker({ workspaceId, chosen, onChoose, label = 'Assigne
 
           <button
             type="button"
-            className={styles.option}
+            className={at === -1 ? `${styles.option} ${styles.optionAt}` : styles.option}
+            // Under the pointer as well as under the arrows: a hand and a
+            // keyboard should not disagree about which row is next.
+            onMouseEnter={() => setAt(-1)}
             onClick={() => {
               onChoose(null);
               setOpen(false);
@@ -133,13 +170,18 @@ export function AssigneePicker({ workspaceId, chosen, onChoose, label = 'Assigne
           {loading && <p className={styles.notice}>Looking…</p>}
           {!loading && found.length === 0 && <p className={styles.notice}>Nobody by that name.</p>}
 
-          {found.map((candidate) => (
+          {found.map((candidate, index) => (
             <button
               key={`${candidate.kind}-${candidate.id}`}
               type="button"
-              className={styles.option}
+              className={index === at ? `${styles.option} ${styles.optionAt}` : styles.option}
               role="option"
-              aria-selected={chosen?.kind === candidate.kind && chosen?.id === candidate.id}
+              aria-selected={index === at}
+              // Kept in view as the arrows move past the bottom of the list.
+              ref={(node) => {
+                if (index === at) node?.scrollIntoView({ block: 'nearest' });
+              }}
+              onMouseEnter={() => setAt(index)}
               onClick={() => {
                 onChoose(candidate);
                 setOpen(false);

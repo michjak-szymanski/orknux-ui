@@ -132,3 +132,14 @@
   font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
+
+/*
+ * The row the arrows are on.
+ *
+ * The same treatment as hover, because they are the same thing said two ways:
+ * a hand and a keyboard should never disagree about which row is next.
+ */
+.optionAt {
+  background: var(--color-surface-raised);
+  outline: 1px solid var(--color-accent-brand);
+}
