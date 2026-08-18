@@ -1,0 +1,31 @@
+# What the image serves, and what it forwards.
+#
+# The bundle is a single page: every route it knows is drawn by the same
+# index.html, so a request for /workspace/1/executions is not a file and must
+# not 404 — it is that file plus a URL. Anything the browser calls on this
+# origin that belongs to the server is forwarded, which is what keeps the
+# session cookie first-party and the browser on one origin.
+server {
+    listen 8080;
+    server_name _;
+    root /usr/share/nginx/html;
+
+    # nginx resolves the name in proxy_pass when it starts, so a server that is
+    # not up yet stops this container from starting. That is deliberate: a front
+    # end that starts without a back end serves a sign-in screen that cannot
+    # sign anybody in, which is a worse thing to hand somebody than a restart.
+    location /api  { proxy_pass ${ORKNUX_SERVER_URL}; include /etc/nginx/orknux-proxy.conf; }
+    location /graphql { proxy_pass ${ORKNUX_SERVER_URL}; include /etc/nginx/orknux-proxy.conf; }
+    location /mcp  { proxy_pass ${ORKNUX_SERVER_URL}; include /etc/nginx/orknux-proxy.conf; }
+
+    # Hashed by the build, so they can be kept for a year; index.html never is,
+    # or a deployment would go on serving the previous bundle.
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

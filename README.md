@@ -1,9 +1,43 @@
 # orknux-ui
 
+[![CI](https://github.com/michjak-szymanski/orknux-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/michjak-szymanski/orknux-ui/actions/workflows/ci.yml)
+[![Licence](https://img.shields.io/github/license/michjak-szymanski/orknux-ui?label=licence)](LICENSE)
+
 The front end for
 [orknux-server](https://github.com/michjak-szymanski/orknux-server): React +
 TypeScript, built with Vite, styled with CSS Modules over the design tokens in
 `src/styles/tokens.css`. Workflows are edited on a React Flow canvas.
+
+# What it looks like
+
+The pictures are the manual's own, in `public/screens`, taken by
+`scripts/screenshots.mjs` against a workspace `scripts/seed-demo.mjs` builds for
+the purpose — so they are the current interface rather than the one somebody
+photographed once.
+
+![The workflow editor: the graph, what each edge carries, and the selected
+node's settings](public/screens/editor.png)
+
+*The editor. Edges are labelled with the fields that travel along them, and a
+label can be dragged out of the way.*
+
+![A run: its summary, and the graph as it ran with each node's
+outcome](public/screens/execution-detail.png)
+
+*A run, node by node.*
+
+![A chat with one of the workspace's models](public/screens/chat.png)
+
+*Chat — with voice mode, which listens, answers and reads the answer back.*
+
+![The quick chat, open over a page and answering about
+it](public/screens/quick-chat.png)
+
+*The quick chat, which answers about whatever is on screen.*
+
+The rest — the catalogues, the admin section, the command palette — are in
+[the manual](src/docs), which is what the [documentation site](https://orknux.io/docs)
+serves.
 
 # Running
 

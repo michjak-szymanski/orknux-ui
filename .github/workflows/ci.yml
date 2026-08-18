@@ -1,0 +1,95 @@
+name: CI
+
+# Every push and every pull request is typechecked and built. Only main and
+# release tags are published: an image for a branch nobody has reviewed is a
+# liability rather than a convenience.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+# A second push to the same branch makes the first one's result irrelevant.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+env:
+  IMAGE_NAME: orknux-ui
+
+jobs:
+  build:
+    name: Typecheck and build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # `npm ci` rather than `npm install`: the lockfile is what the container
+      # the developers use installs from, so CI should install the same tree.
+      - name: Install
+        run: npm ci
+
+      # `tsc -b` on its own, before the build, so a type error is reported as a
+      # type error rather than as whatever vite says when it cannot compile.
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+  publish:
+    name: Publish image
+    runs-on: ubuntu-latest
+    # The bundle has to compile before anything is published; the image build
+    # runs the same build again, so a red typecheck cannot reach the registry.
+    needs: build
+    # Never from a pull request: a fork's pull request must not be able to reach
+    # the registry credentials, and an unmerged change has nothing to publish.
+    if: github.event_name == 'push'
+
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # The same scheme the server publishes under: latest follows main, a
+      # vX.Y.Z tag also publishes X.Y.Z and X.Y, and every build carries its
+      # commit — the one tag that never moves.
+      - name: Work out tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=long
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
