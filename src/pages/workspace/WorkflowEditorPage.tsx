@@ -58,6 +58,7 @@ import pencilIcon from '../../assets/pencil.svg';
 import { ActionDialog } from '../../components/ActionDialog';
 import { AppShell } from '../../components/AppShell';
 import { ConditionDialog } from '../../components/ConditionDialog';
+import { DefinitionPicker } from '../../components/DefinitionPicker';
 import { CreateAgentDialog } from '../../components/CreateAgentDialog';
 import { NameDialog } from '../../components/NameDialog';
 import { CreateTriggerDialog } from '../../components/CreateTriggerDialog';
@@ -1961,19 +1962,14 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                       </span>
                     </span>
                     <div className={styles.inputWrapper}>
-                      <select
+                      <DefinitionPicker
                         id="node-agent"
-                        className={`${styles.input} ${styles.select}`}
                         value={draft.agentId ?? ''}
-                        onChange={(event) => setDraft({ ...draft, agentId: event.target.value || null })}
-                      >
-                        <option value="">—</option>
-                        {agents.map((agent) => (
-                          <option key={agent.id} value={agent.id}>
-                            {agent.name}
-                          </option>
-                        ))}
-                      </select>
+                        options={agents.map((agent) => ({ value: agent.id, label: agent.name }))}
+                        onChoose={(chosen) => setDraft({ ...draft, agentId: chosen || null })}
+                        placeholder="Choose an agent…"
+                        searchPlaceholder="Search agents…"
+                      />
                     </div>
                     {/* The agent brings its own, so the node chooses no model. */}
                     <p className={styles.parameterHint}>
@@ -2009,19 +2005,14 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                       </span>
                     </span>
                     <div className={styles.inputWrapper}>
-                      <select
+                      <DefinitionPicker
                         id="node-trigger"
-                        className={`${styles.input} ${styles.select}`}
                         value={draft.triggerId ?? ''}
-                        onChange={(event) => setDraft({ ...draft, triggerId: event.target.value || null })}
-                      >
-                        <option value="">—</option>
-                        {triggers.map((trigger) => (
-                          <option key={trigger.id} value={trigger.id}>
-                            {trigger.name} · {trigger.source} · {trigger.event}
-                          </option>
-                        ))}
-                      </select>
+                        options={triggers.map((trigger) => ({ value: trigger.id, label: trigger.name }))}
+                        onChoose={(chosen) => setDraft({ ...draft, triggerId: chosen || null })}
+                        placeholder="Choose a trigger…"
+                        searchPlaceholder="Search triggers…"
+                      />
                     </div>
                   </div>
                 )}
@@ -2052,19 +2043,14 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                       </span>
                     </span>
                     <div className={styles.inputWrapper}>
-                      <select
+                      <DefinitionPicker
                         id="node-action"
-                        className={`${styles.input} ${styles.select}`}
                         value={draft.actionId ?? ''}
-                        onChange={(event) => setDraft({ ...draft, actionId: event.target.value || null })}
-                      >
-                        <option value="">—</option>
-                        {actions.map((action) => (
-                          <option key={action.id} value={action.id}>
-                            {action.name} · {action.subtypeLabel}
-                          </option>
-                        ))}
-                      </select>
+                        options={actions.map((action) => ({ value: action.id, label: action.name }))}
+                        onChoose={(chosen) => setDraft({ ...draft, actionId: chosen || null })}
+                        placeholder="Choose an action…"
+                        searchPlaceholder="Search actions…"
+                      />
                     </div>
                   </div>
                 )}
@@ -2100,19 +2086,14 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                       </span>
                     </span>
                     <div className={styles.inputWrapper}>
-                      <select
+                      <DefinitionPicker
                         id="node-object"
-                        className={`${styles.input} ${styles.select}`}
                         value={draft.objectId ?? ''}
-                        onChange={(event) => setDraft({ ...draft, objectId: event.target.value || null })}
-                      >
-                        <option value="">Custom &mdash; this node&apos;s own fields</option>
-                        {objects.map((shape) => (
-                          <option key={shape.id} value={shape.id}>
-                            {shape.name} &middot; {shape.propertyCount} fields
-                          </option>
-                        ))}
-                      </select>
+                        options={objects.map((shape) => ({ value: shape.id, label: shape.name }))}
+                        onChoose={(chosen) => setDraft({ ...draft, objectId: chosen || null })}
+                        placeholder="Choose a shape…"
+                        searchPlaceholder="Search objects…"
+                      />
                     </div>
                     <p className={styles.parameterHint}>
                       A saved shape fixes which fields there are; this node decides what goes in them.
@@ -2402,21 +2383,14 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                       </span>
                     </span>
                     <div className={styles.inputWrapper}>
-                      <select
+                      <DefinitionPicker
                         id="node-condition"
-                        className={`${styles.input} ${styles.select}`}
                         value={draft.conditionId ?? ''}
-                        onChange={(event) =>
-                          setDraft({ ...draft, conditionId: event.target.value || null })
-                        }
-                      >
-                        <option value="">—</option>
-                        {conditions.map((condition) => (
-                          <option key={condition.id} value={condition.id}>
-                            {condition.name} · {condition.typeLabel}
-                          </option>
-                        ))}
-                      </select>
+                        options={conditions.map((condition) => ({ value: condition.id, label: condition.name }))}
+                        onChoose={(chosen) => setDraft({ ...draft, conditionId: chosen || null })}
+                        placeholder="Choose a condition…"
+                        searchPlaceholder="Search conditions…"
+                      />
                     </div>
                   </div>
                 )}
