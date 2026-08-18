@@ -1,0 +1,211 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-20);
+  width: 100%;
+  padding: var(--space-24);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-16);
+}
+
+.titleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--text-xl);
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  margin: 0;
+  max-width: 70ch;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.create {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-8) var(--space-16);
+  background: var(--color-accent-brand);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.searchRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-12);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.search {
+  flex: 1 1 0;
+  min-width: 0;
+  background: none;
+  border: 0;
+  outline: none;
+  font: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-danger);
+}
+
+.table {
+  display: flex;
+  flex-direction: column;
+}
+
+.tableHeader,
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) 100px minmax(0, 2fr) minmax(0, 2fr) 44px;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-12) var(--space-8);
+}
+
+.tableHeader {
+  border-bottom: 1px solid var(--color-border);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.row {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.colUser {
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+  min-width: 0;
+}
+
+/* The circle the header wears, for everybody on the list. */
+.avatar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: var(--text-xs);
+  color: var(--color-text-primary);
+}
+
+.names {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.displayName {
+  overflow: hidden;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.username {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Which kind, at a glance: ours is the accented one. */
+.badgeInternal,
+.badgeExternal {
+  display: inline-flex;
+  padding: var(--space-2) var(--space-8);
+  border-radius: var(--radius-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.badgeInternal {
+  background: var(--color-accent-brand-soft);
+  color: var(--color-accent-brand);
+}
+
+.badgeExternal {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.colRoles,
+.colModified {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.colActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.edit {
+  display: flex;
+  align-items: center;
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.edit:hover {
+  background: var(--color-surface-raised);
+}
+
+.notice {
+  margin: 0;
+  padding: var(--space-24) 0;
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+  text-align: center;
+}

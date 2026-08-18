@@ -10,6 +10,7 @@ import codeIcon from './assets/code.svg';
 import commandIcon from './assets/command.svg';
 import databaseIcon from './assets/database.svg';
 import fileTextIcon from './assets/file-text.svg';
+import userIcon from './assets/user.svg';
 import filterIcon from './assets/filter.svg';
 import gitBranchIcon from './assets/git-branch.svg';
 import lockKeyholeIcon from './assets/lock-keyhole.svg';
@@ -193,6 +194,9 @@ export const PAGES = [
   // ---- The installation ----
   { path: '/admin', access: 'admin', goTo: { label: 'Workspaces', where: 'Admin', icon: commandIcon } },
   { path: '/admin/audit', access: 'admin', goTo: { label: 'Audit Log', where: 'Admin', icon: fileTextIcon } },
+  { path: '/admin/users', access: 'admin', goTo: { label: 'Users', where: 'Admin', icon: userIcon } },
+  { path: '/admin/users/new', access: 'admin', goTo: false },
+  { path: '/admin/users/:userId', access: 'admin', goTo: false },
   {
     path: '/admin/integrations',
     access: 'admin',

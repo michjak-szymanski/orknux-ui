@@ -6,11 +6,13 @@ import puzzleIcon from '../assets/puzzle.svg';
 import settingsIcon from '../assets/settings.svg';
 import stethoscopeIcon from '../assets/activity.svg';
 import shieldIcon from '../assets/lock-keyhole.svg';
+import userIcon from '../assets/user.svg';
 import { SidebarNavItem } from './AppShell';
 import styles from './AdminSidebar.module.css';
 
 export type AdminSection =
   | 'workspaces'
+  | 'users'
   | 'roles'
   | 'audit'
   | 'integrations'
@@ -25,6 +27,7 @@ export function AdminSidebar({ active }: { active: AdminSection }) {
     <>
       <SidebarNavItem label="Workspaces" icon={commandIcon} active={active === 'workspaces'} to="/admin" />
       {/* Beside Workspaces, because what a role is for is which workspaces it opens. */}
+      <SidebarNavItem label="Users" icon={userIcon} active={active === 'users'} to="/admin/users" />
       <SidebarNavItem label="Roles" icon={shieldIcon} active={active === 'roles'} to="/admin/roles" />
       <SidebarNavItem
         label="Audit Log"
