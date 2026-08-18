@@ -762,7 +762,14 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           sameMappings(data.mappings, draft.mappings);
         if (same) return node;
         setSaved(false);
-        return { ...node, data: { ...draft } };
+        /*
+         * Merged, not replaced. The panel owns what it edits; the ports the
+         * server worked out for this node — what it needs and what it gives —
+         * are not the panel's to know, and replacing the data wholesale dropped
+         * them. They came back on the next save, which made an edit look like it
+         * had removed a field until the graph was saved.
+         */
+        return { ...node, data: { ...data, ...draft } };
       }),
     );
   }, [draft, selectedKey, setNodes]);
@@ -1318,8 +1325,15 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                     ) : (
                       <>
                         <div className={styles.parameterList}>
+                          {/*
+                            Keyed by position, not by name. Keyed by name, editing
+                            a field's name changed its key on every keystroke: React
+                            threw the input away and mounted a new one, focus went
+                            with it, and the next Backspace reached the canvas — where
+                            it deleted the selected node.
+                          */}
                           {draft.mappings.map((mapping, index) => (
-                            <div className={styles.parameter} key={mapping.name}>
+                            <div className={styles.parameter} key={index}>
                               <span className={styles.parameterHead}>
                                 {draft.kind === 'OBJECT' && draft.objectId === null ? (
                                   <input
