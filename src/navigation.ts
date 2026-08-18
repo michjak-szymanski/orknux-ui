@@ -237,7 +237,15 @@ export const PAGES = [
   },
   {
     path: '/admin/settings',
-    access: 'signed-in',
+    /*
+     * Administrators, like every other page under /admin.
+     *
+     * It was 'signed-in', so Go to offered it to anybody under the Admin
+     * heading and the page opened for them - showing what the installation
+     * allows, with switches the server then refuses. The refusal was correct;
+     * offering the page at all was not.
+     */
+    access: 'admin',
     goTo: { label: 'Settings', where: 'Admin', icon: settingsIcon, also: 'attachments chat installation' },
   },
   { path: '/admin/workspaces/:workspaceId/settings', access: 'admin', goTo: false },
