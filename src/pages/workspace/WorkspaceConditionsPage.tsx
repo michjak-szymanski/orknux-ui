@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import type { PageOf } from '../../api/client';
 import { fetchCondition, fetchWorkspaceConditions } from '../../api/conditions';
@@ -32,6 +32,19 @@ export function WorkspaceConditionsPage({ session, onSignOut }: WorkspaceConditi
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Condition | null>(null);
+  /*
+   * Arriving to wrap a function in a condition.
+   *
+   * The function editor sends `?function=<id>`, and that is the whole of the
+   * handover: the dialog opens on Function with it already chosen. Read from the
+   * query rather than passed through router state so the link can be kept, sent,
+   * or opened in a second tab and still mean the same thing.
+   */
+  const [query, setQuery] = useSearchParams();
+  const wrapping = query.get('function');
+  // One object per function, or the dialog would be handed a new one to look at
+  // on every render of this page.
+  const preset = useMemo(() => (wrapping === null ? null : { functionId: wrapping }), [wrapping]);
 
   const load = useCallback(() => {
     if (workspaceId === '') return;
@@ -78,7 +91,14 @@ export function WorkspaceConditionsPage({ session, onSignOut }: WorkspaceConditi
     setCreating(false);
     setEditing(null);
     if (conditionId !== undefined) navigate(`/workspace/${workspaceId}/conditions`, { replace: true });
-  }, [conditionId, navigate, workspaceId]);
+    // The function came in the address, so closing has to take it back out, or
+    // the next Create Condition would open on somebody else's function.
+    if (query.has('function')) {
+      const rest = new URLSearchParams(query);
+      rest.delete('function');
+      setQuery(rest, { replace: true });
+    }
+  }, [conditionId, navigate, workspaceId, query, setQuery]);
 
   return (
     <AppShell
@@ -155,9 +175,10 @@ export function WorkspaceConditionsPage({ session, onSignOut }: WorkspaceConditi
       </section>
 
       <ConditionDialog
-        open={creating || editing !== null}
+        open={creating || editing !== null || wrapping !== null}
         workspaceId={workspaceId}
         condition={editing}
+        preset={preset}
         onClose={closeDialog}
         onSaved={() => {
           closeDialog();

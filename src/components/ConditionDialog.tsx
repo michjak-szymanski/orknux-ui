@@ -27,6 +27,15 @@ export interface ConditionDialogProps {
   workspaceId: string;
   /** Null creates one; a condition edits it. */
   condition: Condition | null;
+  /**
+   * What a new condition starts as, when something else decided that for it.
+   *
+   * The function editor sends somebody here to wrap a function it already knows
+   * the id of, and asking them to find it again in a list would be asking them
+   * for the one thing they came with. Ignored when editing: a condition that
+   * exists says what it is itself.
+   */
+  preset?: { functionId: string } | null;
   onClose: () => void;
   onSaved: (condition: Condition) => void;
   onDeleted?: () => void;
@@ -46,6 +55,7 @@ export function ConditionDialog({
   open,
   workspaceId,
   condition,
+  preset = null,
   onClose,
   onSaved,
   onDeleted,
@@ -76,14 +86,14 @@ export function ConditionDialog({
 
     if (open && !dialog.open) {
       setName(condition?.name ?? '');
-      setType(condition?.type ?? 'SLACK');
+      setType(condition?.type ?? (preset === null ? 'SLACK' : 'FUNCTION'));
       const startingProperty = condition?.property ?? 'MESSAGE_AUTHOR';
       setProperty(startingProperty);
       // The first check the property offers, so a new condition never opens on
       // one the dropdown does not list.
       setCheck(condition?.check ?? CHECKS_BY_PROPERTY[startingProperty][0]);
       setNegate(condition?.negate ?? false);
-      setFunctionId(condition?.functionId ?? '');
+      setFunctionId(condition?.functionId ?? preset?.functionId ?? '');
       setValues(condition?.values ?? []);
       setMembers(condition?.members ?? []);
       setIcon(condition?.icon ?? null);
@@ -94,7 +104,7 @@ export function ConditionDialog({
     } else if (!open && dialog.open) {
       dialog.close();
     }
-  }, [open, condition]);
+  }, [open, condition, preset]);
 
   useEffect(() => {
     if (!open || workspaceId === '') return;

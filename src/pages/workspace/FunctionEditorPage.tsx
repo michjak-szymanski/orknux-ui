@@ -466,6 +466,23 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                     <TrashIcon />
                   </button>
                 )}
+                {/*
+                  A function that answers yes or no is a condition waiting to be
+                  written, and writing it meant going to Conditions, choosing
+                  Function, and finding this one in a list. Only offered for a
+                  function that returns a boolean: the condition dialog lists no
+                  others, so the button would lead somewhere that could not show
+                  what it was opened for.
+                */}
+                {!creating && returnType === 'BOOLEAN' && (
+                  <button
+                    type="button"
+                    className={styles.ghostButton}
+                    onClick={() => navigate(`/workspace/${workspaceId}/conditions?function=${functionId}`)}
+                  >
+                    Wrap in Condition
+                  </button>
+                )}
                 <button type="button" className={styles.ghostButton} onClick={handleValidate}>
                   Validate
                 </button>
