@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import {
+  ISSUE_STATUS_LABEL,
   commentOnIssue,
   createIssue,
   deleteIssue,
   editIssueComment,
   fetchIssue,
+  fetchIssueLabels,
   updateIssue,
 } from '../../api/issues';
 import type { Assignee, Issue, IssueStatus } from '../../api/issues';
@@ -23,6 +25,15 @@ import { TrashIcon } from '../../components/TrashIcon';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceIssuePage.module.css';
+
+/**
+ * How many existing labels are offered at once.
+ *
+ * Six is a glance; a workspace with forty labels would otherwise put a wall
+ * of them under a one-line box, and anybody with forty labels is typing the
+ * one they want anyway.
+ */
+const SUGGESTIONS = 6;
 
 export interface WorkspaceIssuePageProps {
   session: SessionUser;
@@ -54,6 +65,25 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [labels, setLabels] = useState<string[]>([]);
+  /*
+   * The labels this workspace already uses, offered as you type.
+   *
+   * A tracker's labels are only useful when everybody spells them the same
+   * way: "p1" and "P1" filter separately, and nobody notices until a search
+   * comes back short. Suggesting what exists is what keeps that from
+   * happening, without forbidding a new one.
+   */
+  const [known, setKnown] = useState<string[]>([]);
+  /*
+   * Whether filing one issue leads to filing the next.
+   *
+   * Somebody arriving with a list in their head files four things in a row,
+   * and being taken to each one as it is filed means four journeys back. Off
+   * by default, because the common case is one issue and then reading it.
+   */
+  const [fileAnother, setFileAnother] = useState(false);
+  /** The number of the one just filed, so an emptied form still says it worked. */
+  const [filed, setFiled] = useState<number | null>(null);
   const [labelDraft, setLabelDraft] = useState('');
   const [assignee, setAssignee] = useState<Assignee | null>(null);
   const [status, setStatus] = useState<IssueStatus>('OPEN');
@@ -99,6 +129,13 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
     };
   }, [creating, workspaceId, number]);
 
+  useEffect(() => {
+    if (workspaceId === '') return;
+    fetchIssueLabels(workspaceId)
+      .then(setKnown)
+      .catch(() => setKnown([]));
+  }, [workspaceId]);
+
   async function save() {
     if (saving || title.trim() === '') return;
     setSaving(true);
@@ -114,7 +151,19 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
       };
       if (creating) {
         const made = await createIssue({ workspaceId, ...details });
-        navigate(`/workspace/${workspaceId}/issues/${made.number}`, { replace: true });
+        if (fileAnother) {
+          /*
+           * Cleared back to an empty form rather than reloaded: the point is
+           * to keep somebody where they are. The assignee and the labels stay,
+           * because four issues filed in a row are usually four issues about
+           * the same thing, going to the same person.
+           */
+          setTitle('');
+          setDescription('');
+          setFiled(made.number);
+        } else {
+          navigate(`/workspace/${workspaceId}/issues/${made.number}`, { replace: true });
+        }
       } else if (issue !== null) {
         setIssue(await updateIssue(issue.id, details));
       }
@@ -125,10 +174,21 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
     }
   }
 
-  /** Open and closed are one click, not a field somebody has to find. */
-  async function toggleStatus() {
+  /**
+   * Moving an issue along, in one click from wherever it is.
+   *
+   * Open leads to in progress and in progress to closed, because that is the
+   * order work actually happens in; closed leads back to open, which is what
+   * reopening means. The button says where it is now and its title says where
+   * pressing it goes, so nothing has to be guessed from an arrow.
+   */
+  function nextStatus(from: IssueStatus): IssueStatus {
+    if (from === 'OPEN') return 'IN_PROGRESS';
+    return from === 'IN_PROGRESS' ? 'CLOSED' : 'OPEN';
+  }
+
+  async function setIssueStatus(wanted: IssueStatus) {
     if (creating || saving) return;
-    const wanted: IssueStatus = status === 'OPEN' ? 'CLOSED' : 'OPEN';
     if (issue === null) return;
     setSaving(true);
     try {
@@ -140,6 +200,11 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
     } finally {
       setSaving(false);
     }
+  }
+
+  /** The one-click move, for the places that offer it. */
+  async function toggleStatus() {
+    await setIssueStatus(nextStatus(status));
   }
 
   /** Saving a change to a comment; only the author is offered this. */
@@ -230,6 +295,21 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
                   <TrashIcon />
                 </button>
               )}
+              {creating && (
+                /*
+                  Beside the button it changes, not above it: a checkbox that
+                  alters what a button does has to be read in the same glance
+                  as the button.
+                */
+                <label className={styles.fileAnother}>
+                  <input
+                    type="checkbox"
+                    checked={fileAnother}
+                    onChange={(event) => setFileAnother(event.target.checked)}
+                  />
+                  File another
+                </label>
+              )}
               <button
                 type="button"
                 className={styles.save}
@@ -244,6 +324,21 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
           {error !== null && (
             <p className={styles.error} role="alert">
               {error}
+            </p>
+          )}
+
+          {/*
+            An emptied form looks exactly like a form that did nothing, so the
+            one just filed says so and links to itself - the only way back to it
+            once the page has moved on.
+          */}
+          {creating && filed !== null && error === null && (
+            <p className={styles.filed} role="status">
+              Filed{' '}
+              <Link to={`/workspace/${workspaceId}/issues/${filed}`} className={styles.filedLink}>
+                #{filed}
+              </Link>
+              . The next one is ready.
             </p>
           )}
 
@@ -356,8 +451,13 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
                     />
                     <div className={styles.composerActions}>
                       {/* Closing and commenting are the two things anybody does here. */}
-                      <button type="button" className={styles.ghost} onClick={() => void toggleStatus()} disabled={saving}>
-                        {status === 'OPEN' ? 'Close issue' : 'Reopen issue'}
+                      <button
+                        type="button"
+                        className={styles.ghost}
+                        onClick={() => void setIssueStatus(status === 'CLOSED' ? 'OPEN' : 'CLOSED')}
+                        disabled={saving}
+                      >
+                        {status === 'CLOSED' ? 'Reopen issue' : 'Close issue'}
                       </button>
                       <button
                         type="button"
@@ -378,12 +478,22 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
                 <span className={styles.label}>Status</span>
                 <button
                   type="button"
-                  className={status === 'OPEN' ? styles.statusOpen : styles.statusClosed}
+                  className={
+                    status === 'OPEN'
+                      ? styles.statusOpen
+                      : status === 'IN_PROGRESS'
+                        ? styles.statusProgress
+                        : styles.statusClosed
+                  }
                   onClick={() => void toggleStatus()}
                   disabled={creating || saving}
-                  title={creating ? 'A new issue opens when it is filed' : 'Change the status'}
+                  title={
+                    creating
+                      ? 'A new issue opens when it is filed'
+                      : `Press for ${ISSUE_STATUS_LABEL[nextStatus(status)].toLowerCase()}`
+                  }
                 >
-                  {status === 'OPEN' ? 'Open' : 'Closed'}
+                  {ISSUE_STATUS_LABEL[status]}
                 </button>
               </div>
 
@@ -419,6 +529,44 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
                   }}
                   onBlur={addLabel}
                 />
+                {/*
+                  What this workspace already calls things, narrowed as you
+                  type. Only labels not already on this issue, and only when
+                  there is something to choose - a list that never shrinks is a
+                  list nobody reads.
+                */}
+                {known.filter(
+                  (one) =>
+                    !labels.includes(one) &&
+                    (labelDraft.trim() === '' || one.toLowerCase().includes(labelDraft.trim().toLowerCase())),
+                ).length > 0 && (
+                  <div className={styles.labelSuggestions}>
+                    {known
+                      .filter(
+                        (one) =>
+                          !labels.includes(one) &&
+                          (labelDraft.trim() === '' ||
+                            one.toLowerCase().includes(labelDraft.trim().toLowerCase())),
+                      )
+                      .slice(0, SUGGESTIONS)
+                      .map((one) => (
+                        <button
+                          key={one}
+                          type="button"
+                          className={styles.labelSuggestion}
+                          // Pressed rather than clicked, so the label box losing
+                          // focus does not add whatever was half-typed first.
+                          onMouseDown={(event) => {
+                            event.preventDefault();
+                            setLabels([...labels, one]);
+                            setLabelDraft('');
+                          }}
+                        >
+                          + {one}
+                        </button>
+                      ))}
+                  </div>
+                )}
               </div>
 
               {!creating && (

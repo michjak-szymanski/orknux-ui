@@ -1,7 +1,17 @@
 import { graphql } from './client';
 
 /** Where an issue is in its life. Two states; a third would need a reason. */
-export type IssueStatus = 'OPEN' | 'CLOSED';
+export type IssueStatus = 'OPEN' | 'IN_PROGRESS' | 'CLOSED';
+
+/** What a list is ordered by, in the words the server uses. */
+export type IssueOrder = 'NUMBER' | 'TITLE' | 'UPDATED';
+
+/** What each state is called where somebody reads it. */
+export const ISSUE_STATUS_LABEL: Record<IssueStatus, string> = {
+  OPEN: 'Open',
+  IN_PROGRESS: 'In progress',
+  CLOSED: 'Closed',
+};
 
 /**
  * What kind of thing an issue is assigned to.
@@ -72,11 +82,20 @@ const FULL_FIELDS = `
 
 export async function fetchIssues(
   workspaceId: string,
-  options: { status?: IssueStatus; search?: string; page?: number; size?: number } = {},
+  options: {
+    status?: IssueStatus;
+    search?: string;
+    page?: number;
+    size?: number;
+    order?: IssueOrder;
+    ascending?: boolean;
+  } = {},
 ): Promise<IssuePage> {
   const data = await graphql<{ workspaceIssues: IssuePage }>(
-    `query ($workspaceId: ID!, $status: IssueStatus, $search: String, $page: Int, $size: Int) {
-       workspaceIssues(workspaceId: $workspaceId, status: $status, search: $search, page: $page, size: $size) {
+    `query ($workspaceId: ID!, $status: IssueStatus, $search: String, $page: Int, $size: Int,
+            $order: IssueOrder, $ascending: Boolean) {
+       workspaceIssues(workspaceId: $workspaceId, status: $status, search: $search, page: $page, size: $size,
+                       order: $order, ascending: $ascending) {
          totalElements
          content { ${ROW_FIELDS} }
        }
@@ -84,6 +103,8 @@ export async function fetchIssues(
     {
       workspaceId,
       status: options.status ?? null,
+      order: options.order ?? null,
+      ascending: options.ascending ?? null,
       search: options.search || null,
       page: options.page ?? 0,
       size: options.size ?? 20,

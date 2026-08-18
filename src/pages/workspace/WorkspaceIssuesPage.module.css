@@ -201,6 +201,7 @@
 
 /* Open or closed, in the one place the eye already is. */
 .dotOpen,
+.dotProgress,
 .dotClosed {
   display: block;
   flex: none;
@@ -215,6 +216,67 @@
 
 .dotClosed {
   background: var(--color-text-muted);
+}
+
+/*
+ * Amber for work in hand: the same colour this interface already uses for
+ * "something is happening", and distinct from the brand colour at a glance
+ * down a column of dots, which is the only way anybody reads these.
+ */
+.dotProgress {
+  background: var(--color-accent-warning, #f59e0b);
+}
+
+/*
+ * The order and the size of the list, beside the search rather than above it.
+ *
+ * They are read far less often than the search box and belong on the same
+ * line as it: a row of controls that only some people ever touch should not
+ * push the list itself further down the page for everybody.
+ */
+.sortRow {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.sortLabel {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.sortSelect {
+  padding: var(--space-6) var(--space-8);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.sortDirection {
+  width: 30px;
+  padding: var(--space-6) 0;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  text-align: center;
+  cursor: pointer;
+}
+
+.sortDirection:hover,
+.sortSelect:hover {
+  border-color: var(--color-text-muted);
 }
 
 .issueTitle {

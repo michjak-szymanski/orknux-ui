@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
-import { fetchIssueLabels, fetchIssues } from '../../api/issues';
-import type { Issue, IssuePage, IssueStatus } from '../../api/issues';
+import { ISSUE_STATUS_LABEL, fetchIssueLabels, fetchIssues } from '../../api/issues';
+import type { Issue, IssueOrder, IssuePage, IssueStatus } from '../../api/issues';
 import type { SessionUser } from '../../api/session';
 import { timeAgo } from '../../api/tools';
 import { initialsOf } from '../../api/users';
@@ -20,7 +20,17 @@ export interface WorkspaceIssuesPageProps {
   onSignOut?: () => void;
 }
 
-const PAGE_SIZE = 10;
+/**
+ * How many rows a page holds, and what else it may be set to.
+ *
+ * Ten fits a laptop without scrolling, which is why it is first; a tracker
+ * being read rather than worked through wants fifty. Remembered per person
+ * rather than per workspace - it says how much of a screen somebody has, not
+ * what they are looking at.
+ */
+const PAGE_SIZES = [10, 25, 50, 100];
+const DEFAULT_PAGE_SIZE = 10;
+const PAGE_SIZE_KEY = 'orknux.issues.page-size';
 
 /** How long typing has to pause before the list is asked. */
 const SEARCH_PAUSE_MS = 300;
@@ -38,8 +48,22 @@ const STALE_AFTER_MS = 30_000;
 /** Open first, because that is what somebody arriving is looking at. */
 const FILTERS: { label: string; status: IssueStatus | null }[] = [
   { label: 'Open', status: 'OPEN' },
+  { label: 'In progress', status: 'IN_PROGRESS' },
   { label: 'Closed', status: 'CLOSED' },
   { label: 'All', status: null },
+];
+
+/**
+ * What the list can be ordered by, in the words somebody would use.
+ *
+ * Asked of the server rather than sorted here: this page holds ten rows of a
+ * hundred, and sorting ten of them orders the page instead of the tracker -
+ * which looks like it worked until the row somebody wanted is on page three.
+ */
+const ORDERS: { label: string; order: IssueOrder }[] = [
+  { label: 'Newest', order: 'NUMBER' },
+  { label: 'Title', order: 'TITLE' },
+  { label: 'Last change', order: 'UPDATED' },
 ];
 
 /**
@@ -63,6 +87,12 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
   const [status, setStatus] = useState<IssueStatus | null>('OPEN');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [order, setOrder] = useState<IssueOrder>('NUMBER');
+  const [ascending, setAscending] = useState(false);
+  const [pageSize, setPageSize] = useState(() => {
+    const held = Number(window.localStorage.getItem(PAGE_SIZE_KEY));
+    return PAGE_SIZES.includes(held) ? held : DEFAULT_PAGE_SIZE;
+  });
   const [loading, setLoading] = useState(true);
   /*
    * Bumped to ask again.
@@ -102,7 +132,9 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
         status: status ?? undefined,
         search: search.trim() || undefined,
         page: page - 1,
-        size: PAGE_SIZE,
+        size: pageSize,
+        order,
+        ascending,
       })
         .then((found) => {
           if (!current) return;
@@ -121,7 +153,7 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
       current = false;
       window.clearTimeout(timer);
     };
-  }, [workspaceId, status, search, page, asked]);
+  }, [workspaceId, status, search, page, pageSize, order, ascending, asked]);
 
   /*
    * Coming back to the window catches the list up, quietly and not always.
@@ -212,6 +244,68 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
               }}
             />
           </div>
+
+          <div className={styles.sortRow}>
+            <label className={styles.sortLabel} htmlFor="issue-order">
+              Sort
+            </label>
+            <select
+              id="issue-order"
+              className={styles.sortSelect}
+              value={order}
+              onChange={(event) => {
+                setOrder(event.target.value as IssueOrder);
+                setPage(1);
+              }}
+            >
+              {ORDERS.map((one) => (
+                <option key={one.order} value={one.order}>
+                  {one.label}
+                </option>
+              ))}
+            </select>
+            {/*
+              One button rather than two options, because a direction has two
+              states and a control with two states is a switch. The arrow says
+              which way it is now, not which way pressing it would go.
+            */}
+            <button
+              type="button"
+              className={styles.sortDirection}
+              onClick={() => {
+                setAscending((was) => !was);
+                setPage(1);
+              }}
+              title={ascending ? 'Ascending - press for descending' : 'Descending - press for ascending'}
+              aria-label={ascending ? 'Sorted ascending' : 'Sorted descending'}
+            >
+              {ascending ? '↑' : '↓'}
+            </button>
+
+            <label className={styles.sortLabel} htmlFor="issue-page-size">
+              Show
+            </label>
+            <select
+              id="issue-page-size"
+              className={styles.sortSelect}
+              value={pageSize}
+              onChange={(event) => {
+                const chosen = Number(event.target.value);
+                setPageSize(chosen);
+                window.localStorage.setItem(PAGE_SIZE_KEY, String(chosen));
+                // The page somebody is on means something different at a
+                // different size, and the first page is the one that always
+                // exists.
+                setPage(1);
+              }}
+            >
+              {PAGE_SIZES.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {labels.length > 0 && (
@@ -262,7 +356,17 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
               >
                 <span className={styles.rowMain}>
                   <span className={styles.rowTitle}>
-                    <span className={issue.status === 'OPEN' ? styles.dotOpen : styles.dotClosed} aria-hidden="true" />
+                    <span
+                      className={
+                        issue.status === 'OPEN'
+                          ? styles.dotOpen
+                          : issue.status === 'IN_PROGRESS'
+                            ? styles.dotProgress
+                            : styles.dotClosed
+                      }
+                      aria-hidden="true"
+                      title={ISSUE_STATUS_LABEL[issue.status]}
+                    />
                     <span className={styles.issueTitle}>{issue.title}</span>
                   </span>
                   <span className={styles.rowMeta}>
@@ -291,10 +395,10 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
             ))}
         </div>
 
-        {issues !== null && issues.totalElements > PAGE_SIZE && (
+        {issues !== null && issues.totalElements > pageSize && (
           <CompactPagination
             page={page}
-            pageSize={PAGE_SIZE}
+            pageSize={pageSize}
             totalItems={issues.totalElements}
             unit="issues"
             onPageChange={setPage}
