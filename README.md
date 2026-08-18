@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/michjak-szymanski/orknux-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/michjak-szymanski/orknux-ui/actions/workflows/ci.yml)
 [![Licence](https://img.shields.io/github/license/michjak-szymanski/orknux-ui?label=licence)](LICENSE)
+[![Docker](https://img.shields.io/docker/v/orknux/orknux-ui?label=docker&sort=semver)](https://hub.docker.com/r/orknux/orknux-ui)
+[![Image size](https://img.shields.io/docker/image-size/orknux/orknux-ui/latest?label=image)](https://hub.docker.com/r/orknux/orknux-ui)
 
 The front end for
 [orknux-server](https://github.com/michjak-szymanski/orknux-server): React +
