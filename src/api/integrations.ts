@@ -1,7 +1,9 @@
 import { graphql } from './client';
 import type { PageOf } from './client';
 
-export type ConnectionType = 'SLACK_SOCKET_MODE' | 'SLACK' | 'GITHUB' | 'JIRA' | 'WEBHOOK';
+export type ConnectionType = 'SLACK_SOCKET_MODE' | 'SLACK' | 'GITHUB' | 'JIRA' | 'SMTP' | 'WEBHOOK';
+/** How the session with a mail server is secured; the port follows from it. */
+export type MailSecurity = 'NONE' | 'STARTTLS' | 'TLS';
 export type AuthType = 'NONE' | 'API_KEY' | 'BEARER_TOKEN' | 'BASIC';
 /** CONNECTED only once a check has reached the service. */
 export type ConnectionStatus = 'NOT_CONFIGURED' | 'NOT_CHECKED' | 'CONNECTED' | 'FAILED';
@@ -34,6 +36,12 @@ export interface WorkspaceConnection {
   secretSet: boolean;
   /** Whether a Socket Mode app-level token is stored, which is what lets orknux listen. */
   appTokenSet: boolean;
+  /** The port a mail connection will use, which is the default one when none was chosen. */
+  smtpPort: number | null;
+  /** Who a mail connection logs in as; null sends without authenticating. */
+  smtpUsername: string | null;
+  smtpFrom: string | null;
+  smtpSecurity: MailSecurity;
   status: ConnectionStatus;
   lastCheckMessage: string | null;
   lastCheckedAt: string | null;
@@ -52,7 +60,7 @@ export interface McpServer {
 const CONNECTION_FIELDS = 'id name type url';
 const WORKSPACE_CONNECTION_FIELDS =
   'id workspaceId name type url urlOverride effectiveUrl authType headers { name value } inherited secretSet ' +
-  'appTokenSet status lastCheckMessage lastCheckedAt';
+  'appTokenSet smtpPort smtpUsername smtpFrom smtpSecurity status lastCheckMessage lastCheckedAt';
 const MCP_SERVER_FIELDS = 'id workspaceId name address authType headers { name value } secretSet';
 
 const CONNECTIONS_QUERY = `
@@ -218,6 +226,12 @@ export async function createWorkspaceConnection(input: {
   secret?: string;
   /** Slack's Socket Mode app-level token, for the type that opens a websocket. */
   appToken?: string;
+  /** Where the mail server listens; omitted takes the port the security implies. */
+  smtpPort?: number;
+  /** Who to log in as; omitted sends without authenticating, and the password is `secret`. */
+  smtpUsername?: string;
+  smtpFrom?: string;
+  smtpSecurity?: MailSecurity;
   headers?: HttpHeader[];
 }): Promise<WorkspaceConnection> {
   const data = await graphql<{ createWorkspaceConnection: WorkspaceConnection }>(CREATE_WORKSPACE_CONNECTION_MUTATION, { input });
@@ -233,6 +247,10 @@ export async function updateWorkspaceConnection(
     authType?: AuthType;
     secret?: string;
     appToken?: string;
+    smtpPort?: number;
+    smtpUsername?: string;
+    smtpFrom?: string;
+    smtpSecurity?: MailSecurity;
     urlOverride?: string;
     headers?: HttpHeader[];
   },
@@ -342,6 +360,8 @@ export function connectionTypeLabel(type: ConnectionType): string {
       return 'GitHub';
     case 'JIRA':
       return 'Jira';
+    case 'SMTP':
+      return 'Email (SMTP)';
     case 'WEBHOOK':
       return 'Webhook';
   }

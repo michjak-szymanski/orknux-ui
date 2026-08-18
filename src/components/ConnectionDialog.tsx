@@ -16,21 +16,25 @@ export interface ConnectionDialogProps {
 /**
  * What can be created, which is what a connection can be used for.
  *
- * GitHub, Jira and Webhook are missing on purpose. `OutgoingMessages.send` refuses
- * any connection that is not Slack, and nothing listens on the other three — so one
- * could be created, tested, and then do nothing at all, which is a worse answer than
- * not offering it.
+ * GitHub, Jira and Webhook are missing on purpose. Nothing sends through them and
+ * nothing listens on them — so one could be created, tested, and then do nothing at
+ * all, which is a worse answer than not offering it.
+ *
+ * Email is offered because a mail action sends through one. A default carries the
+ * host and nothing else, which is the part a company's relay has in common across
+ * every workspace; the login and the from-address are each workspace's own.
  *
  * They stay in the type and in the labels, because a connection created while they
  * were offered still has to name itself properly in the list.
  */
-const TYPES: ConnectionType[] = ['SLACK'];
+const TYPES: ConnectionType[] = ['SLACK', 'SMTP'];
 
 const TYPE_LABELS: Record<ConnectionType, string> = {
   SLACK: 'Slack',
   SLACK_SOCKET_MODE: 'Slack (Socket Mode)',
   GITHUB: 'GitHub',
   JIRA: 'Jira',
+  SMTP: 'Email (SMTP)',
   WEBHOOK: 'Webhook',
 };
 
@@ -163,7 +167,8 @@ export function ConnectionDialog({ open, onClose, onSaved }: ConnectionDialogPro
 
           <div className={styles.field}>
             <label className={styles.label} htmlFor="connection-url">
-              URL
+              {/* A mail server is named, not addressed: there is no URL to type. */}
+              {type === 'SMTP' ? 'Host' : 'URL'}
             </label>
             <div className={styles.inputWrapper}>
               <input
@@ -171,7 +176,7 @@ export function ConnectionDialog({ open, onClose, onSaved }: ConnectionDialogPro
                 name="connectionUrl"
                 className={`${styles.input} ${styles.inputMono}`}
                 type="text"
-                placeholder="https://"
+                placeholder={type === 'SMTP' ? 'smtp.example.com' : 'https://'}
                 value={url}
                 onChange={(event) => setUrl(event.target.value)}
                 required

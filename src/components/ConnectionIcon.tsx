@@ -1,5 +1,6 @@
 import type { ConnectionType } from '../api/integrations';
 import githubIcon from '../assets/github.svg';
+import mailIcon from '../assets/mail.svg';
 import plugIcon from '../assets/plug.svg';
 import slackIcon from '../assets/slack.svg';
 import trelloIcon from '../assets/trello.svg';
@@ -10,6 +11,7 @@ const ICONS: Record<ConnectionType, string> = {
   SLACK_SOCKET_MODE: slackIcon,
   GITHUB: githubIcon,
   JIRA: trelloIcon,
+  SMTP: mailIcon,
   WEBHOOK: plugIcon,
 };
 

@@ -13,7 +13,7 @@ import {
   testWorkspaceConnection,
   updateWorkspaceConnection,
 } from '../../api/integrations';
-import type { AuthType, ConnectionStatus, WorkspaceConnection } from '../../api/integrations';
+import type { AuthType, ConnectionStatus, MailSecurity, WorkspaceConnection } from '../../api/integrations';
 import type { SessionUser } from '../../api/session';
 import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import lockIcon from '../../assets/lock-keyhole.svg';
@@ -30,6 +30,13 @@ export interface ConnectionSettingsPageProps {
 }
 
 const AUTH_TYPES: AuthType[] = ['NONE', 'API_KEY', 'BEARER_TOKEN', 'BASIC'];
+
+/** How the session with a mail server is secured, and the port that goes with it. */
+const SECURITY: { value: MailSecurity; label: string; port: number }[] = [
+  { value: 'STARTTLS', label: 'STARTTLS', port: 587 },
+  { value: 'TLS', label: 'TLS (implicit)', port: 465 },
+  { value: 'NONE', label: 'None', port: 25 },
+];
 
 /** Stands in for a stored secret until the caller asks to see it. */
 const MASK = '••••••••••••••••••••••••••••••••';
@@ -56,6 +63,10 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
   const [appToken, setAppToken] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [urlOverride, setUrlOverride] = useState('');
+  const [smtpUsername, setSmtpUsername] = useState('');
+  const [smtpFrom, setSmtpFrom] = useState('');
+  const [smtpSecurity, setSmtpSecurity] = useState<MailSecurity>('STARTTLS');
+  const [smtpPort, setSmtpPort] = useState('');
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -74,6 +85,10 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
         setName(found.name);
         setAuthType(found.authType);
         setUrlOverride(found.urlOverride ?? '');
+        setSmtpUsername(found.smtpUsername ?? '');
+        setSmtpFrom(found.smtpFrom ?? '');
+        setSmtpSecurity(found.smtpSecurity);
+        setSmtpPort(found.smtpPort === null ? '' : String(found.smtpPort));
         setSecret(null);
         setAppToken(null);
         setRevealed(false);
@@ -82,6 +97,17 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
         setLoadError(cause instanceof Error ? cause.message : 'Could not load the connection.');
       });
   }, [connectionId]);
+
+  const mail = connection?.type === 'SMTP';
+
+  /** Changing how the session is secured moves the port with it, until it is typed over. */
+  function changeSecurity(next: MailSecurity) {
+    const previous = SECURITY.find((candidate) => candidate.value === smtpSecurity);
+    setSmtpSecurity(next);
+    if (smtpPort === '' || smtpPort === String(previous?.port)) {
+      setSmtpPort(String(SECURITY.find((candidate) => candidate.value === next)?.port ?? ''));
+    }
+  }
 
   async function handleReveal() {
     try {
@@ -129,6 +155,12 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
         secret: secret ?? undefined,
         appToken: appToken ?? undefined,
         urlOverride: urlOverride.trim(),
+        // Only for a mail connection: sending these for a Slack one would write
+        // settings nothing reads and clear what somebody typed elsewhere.
+        smtpPort: mail ? Number(smtpPort) : undefined,
+        smtpUsername: mail ? smtpUsername.trim() : undefined,
+        smtpFrom: mail ? smtpFrom.trim() : undefined,
+        smtpSecurity: mail ? smtpSecurity : undefined,
       });
       setConnection(updated);
       setSaved(true);
@@ -227,7 +259,11 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
               value={connection === null ? '' : connectionTypeLabel(connection.type)}
               locked={locked}
             />
-            <ReadOnlyField label="Default API Host URL" value={connection?.url ?? ''} locked={locked} />
+            <ReadOnlyField
+              label={mail ? 'Mail Server' : 'Default API Host URL'}
+              value={connection?.url ?? ''}
+              locked={locked}
+            />
 
             {!locked && (
               <div className={styles.actionRow}>
@@ -248,6 +284,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
           <form className={styles.card} onSubmit={handleSave}>
             <h2 className={styles.cardTitle}>Active Credentials</h2>
 
+            {!mail && (
             <div className={styles.field}>
               <label className={styles.label} htmlFor="connection-auth">
                 Auth Type
@@ -269,10 +306,94 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
                 <img src={chevronDown12Icon} alt="" width={12} height={12} />
               </div>
             </div>
+            )}
+
+            {mail && (
+              <>
+                <div className={styles.field}>
+                  <label className={styles.label} htmlFor="connection-smtp-from">
+                    From Address
+                  </label>
+                  <div className={styles.inputWrapper}>
+                    <input
+                      id="connection-smtp-from"
+                      name="smtpFrom"
+                      className={styles.input}
+                      type="email"
+                      placeholder="orknux@example.com"
+                      value={smtpFrom}
+                      onChange={(event) => setSmtpFrom(event.target.value)}
+                    />
+                  </div>
+                  <p className={styles.fieldHint}>
+                    Every mail this connection sends is from this address, and a provider that has
+                    not authorised it refuses the message however good the password is.
+                  </p>
+                </div>
+
+                <div className={styles.field}>
+                  <label className={styles.label} htmlFor="connection-smtp-security">
+                    Security
+                  </label>
+                  <div className={styles.inputWrapper}>
+                    <select
+                      id="connection-smtp-security"
+                      name="smtpSecurity"
+                      className={`${styles.input} ${styles.select}`}
+                      value={smtpSecurity}
+                      onChange={(event) => changeSecurity(event.target.value as MailSecurity)}
+                    >
+                      {SECURITY.map((candidate) => (
+                        <option key={candidate.value} value={candidate.value}>
+                          {candidate.label}
+                        </option>
+                      ))}
+                    </select>
+                    <img src={chevronDown12Icon} alt="" width={12} height={12} />
+                  </div>
+                </div>
+
+                <div className={styles.field}>
+                  <label className={styles.label} htmlFor="connection-smtp-port">
+                    Port
+                  </label>
+                  <div className={styles.inputWrapper}>
+                    <input
+                      id="connection-smtp-port"
+                      name="smtpPort"
+                      className={`${styles.input} ${styles.inputMono}`}
+                      type="number"
+                      min={1}
+                      max={65535}
+                      value={smtpPort}
+                      onChange={(event) => setSmtpPort(event.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.field}>
+                  <label className={styles.label} htmlFor="connection-smtp-username">
+                    Username
+                  </label>
+                  <div className={styles.inputWrapper}>
+                    <input
+                      id="connection-smtp-username"
+                      name="smtpUsername"
+                      className={styles.input}
+                      type="text"
+                      placeholder="Leave empty to send without authenticating"
+                      value={smtpUsername}
+                      onChange={(event) => setSmtpUsername(event.target.value)}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
 
             <div className={styles.field}>
               <label className={styles.label} htmlFor="connection-secret">
-                API Token
+                {/* The same column, and for a mail server it holds the password. */}
+                {mail ? 'Password' : 'API Token'}
               </label>
               <div className={styles.inputWrapper}>
                 <input
@@ -280,7 +401,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
                   name="secret"
                   className={`${styles.input} ${styles.inputMono}`}
                   type="text"
-                  placeholder="Enter token or key..."
+                  placeholder={mail ? 'Enter password...' : 'Enter token or key...'}
                   value={secret ?? (connection?.secretSet === true ? MASK : '')}
                   onChange={(event) => setSecret(event.target.value)}
                 />
@@ -315,6 +436,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
               </div>
             )}
 
+            {!mail && (
             <div className={styles.field}>
               <label className={styles.label} htmlFor="connection-url-override">
                 Webhook URL Override
@@ -331,6 +453,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
                 />
               </div>
             </div>
+            )}
 
             {saveError !== null && (
               <p className={styles.error} role="alert">
