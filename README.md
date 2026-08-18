@@ -202,3 +202,5 @@ That attribution is the line in the shell and on the sign-in screen; it is drawn
 by `src/components/Attribution.tsx`.
 
 Copyright (C) 2026 Michał Szymański.
+
+The changelog for both halves of the product lives in the server repository, at [`CHANGELOG.md`](https://github.com/michjak-szymanski/orknux-server/blob/main/CHANGELOG.md): they are released together under one version, and two changelogs would be two places to look.
