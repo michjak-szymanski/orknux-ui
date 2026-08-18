@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -1081,12 +1081,27 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
    * given an output name showed nothing to point at until somebody saved — and
    * the list of things to fix described a graph that had since been edited.
    */
+  /*
+   * Which ask is the current one, so an answer can tell whether it still is.
+   *
+   * Clearing the timeout stops a preview being asked, not one already in
+   * flight - and two in flight can land in either order. A stale answer is a
+   * picture of the graph from before the last edit: applied, it renamed a
+   * field's chip back, or took a new field's chip off the node entirely, some
+   * seconds after everything had settled. Everything that applies feedback
+   * moves this on, and an answer that is no longer the newest is dropped.
+   */
+  const asked = useRef(0);
+
   useEffect(() => {
     if (workspaceId === '' || workflowId === '' || nodes.length === 0) return;
 
     const timer = window.setTimeout(() => {
+      const mine = ++asked.current;
       fetchWorkflowGraphPreview(workspaceId, workflowId, toGraph())
-        .then(applyGraphFeedback)
+        .then((graph) => {
+          if (asked.current === mine) applyGraphFeedback(graph);
+        })
         // Advice, and asking again is cheap: a failed ask leaves what the last
         // answer said rather than putting an error over the canvas.
         .catch(() => undefined);
@@ -1105,7 +1120,9 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       setStatus(graph.status);
       // What is left to fix is decided by the server, and saving is when it
       // decides again. Keeping the list from the last load means the panel
-      // describes a graph that is no longer on screen.
+      // describes a graph that is no longer on screen. The save is the newest
+      // word on the graph, so any preview still in flight is out of date.
+      asked.current += 1;
       applyGraphFeedback(graph);
       setSaved(true);
       return true;
@@ -1136,6 +1153,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       await saveWorkflowGraph(workspaceId, workflowId, toGraph());
       const graph = await publishWorkflow(workspaceId, workflowId);
       setStatus(graph.status);
+      asked.current += 1;
       applyGraphFeedback(graph);
       setSaved(true);
     } catch (cause) {
