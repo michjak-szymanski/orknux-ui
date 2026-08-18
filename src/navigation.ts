@@ -10,6 +10,7 @@ import codeIcon from './assets/code.svg';
 import commandIcon from './assets/command.svg';
 import databaseIcon from './assets/database.svg';
 import fileTextIcon from './assets/file-text.svg';
+import alertTriangleIcon from './assets/alert-triangle.svg';
 import userIcon from './assets/user.svg';
 import filterIcon from './assets/filter.svg';
 import gitBranchIcon from './assets/git-branch.svg';
@@ -95,6 +96,13 @@ export const PAGES = [
     access: 'signed-in',
     goTo: { label: 'Actions', where: 'Workspace', icon: activityIcon },
   },
+  {
+    path: '/workspace/:workspaceId/issues',
+    access: 'signed-in',
+    goTo: { label: 'Issues', where: 'Workspace', icon: alertTriangleIcon },
+  },
+  { path: '/workspace/:workspaceId/issues/new', access: 'signed-in', goTo: false },
+  { path: '/workspace/:workspaceId/issues/:issueId', access: 'signed-in', goTo: false },
   {
     path: '/workspace/:workspaceId/conditions',
     access: 'signed-in',

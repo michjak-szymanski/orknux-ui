@@ -10,6 +10,8 @@ import { AdminPage } from './pages/admin/AdminPage';
 import { AdminPluginsPage } from './pages/admin/AdminPluginsPage';
 import { AdminRolesPage } from './pages/admin/AdminRolesPage';
 import { AdminUserPage } from './pages/admin/AdminUserPage';
+import { WorkspaceIssuePage } from './pages/workspace/WorkspaceIssuePage';
+import { WorkspaceIssuesPage } from './pages/workspace/WorkspaceIssuesPage';
 import { AdminUsersPage } from './pages/admin/AdminUsersPage';
 import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
 import { WorkspaceSettingsPage as AdminWorkspaceSettingsPage } from './pages/workspace-settings/WorkspaceSettingsPage';
@@ -70,6 +72,10 @@ export const PAGE_ELEMENTS: Record<PagePath, PageElement> = {
   '/workspace/:workspaceId/triggers': (session, onSignOut) => <WorkspaceTriggersPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/actions': (session, onSignOut) => <WorkspaceActionsPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/conditions': (session, onSignOut) => <WorkspaceConditionsPage session={session} onSignOut={onSignOut} />,
+  '/workspace/:workspaceId/issues': (session, onSignOut) => <WorkspaceIssuesPage session={session} onSignOut={onSignOut} />,
+  /* Before the one with an id in it: `new` is a page, not an issue called new. */
+  '/workspace/:workspaceId/issues/new': (session, onSignOut) => <WorkspaceIssuePage session={session} onSignOut={onSignOut} />,
+  '/workspace/:workspaceId/issues/:issueId': (session, onSignOut) => <WorkspaceIssuePage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/functions': (session, onSignOut) => <WorkspaceFunctionsPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/agents': (session, onSignOut) => <AgentsPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/objects': (session, onSignOut) => <WorkspaceObjectsPage session={session} onSignOut={onSignOut} />,

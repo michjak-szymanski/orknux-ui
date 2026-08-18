@@ -18,6 +18,7 @@ import lockKeyholeIcon from '../assets/lock-keyhole.svg';
 import plugIcon from '../assets/plug.svg';
 import settingsIcon from '../assets/settings.svg';
 import toolIcon from '../assets/tool.svg';
+import alertTriangleIcon from '../assets/alert-triangle.svg';
 import { rememberWorkspace } from '../session/lastWorkspace';
 import { cachedWorkspaces, loadWorkspaces } from '../session/workspaces';
 import { SidebarNavItem, WorkspaceSelector } from './AppShell';
@@ -35,6 +36,7 @@ export type WorkspaceSection =
   | 'objects'
   | 'variables'
   | 'memory'
+  | 'issues'
   | 'audit'
   | 'integrations'
   | 'models'
@@ -153,6 +155,13 @@ export function WorkspaceSidebar({ workspaceId, active, onWorkspacesLoaded }: Wo
         icon={memoryIcon}
         active={active === 'memory'}
         to={`/workspace/${workspaceId}/memory`}
+      />
+      {/* What is wrong with this workspace's work, beside the work itself. */}
+      <SidebarNavItem
+        label="Issues"
+        icon={alertTriangleIcon}
+        active={active === 'issues'}
+        to={`/workspace/${workspaceId}/issues`}
       />
       <SidebarNavItem
         label="Audit Log"

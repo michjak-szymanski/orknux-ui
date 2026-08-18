@@ -1,0 +1,319 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  width: 100%;
+  padding: var(--space-24);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  padding-bottom: var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+.number {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  color: var(--color-text-muted);
+}
+
+/* The title is the heading and the field at once: no edit button for it. */
+.titleInput {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: var(--space-6) var(--space-8);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-6);
+  font: inherit;
+  font-weight: 700;
+  font-size: var(--text-xl);
+  color: var(--color-text-primary);
+}
+
+.titleInput:hover,
+.titleInput:focus {
+  background: var(--color-background);
+  border-color: var(--color-border);
+  outline: none;
+}
+
+.actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.save {
+  padding: var(--space-8) var(--space-16);
+  background: var(--color-accent-brand);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ghost {
+  padding: var(--space-8) var(--space-16);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.ghost:hover:not(:disabled) {
+  border-color: var(--color-text-muted);
+}
+
+.delete {
+  display: flex;
+  align-items: center;
+  padding: var(--space-8) var(--space-10);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  color: var(--color-danger);
+  cursor: pointer;
+}
+
+.delete:hover {
+  border-color: var(--color-danger);
+}
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: var(--space-24);
+  align-items: start;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.description,
+.commentInput {
+  padding: var(--space-12);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  resize: vertical;
+}
+
+.comments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  margin-top: var(--space-16);
+  padding-top: var(--space-16);
+  border-top: 1px solid var(--color-border);
+}
+
+.commentsTitle {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.comment {
+  display: flex;
+  gap: var(--space-10);
+}
+
+.commentBody {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: var(--space-10) var(--space-12);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.commentHead {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.commentText {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  white-space: pre-wrap;
+}
+
+.nothing {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.composer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.composerActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-8);
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  padding: var(--space-16);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.sideField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.statusOpen,
+.statusClosed {
+  align-self: flex-start;
+  padding: var(--space-4) var(--space-12);
+  border-radius: var(--radius-4);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.statusOpen {
+  background: var(--color-accent-brand-soft);
+  border: 1px solid var(--color-accent-brand);
+  color: var(--color-accent-brand);
+}
+
+.statusClosed {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.statusOpen:disabled,
+.statusClosed:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+/* A label is removed by clicking it, which is what the × says. */
+.label_ {
+  padding: var(--space-2) var(--space-8);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.label_:hover {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.labelInput {
+  padding: var(--space-6) var(--space-8);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.reporter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.when {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.avatar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: var(--text-xs);
+  color: var(--color-text-primary);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-danger);
+}
