@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import {
   fetchModels,
@@ -39,6 +39,7 @@ function statusDot(status: ProviderStatus): string {
 
 export function WorkspaceModelsPage({ session, onSignOut }: WorkspaceModelsPageProps) {
   const { workspaceId = '' } = useParams();
+  const navigate = useNavigate();
 
   const [providers, setProviders] = useState<ModelProvider[] | null>(null);
   const [models, setModels] = useState<Model[] | null>(null);
@@ -110,8 +111,22 @@ export function WorkspaceModelsPage({ session, onSignOut }: WorkspaceModelsPageP
         {providers?.length === 0 && <p className={styles.notice}>No providers yet.</p>}
 
         {providers?.map((provider) => (
-          <div key={provider.id} className={styles.row}>
-            <span className={`${styles.colProvider} ${styles.providerName}`}>{provider.name}</span>
+          // The whole row opens it, the way a connection's row does on
+          // Integrations: a cog at the far right is a small target for the only
+          // thing anybody wants from a row. The name is a real link, so the row
+          // is reachable by keyboard and announced as somewhere to go — the
+          // click on the row is a wider target for the mouse and nothing more.
+          <div
+            key={provider.id}
+            className={`${styles.row} ${styles.rowOpens}`}
+            onClick={() => navigate(`/workspace/${workspaceId}/models/providers/${provider.id}`)}
+          >
+            <Link
+              className={`${styles.colProvider} ${styles.openName}`}
+              to={`/workspace/${workspaceId}/models/providers/${provider.id}`}
+            >
+              {provider.name}
+            </Link>
             <span className={`${styles.colGrow} ${styles.endpoint}`}>{provider.endpoint}</span>
             <span className={styles.colStatus}>
               <span
@@ -127,6 +142,7 @@ export function WorkspaceModelsPage({ session, onSignOut }: WorkspaceModelsPageP
                 to={`/workspace/${workspaceId}/models/providers/${provider.id}`}
                 aria-label={`Settings for ${provider.name}`}
                 title={`Settings for ${provider.name}`}
+                onClick={(event) => event.stopPropagation()}
               >
                 <img src={settingsIcon} alt="" width={14} height={14} />
               </Link>
@@ -168,8 +184,14 @@ export function WorkspaceModelsPage({ session, onSignOut }: WorkspaceModelsPageP
         )}
 
         {models?.map((model) => (
-          <div key={model.id} className={styles.row}>
-            <Link className={`${styles.colModel} ${styles.modelName}`} to={`/workspace/${workspaceId}/models/${model.id}`}>
+          // As above. Both lists on this page behave the same way; a page where
+          // half the rows open and half do not is worse than neither.
+          <div
+            key={model.id}
+            className={`${styles.row} ${styles.rowOpens}`}
+            onClick={() => navigate(`/workspace/${workspaceId}/models/${model.id}`)}
+          >
+            <Link className={`${styles.colModel} ${styles.openName}`} to={`/workspace/${workspaceId}/models/${model.id}`}>
               {model.name}
             </Link>
             <span className={`${styles.colProviderName} ${styles.providerCell}`}>{model.providerName}</span>
@@ -180,7 +202,15 @@ export function WorkspaceModelsPage({ session, onSignOut }: WorkspaceModelsPageP
               <button
                 type="button"
                 className={styles.toggle}
-                onClick={() => void toggle(model)}
+                /*
+                 * The switch stops the click reaching the row, which would
+                 * otherwise open the model's page from under the finger that
+                 * only meant to turn it off.
+                 */
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void toggle(model);
+                }}
                 role="switch"
                 aria-checked={model.enabled}
                 aria-label={`${model.enabled ? 'Deactivate' : 'Activate'} ${model.name}`}
@@ -197,6 +227,7 @@ export function WorkspaceModelsPage({ session, onSignOut }: WorkspaceModelsPageP
                 to={`/workspace/${workspaceId}/models/${model.id}`}
                 aria-label={`Settings for ${model.name}`}
                 title={`Settings for ${model.name}`}
+                onClick={(event) => event.stopPropagation()}
               >
                 <img src={settingsIcon} alt="" width={14} height={14} />
               </Link>

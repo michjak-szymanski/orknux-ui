@@ -159,15 +159,6 @@
   width: 80px;
 }
 
-.providerName {
-  overflow: hidden;
-  font-weight: 600;
-  font-size: var(--text-base);
-  color: var(--color-text-primary);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .endpoint {
   overflow: hidden;
   font-family: var(--font-mono);
@@ -177,8 +168,21 @@
   white-space: nowrap;
 }
 
-/* The name opens the model, so it reads as something to click. */
-.modelName {
+/*
+ * The whole row opens what it lists, so the whole row says so. The name inside
+ * it is the real link - what a keyboard reaches and a screen reader announces -
+ * and this is only the wider target for a mouse.
+ */
+.rowOpens {
+  cursor: pointer;
+}
+
+.rowOpens:hover {
+  background: var(--color-surface-raised);
+}
+
+/* The name opens the row's page, so it reads as something to click. */
+.openName {
   overflow: hidden;
   font-weight: 600;
   font-size: var(--text-base);
@@ -188,8 +192,17 @@
   white-space: nowrap;
 }
 
-.modelName:hover {
+.openName:hover {
   color: #c084fc;
+}
+
+/*
+ * Focus has to be visible on a row that is otherwise only ever hovered: the
+ * link is how somebody without a mouse gets to the provider's page.
+ */
+.openName:focus-visible {
+  outline: 2px solid var(--color-accent-brand);
+  outline-offset: 2px;
 }
 
 .providerCell {
