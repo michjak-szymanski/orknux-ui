@@ -4,7 +4,7 @@ import { graphql } from './client';
 export type IssueStatus = 'OPEN' | 'IN_PROGRESS' | 'CLOSED';
 
 /** What a list is ordered by, in the words the server uses. */
-export type IssueOrder = 'NUMBER' | 'TITLE' | 'UPDATED';
+export type IssueOrder = 'NUMBER' | 'TITLE' | 'UPDATED' | 'LAST_COMMENT';
 
 /** What each state is called where somebody reads it. */
 export const ISSUE_STATUS_LABEL: Record<IssueStatus, string> = {
@@ -100,6 +100,8 @@ export interface Issue {
   comments: IssueComment[];
   createdAt: string;
   lastModifiedAt: string;
+  /** When somebody last said something here, or null if nobody has. */
+  lastCommentAt: string | null;
   lastModifiedBy: string;
 }
 
@@ -116,7 +118,7 @@ export interface IssuePage {
  * the more the tracker is used.
  */
 const ROW_FIELDS =
-  'id workspaceId number title status reporter assignee { kind id name hint } labels createdAt lastModifiedAt lastModifiedBy';
+  'id workspaceId number title status reporter assignee { kind id name hint } labels createdAt lastModifiedAt lastCommentAt lastModifiedBy';
 
 const ATTACHMENT_FIELDS = 'id filename contentType sizeBytes uploadedBy uploadedAt mine';
 
@@ -129,7 +131,7 @@ const FULL_FIELDS = `
   attachments { ${ATTACHMENT_FIELDS} }
   links { ${LINK_FIELDS} }
   comments { id author content createdAt editedAt mine attachments { ${ATTACHMENT_FIELDS} } }
-  createdAt lastModifiedAt lastModifiedBy
+  createdAt lastModifiedAt lastCommentAt lastModifiedBy
 `;
 
 export async function fetchIssues(

@@ -72,6 +72,7 @@ const ORDERS: { label: string; order: IssueOrder }[] = [
   { label: 'Number', order: 'NUMBER' },
   { label: 'Title', order: 'TITLE' },
   { label: 'Last change', order: 'UPDATED' },
+  { label: 'Last comment', order: 'LAST_COMMENT' },
 ];
 
 /**
@@ -456,6 +457,14 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
                       a list nobody can check.
                     */}
                     {order === 'UPDATED' && <> · changed {timeAgo(issue.lastModifiedAt)}</>}
+                    {order === 'LAST_COMMENT' && (
+                      <>
+                        {' · '}
+                        {issue.lastCommentAt === null
+                          ? 'nothing said yet'
+                          : `last comment ${timeAgo(issue.lastCommentAt)}`}
+                      </>
+                    )}
                   </span>
                 </span>
 
