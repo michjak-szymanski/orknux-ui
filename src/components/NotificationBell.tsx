@@ -120,12 +120,17 @@ export function NotificationBell() {
         <div className={styles.panel} role="dialog" aria-label="Notifications">
           {items === null && <p className={styles.notice}>Looking…</p>}
           {items !== null && items.length === 0 && (
-            <p className={styles.notice}>Nothing waiting. Anything on your issues will appear here.</p>
+            <p className={styles.notice}>Nothing yet. Anything on your issues will appear here.</p>
           )}
           {items?.map((item) => (
             <Link
               key={item.id}
-              className={styles.item}
+              /*
+                The unread ones are marked rather than being the only ones
+                shown. The panel is what happened; the number on the bell is
+                what is new (issue #114).
+              */
+              className={item.unread ? `${styles.item} ${styles.itemUnread}` : styles.item}
               to={`/workspace/${item.workspaceId}/issues/${item.issueNumber}`}
               onClick={() => setOpen(false)}
             >

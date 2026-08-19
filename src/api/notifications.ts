@@ -20,9 +20,11 @@ export interface Notification {
   /** What was said, or the status it moved to. */
   says: string | null;
   at: string;
+  /** Still unread when it was asked for. The bell counts these; the panel shows everything. */
+  unread: boolean;
 }
 
-const FIELDS = 'id workspaceId issueNumber issueTitle kind actor says at';
+const FIELDS = 'id workspaceId issueNumber issueTitle kind actor says at unread';
 
 export async function fetchNotifications(limit?: number): Promise<Notification[]> {
   const data = await graphql<{ myNotifications: Notification[] }>(

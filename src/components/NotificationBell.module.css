@@ -127,3 +127,13 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
+/*
+ * The ones that arrived since this was last opened, marked with the brand rule
+ * down their leading edge rather than with a colour on the text - the rows
+ * already carry three weights of type and a fourth would be noise.
+ */
+.itemUnread {
+  border-left: 2px solid var(--color-accent-brand);
+  background: var(--color-surface-raised);
+}
