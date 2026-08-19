@@ -1099,10 +1099,31 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                     <img src={plusIcon} alt="" width={14} height={14} />
                     Add External
                   </button>
+                  {/*
+                    A way out to where these are defined, which the sentence
+                    below describes and did not offer - most of all in the empty
+                    case, which tells somebody to define a variable first and
+                    then leaves them to find the page themselves.
+
+                    A new tab, unlike "Change them" further up this panel. That
+                    one is a rare deliberate detour; this is reached in the
+                    middle of writing a function that wants a variable, and this
+                    editor - unlike the workflow editor - has nothing listening
+                    for a navigation away, so the same tab would discard the
+                    code being written without saying so.
+                  */}
                   <p className={styles.paramHint}>
                     {variables.length === 0
                       ? 'Define a variable first; externals are chosen from what the workspace keeps.'
-                      : 'The workspace\u2019s values, handed to this function after its own parameters. Their values are never shown here.'}
+                      : 'The workspace\u2019s values, handed to this function after its own parameters. Their values are never shown here.'}{' '}
+                    <a
+                      className={styles.shortcutLink}
+                      href={`/workspace/${workspaceId}/variables`}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                    >
+                      Open Variables
+                    </a>
                   </p>
                 </div>
               </section>
