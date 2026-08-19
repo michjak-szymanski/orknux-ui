@@ -689,7 +689,13 @@
  */
 .contentFills {
   min-height: 0;
-  padding-bottom: 0;
+  /*
+   * The page's own padding, not the launcher's clearance and not nothing.
+   * Zero put the composer hard against the attribution strip; the clearance
+   * put it 112px up the screen. This is what the sides have, so the bottom
+   * matches them.
+   */
+  padding-bottom: var(--space-24);
   overflow: hidden;
 }
 
