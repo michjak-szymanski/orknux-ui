@@ -110,6 +110,43 @@ issue's own page, where a number after a hash is an issue and nothing else, and
 only where it reads as one: inside code it is left alone, and so is anything
 longer than five digits, which is a colour.
 
+## Moving it elsewhere
+
+An issue filed in the wrong workspace can be moved to the right one. **Move**,
+beside the delete button on the issue, asks where it should go. Administrators
+only, because a move takes an issue out of one team's tracker and puts it in
+another's.
+
+Its comments, labels, links, observers and files go with it, the files included:
+the bytes are moved into the destination's own storage, so the screenshots still
+open afterwards.
+
+Its number does not go with it, and cannot. Numbers are counted per workspace,
+so the issue is given one that is free where it lands, and the number it had is
+free again for the next issue filed where it came from. Two things follow, and
+the dialog says both before you press the button:
+
+- The address people have been sending each other stops working. There is no
+  redirect, deliberately - the old number will be handed to some other issue
+  soon enough, and a redirect that eventually points away from a live issue is
+  worse than one that was never there.
+- A `#4` written in some other issue goes on pointing at whatever holds 4 where
+  it was written. Nothing rewrites those: nothing can tell which of them meant
+  this issue, and editing what other people wrote is not something this does.
+
+So the move is recorded where somebody looking for it will find it. It is
+written into the issue as a comment saying which workspace it came from and what
+number it had, into the audit log of both workspaces, and sent to everybody
+following the issue.
+
+Some issues are refused rather than moved, and the refusal says what is in the
+way. An issue assigned to an agent or a model of the workspace it is leaving has
+no assignee where it is going, and an observer that is such an agent would
+simply stop hearing about it - so those are refused, naming what to change,
+rather than quietly cleared. People are never in the way: a person belongs to
+the installation rather than to a workspace, and so does an `@name` written in a
+comment.
+
 ## Links
 
 Half of what a report points at is somewhere else: the pull request that caused
@@ -222,5 +259,9 @@ The exceptions all protect authorship rather than the workspace: a comment is
 edited only by whoever wrote it, and a file or a link is removed only by
 whoever put it there.
 
-Filing, closing, reopening, attaching, linking and deleting are written to the
-workspace's audit log.
+Moving an issue to another workspace is the one thing here that needs the
+administrator role, since it is the one thing that changes which workspace an
+issue belongs to.
+
+Filing, closing, reopening, attaching, linking, moving and deleting are written
+to the workspace's audit log.
