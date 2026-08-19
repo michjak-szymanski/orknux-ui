@@ -72,7 +72,9 @@
  */
 .collapseCatalogs {
   position: absolute;
-  top: 26px;
+  /* The same 36px the shell's handle uses: both containing blocks now start
+     at the top of the frame, so the two circles line up across the page. */
+  top: 36px;
   left: 280px;
   z-index: 5;
   display: flex;
