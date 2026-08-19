@@ -48,6 +48,16 @@ was, and one dropped on wiring the graph already has is left alone.
   left, bottom to top - and changes nothing about what runs. A long chain simply
   reads better down a screen than off the side of one. Each node is turned on
   its own, so a graph can bend where it needs to.
+- A node can be **copied**: **Duplicate** in the toolbar, or `Ctrl`+`D` on the
+  canvas. The copy points at the same action, trigger, condition, agent or
+  object - two nodes running one action is the ordinary case - and carries its
+  description, its icon, which way it faces and what it passes on. It is not
+  wired to anything: a copy joined to everything the original was joined to is
+  rarely the graph anybody wanted, and for a condition it is not even clear
+  which of the two answers the copy's lines should leave by. It is named after
+  what it was copied from - `Fetch the order copy`, then `copy 2` - so no two
+  nodes read identically, and it lands a little below and to the right rather
+  than under the original.
 - Pickers are **typed into** rather than scrolled. Agents, triggers, actions,
   objects, conditions, functions and connections all narrow as you type, with
   the arrows to move and Enter to take.

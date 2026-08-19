@@ -141,7 +141,8 @@ Preferences belong to the person signed in rather than to any workspace —
 the theme among them — so they follow you into every workspace you can see.
 
 Every keystroke this application listens for is set here too: **Go To**,
-**Save**, **Format**, **Turn Node**, **Undo** and **Redo**. Each is changed by
+**Save**, **Format**, **Turn Node**, **Undo**, **Redo** and **Duplicate Node**.
+Each is changed by
 pressing the keys you want rather than by picking from a list, because which
 keys are free depends on your browser and your machine and not on this
 application. All of them but Turn Node have to carry a modifier: a bare letter

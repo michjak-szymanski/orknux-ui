@@ -72,6 +72,7 @@ import { TrashIcon } from '../../components/TrashIcon';
 import { WorkflowConfirmDialog } from '../../components/WorkflowConfirmDialog';
 import {
   matches,
+  useDuplicateShortcut,
   useRedoShortcut,
   useSaveShortcut,
   useTurnShortcut,
@@ -509,6 +510,58 @@ function CarriedEdge({
 }
 
 const edgeTypes = { carried: CarriedEdge };
+
+/**
+ * The first of `first`, `then(2)`, `then(3)` … that nothing has taken.
+ *
+ * A copy needs a free one of three things - a key, a name and an output name -
+ * and each is counted on differently: `-2`, ` 2`, `2`. One walk, and the caller
+ * says how its step is spelled.
+ */
+function untaken(first: string, then: (at: number) => string, taken: Set<string>): string {
+  if (!taken.has(first)) return first;
+  for (let at = 2; ; at += 1) {
+    const next = then(at);
+    if (!taken.has(next)) return next;
+  }
+}
+
+/**
+ * What a copy of this node is called.
+ *
+ * `Fetch the order` copied is `Fetch the order copy`, and copying that is
+ * `Fetch the order copy 2` rather than `Fetch the order copy copy`. Pressing
+ * the key twice in a row is the ordinary way to get three of something - the
+ * copy is what ends up selected, so the second press copies the copy - and a
+ * name that grows a word each time is a name nobody can read by the fourth.
+ *
+ * A node called nothing but `copy` keeps its word: stripping it would leave a
+ * stem of nothing, and ` copy` is not a name.
+ */
+function copyName(of: string, taken: Set<string>): string {
+  const stem = of.replace(/ copy(?: \d+)?$/, '') || of;
+  return untaken(`${stem} copy`, (at) => `${stem} copy ${at}`, taken);
+}
+
+/**
+ * The same, for the name a node gives what it produces.
+ *
+ * Spelled without the space, because a field is pointed at by its name and the
+ * panel refuses anything but letters, digits and underscores in one.
+ */
+function copyOutputName(of: string, taken: Set<string>): string {
+  const stem = of.replace(/Copy\d*$/, '') || of;
+  return untaken(`${stem}Copy`, (at) => `${stem}Copy${at}`, taken);
+}
+
+/**
+ * How far a copy sits from what it was copied from.
+ *
+ * Far enough to be visibly a second node rather than one hiding the other, and
+ * near enough to read as belonging to it. The same step the Add buttons put
+ * between successive nodes.
+ */
+const COPY_OFFSET = 40;
 
 /** A name for the next field of a shape being made up as it is drawn. */
 function nextFieldName(held: NodeMapping[]): string {
@@ -1280,8 +1333,22 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     [carryLabel, edges, setEdges],
   );
 
+  /**
+   * A key for a new node that nothing in the graph is already using.
+   *
+   * The clock is nearly enough on its own and not quite: two nodes made inside
+   * the same millisecond would share an id, and a graph with two nodes under
+   * one key saves as one node. A person cannot press a key twice that fast; a
+   * script driving the editor can, and so could a copy made from a menu that
+   * did not wait for a keystroke.
+   */
+  function freshKey(kind: NodeKind): string {
+    const stem = `${kind.toLowerCase()}-${Date.now().toString(36)}`;
+    return untaken(stem, (at) => `${stem}-${at}`, new Set(nodes.map((node) => node.id)));
+  }
+
   function addNode(kind: NodeKind) {
-    const key = `${kind.toLowerCase()}-${Date.now().toString(36)}`;
+    const key = freshKey(kind);
     setNodes((current) => [
       ...current.map((node) => ({ ...node, selected: false })),
       {
@@ -1315,6 +1382,106 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
         },
       },
     ]);
+    setSelectedKey(key);
+    // The store only learns about the node on the next tick, so select it then.
+    requestAnimationFrame(() => updateNode(key, { selected: true }));
+    setSaved(false);
+  }
+
+  /**
+   * The selected node again, beside itself.
+   *
+   * What is copied is what the node is: its kind, its description, its icon,
+   * which way it faces, what its branches are called, and - the point of the
+   * whole thing - the definition it points at. Two nodes running the same
+   * action is the ordinary case, so the pointer is copied rather than the
+   * definition duplicated behind it; editing that action still edits it once.
+   * The mappings come too, as the node's own copy, so changing what one node
+   * passes does not change what the other does.
+   *
+   * What is not copied is the wiring. A node arriving already joined to
+   * everything its original was joined to is rarely the graph anybody wanted,
+   * and for a condition it is not even well defined - which of the two answers
+   * should the copy's edges leave by? So the copy lands loose, and drawing the
+   * one or two lines it actually needs is a shorter job than deleting five.
+   *
+   * The name is not copied verbatim either. Two nodes reading identically on
+   * the canvas is exactly the confusion a copy invites, and a node's name is
+   * what the field picker calls the group it produces - so `Fetch the order`
+   * gets `Fetch the order copy`, and a copy of that gets `copy 2`. The output
+   * name is stepped the same way for the same reason, and a sharper one: a
+   * reference is resolved by the field's name, so two nodes both giving `reply`
+   * means somebody's `reply` silently reads from whichever of them the graph
+   * happens to list first.
+   *
+   * Nothing else is needed to make this undoable or to mark the graph unsaved
+   * beyond saying so: a step is a copy of the whole graph, and the graph now
+   * has a node in it that it did not.
+   */
+  function duplicate() {
+    if (selectedKey === null) return;
+    const original = nodes.find((node) => node.id === selectedKey);
+    if (original === undefined) return;
+
+    /*
+     * Read from the panel, not from the canvas - which is a picture of the
+     * panel a quarter of a second behind, on purpose. Copying the picture
+     * would copy the name as it stood before the last word was typed. The same
+     * merge is written onto the original here, so the edit is not lost when the
+     * selection moves to the copy and cancels the write that was pending.
+     */
+    const from: NodeData =
+      draft === null
+        ? (original.data as NodeData)
+        : { ...(original.data as NodeData), ...named(withHeldName(draft, fieldEdit)) };
+
+    const key = freshKey(from.kind);
+    const name = copyName(from.name, new Set(nodes.map((node) => (node.data as NodeData).name)));
+    const given = from.outputName;
+    const outputName =
+      given === null || given === ''
+        ? given
+        : copyOutputName(
+            given,
+            new Set(
+              nodes
+                .map((node) => (node.data as NodeData).outputName)
+                .filter((one): one is string => one !== null && one !== ''),
+            ),
+          );
+
+    /*
+     * Without the ports. They are the server's answer about the node it was
+     * asked about, and carrying them onto a node the server has never seen
+     * would draw chips on the copy that describe the original.
+     */
+    const { inputs: _inputs, outputs: _outputs, ...its } = from;
+
+    setNodes((current) => [
+      ...current.map((node) =>
+        node.id === selectedKey
+          ? { ...node, data: { ...(node.data as NodeData), ...from }, selected: false }
+          : { ...node, selected: false },
+      ),
+      {
+        id: key,
+        type: original.type,
+        // A node somebody widened by hand is a node they want two of that size.
+        width: original.width,
+        height: original.height,
+        style: original.style,
+        position: { x: original.position.x + COPY_OFFSET, y: original.position.y + COPY_OFFSET },
+        data: {
+          ...its,
+          name,
+          outputName,
+          // Its own, so editing what one node passes leaves the other alone.
+          mappings: its.mappings.map((mapping) => ({ ...mapping })),
+        },
+      },
+    ]);
+    // The held name belongs to a field of the node the panel is about to leave.
+    setFieldEdit(null);
     setSelectedKey(key);
     // The store only learns about the node on the next tick, so select it then.
     requestAnimationFrame(() => updateNode(key, { selected: true }));
@@ -1714,6 +1881,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   const turnKey = useTurnShortcut();
   const undoKey = useUndoShortcut();
   const redoKey = useRedoShortcut();
+  const copyKey = useDuplicateShortcut();
 
   /** Read by the keyboard handler, which must not start a second save. */
   const busyRef = useRef(busy);
@@ -1831,6 +1999,34 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       if (draft === null) return;
       event.preventDefault();
       setDraft({ ...draft, orientation: turned(draft.orientation ?? null) });
+    }
+
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  });
+
+  /**
+   * Copying the selected node from the keyboard, Ctrl+D until somebody changes
+   * it in Preferences.
+   *
+   * Heard wherever the caret is, unlike turning and unlike undo. Both of those
+   * are handed back inside a text box because something else there means more -
+   * a letter is somebody typing it, and the browser's undo is the better undo
+   * for the box in front of them. Nothing in a text box means Ctrl+D, and the
+   * panel's name field is exactly where somebody finishes naming the node they
+   * want a second of.
+   *
+   * Prevented whether or not there is a node to copy, and whatever has been
+   * chosen: the default's own meaning in a browser is a bookmark, and
+   * "sometimes it bookmarks the page" is not a rule anybody can hold.
+   * Rebound every render, so it copies the graph as it stands rather than an
+   * older one.
+   */
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (!matches(event, copyKey)) return;
+      event.preventDefault();
+      duplicate();
     }
 
     window.addEventListener('keydown', onKey, true);
@@ -1990,6 +2186,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
 
   return (
     <AppShell
+      title={name === '' ? undefined : name}
       user={shellUser(session)}
       section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
@@ -2054,6 +2251,27 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
               </button>
             ))}
           </div>
+          {/*
+            Beside Add, because it is the other way a node gets onto the canvas.
+            Grey while nothing is selected, which is also how somebody learns
+            that it is the selected node this copies. The keystroke is on the
+            button for the reason Save's is: nobody finds out a shortcut exists
+            without being told, and it is read from the setting the handler
+            obeys so a rebinding shows here too.
+          */}
+          <button
+            type="button"
+            className={styles.ghostButton}
+            onClick={() => duplicate()}
+            disabled={selectedKey === null}
+            title={
+              selectedKey === null
+                ? 'Select a node to copy it'
+                : `Copy the selected node (${copyKey}). Change the keystroke in Preferences.`
+            }
+          >
+            Duplicate <kbd className={styles.shortcutKey}>{copyKey}</kbd>
+          </button>
           <button
             type="button"
             className={styles.deleteButton}

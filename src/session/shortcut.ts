@@ -6,6 +6,7 @@ const FORMAT_KEY = 'orknux.formatShortcut';
 const TURN_KEY = 'orknux.turnShortcut';
 const UNDO_KEY = 'orknux.undoShortcut';
 const REDO_KEY = 'orknux.redoShortcut';
+const DUPLICATE_KEY = 'orknux.duplicateShortcut';
 
 /** What opens the palette when nothing has been chosen. */
 export const DEFAULT_SHORTCUT = 'Ctrl+Q';
@@ -47,6 +48,16 @@ export const DEFAULT_TURN_SHORTCUT = 'R';
  */
 export const DEFAULT_UNDO_SHORTCUT = 'Ctrl+Z';
 export const DEFAULT_REDO_SHORTCUT = 'Ctrl+Shift+Z';
+
+/**
+ * What copies the selected node when nothing has been chosen.
+ *
+ * Ctrl+D, which is what every canvas with a duplicate in it uses. It has to be
+ * prevented wherever it is honoured: the browser's own meaning for it is a
+ * bookmark, and a graph editor that quietly bookmarked the page every time
+ * somebody copied a node would be the worse of the two surprises.
+ */
+export const DEFAULT_DUPLICATE_SHORTCUT = 'Ctrl+D';
 
 /**
  * Which keystroke opens the command palette, written the way it is shown:
@@ -111,6 +122,7 @@ const formatting = remembered(FORMAT_KEY, DEFAULT_FORMAT_SHORTCUT);
 const turning = remembered(TURN_KEY, DEFAULT_TURN_SHORTCUT);
 const undoing = remembered(UNDO_KEY, DEFAULT_UNDO_SHORTCUT);
 const redoing = remembered(REDO_KEY, DEFAULT_REDO_SHORTCUT);
+const duplicating = remembered(DUPLICATE_KEY, DEFAULT_DUPLICATE_SHORTCUT);
 
 export function paletteShortcut(): Shortcut {
   return palette.get();
@@ -182,6 +194,18 @@ export function setRedoShortcut(next: Shortcut): void {
 
 export function useRedoShortcut(): Shortcut {
   return redoing.use();
+}
+
+export function duplicateShortcut(): Shortcut {
+  return duplicating.get();
+}
+
+export function setDuplicateShortcut(next: Shortcut): void {
+  duplicating.set(next);
+}
+
+export function useDuplicateShortcut(): Shortcut {
+  return duplicating.use();
 }
 
 /** One key, named as somebody would read it rather than as the browser sends it. */

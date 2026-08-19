@@ -15,11 +15,13 @@ import {
   DEFAULT_TURN_SHORTCUT,
   DEFAULT_UNDO_SHORTCUT,
   DEFAULT_REDO_SHORTCUT,
+  DEFAULT_DUPLICATE_SHORTCUT,
   DEFAULT_SAVE_SHORTCUT,
   setFormatShortcut,
   setTurnShortcut,
   setUndoShortcut,
   setRedoShortcut,
+  setDuplicateShortcut,
   setPaletteShortcut,
   setSaveShortcut,
   usable,
@@ -27,6 +29,7 @@ import {
   useTurnShortcut,
   useUndoShortcut,
   useRedoShortcut,
+  useDuplicateShortcut,
   usePaletteShortcut,
   useSaveShortcut,
 } from '../../session/shortcut';
@@ -53,12 +56,13 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
   const turn = useTurnShortcut();
   const undo = useUndoShortcut();
   const redo = useRedoShortcut();
+  const duplicate = useDuplicateShortcut();
   /**
    * Which shortcut the next keystroke belongs to, or null while none is being
    * recorded. Not a boolean: there are three of these now, and they share the one
    * listener — one per shortcut would fight over the same keypress.
    */
-  const [recording, setRecording] = useState<'palette' | 'save' | 'format' | 'turn' | 'undo' | 'redo' | null>(null);
+  const [recording, setRecording] = useState<'palette' | 'save' | 'format' | 'turn' | 'undo' | 'redo' | 'duplicate' | null>(null);
   const [refused, setRefused] = useState<string | null>(null);
 
   /*
@@ -100,6 +104,7 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
       else if (recording === 'turn') setTurnShortcut(said);
       else if (recording === 'undo') setUndoShortcut(said);
       else if (recording === 'redo') setRedoShortcut(said);
+      else if (recording === 'duplicate') setDuplicateShortcut(said);
       else setFormatShortcut(said);
       setRecording(null);
       setRefused(null);
@@ -468,6 +473,44 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                   <>Press the combination you want. Escape leaves it as it is.</>
                 ) : (
                   <>Steps forward again. Ctrl+Y is heard as well, whatever is chosen here, because it is the other habit people arrive with.</>
+                )}
+              </p>
+            </div>
+
+            <div className={styles.setting}>
+              <span className={styles.settingLabel} id="duplicate-shortcut">
+                Duplicate Node Shortcut
+              </span>
+              <div className={styles.options}>
+                <button
+                  type="button"
+                  className={recording === 'duplicate' ? styles.optionCurrent : styles.option}
+                  onClick={() => {
+                    setRefused(null);
+                    setRecording((held) => (held === 'duplicate' ? null : 'duplicate'));
+                  }}
+                >
+                  {recording === 'duplicate' ? 'Press any keys…' : duplicate}
+                </button>
+                {duplicate !== DEFAULT_DUPLICATE_SHORTCUT && recording !== 'duplicate' && (
+                  <button
+                    type="button"
+                    className={styles.option}
+                    onClick={() => setDuplicateShortcut(DEFAULT_DUPLICATE_SHORTCUT)}
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+              <p className={styles.settingNote}>
+                {recording === 'duplicate' ? (
+                  <>Press the combination you want. Escape leaves it as it is.</>
+                ) : (
+                  <>
+                    Puts a second copy of the selected node on the workflow canvas, pointed at the same
+                    action, trigger or agent and wired to nothing. The browser&apos;s own meaning for the
+                    usual choice is a bookmark, which the editor takes instead.
+                  </>
                 )}
               </p>
             </div>
