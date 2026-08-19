@@ -37,7 +37,7 @@ const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
 const USER = process.env.ORKNUX_USER ?? 'alice';
 const PASSWORD = process.env.ORKNUX_PASSWORD ?? 'password';
 /** The workspace the seed builds. Must match `WORKSPACE_NAME` in seed-demo.mjs. */
-const WORKSPACE_NAME = process.env.ORKNUX_DEMO_WORKSPACE ?? 'Acme Support';
+const WORKSPACE_NAME = process.env.ORKNUX_DEMO_WORKSPACE ?? 'Northwind Support';
 /*
  * `screens` rather than `docs`, which would put the files under the same path
  * as the documentation's own route. A static file wins that race today; a
@@ -103,7 +103,7 @@ const found = await gql(`{
 }`);
 
 const byName = (list, name) => list.find((item) => item.name === name) ?? list[0];
-const flagship = byName(found.workflows.content, 'Azure Agent reply for Slack');
+const flagship = byName(found.workflows.content, 'Answer a question asked in Slack');
 const responder = byName(found.agents.content, 'Support responder');
 const fn = byName(found.functions.content, 'escalationNote');
 const tool = byName(found.tools.content, 'lookupCustomer');
@@ -252,7 +252,48 @@ const SHOTS = [
       await page.waitForTimeout(300);
     },
   },
-  { name: 'admin-workspaces', path: '/admin' },
+  {
+    name: 'admin-workspaces',
+    path: '/admin',
+    /*
+     * The other page whose text is changed before it is photographed.
+     *
+     * Every other picture is of one workspace, and the seed decides what is in
+     * it. This one is a list of all of them, and the machine that takes these
+     * pictures is somebody's own: the workspaces beside the demonstration one
+     * are real work, and their names and descriptions would ship in a public
+     * manual. So the demonstration workspace keeps its name and the rest are
+     * given invented ones, in the order they happen to appear.
+     *
+     * The page is still honest about what it is — a list of several workspaces,
+     * each with a description and a way into its settings. Only whose they are
+     * is hidden.
+     */
+    redact: () => {
+      const invented = [
+        ['Billing Operations', 'The nightly export, and who hears about it when it stops.'],
+        ['Onboarding', 'What a new customer is walked through in their first week.'],
+        ['Field Engineering', 'The questions that arrive from site, and what answers them.'],
+      ];
+      const keep = 'Northwind Support';
+      let next = 0;
+      const main = document.querySelector('main');
+      if (main === null) return;
+      for (const link of main.querySelectorAll('a[href^="/workspace/"]')) {
+        if (link.textContent?.trim() === keep) continue;
+        const [name, description] = invented[next] ?? ['Another workspace', '—'];
+        next += 1;
+        link.textContent = name;
+        // The row is `name cell`, `description cell`, `settings link`; the
+        // link sits inside the first of those.
+        const row = link.parentElement?.parentElement;
+        if (row?.children[1] !== undefined) row.children[1].textContent = description;
+        const settings = row?.querySelector('a[aria-label^="Settings for"]');
+        settings?.setAttribute('aria-label', `Settings for ${name}`);
+        settings?.setAttribute('title', `Settings for ${name}`);
+      }
+    },
+  },
   { name: 'users', path: '/admin/users' },
   internal && { name: 'user', path: `/admin/users/${internal.id}` },
   {
