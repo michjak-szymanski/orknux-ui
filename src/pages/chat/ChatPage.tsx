@@ -1461,12 +1461,18 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                   {voice && (
                     <button
                       type="button"
-                      className={styles.iconButton}
+                      /*
+                        The same control the microphone is, not a bare glyph:
+                        it sits in a row with two drawn buttons, and an
+                        undrawn one between them reads as something that fell
+                        in rather than something you press.
+                      */
+                      className={styles.micButton}
                       onClick={() => setVoice(false)}
                       title="Leave voice mode"
                       aria-label="Leave voice mode"
                     >
-                      <img src={xIcon} alt="" width={14} height={14} />
+                      <img src={xIcon} alt="" width={16} height={16} />
                     </button>
                   )}
                 </>
