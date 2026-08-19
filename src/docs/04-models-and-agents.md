@@ -129,6 +129,13 @@ state, by labels or by a search; read one with its comments; comment on it; move
 it between open and closed; and change its title, description or labels. An issue
 is addressed by the number people say, so #4 to an assistant is #4 on the page.
 
+It can also **file** one. An assistant that finds something and can only describe
+it in a conversation is one whose findings depend on somebody else writing them
+down, which is the failure a tracker exists to prevent. A filed issue is under
+the name of whoever is asking, and assigned to nobody: deciding who should look
+at something is a judgement for a person, and an assistant that assigned its own
+findings would be handing out work.
+
 ### Waiting to be told
 
 One tool answers slowly on purpose. `orknux_news` gives whoever is asking what
