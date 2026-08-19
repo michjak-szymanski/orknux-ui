@@ -8,12 +8,19 @@
  * command or it never happens.
  *
  *   docker exec orknux-ui-dev-1 npx playwright install --with-deps chromium
- *   docker exec orknux-ui-dev-1 node scripts/seed-demo.mjs
+ *   docker exec -e ORKNUX_DEMO_ENDPOINT=http://a.model.that/answers \
+ *     orknux-ui-dev-1 node scripts/seed-demo.mjs
  *   docker exec orknux-ui-dev-1 node scripts/screenshots.mjs
  *
  * The first line is needed once per container: the browser and the system
  * libraries it needs live in the container's own filesystem, not in the
  * node_modules volume, so recreating the container takes them with it.
+ *
+ * The endpoint on the second matters more than it looks. Half a dozen of these
+ * pictures are of a product talking to a model - a chat with an answer in it, a
+ * run with an agent step, a provider with a green light - and pointed at
+ * nothing they are pictures of a 404. Whatever it is pointed at, its address is
+ * replaced in every image before the shutter: see `hideTheEndpoint` below.
  *
  * The seed comes first and is not optional. These pictures used to be taken of
  * whatever was in the developer's database, which is how the manual ended up
@@ -38,6 +45,34 @@ const USER = process.env.ORKNUX_USER ?? 'alice';
 const PASSWORD = process.env.ORKNUX_PASSWORD ?? 'password';
 /** The workspace the seed builds. Must match `WORKSPACE_NAME` in seed-demo.mjs. */
 const WORKSPACE_NAME = process.env.ORKNUX_DEMO_WORKSPACE ?? 'Northwind Support';
+/*
+ * The colleague the seed makes, and the only account whose page is photographed.
+ *
+ * By name, and deliberately. This used to be "the first internal user", which
+ * on the machine that takes these pictures is the account an AI assistant signs
+ * in with: the manual's page about what a user is showed an account named after
+ * a vendor's assistant, holding Administrators and Developer, with three live
+ * tokens named after the tool that holds them. None of that is a user page — it
+ * is somebody's automation, photographed by accident because it happened to
+ * sort first. Must match `COLLEAGUE.username` in seed-demo.mjs.
+ */
+const COLLEAGUE = process.env.ORKNUX_DEMO_COLLEAGUE ?? 'dana';
+
+/**
+ * What a provider's address is shown as.
+ *
+ * A working demonstration needs a model that answers, and the one that answers
+ * on the machine these are taken on is a server on the owner's home network.
+ * Its address is drawn wherever a provider is: the models list, the provider's
+ * own page, the message a check leaves behind, a chat that could not reach it.
+ *
+ * So it is replaced on every page rather than on the two somebody remembered.
+ * What it really is comes from the provider itself further down, not from an
+ * environment variable this script would have to be told about separately - the
+ * seed already stored it, and a redaction that has to be configured twice is
+ * one that will one day be configured once.
+ */
+const SHOWN_ENDPOINT = process.env.ORKNUX_DEMO_ENDPOINT_SHOWN ?? 'http://ollama.northwind.internal:11434';
 /*
  * `screens` rather than `docs`, which would put the files under the same path
  * as the documentation's own route. A static file wins that race today; a
@@ -95,7 +130,7 @@ const found = await gql(`{
   functions: workspaceFunctions(workspaceId: "${ws}") { content { id name } }
   tools: workspaceTools(workspaceId: "${ws}") { content { id name } }
   skills: workspaceSkills(workspaceId: "${ws}") { content { id name } }
-  providers: modelProviders(workspaceId: "${ws}") { id name }
+  providers: modelProviders(workspaceId: "${ws}") { id name endpoint }
   issues: workspaceIssues(workspaceId: "${ws}", size: 100) {
     content { number title attachments { id } comments { id } }
   }
@@ -120,8 +155,30 @@ const illustrated =
   found.issues.content.find((issue) => issue.attachments.length > 0 && issue.comments.length > 0) ??
   found.issues.content.find((issue) => issue.comments.length > 0) ??
   found.issues.content[0];
-/* The one kind of user whose page has a password and tokens on it. */
-const internal = found.users.find((user) => user.type === 'INTERNAL') ?? found.users[0];
+/*
+ * The colleague, by name.
+ *
+ * Not "the first internal user": see the comment on COLLEAGUE above for what
+ * that photographed. If she is not there the capture stops rather than falling
+ * back to whoever is, because the fallback is exactly the account that must not
+ * be published - and a shot that quietly does not happen leaves the previous,
+ * wrong picture on disk under the same name.
+ */
+const internal = found.users.find((user) => user.username === COLLEAGUE);
+if (!internal) {
+  console.error(
+    `No user called "${COLLEAGUE}", whose page is what /admin/users/:id is photographed from.\n` +
+      '  Run scripts/seed-demo.mjs, which makes her.',
+  );
+  process.exit(1);
+}
+
+/*
+ * What the provider's address really is, so it can be replaced with what the
+ * pictures say it is. Empty when there is no provider, which is a workspace
+ * nobody seeded rather than a workspace with nothing to hide.
+ */
+const REAL_ENDPOINT = provider?.endpoint ?? '';
 
 /**
  * What to photograph.
@@ -183,12 +240,83 @@ const SHOTS = [
   responder && { name: 'agent-settings', path: `/workspace/${ws}/agents/${responder.id}/settings` },
   { name: 'models', path: `/workspace/${ws}/models` },
   provider && { name: 'model-provider', path: `/workspace/${ws}/models/providers/${provider.id}` },
-  { name: 'functions', path: `/workspace/${ws}/functions` },
-  fn && { name: 'function-editor', path: `/workspace/${ws}/functions/${fn.id}` },
+  {
+    name: 'functions',
+    path: `/workspace/${ws}/functions`,
+    /*
+     * A workspace page that lists installation-wide things, which is why it
+     * needs the same treatment the Admin plugins page gets.
+     *
+     * A plugin's functions are offered to every workspace - one row in the
+     * database with no workspace on it at all - and they are listed here beside
+     * the workspace's own under `<plugin key>_<function>`. So this page was
+     * showing `teammates_isTeammate` and `tsdemo_isTeammate`: the scratch
+     * uploads on the developer's machine, turning up inside the demonstration
+     * workspace where nobody put them.
+     *
+     * The choice was between hiding them and getting them out of the workspace,
+     * and getting them out is not a thing that exists: they are not in the
+     * workspace to be removed from it. The only way to stop them appearing here
+     * is to delete the plugins from the installation, and those are somebody's
+     * uploads - deleting them to tidy a screenshot is the capture script
+     * editing the machine it is photographing, which is the one thing the seed
+     * beside it refuses to do. So they are renamed, with the same names the
+     * plugins page gives them, because a reader who turns from one page to the
+     * other has to find the same plugin there.
+     */
+    redact: () => {
+      // Keyed by what a plugin is called in the database, valued by what the
+      // plugins page above calls it. Prefixes, not whole names: what follows
+      // the underscore is the function's own name, and that part is true as it
+      // stands.
+      const instead = new Map([
+        ['teammates', 'zendesk'],
+        ['template', 'pagerduty'],
+        ['tsdemo', 'statuspage'],
+      ]);
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+        const text = node.nodeValue?.trim() ?? '';
+        const underscore = text.indexOf('_');
+        if (underscore <= 0) continue;
+        const given = instead.get(text.slice(0, underscore));
+        if (given !== undefined) node.nodeValue = `${given}${text.slice(underscore)}`;
+      }
+    },
+  },
+  /*
+   * The three editors, each waiting for something only a loaded one has.
+   *
+   * These pages draw their whole frame - heading, empty name, empty code pane,
+   * a greyed Save - before the thing being edited has arrived, and they say
+   * nothing while they wait. The default wait here is "does `main` have text in
+   * it", which that empty frame satisfies immediately, so a run where the dev
+   * server was still compiling the route photographed the frame: `tool-editor`
+   * shipped as a blank form with "Tool" for a heading and `…` for a name, which
+   * reads as a feature that does not work.
+   *
+   * So each waits for a control that only exists once there is something to
+   * edit - the Active badge, whose title says which kind of thing it is, and a
+   * parameter row on the function editor, which is drawn from the loaded
+   * function's own parameters.
+   */
+  fn && {
+    name: 'function-editor',
+    path: `/workspace/${ws}/functions/${fn.id}`,
+    waitFor: 'input[aria-label="Parameter 1 name"]',
+  },
   { name: 'tools', path: `/workspace/${ws}/tools` },
-  tool && { name: 'tool-editor', path: `/workspace/${ws}/tools/${tool.id}` },
+  tool && {
+    name: 'tool-editor',
+    path: `/workspace/${ws}/tools/${tool.id}`,
+    waitFor: 'button[title$="this tool"]',
+  },
   { name: 'skills', path: `/workspace/${ws}/skills` },
-  skill && { name: 'skill-editor', path: `/workspace/${ws}/skills/${skill.id}` },
+  skill && {
+    name: 'skill-editor',
+    path: `/workspace/${ws}/skills/${skill.id}`,
+    waitFor: 'button[title$="this skill"]',
+  },
   { name: 'actions', path: `/workspace/${ws}/actions` },
   { name: 'conditions', path: `/workspace/${ws}/conditions` },
   { name: 'objects', path: `/workspace/${ws}/objects` },
@@ -211,28 +339,53 @@ const SHOTS = [
     prepare: async (page) => {
       await page.click('button[aria-label="Ask about this page"]');
       await page.waitForSelector('section[aria-label="Quick chat"]', { timeout: 10_000 });
-      await page.fill('textarea[aria-label="Ask about this page"]', 'Which run failed, and what stopped it?');
       /*
-       * How much text the panel holds before the answer, so the wait is for it
-       * to grow rather than for a length picked in advance — a short answer is
-       * still an answer, and the first version of this called one a timeout.
+       * A question this page can actually answer. It used to ask which run
+       * failed - written when the demonstration's model was unreachable and
+       * every run of the flagship workflow died on it, so there was always one.
+       * With a model that answers there is nothing failed to point at, and the
+       * panel replied "None of the recent runs have failed", which is correct
+       * and teaches nothing. What the panel is for is reading what is on the
+       * screen, so it is asked something only the screen knows.
        */
-      const before = await page.evaluate(
-        () => document.querySelector('section[aria-label="Quick chat"]')?.innerText.length ?? 0,
-      );
+      const asked = 'Which of these runs took the longest, and which workflow was it?';
+      await page.fill('textarea[aria-label="Ask about this page"]', asked);
       await page.click('section[aria-label="Quick chat"] button[type="submit"]');
+      const held = () => document.querySelector('section[aria-label="Quick chat"]')?.innerText ?? '';
       try {
-        // A real model answers this, so it takes as long as it takes.
+        /*
+         * Two waits, because the panel gets *shorter* before it gets longer.
+         *
+         * An unused panel holds a paragraph explaining what it is for, and
+         * sending the first question replaces that paragraph with the
+         * conversation - so measuring before the question and waiting to grow
+         * past it waits for something that never happens: 174 characters of
+         * explanation became 100 of question, then 195 with the answer, and a
+         * margin of any size over 174 was a guaranteed timeout. It warned about
+         * an answer that was sitting in the picture.
+         *
+         * So the baseline is taken once the question is in the panel, and what
+         * is waited for is anything after it. A real model answers this, so the
+         * second wait takes as long as it takes.
+         */
         await page.waitForFunction(
-          (base) => (document.querySelector('section[aria-label="Quick chat"]')?.innerText.length ?? 0) > base + 40,
-          before,
+          (question) =>
+            (document.querySelector('section[aria-label="Quick chat"]')?.innerText ?? '').includes(question),
+          asked,
+          { timeout: 15_000 },
+        );
+        const echoed = await page.evaluate(held);
+        await page.waitForFunction(
+          (base) =>
+            (document.querySelector('section[aria-label="Quick chat"]')?.innerText.length ?? 0) > base + 20,
+          echoed.length,
           { timeout: 90_000 },
         );
       } catch {
-        // Answer never came: the question and the panel are still worth showing.
-        // Usually not a failure: the panel keeps its conversation, so a second
-        // run finds this question already answered and nothing grows.
-        console.warn('  quick-chat: the panel did not grow — it may already hold this answer');
+        // Answer never came: the question and the panel are still worth showing,
+        // but a picture of a question nobody answered is not what this page is
+        // for, so it is said out loud rather than quietly published.
+        console.warn('  quick-chat: no answer arrived — check the model provider');
       }
     },
   },
@@ -294,24 +447,33 @@ const SHOTS = [
       }
     },
   },
-  { name: 'users', path: '/admin/users' },
-  internal && {
-    name: 'user',
-    path: `/admin/users/${internal.id}`,
+  {
+    name: 'users',
+    path: '/admin/users',
     /*
-     * The token names, and only the names - no value is ever shown here, and a
-     * token is stored as a hash so there is none to show. What is hidden is
-     * that these are the live tokens of whoever ran the capture: three near
-     * duplicates called after the tool that holds them, which reads as somebody
-     * else's account rather than as an illustration of what tokens are for.
+     * Installation-wide, like the workspaces and plugins lists above, so it
+     * shows whoever this machine knows - and one of them is the account an AI
+     * assistant signs in with here, called after the vendor whose assistant it
+     * is.
+     *
+     * That name cannot ship in a manual for a reason that has nothing to do
+     * with privacy. A reader who meets "Claude" in the users table of a product
+     * that also has agents in it will conclude the product is that assistant,
+     * or ships with it, or requires it - and none of those are true. Orknux
+     * talks to whatever model provider it is pointed at. An accident of whose
+     * machine took the picture would be read as a statement about the product.
+     *
+     * So the row is given a colleague's name, the same way the workspaces above
+     * are given invented names: what the page is - three accounts, two kinds,
+     * one of them holding two roles - is unchanged, and only whose account it
+     * is stops being visible.
      */
     redact: () => {
-      // Text nodes again, and only the names - a token's value is never on this
-      // page, because only its hash was ever stored.
       const instead = new Map([
-        ['Claude Code', 'Nightly export'],
-        ['Claude Code (issue tools)', 'Rota sync'],
-        ['Claude Code issue tools', 'Status page'],
+        ['Claude', 'Priya Raman'],
+        // The avatar, which is initials rather than a name and so is missed by
+        // a map written only against names.
+        ['CL', 'PR'],
       ]);
       const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
       for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
@@ -320,6 +482,17 @@ const SHOTS = [
       }
     },
   },
+  /*
+   * The colleague's own page, and nothing is painted over on it.
+   *
+   * It used to be whichever internal account sorted first, with its three live
+   * token names replaced by invented ones after the fact. The account is now
+   * chosen by name and the tokens on it were made by the seed, so what is in
+   * the picture is what is in the database: three tokens called after jobs a
+   * support desk would actually run, two of them used. Nothing here is a
+   * redaction, which is the version of this page worth having.
+   */
+  { name: 'user', path: `/admin/users/${internal.id}` },
   {
     name: 'doctor',
     path: '/admin/doctor',
@@ -368,12 +541,25 @@ const SHOTS = [
        * page's redaction is: this list is spans with hashed class names, and a
        * selector written against them is one that breaks the next time the
        * stylesheet is touched.
+       *
+       * All three rows, not two. The map used to cover `template` and `tsdemo`
+       * and miss the row above them - `orknux-plugin (2)`, a scratch upload
+       * still carrying a browser's duplicate-download suffix, at the top of the
+       * manual's picture of what a plugin is.
+       *
+       * The signatures are left alone now. Rewriting them is what made this
+       * page disagree with a workspace's Functions page, where the same plugins
+       * appear again: a plugin's function is listed there as `<key>_<name>`, so
+       * a signature invented here would have had to be invented identically
+       * there or the manual contradicts itself two pages apart. What they
+       * really declare - `isTeammate(email)` - is a plausible thing for a
+       * support desk to ask, and a true signature needs no second copy kept in
+       * step with it.
        */
       const instead = new Map([
-        ['class-template', 'zendesk-bridge'],
+        ['orknux-plugin (2)', 'zendesk'],
         ['template', 'pagerduty'],
         ['tsdemo', 'statuspage'],
-        ['isTeammate(email: string): boolean', 'raiseTicket(subject: string, body: string): string'],
       ]);
       const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
       for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
@@ -383,6 +569,51 @@ const SHOTS = [
     },
   },
   { name: 'roles', path: '/admin/roles' },
+  /*
+   * Both installation-wide, and both photographed from what the seed puts
+   * there: `seed-demo.mjs` adds two machines and three proxy rules, because a
+   * page with nothing in it is a picture of an empty box rather than of what
+   * the page is for.
+   *
+   * Neither is redacted, and that is a decision rather than an oversight. The
+   * seed adds and never replaces, so anything this installation already held
+   * is still in the list and will be in the picture - somebody's real proxy,
+   * with its real address on it. Look at both before publishing.
+   */
+  {
+    name: 'networking',
+    path: '/admin/networking',
+    /*
+     * The tester, used rather than empty.
+     *
+     * Nothing is redacted here: the address is typed in and the button is
+     * pressed, which is what a reader would do, and the answer under it is the
+     * product's own. It is worth the two lines because an unused tester is a
+     * box with a placeholder in it - and the placeholder is a Microsoft sign-in
+     * URL, which on a page whose every other row says `northwind.example` reads
+     * as a stray from a different manual.
+     *
+     * The address is a real one that matches none of the rules, and both halves
+     * of that are deliberate. A `northwind.example` address is what the rules
+     * are written against, and it was tried first - but the tester answers with
+     * what a real request would do, and the first thing a real request does is
+     * resolve the host. `northwind.example` is a reserved name that resolves
+     * nowhere, so the card answered "Goes through Vendor APIs" and then, in
+     * red, that the address is refused before any rule is consulted. Both
+     * sentences are true and the pair is a picture of something being wrong.
+     *
+     * So it asks about somewhere this installation really does call, and gets
+     * the answer most addresses get: no rule matched, so it goes out directly.
+     * That is the sentence a reader most needs to recognise.
+     */
+    prepare: async (page) => {
+      const box = 'input[aria-label="An address to test against the rules"]';
+      await page.fill(box, 'https://slack.com/api/chat.postMessage');
+      await page.click('button:has-text("Check")');
+      await page.waitForTimeout(1500);
+    },
+  },
+  { name: 'shell', path: '/admin/shell' },
   { name: 'monitoring', path: '/admin/monitoring' },
   { name: 'admin-settings', path: '/admin/settings' },
   // By a setting rather than by the page having text in it: this one lays its
@@ -431,9 +662,63 @@ const SHOTS = [
         console.warn('  notifications: nothing is waiting, so the panel is empty');
       }
       await page.waitForTimeout(400);
+
+      /*
+       * And the one check in this file that stops a picture being taken.
+       *
+       * The bell is not a workspace's. It lists what is waiting for whoever is
+       * signed in, across every workspace they can see - so on the machine that
+       * takes these pictures it can hold the titles of somebody's real issues,
+       * from a tracker that has nothing to do with the demonstration. Every
+       * other page here is reached by a path with the demo workspace's id in
+       * it; this one is the exception, and it is the exception on the page most
+       * likely to be full of sentences somebody wrote about their own work.
+       *
+       * Each row links to the issue it is about, so the workspace it belongs to
+       * is in the link. If any of them is from somewhere else the shot fails
+       * and is reported, rather than being written and looked at later.
+       */
+      const strays = await page.evaluate((prefix) => {
+        const links = [...document.querySelectorAll('div[role="dialog"][aria-label="Notifications"] a')];
+        return links.map((link) => link.getAttribute('href') ?? '').filter((href) => !href.startsWith(prefix));
+      }, `/workspace/${ws}/`);
+      if (strays.length > 0) {
+        throw new Error(
+          `the bell is holding ${strays.length} notification(s) from outside ${WORKSPACE_NAME} — ` +
+            'they belong to whoever uses this installation, so this is not a picture that can be published',
+        );
+      }
     },
   },
 ].filter(Boolean);
+
+/**
+ * The provider's real address, gone, on whatever page happens to be showing it.
+ *
+ * The only thing in this file that runs before *every* screenshot rather than
+ * before one. The three `redact` hooks above each know which page they are for;
+ * this one cannot, because the address turns up in places nobody would go
+ * looking - a chat that says which provider answered, a check's message on the
+ * doctor page, an error a page kept from an earlier attempt. A per-page list
+ * would have to be right about all of them forever, and being wrong once means
+ * publishing somebody's home network.
+ *
+ * Text nodes and field values both. The models list draws the address as text;
+ * the provider's own page draws it in an input, where a text-node walk finds
+ * nothing at all - which is exactly the sort of half-done job this replaces.
+ */
+function hideTheEndpoint({ real, shown }) {
+  if (real === '' || real === shown) return;
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+    if (node.nodeValue?.includes(real)) node.nodeValue = node.nodeValue.split(real).join(shown);
+  }
+  for (const field of document.querySelectorAll('input, textarea')) {
+    if (field.value?.includes(real)) field.value = field.value.split(real).join(shown);
+    const placeholder = field.getAttribute('placeholder');
+    if (placeholder?.includes(real)) field.setAttribute('placeholder', placeholder.split(real).join(shown));
+  }
+}
 
 /*
  * `ORKNUX_ONLY=doctor,chat` takes just those, for when one page has changed and
@@ -497,6 +782,7 @@ for (const shot of CHOSEN) {
     await page.waitForTimeout(700);
     if (shot.prepare) await shot.prepare(page);
     if (shot.redact) await page.evaluate(shot.redact);
+    await page.evaluate(hideTheEndpoint, { real: REAL_ENDPOINT, shown: SHOWN_ENDPOINT });
     await page.screenshot({ path: `${OUT}${shot.name}.png` });
     taken += 1;
     console.log(shot.name);

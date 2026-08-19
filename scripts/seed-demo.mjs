@@ -47,7 +47,17 @@ export const WORKSPACE_NAME = process.env.ORKNUX_DEMO_WORKSPACE ?? 'Northwind Su
  *   ORKNUX_DEMO_ENDPOINT=http://10.0.0.5:8081 node scripts/seed-demo.mjs
  *
  * A demo whose model is dead photographs a red light and an agent that cannot
- * run, so it is worth pointing at something real before capturing.
+ * run, so it is worth pointing at something real before capturing. Give it the
+ * root the server speaks to, not a path: the probe asks `<endpoint>/models` and
+ * a chat goes to `<endpoint>/chat/completions`, and llama.cpp answers both at
+ * its root as well as under `/v1`.
+ *
+ * The model id is the name asked for, not the name the provider gives back. A
+ * llama.cpp server lists whatever file it loaded — an absolute path, on the
+ * machine it runs on — and it will run whatever id is asked for, since it holds
+ * exactly one model. So the id here is the readable one, and copying the id out
+ * of the listing would put somebody's home directory in the manual's picture of
+ * the models page.
  */
 const OLLAMA_ENDPOINT = process.env.ORKNUX_DEMO_ENDPOINT ?? 'http://localhost:11434';
 const OLLAMA_MODEL_ID = process.env.ORKNUX_DEMO_MODEL ?? 'gemma-4-31B-it-Q5_K_M';
@@ -173,14 +183,22 @@ if (previous) {
   log(`removed the previous ${WORKSPACE_NAME} (id ${previous.id}, ${workspaceWorkflows.content.length} workflows)`);
 }
 
+/*
+ * Held in a constant rather than written inline, because it is needed twice.
+ *
+ * The role is assigned by updating the workspace, and that update takes the
+ * whole workspace: name, description and roles together. It used to send back
+ * `workspace.description` from the creation above, which never selected the
+ * field - so it sent `undefined`, the description was cleared a second after it
+ * was set, and the manual's picture of the Workspaces list showed every
+ * workspace with a description except the demonstration one.
+ */
+const WORKSPACE_DESCRIPTION =
+  'Where Slack questions land: what the desk answers, and what it wakes somebody for.';
+
 const { createWorkspace: workspace } = await gql(
   'mutation($input: CreateWorkspaceInput!) { createWorkspace(input: $input) { id name } }',
-  {
-    input: {
-      name: WORKSPACE_NAME,
-      description: 'Where Slack questions land: what the desk answers, and what it wakes somebody for.',
-    },
-  },
+  { input: { name: WORKSPACE_NAME, description: WORKSPACE_DESCRIPTION } },
 );
 const ws = workspace.id;
 log(`workspace ${ws}: ${workspace.name}`);
@@ -209,7 +227,7 @@ if (!deskRole) {
 }
 await gql('mutation($id: ID!, $input: UpdateWorkspaceInput!) { updateWorkspace(id: $id, input: $input) { id } }', {
   id: ws,
-  input: { name: WORKSPACE_NAME, description: workspace.description, roleIds: [deskRole.id] },
+  input: { name: WORKSPACE_NAME, description: WORKSPACE_DESCRIPTION, roleIds: [deskRole.id] },
 });
 
 const { users: knownUsers } = await gql('{ users { id username type } }');
@@ -990,15 +1008,42 @@ for (const input of ['SUP-4471', 'SUP-4468', 'SUP-4470', 'SUP-4455', 'SUP-4462']
   }
 }
 /*
- * And one run of the workflow that reaches Slack, which is not configured here.
- * It fails, which is the point: a list where every row is green says nothing
- * about what the status column is for.
+ * And one run of the workflow with the agent in it, which is the run the manual
+ * actually wants a picture of: a trigger, an action, a model that answers, and
+ * a step that had nothing to do.
+ *
+ * The input is a JSON object rather than a sentence, and that is the whole
+ * difference between this row being green and being red. The graph's nodes read
+ * `trigger.text`, `trigger.channel` and `trigger.threadTs` - a manual run's
+ * input *is* the event, and a reference into a bare string resolves to nothing,
+ * so the first action was handed null and died on it. The manual then opened on
+ * an executions list whose top row was a red "Answer a question asked in Slack",
+ * which reads as a product that cannot run its own example. What the shape here
+ * has to match is the trigger the graph was drawn around, so this is the event
+ * Slack would have delivered.
+ *
+ * The reply step still has no bot token to send with, and that is fine: the
+ * action reports that it sent nothing and the run completes. A skipped step
+ * with a reason on it is a better picture than a failure, because it is what an
+ * installation with one integration still to configure actually looks like.
  */
+let flagshipRun = null;
 try {
-  await gql(
+  const { startExecution } = await gql(
     'mutation($ws: ID!, $id: ID!, $input: String) { startExecution(workspaceId: $ws, workflowId: $id, input: $input) { id status } }',
-    { ws, id: flagship.id, input: 'Any update on SUP-4471?' },
+    {
+      ws,
+      id: flagship.id,
+      input: JSON.stringify({
+        text:
+          'Any update on SUP-4471? We know the cause is a schema change on our side and the fix ' +
+          'ships at 15:30 - draft the reply for the thread.',
+        channel: '#support',
+        threadTs: '1755600000.000100',
+      }),
+    },
   );
+  flagshipRun = startExecution.id;
   runs += 1;
 } catch (failure) {
   console.warn(`  flagship run: ${failure.message.slice(0, 120)}`);
@@ -1285,5 +1330,177 @@ if (asColleague) {
   }
   log(`the desk answered, as ${COLLEAGUE.displayName}`);
 }
+
+/* ------------------------------------------------ and the tokens she signs with */
+
+/*
+ * Access tokens on the colleague's account, because the manual has a picture of
+ * a user page and that page is mostly about tokens.
+ *
+ * It used to photograph whichever internal account came first, which on the
+ * machine that takes these pictures is the account an AI assistant signs in
+ * with - two administrator roles and three live tokens named after the tool
+ * holding them. The capture now asks for this colleague by name, and this is
+ * what makes her page worth photographing: three tokens that were invented on
+ * purpose, so nothing has to be painted over afterwards.
+ *
+ * Added by name and only when the name is free, the way the proxy rules and
+ * shells below are: this account survives a rebuild of the workspace, and a
+ * seed run twice should not leave her holding six.
+ *
+ * Two of them are then used - one call each, which is all it takes for the page
+ * to say "used ... ago" beside them. A page where every row reads "never used"
+ * is a picture of three things nobody has done anything with.
+ */
+if (colleague) {
+  const TOKENS = ['Nightly export', 'Rota sync', 'Status page'];
+  const { userTokens } = await gql(`{ userTokens(id: "${colleague.id}") { id name } }`);
+  const already = new Set(userTokens.map((token) => token.name));
+  const issued = [];
+  for (const name of TOKENS) {
+    if (already.has(name)) continue;
+    const { createUserToken } = await gql(
+      'mutation($id: ID!, $name: String!) { createUserToken(id: $id, name: $name) { token { id name } secret } }',
+      { id: colleague.id, name },
+    );
+    issued.push(createUserToken.secret);
+  }
+  // A token is a bearer credential, so it goes in the header rather than in the
+  // session cookie the rest of this script uses.
+  for (const secret of issued.slice(0, 2)) {
+    const response = await fetch(`${BASE}/graphql`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${secret}` },
+      body: JSON.stringify({ query: '{ myNotificationCount }' }),
+    });
+    if (!response.ok) console.warn(`  token call: ${response.status}`);
+  }
+  log(`${issued.length} access tokens for ${COLLEAGUE.displayName}`);
+}
+
+/*
+ * The run with the model in it, finished before this script says it is done.
+ *
+ * It was started well above and has been running while the tracker was filled,
+ * which is the point of starting it there - but a capture that opens the
+ * executions list while it is still going photographs a spinner, and the
+ * workflows list beside it photographs a workflow with no outcome yet.
+ */
+if (flagshipRun !== null) {
+  const until = Date.now() + 180_000;
+  let status = 'RUNNING';
+  while (status === 'RUNNING' && Date.now() < until) {
+    await new Promise((wake) => setTimeout(wake, 3000));
+    const { execution } = await gql(`{ execution(id: "${flagshipRun}") { status } }`);
+    status = execution.status;
+  }
+  log(`the run with the model in it: ${status}`);
+}
+
+
+/* ------------------------------------------- and the two installation lists */
+
+/*
+ * Everything above belongs to a workspace. These two do not: shells and proxy
+ * rules are the installation's, and the Admin pages holding them show whatever
+ * this machine holds. On a machine with none they photograph as an empty box,
+ * which tells a reader nothing about what either page is for.
+ *
+ * So this adds by name, and only when the name is free. Nothing here is edited
+ * or deleted. The rest of this script may demolish a workspace it built itself;
+ * these two lists can hold somebody's real proxies and real machines, and a
+ * documentation script has no business touching those.
+ *
+ * Every address below is a literal address on a private network, which is not a
+ * style choice. A shell's host goes past the same guard every outbound address
+ * goes past, and a name that does not resolve is refused as it is saved - so
+ * `build.northwind.example`, which is what the rest of this seed would have
+ * reached for, cannot be stored at all. A literal `10.` address has nothing to
+ * look up, and points at a network this machine is not on.
+ */
+
+const { proxyRules } = await gql('{ proxyRules { id name } }');
+const held = new Set(proxyRules.map((rule) => rule.name));
+
+/*
+ * The patterns are narrow on purpose, and for a different reason: a proxy rule
+ * applies to the requests this installation really makes, so a demonstration
+ * rule matching something it really calls would send that call into a hole.
+ */
+const RULES = [
+  {
+    name: 'Vendor APIs',
+    // Found anywhere in the URL and ignoring case, so the anchor is doing real
+    // work.
+    pattern: '^https://api\.(zendesk|pagerduty)\.northwind\.example/',
+    proxyHost: '10.0.4.2',
+    proxyPort: 3128,
+    username: 'orknux',
+    // The page shows that a password is stored, and never the password.
+    password: 'demo-only-never-used',
+    enabled: true,
+  },
+  {
+    name: 'Internal registry',
+    pattern: '^https://registry\.northwind\.example/',
+    proxyHost: '10.0.4.2',
+    proxyPort: 3128,
+    enabled: true,
+  },
+  {
+    // Third, off, and last on purpose. The list is read top to bottom and the
+    // first enabled rule that matches is the one used, so a row broader than
+    // the two above it and switched off shows both of the things this page is
+    // about at once.
+    //
+    // Short, because the name column is narrow and truncates: the manual's
+    // picture of this page used to end in "Everything else at North…", which
+    // reads as a product that cannot fit its own data on its own screen.
+    name: 'All Northwind hosts',
+    pattern: '^https?://[^/]*\.northwind\.example/',
+    proxyHost: '10.0.4.2',
+    proxyPort: 3128,
+    enabled: false,
+  },
+];
+
+for (const rule of RULES) {
+  if (held.has(rule.name)) continue;
+  await gql('mutation($input: ProxyRuleInput!) { createProxyRule(input: $input) { id } }', { input: rule });
+}
+log(`proxy rules: ${RULES.filter((rule) => !held.has(rule.name)).length} added`);
+
+const { shells } = await gql('{ shells { id name } }');
+const machines = new Set(shells.map((shell) => shell.name));
+
+/*
+ * A key is made here rather than checked in.
+ *
+ * A shell with no key reads as "No private key is stored", which photographs
+ * the one state the page is not trying to explain. A key committed to a public
+ * repository is worse in a different way - it is a private key in a public
+ * repository, whatever it opens - so one is generated per run, for two machines
+ * on a network this is not on. It opens nothing and it outlives nothing.
+ */
+const { generateKeyPairSync } = await import('node:crypto');
+const throwaway = () =>
+  generateKeyPairSync('rsa', {
+    modulusLength: 2048,
+    publicKeyEncoding: { type: 'spki', format: 'pem' },
+    privateKeyEncoding: { type: 'pkcs1', format: 'pem' },
+  }).privateKey;
+
+const MACHINES = [
+  { name: 'Build box', host: '10.0.4.12', port: 22, username: 'orknux' },
+  { name: 'Export runner', host: '10.0.4.19', port: 22, username: 'deploy' },
+];
+
+for (const machine of MACHINES) {
+  if (machines.has(machine.name)) continue;
+  await gql('mutation($input: ShellInput!) { createShell(input: $input) { id } }', {
+    input: { ...machine, privateKey: throwaway() },
+  });
+}
+log(`shells: ${MACHINES.filter((machine) => !machines.has(machine.name)).length} added`);
 
 log(`\n${WORKSPACE_NAME} is workspace ${ws}. Point the capture at it.`);
