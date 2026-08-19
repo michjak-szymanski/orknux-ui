@@ -5,6 +5,42 @@ arrives, a workflow decides what to do about it, and a record of what happened
 is kept. This page is the short version of everything the rest of these pages
 go into.
 
+## Running it
+
+If somebody has already put an Orknux in front of you, skip this.
+
+`deploy/compose.yaml` in the server repository is a whole installation in one
+file: the server, the interface, Postgres, a directory to sign in against, and
+Temporal, from the published images. Three lines:
+
+```
+curl -O https://raw.githubusercontent.com/michjak-szymanski/orknux-server/main/deploy/compose.yaml
+export ORKNUX_SECRET_KEY="$(openssl rand -base64 32)"
+docker compose up -d
+```
+
+Then open **http://localhost:8080** and sign in as `alice` / `password`. That
+one port is the only one published: the interface forwards `/api`, `/graphql`
+and `/mcp` to the server, so the browser only ever talks to one address. The
+first start takes a minute or two while Temporal and the server apply their
+schemas.
+
+**`ORKNUX_SECRET_KEY` has no default, and the stack refuses to start without
+one.** That refusal is deliberate. Every credential the server is trusted with -
+a model provider key, a Slack token, an MCP secret - is encrypted with that key,
+so changing it or losing it leaves all of them unreadable, with nothing to do
+but enter them again by hand. It is the thing to get right before you save your
+first provider key rather than after, and it belongs wherever you already keep
+secrets, backed up somewhere other than the database it protects.
+
+The `compose.yaml` at the *root* of the repository is a different file and not a
+smaller version of this one. It brings up only the dependencies, for working on
+Orknux rather than for running it.
+
+`deploy/README.md`, beside the file, is the full account: what each service is
+there for, what to change before the installation holds anything real, and what
+to look at when it does not come up.
+
 ## Signing in
 
 ![The sign-in screen](/screens/sign-in.png)

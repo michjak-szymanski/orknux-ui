@@ -17,6 +17,11 @@ right.
   A workflow with entries here can be saved but should not be trusted to run.
 - **Parameter connections** are drawn as labelled edges: where a node reads a
   value from an earlier one, the edge says which fields travel along it.
+- **Input and output dots** are told apart by shape: an input is hollow and an
+  output is filled, a socket and a plug. A turned node moves where each dot
+  sits, so where it sits cannot be what tells you which it is. Shape rather than
+  colour, because colour is already carrying which of a condition's two ways out
+  is which.
 - **Icons** can be given to any node. A node made from a definition inherits
   the definition's icon.
 - Nodes **resize**, and long text wraps rather than spilling.
@@ -28,6 +33,13 @@ right.
   They are ignored while a caret is in a text box, where the browser's own undo
   is the right one.
 - **Save** is `Ctrl`+`S`, and the button says which key it is listening for.
+- **Run** stands between Save and Publish and starts the workflow as it is on
+  screen, saving first if there is anything unsaved, and then opening the new
+  run's page. That page is where the steps, their inputs and the log are, which
+  is what pressing Run was for; going back to the list to hunt for the newest
+  row is a detour past it. A start that is refused - a graph with no nodes has
+  nothing to run - is said beside the workflow's name and leaves you in the
+  editor, because there is no run at the other end to go and look at.
 - A node can be **turned**: **Facing** in its panel, or `R` on the canvas. It
   moves where the lines join the node - left to right, top to bottom, right to
   left, bottom to top - and changes nothing about what runs. A long chain simply
@@ -198,10 +210,40 @@ went](/screens/execution-detail.png)
 Opening a run shows the graph as it ran, each node carrying its own outcome and
 timing, with the log underneath.
 
-Running one again is a fresh run on the same input, and it is a person pressing
-a button: it is recorded as manual, and it uses the draft rather than the graph
-that ran the first time. That is the point of it - something failed, you changed
-the graph, and you want the same event put through what you have now.
+**Re-run** puts the same event through the workflow again. The input is carried
+over, because a re-run starting from nothing is a run with nobody left to
+answer, and the point of it is the thing that happened put through a graph you
+have changed since. It is recorded as manual however the first run started,
+since a person pressed it, and it runs the same kind of graph the first run did:
+the draft for a run somebody started by hand, the published copy for one a
+trigger started. Re-running what a webhook did against a half-finished edit
+would not be re-running what the webhook did.
+
+### Re-running from a step
+
+A run that failed at the last node of six should not have to redo the five that
+worked. For a node that sends a message, files a ticket or takes a payment,
+doing it again is not a repeat but a second occurrence, so the safe thing to do
+with a fixed node further down was often to do nothing at all.
+
+Select a node on a finished run's page and its details offer
+**Re-run from here**. The workflow starts again at that node, carrying what the
+earlier run had produced by the time it reached it. The steps ahead of it are
+not performed again: they appear in the new run as what they were, marked
+**Carried over**, showing the earlier run's status and times. Leaving them blank
+would have read as a run that never started, and a step saying it completed at
+09:14 when the run began at 11:02 is a lie unless something on it says where it
+came from.
+
+It refuses, and says which, wherever starting there would mean guessing: a step
+that never ran, a node the graph no longer has, a branch the earlier run did not
+take, a condition whose answer was not recorded, a run that has not finished,
+and a node edited since to read something the earlier run never produced. A run
+that quietly reads blank where the earlier one read a channel is worse than
+being told it cannot be started.
+
+A run made by either kind of re-run says where it came from: a **Started from →
+Run #N** row under the Run ID, linking back to the run it was started from.
 
 Runs are carried out by Temporal, so a run that fails part-way is retried
 according to the workflow's settings rather than silently lost. Administrators

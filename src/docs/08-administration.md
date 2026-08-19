@@ -38,8 +38,9 @@ nobody can get back into.
 Two kinds of person appear here, and the badge on the row says which.
 
 - **External** users come from your organisation's provider. They are recorded
-  the first time they sign in, and nothing about them is edited here: the
-  provider is what says who they are.
+  the first time they sign in, and almost nothing about them is edited here: the
+  provider is what says who they are. Their email address is the one exception,
+  below.
 - **Internal** users are made here, for somebody the provider does not know - a
   contractor, a service, a person who needs one workspace and nothing else.
   Administrators only, and only this kind can be created.
@@ -56,6 +57,25 @@ the current one.
 Internal users are tried before the directory when somebody signs in, so an
 installation that authenticates everybody else through a single sign-on provider
 still lets them in. Their roles then work exactly as anybody else's do.
+
+## Email addresses
+
+Every user has an address: somewhere to write to them, when anything needs to.
+
+It arrives on its own. The directory's `mail` attribute, or the OIDC provider's
+`email` claim, is read at every sign-in and kept in step with whatever the
+provider says, so for most people the field fills itself and is never touched.
+
+Somebody who wants a different address sets their own in **Preferences**. An
+administrator can set anybody's from that person's page under Users, external
+users included - which is the point of the arrangement, since an external user
+is exactly the person whose provider might have the wrong address or none at
+all. Once an address has been typed, sign-in leaves it alone. A directory that
+overwrote a chosen address every morning would make the field useless: the edit
+would last until the next time that person arrived.
+
+Clearing it hands the field back to the provider. The next sign-in seeds it
+again from the directory, as though it had never been set.
 
 ## Access tokens
 
@@ -144,6 +164,22 @@ again later as whichever of the two it was written in.
 
 A plugin's key is its identity, not its filename: loading the same key again
 replaces what is there.
+
+A plugin says what it has to be told before it can work, and each workspace
+answers separately: the same plugin points at two different projects for two
+different teams. The declaration is read off the plugin when it is loaded and
+shown here; the answers are set on each workspace's own Plugins page, either by
+typing a value or by pointing at one of that workspace's variables.
+
+A workspace that has not answered something a plugin needs is marked on that
+page, in the list and against the parameter itself, and a run that reaches one
+of the plugin's functions stops saying which parameter is missing. A parameter
+the plugin declared as a secret cannot be typed in at all - the only way to
+answer one is a variable, which is encrypted at rest and never shown back.
+
+What a plugin can reach is exactly that list and nothing else. There is no way
+for one to ask the server for anything it was not given, which is why declaring
+parameters is also the answer to "what data does this plugin see?".
 
 ## Configuration
 
