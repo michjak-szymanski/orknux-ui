@@ -85,6 +85,31 @@ const { workspaces } = await gql('{ workspaces(size: 100) { content { id name } 
 const previous = workspaces.content.find((w) => w.name === WORKSPACE_NAME);
 if (previous) {
   /*
+   * Refused unless somebody says so out loud.
+   *
+   * What follows deletes the whole workspace, and the workspace this seed wants
+   * is one anybody might already be using for real: it is named after a plain
+   * English idea, so a development installation grows one by accident and then
+   * fills it with work. This script was one command away from taking a tracker
+   * with seventy-five issues in it, which is not a risk worth carrying to save
+   * one environment variable.
+   *
+   * The check is on the count rather than on the name, because the name is the
+   * thing that collided in the first place.
+   */
+  const { workspaceIssues } = await gql(
+    `{ workspaceIssues(workspaceId: "${previous.id}", size: 1) { totalElements } }`,
+  );
+  if (workspaceIssues.totalElements > 0 && process.env.ORKNUX_SEED_REPLACE !== '1') {
+    log(
+      `${WORKSPACE_NAME} already exists as workspace ${previous.id} and holds ` +
+        `${workspaceIssues.totalElements} issues. Seeding would delete it and everything in it.
+` +
+        'Set ORKNUX_SEED_REPLACE=1 if that is what you want, or rename the workspace you are keeping.',
+    );
+    process.exit(1);
+  }
+  /*
    * The workflows go first, and not for tidiness: deleting a workspace cascades
    * to its agents, while `workflow_node.agent_id` still points at one, so a
    * workspace holding a graph with an agent node in it cannot be deleted at all
