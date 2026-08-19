@@ -90,14 +90,23 @@ It is a strange answer the first time you meet it, and it is the right one - the
 alternative tells anybody with an account roughly how much this installation
 holds and what of, one number at a time.
 
-The workspace picker sits at the top of the sidebar. The tab bar above it moves
-between the three parts of the product:
+The top bar carries the whole of it. On the left, beside the mark, are the two
+parts of the product you work inside:
 
 - **Workspace** — everything a workspace owns.
 - **Chat** — talking to a model, with your workspace's agents and tools within
   reach. Can be switched off for an installation.
-- **Admin** — the organisation: its workspaces, its connections, and what this
-  installation allows. Administrators only.
+
+On the right, in front of your account: the **workspace picker**, then **Docs**,
+then **Admin** - the organisation, its workspaces, its connections and what this
+installation allows, offered only to administrators - and the notification bell.
+
+The picker is there on every screen, including the docs and the admin section,
+which are exactly the places somebody wants to get back to a workspace from.
+Changing it keeps you where you are when that means anything: a list stays the
+same list in the workspace you moved to, while a page about one particular thing
+falls back to its list, since issue #4 somewhere else is a different issue or
+none at all.
 
 Each workspace also keeps a tracker of what is wrong with its work; see Issues.
 The bell beside your name is where anything that concerns you on one of them
