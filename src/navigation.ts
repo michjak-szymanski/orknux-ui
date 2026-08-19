@@ -129,6 +129,16 @@ export const PAGES = [
     goTo: { label: 'Variables', where: 'Workspace', icon: lockKeyholeIcon, also: 'secrets catalogs values' },
   },
   {
+    path: '/workspace/:workspaceId/plugins',
+    access: 'signed-in',
+    goTo: {
+      label: 'Plugins',
+      where: 'Workspace',
+      icon: puzzleIcon,
+      also: 'parameters extensions settings',
+    },
+  },
+  {
     path: '/workspace/:workspaceId/memory',
     access: 'signed-in',
     goTo: { label: 'Memory', where: 'Workspace', icon: memoryIcon },

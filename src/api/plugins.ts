@@ -28,9 +28,32 @@ export interface Plugin {
    * these become callable once materialised as organisation-level functions.
    */
   declaredFunctions: PluginFunctionDeclaration[];
+  /**
+   * What the plugin says it has to be told before it can work.
+   *
+   * The declaration only. What a workspace set them to is on `WorkspacePlugin`,
+   * because the answers belong to a workspace and the question does not.
+   */
+  declaredParameters: PluginParameterDeclaration[];
   sha256: string;
   uploadedAt: string;
   uploadedBy: string;
+}
+
+/**
+ * One thing a plugin says it has to be told.
+ *
+ * Not a function's parameter: a function's is filled in call by call, this one
+ * is filled in once by the workspace and is the same for every call.
+ */
+export interface PluginParameterDeclaration {
+  name: string;
+  description: string | null;
+  /** One of the types a workspace variable can hold: STRING, NUMBER or BOOLEAN. */
+  type: string;
+  required: boolean;
+  /** Declared as a secret, which means it can only be answered with a variable. */
+  secret: boolean;
 }
 
 export interface PluginFunctionDeclaration {
@@ -45,6 +68,7 @@ export interface PluginFunctionDeclaration {
 const PLUGIN_FIELDS = `
   id key name filename sizeBytes apiVersion sha256 uploadedAt uploadedBy
   declaredFunctions { name description returnType signature params { name type } }
+  declaredParameters { name description type required secret }
 `;
 
 export async function fetchPlugins(): Promise<Plugin[]> {
@@ -198,4 +222,105 @@ export function pluginSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/**
+ * A plugin as one workspace sees it: what it asked for, and what this workspace
+ * answered.
+ *
+ * A different question from the admin list. Loading a plugin is installation-wide
+ * and an operator's; answering what one needs belongs to whoever runs the
+ * workspace it will run for, which is why this is not an admin call.
+ */
+export interface WorkspacePlugin {
+  plugin: Plugin;
+  parameters: PluginParameterSetting[];
+  /**
+   * The required parameters this workspace has not answered.
+   *
+   * Empty when the plugin has everything it asked for. It holds exactly the names
+   * marked on the parameters below, so the mark on a row and the marks inside it
+   * cannot disagree.
+   */
+  missing: string[];
+}
+
+/** One of a plugin's parameters, and what this workspace set it to. */
+export interface PluginParameterSetting {
+  name: string;
+  description: string | null;
+  type: string;
+  required: boolean;
+  secret: boolean;
+  /** What somebody typed. Null when this points at a variable, or is unanswered. */
+  literal: string | null;
+  variableId: string | null;
+  /** The name of that variable, never what it holds. */
+  variableName: string | null;
+  missing: boolean;
+}
+
+const WORKSPACE_PLUGIN_FIELDS = `
+  missing
+  plugin { ${PLUGIN_FIELDS} }
+  parameters { name description type required secret literal variableId variableName missing }
+`;
+
+export async function fetchWorkspacePlugins(workspaceId: string): Promise<WorkspacePlugin[]> {
+  const data = await graphql<{ workspacePlugins: WorkspacePlugin[] }>(
+    `query WorkspacePlugins($workspaceId: ID!) {
+      workspacePlugins(workspaceId: $workspaceId) { ${WORKSPACE_PLUGIN_FIELDS} }
+    }`,
+    { workspaceId },
+  );
+  return data.workspacePlugins;
+}
+
+/**
+ * Answers one parameter, with a value or with one of the workspace's variables.
+ *
+ * Exactly one of `literal` and `variableId`. The whole plugin comes back rather
+ * than the one parameter, so whether it is still marked as needing something is
+ * the server's answer and not this page's arithmetic.
+ */
+export async function setPluginParameter(
+  workspaceId: string,
+  pluginId: string,
+  name: string,
+  answer: { literal: string } | { variableId: string },
+): Promise<WorkspacePlugin> {
+  const data = await graphql<{ setPluginParameter: WorkspacePlugin }>(
+    `mutation SetPluginParameter(
+      $workspaceId: ID!, $pluginId: ID!, $name: String!, $literal: String, $variableId: ID
+    ) {
+      setPluginParameter(
+        workspaceId: $workspaceId, pluginId: $pluginId, name: $name, literal: $literal, variableId: $variableId
+      ) { ${WORKSPACE_PLUGIN_FIELDS} }
+    }`,
+    {
+      workspaceId,
+      pluginId,
+      name,
+      literal: 'literal' in answer ? answer.literal : null,
+      variableId: 'variableId' in answer ? answer.variableId : null,
+    },
+  );
+  return data.setPluginParameter;
+}
+
+/** Unsets one parameter. A required one is marked as missing again. */
+export async function clearPluginParameter(
+  workspaceId: string,
+  pluginId: string,
+  name: string,
+): Promise<WorkspacePlugin> {
+  const data = await graphql<{ clearPluginParameter: WorkspacePlugin }>(
+    `mutation ClearPluginParameter($workspaceId: ID!, $pluginId: ID!, $name: String!) {
+      clearPluginParameter(workspaceId: $workspaceId, pluginId: $pluginId, name: $name) {
+        ${WORKSPACE_PLUGIN_FIELDS}
+      }
+    }`,
+    { workspaceId, pluginId, name },
+  );
+  return data.clearPluginParameter;
 }

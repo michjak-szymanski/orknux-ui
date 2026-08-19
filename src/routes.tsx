@@ -47,6 +47,7 @@ import { WorkspaceSettingsPage } from './pages/workspace/WorkspaceSettingsPage';
 import { WorkspaceSkillsPage } from './pages/workspace/WorkspaceSkillsPage';
 import { WorkspaceToolsPage } from './pages/workspace/WorkspaceToolsPage';
 import { WorkspaceTriggersPage } from './pages/workspace/WorkspaceTriggersPage';
+import { WorkspacePluginsPage } from './pages/workspace/WorkspacePluginsPage';
 import { WorkspaceVariablesPage } from './pages/workspace/WorkspaceVariablesPage';
 import { WorkspaceWorkflowsPage } from './pages/workspace/WorkspaceWorkflowsPage';
 
@@ -80,6 +81,7 @@ export const PAGE_ELEMENTS: Record<PagePath, PageElement> = {
   '/workspace/:workspaceId/agents': (session, onSignOut) => <AgentsPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/objects': (session, onSignOut) => <WorkspaceObjectsPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/variables': (session, onSignOut) => <WorkspaceVariablesPage session={session} onSignOut={onSignOut} />,
+  '/workspace/:workspaceId/plugins': (session, onSignOut) => <WorkspacePluginsPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/memory': (session, onSignOut) => <WorkspaceMemoryPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/skills': (session, onSignOut) => <WorkspaceSkillsPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/tools': (session, onSignOut) => <WorkspaceToolsPage session={session} onSignOut={onSignOut} />,

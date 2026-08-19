@@ -35,9 +35,10 @@ export interface AdminPluginsPageProps {
  * An organisation-level screen, beside workspaces and integrations, because a
  * plugin is loaded once for everyone rather than per workspace.
  *
- * List, load, unload. Nothing here runs a plugin or says what one exposes —
- * there is no plugin runtime yet, and the notice at the foot of the page says so
- * rather than letting the screen imply otherwise.
+ * List, load, unload, and read what each one declares - the functions it offers
+ * and the parameters it needs. What those parameters are set to is not here: the
+ * answers belong to each workspace, on that workspace's own Plugins page, because
+ * the same plugin points at two different projects for two different teams.
  */
 export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) {
   const [plugins, setPlugins] = useState<Plugin[] | null>(null);
@@ -294,6 +295,20 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
                         .map((one) => `${one.name}${one.signature}`)
                         .join('  ·  ')}
                 </span>
+                {/*
+                  What it asks to be told. Listed here because it is the whole of
+                  what a plugin can reach, which is the thing an operator wants to
+                  read before loading one. What each workspace sets it to is the
+                  workspace's own screen; this is only the question.
+                */}
+                {plugin.declaredParameters.length > 0 && (
+                  <span className={styles.declares}>
+                    needs{' '}
+                    {plugin.declaredParameters
+                      .map((one) => `${one.name}${one.required ? '' : '?'}: ${one.type.toLowerCase()}`)
+                      .join('  ·  ')}
+                  </span>
+                )}
               </span>
             </span>
             {/* The plugin API it asked for, which the server agreed to. */}
@@ -357,8 +372,9 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
 
       <p className={styles.disclaimer}>
         <img src={infoIcon} alt="" width={14} height={14} />
-        Loaded plugins are stored but not yet run: there is no plugin runtime, and nothing calls into
-        them. Loading a file with a name already in the list replaces it.
+        A plugin's functions are available in every workspace, and run out of the plugin's own text
+        in its own sandbox. What a plugin needs to be told is set per workspace, on that workspace's
+        Plugins page. Loading a file with a name already in the list replaces it.
       </p>
     </AppShell>
   );

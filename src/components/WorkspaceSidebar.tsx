@@ -17,6 +17,7 @@ import gitBranchIcon from '../assets/git-branch.svg';
 import lockKeyholeIcon from '../assets/lock-keyhole.svg';
 import plugIcon from '../assets/plug.svg';
 import settingsIcon from '../assets/settings.svg';
+import puzzleIcon from '../assets/puzzle.svg';
 import toolIcon from '../assets/tool.svg';
 import alertTriangleIcon from '../assets/alert-triangle.svg';
 import { rememberWorkspace } from '../session/lastWorkspace';
@@ -35,6 +36,7 @@ export type WorkspaceSection =
   | 'skills'
   | 'objects'
   | 'variables'
+  | 'plugins'
   | 'memory'
   | 'issues'
   | 'audit'
@@ -143,6 +145,17 @@ export function WorkspaceSidebar({ workspaceId, active, onWorkspacesLoaded }: Wo
         icon={lockKeyholeIcon}
         active={active === 'variables'}
         to={`/workspace/${workspaceId}/variables`}
+      />
+      {/*
+        Beside Variables, because that is what most of a plugin's parameters end
+        up pointing at, and because both answer the same question: what this
+        workspace has told something that runs on its behalf.
+      */}
+      <SidebarNavItem
+        label="Plugins"
+        icon={puzzleIcon}
+        active={active === 'plugins'}
+        to={`/workspace/${workspaceId}/plugins`}
       />
       <SidebarNavItem
         label="Objects"

@@ -39,5 +39,11 @@ parameter — it is never spliced into the body as text.
 
 A variable in use cannot be deleted; the error says what is still using it.
 
+A plugin's parameters read variables the same way. On the workspace's **Plugins**
+page, a parameter can be answered either with a value typed in or with one of
+these variables, and a parameter the plugin declared as a secret can only be
+answered with a variable. The reference is read when the plugin runs, not when
+it is set, so rotating a token is one edit here rather than one per plugin.
+
 Editing is inline: click the field, change it, and save with the check. Renaming
 is the same edit. Deleting a catalog requires it to be empty first.
