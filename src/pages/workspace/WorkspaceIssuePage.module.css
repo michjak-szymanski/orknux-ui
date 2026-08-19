@@ -383,6 +383,17 @@
   cursor: text;
 }
 
+/*
+ * The same, standing in for a comment box rather than a description.
+ *
+ * A comment is three rows, so a preview that kept a description's height would
+ * push the Comment button down the page every time somebody looked at two
+ * lines of text, and the buttons would move back up when they looked away.
+ */
+.renderedShort {
+  min-height: 64px;
+}
+
 .edited {
   font-size: var(--text-xs);
   color: var(--color-text-muted);

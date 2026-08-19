@@ -102,6 +102,15 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
   const [writing, setWriting] = useState(false);
   /** The comment being changed, and what it is being changed to. */
   const [editing, setEditing] = useState<{ id: string; content: string } | null>(null);
+  /*
+   * Whether the comment being written is being read back instead.
+   *
+   * The two comment boxes keep their own answer rather than sharing one,
+   * because previewing a reply is no reason to stop looking at the wording of
+   * the comment being corrected further up the page.
+   */
+  const [readingComment, setReadingComment] = useState(false);
+  const [readingEdit, setReadingEdit] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -267,6 +276,7 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
     try {
       setIssue(await editIssueComment(editing.id, editing.content));
       setEditing(null);
+      setReadingEdit(false);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not change the comment.');
     } finally {
@@ -282,6 +292,8 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
       setIssue(await commentOnIssue(issue.id, said, commentFiles.map((file) => file.id)));
       setComment('');
       setCommentFiles([]);
+      // The next comment starts as a box to type in, not as a preview of nothing.
+      setReadingComment(false);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not add the comment.');
     } finally {
@@ -556,11 +568,15 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
             <div className={styles.main}>
               <span className={styles.labelRow}>
                 <span className={styles.label}>Description</span>
-                {!creating && (
-                  <button type="button" className={styles.textButton} onClick={() => setWriting(!writing)}>
-                    {writing ? 'Preview' : 'Edit'}
-                  </button>
-                )}
+                {/*
+                  Offered while the issue is being filed too. A report is
+                  written once and read by everybody after, so the moment
+                  somebody most wants to see how their markdown lands is
+                  before they have handed it over.
+                */}
+                <button type="button" className={styles.textButton} onClick={() => setWriting(!writing)}>
+                  {writing ? 'Preview' : 'Edit'}
+                </button>
               </span>
               {writing ? (
                 <MarkdownEditor
@@ -576,21 +592,7 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
                 /* What was written, as it reads. Clicking it writes again,
                    because the thing somebody wants after reading their own
                    description is usually to change it. */
-                <div
-                  className={styles.rendered}
-                  role="button"
-                  tabIndex={0}
-                  onDoubleClick={() => setWriting(true)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') setWriting(true);
-                  }}
-                >
-                  {description.trim() === '' ? (
-                    <p className={styles.nothing}>Nothing written yet.</p>
-                  ) : (
-                    <Markdown issuesIn={workspaceId}>{description}</Markdown>
-                  )}
-                </div>
+                <Written text={description} workspaceId={workspaceId} onWrite={() => setWriting(true)} />
               )}
 
               {/*
@@ -735,7 +737,10 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
                             <button
                               type="button"
                               className={styles.textButton}
-                              onClick={() => setEditing({ id: said.id, content: said.content })}
+                              onClick={() => {
+                                setEditing({ id: said.id, content: said.content });
+                                setReadingEdit(false);
+                              }}
                             >
                               Edit
                             </button>
@@ -744,15 +749,41 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
 
                         {editing?.id === said.id ? (
                           <div className={styles.commentEditor}>
-                            <MarkdownEditor
-                              value={editing.content}
-                              onChange={(next) => setEditing({ id: said.id, content: next })}
-                              workspaceId={workspaceId}
-                              rows={4}
-                              ariaLabel="Edit this comment"
-                            />
+                            <span className={styles.labelRow}>
+                              <span className={styles.label}>Comment</span>
+                              <button
+                                type="button"
+                                className={styles.textButton}
+                                onClick={() => setReadingEdit(!readingEdit)}
+                              >
+                                {readingEdit ? 'Edit' : 'Preview'}
+                              </button>
+                            </span>
+                            {readingEdit ? (
+                              <Written
+                                text={editing.content}
+                                workspaceId={workspaceId}
+                                onWrite={() => setReadingEdit(false)}
+                                short
+                              />
+                            ) : (
+                              <MarkdownEditor
+                                value={editing.content}
+                                onChange={(next) => setEditing({ id: said.id, content: next })}
+                                workspaceId={workspaceId}
+                                rows={4}
+                                ariaLabel="Edit this comment"
+                              />
+                            )}
                             <div className={styles.composerActions}>
-                              <button type="button" className={styles.ghost} onClick={() => setEditing(null)}>
+                              <button
+                                type="button"
+                                className={styles.ghost}
+                                onClick={() => {
+                                  setEditing(null);
+                                  setReadingEdit(false);
+                                }}
+                              >
                                 Cancel
                               </button>
                               <button
@@ -791,15 +822,34 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
                         onRemove={(id) => void detach(id)}
                       />
                     )}
-                    <MarkdownEditor
-                      value={comment}
-                      onChange={setComment}
-                      workspaceId={workspaceId}
-                      rows={3}
-                      ariaLabel="Add a comment"
-                      placeholder="Say something… paste a screenshot to attach it."
-                      onPaste={(event) => void pasted(event, 'comment')}
-                    />
+                    <span className={styles.labelRow}>
+                      <span className={styles.label}>Comment</span>
+                      <button
+                        type="button"
+                        className={styles.textButton}
+                        onClick={() => setReadingComment(!readingComment)}
+                      >
+                        {readingComment ? 'Edit' : 'Preview'}
+                      </button>
+                    </span>
+                    {readingComment ? (
+                      <Written
+                        text={comment}
+                        workspaceId={workspaceId}
+                        onWrite={() => setReadingComment(false)}
+                        short
+                      />
+                    ) : (
+                      <MarkdownEditor
+                        value={comment}
+                        onChange={setComment}
+                        workspaceId={workspaceId}
+                        rows={3}
+                        ariaLabel="Add a comment"
+                        placeholder="Say something… paste a screenshot to attach it."
+                        onPaste={(event) => void pasted(event, 'comment')}
+                      />
+                    )}
                     <div className={styles.composerActions}>
                       {attachmentsAllowed && (
                         <button
@@ -970,6 +1020,47 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
         urlOf={issueAttachmentUrl}
       />
     </AppShell>
+  );
+}
+
+interface WrittenProps {
+  /** The markdown as it stands in the box this stands in for. */
+  text: string;
+  /** Where a `#12` in it points, which is the workspace the issue is in. */
+  workspaceId: string;
+  /** Back to the box, for the double click and the Enter that ask for it. */
+  onWrite: () => void;
+  /** Whether this replaces a comment's few rows rather than a whole description. */
+  short?: boolean;
+}
+
+/**
+ * Markdown as it will read once it is saved.
+ *
+ * Through the same renderer the saved text goes through rather than a second
+ * one of its own, because the only useful preview is one that cannot disagree
+ * with the page it is predicting - a `#12` has to become the link it will
+ * become, and a fenced block has to be coloured the way it will be coloured.
+ * The moment a preview draws it differently, the version somebody trusts is
+ * the version that is wrong.
+ */
+function Written({ text, workspaceId, onWrite, short = false }: WrittenProps) {
+  return (
+    <div
+      className={short ? `${styles.rendered} ${styles.renderedShort}` : styles.rendered}
+      role="button"
+      tabIndex={0}
+      onDoubleClick={onWrite}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') onWrite();
+      }}
+    >
+      {text.trim() === '' ? (
+        <p className={styles.nothing}>Nothing written yet.</p>
+      ) : (
+        <Markdown issuesIn={workspaceId}>{text}</Markdown>
+      )}
+    </div>
   );
 }
 
