@@ -1,0 +1,9 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="audio-lines">
+<path id="Bar1" d="M2 6.5V9.5" stroke="#A1A1AA" stroke-width="1.5" stroke-linecap="round"/>
+<path id="Bar2" d="M5 4V12" stroke="#A1A1AA" stroke-width="1.5" stroke-linecap="round"/>
+<path id="Bar3" d="M8 2.5V13.5" stroke="#A1A1AA" stroke-width="1.5" stroke-linecap="round"/>
+<path id="Bar4" d="M11 5V11" stroke="#A1A1AA" stroke-width="1.5" stroke-linecap="round"/>
+<path id="Bar5" d="M14 6.5V9.5" stroke="#A1A1AA" stroke-width="1.5" stroke-linecap="round"/>
+</g>
+</svg>

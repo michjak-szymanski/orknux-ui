@@ -46,7 +46,8 @@ The microphone appears only once the workspace has a transcription model.
 
 ## Talking to it
 
-**Voice** in the title bar holds the conversation out loud: it listens, sends
+**Voice** — the filled circle with a waveform in it, beside the microphone at
+the end of the message box — holds the conversation out loud: it listens, sends
 what it heard, reads the answer back, and listens again — no key pressed
 between turns.
 

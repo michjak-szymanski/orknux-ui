@@ -35,6 +35,7 @@ import { fetchWorkspaceAgents } from '../../api/agents';
 import type { Agent } from '../../api/agents';
 import type { SessionUser } from '../../api/session';
 import { fetchWorkspaces } from '../../api/workspaces';
+import audioLinesIcon from '../../assets/audio-lines.svg';
 import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import copyIcon from '../../assets/copy.svg';
 import cpuIcon from '../../assets/cpu.svg';
@@ -941,75 +942,6 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
           <header className={styles.titleBar}>
             <h1 className={styles.chatTitle}>{current.title}</h1>
             <div className={styles.titleActions}>
-              {hears && reads && (
-                <>
-                  {/*
-                    One control, three states, and it does something different
-                    in each: entering when it is off, cutting the answer short
-                    while it is talking, and ending a turn early while it is
-                    listening. Leaving is the X beside it - having the same
-                    button both interrupt and leave meant one of those happening
-                    when the other was meant.
-                  */}
-                  <button
-                    type="button"
-                    className={
-                      voice
-                        ? `${styles.iconButton} ${styles.iconButtonOn} ${styles[`voice${voicePhase}`]}`
-                        : styles.iconButton
-                    }
-                    onClick={() => (voice ? voiceControls.current?.interrupt() : setVoice(true))}
-                    aria-pressed={voice}
-                    title={
-                      !voice
-                        ? 'Talk instead of typing'
-                        : voicePhase === 'speaking'
-                          ? 'Speaking - press to cut in'
-                          : voicePhase === 'thinking'
-                            ? 'Thinking'
-                            : 'Listening - press when you have finished'
-                    }
-                    aria-label={
-                      !voice
-                        ? 'Enter voice mode'
-                        : voicePhase === 'speaking'
-                          ? 'Stop speaking and listen'
-                          : voicePhase === 'thinking'
-                            ? 'Thinking'
-                            : 'Finish speaking'
-                    }
-                  >
-                    {voice && voicePhase === 'thinking' ? (
-                      // Three dots rather than an icon: there is nothing to
-                      // hear and nothing to say, and a still icon reads as
-                      // stuck rather than working.
-                      <span className={styles.voiceDots} aria-hidden="true">
-                        <span />
-                        <span />
-                        <span />
-                      </span>
-                    ) : (
-                      <img
-                        src={voice && voicePhase === 'listening' ? micIcon : volume2Icon}
-                        alt=""
-                        width={14}
-                        height={14}
-                      />
-                    )}
-                  </button>
-                  {voice && (
-                    <button
-                      type="button"
-                      className={styles.iconButton}
-                      onClick={() => setVoice(false)}
-                      title="Leave voice mode"
-                      aria-label="Leave voice mode"
-                    >
-                      <img src={xIcon} alt="" width={14} height={14} />
-                    </button>
-                  )}
-                </>
-              )}
               <button
                 type="button"
                 className={styles.iconButton}
@@ -1409,6 +1341,89 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                 >
                   <img src={micIcon} alt="" width={16} height={16} />
                 </button>
+              )}
+              {hears && reads && (
+                <>
+                  {/*
+                    Voice mode, next to the microphone it is easily confused
+                    with: the microphone dictates into the box, this one hands
+                    the conversation over to speech entirely. The waveform in a
+                    filled circle is how that control is drawn everywhere else,
+                    and it used to be a loudspeaker off in the title bar, which
+                    said "read this aloud" from a place nobody looked.
+
+                    One control, three states, and it does something different
+                    in each: entering when it is off, cutting the answer short
+                    while it is talking, and ending a turn early while it is
+                    listening. Leaving is the X beside it - having the same
+                    button both interrupt and leave meant one of those happening
+                    when the other was meant.
+                  */}
+                  <button
+                    type="button"
+                    className={
+                      voice
+                        ? `${styles.voiceButton} ${styles.voiceButtonOn} ${styles[`voice${voicePhase}`]}`
+                        : styles.voiceButton
+                    }
+                    onClick={() => (voice ? voiceControls.current?.interrupt() : setVoice(true))}
+                    aria-pressed={voice}
+                    title={
+                      !voice
+                        ? 'Talk instead of typing'
+                        : voicePhase === 'speaking'
+                          ? 'Speaking - press to cut in'
+                          : voicePhase === 'thinking'
+                            ? 'Thinking'
+                            : 'Listening - press when you have finished'
+                    }
+                    aria-label={
+                      !voice
+                        ? 'Enter voice mode'
+                        : voicePhase === 'speaking'
+                          ? 'Stop speaking and listen'
+                          : voicePhase === 'thinking'
+                            ? 'Thinking'
+                            : 'Finish speaking'
+                    }
+                  >
+                    {voice && voicePhase === 'thinking' ? (
+                      // Three dots rather than an icon: there is nothing to
+                      // hear and nothing to say, and a still icon reads as
+                      // stuck rather than working.
+                      <span className={styles.voiceDots} aria-hidden="true">
+                        <span />
+                        <span />
+                        <span />
+                      </span>
+                    ) : (
+                      /*
+                        The button draws these white, because the circle under
+                        them is brand green in either theme. That is why they
+                        opt out of the rule darkening icons for the light theme:
+                        a glyph darkened for a white page vanishes into green.
+                      */
+                      <img
+                        src={voice && voicePhase === 'speaking' ? volume2Icon : audioLinesIcon}
+                        alt=""
+                        width={16}
+                        height={16}
+                        data-keeps-colour
+                      />
+                    )}
+                  </button>
+                  {voice && (
+                    <button
+                      type="button"
+                      className={styles.iconButton}
+                      onClick={() => setVoice(false)}
+                      title="Leave voice mode"
+                      aria-label="Leave voice mode"
+                    >
+                      <img src={xIcon} alt="" width={14} height={14} />
+                    </button>
+                  )}
+                </>
               )}
               <button
                 type="submit"

@@ -295,86 +295,6 @@
   white-space: nowrap;
 }
 
-.iconButtonOn {
-  background: var(--color-accent-brand);
-  color: var(--color-accent-foreground);
-}
-
-/*
- * The three things voice mode can be doing, said by the button itself.
- *
- * Listening shows a microphone and holds still, because the movement worth
- * watching then is the person talking. Speaking pulses, so a glance says it is
- * still going and pressing will cut in. Thinking is dots, since there is
- * nothing to hear and nothing to say, and a still icon reads as stuck.
- */
-.voicelistening {
-  animation: none;
-}
-
-.voicespeaking {
-  animation: voicePulse 1.1s ease-in-out infinite;
-}
-
-.voicethinking {
-  background: var(--color-surface-raised);
-}
-
-@keyframes voicePulse {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.18);
-  }
-}
-
-.voiceDots {
-  display: inline-flex;
-  gap: 2px;
-  align-items: center;
-}
-
-.voiceDots span {
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: var(--color-text-primary);
-  animation: voiceThinking 1.2s ease-in-out infinite;
-}
-
-.voiceDots span:nth-child(2) {
-  animation-delay: 0.15s;
-}
-
-.voiceDots span:nth-child(3) {
-  animation-delay: 0.3s;
-}
-
-@keyframes voiceThinking {
-  0%,
-  100% {
-    opacity: 0.25;
-    transform: translateY(0);
-  }
-  50% {
-    opacity: 1;
-    transform: translateY(-2px);
-  }
-}
-
-/*
- * Nothing moves for somebody who has asked for that. An indicator that cannot
- * hold still is worse than one that says less.
- */
-@media (prefers-reduced-motion: reduce) {
-  .voicespeaking,
-  .voiceDots span {
-    animation: none;
-  }
-}
-
 .titleActions {
   display: flex;
   flex-shrink: 0;
@@ -1028,6 +948,126 @@ button.attachmentName {
 .micRecording {
   border-color: var(--color-accent-brand);
   background: var(--color-accent-brand-soft);
+}
+
+/*
+ * Voice mode, the circle beside the microphone.
+ *
+ * Filled and round where the microphone is outlined and square, because they
+ * are next to each other and do different things: one dictates into the box,
+ * the other hands the conversation over. That pairing — a plain microphone,
+ * then a waveform in a solid circle — is how the control is drawn everywhere
+ * else, and it is the whole reason the loudspeaker up in the title bar was
+ * read as "play this" rather than "talk to it".
+ */
+.voiceButton {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: var(--color-accent-brand);
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.voiceButton:hover {
+  opacity: 0.85;
+}
+
+/*
+ * The glyph is white on the green, whichever theme is on, so it is forced here
+ * rather than baked into the file — the icons are one grey with a filter over
+ * them for the light theme, and there is no third colour to import. The `img`
+ * carries `data-keeps-colour` so that filter leaves this one alone.
+ */
+.voiceButton img {
+  filter: brightness(0) invert(1);
+}
+
+/* In the mode, the circle keeps a ring so it is not just a button that was pressed. */
+.voiceButtonOn {
+  box-shadow: 0 0 0 3px var(--color-accent-brand-soft);
+}
+
+/*
+ * The three things voice mode can be doing, said by the button itself.
+ *
+ * Listening keeps the waveform and holds still, because the movement worth
+ * watching then is the person talking — and a microphone there would be the
+ * second one in a row, next to the one that only dictates. Speaking pulses and
+ * takes the loudspeaker, so a glance says it is still going and pressing will
+ * cut in. Thinking is dots, since there is nothing to hear and nothing to say,
+ * and a still icon reads as stuck.
+ */
+.voicelistening {
+  animation: none;
+}
+
+.voicespeaking {
+  animation: voicePulse 1.1s ease-in-out infinite;
+}
+
+.voicethinking {
+  background: var(--color-surface-raised);
+}
+
+@keyframes voicePulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.18);
+  }
+}
+
+.voiceDots {
+  display: inline-flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.voiceDots span {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--color-text-primary);
+  animation: voiceThinking 1.2s ease-in-out infinite;
+}
+
+.voiceDots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.voiceDots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes voiceThinking {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+/*
+ * Nothing moves for somebody who has asked for that. An indicator that cannot
+ * hold still is worse than one that says less.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .voicespeaking,
+  .voiceDots span {
+    animation: none;
+  }
 }
 
 .sendButton {
