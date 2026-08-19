@@ -266,17 +266,21 @@ export function AppShell({
             className={collapsed ? `${styles.sidebar} ${styles.sidebarCollapsed}` : styles.sidebar}
             aria-label="Primary"
           >
+            {sidebar}
             {/*
               The toggle belongs to the shell rather than to each sidebar: it is
               the column being collapsed, not what happens to be in it, so every
               screen gets it without having to remember to.
 
-              First in the column, before whatever the page put in it. It used to
-              be last, which on this menu meant last of nineteen — off the bottom
-              of a laptop screen, sitting against the attribution strip it has
-              nothing to do with, so the way to reopen a collapsed column was to
-              scroll to the foot of it (issue #108). At the top it is on the
-              menu it collapses, and on screen however tall that menu gets.
+              Last in the column and asked to stay there (issue #108). The
+              complaint was not that the bottom is the wrong end - it is the
+              right one - but that it had drifted off the menu and onto the
+              attribution strip below it, and with nineteen sections on a laptop
+              screen that put it under the fold, so reopening a collapsed column
+              meant scrolling to the foot of the menu first. It is inside the
+              column now and sticks to the bottom of the view rather than to the
+              bottom of the document, which is what "always on the menu" asks
+              for however tall the menu gets.
             */}
             <button
               type="button"
@@ -288,7 +292,6 @@ export function AppShell({
             >
               <img src={panelCollapseIcon} alt="" width={16} height={16} />
             </button>
-            {sidebar}
           </nav>
         )}
         {/*

@@ -420,7 +420,7 @@
 }
 
 /*
- * The toggle sits at the top of the column, above whatever the page put in it.
+ * The toggle sits at the foot of the column, under whatever the page put in it.
  *
  * It used to be last, with `margin-top: auto` — which on a menu of nineteen
  * sections put it below the fold of a laptop screen and hard against the
@@ -432,12 +432,26 @@
  * in; centred over the icons while it is closed, because that is the only
  * column there is then and a button hugging one side of it looks dropped.
  */
+/*
+ * The bottom of the menu, and on screen wherever the menu ends.
+ *
+ * `margin-top: auto` puts it after the sections on a short menu; sticky keeps
+ * it against the bottom of the view on a long one, which is the whole of issue
+ * #108 - it was falling below the fold, nineteen sections down, so a collapsed
+ * column could only be reopened by scrolling to the foot of it first.
+ *
+ * It needs its own background because sticky means it passes over the items
+ * above it, and a transparent button would have menu text sliding through it.
+ */
 .collapseToggle {
   display: flex;
   align-items: center;
   align-self: flex-end;
+  margin-top: auto;
+  position: sticky;
+  bottom: var(--space-16);
   padding: var(--space-6);
-  background: none;
+  background: var(--color-surface);
   border: 0;
   border-radius: var(--radius-6);
   cursor: pointer;
