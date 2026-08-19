@@ -57,6 +57,16 @@ export interface AppShellProps {
   /** The workflow editor fills the workspace itself. */
   hideSidebar?: boolean;
   /**
+   * This page fills the frame and owns its own bottom edge.
+   *
+   * Every other page is given room at the foot for the floating assistant
+   * launcher. A page whose last element is meant to touch the bottom - the
+   * chat's composer - must not be, and pushing it up by that clearance is
+   * exactly what broke it (issue #115). Separate from `hideSidebar`, because
+   * the chat has a sidebar and still owns its bottom.
+   */
+  fills?: boolean;
+  /**
    * What is open here — the workflow being edited, the issue being read — for
    * the browser tab.
    *
@@ -149,6 +159,7 @@ export function AppShell({
   workspacePath,
   sidebar,
   hideSidebar = false,
+  fills = false,
   scrollContent = false,
   showAdmin,
   title,
@@ -309,6 +320,7 @@ export function AppShell({
             [
               styles.content,
               hideSidebar ? styles.contentFlush : styles.contentEnter,
+              fills ? styles.contentFills : '',
               scrollContent ? styles.contentScroll : '',
             ]
               .filter(Boolean)

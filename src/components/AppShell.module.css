@@ -679,6 +679,20 @@
   padding-bottom: var(--quick-chat-clearance);
 }
 
+/*
+ * A page that reaches the bottom of the frame itself.
+ *
+ * The clearance above exists so a page's last control is not under the floating
+ * launcher. The chat's composer is meant to touch the bottom, so the clearance
+ * is the wrong answer there - it pushed the composer 112px up the screen, which
+ * is what issue #115 reported. It keeps the side and top padding it had.
+ */
+.contentFills {
+  min-height: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+
 /* Long pages scroll here, under a top bar and a sidebar that stay put. */
 .contentScroll {
   min-height: 0;

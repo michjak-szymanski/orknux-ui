@@ -926,6 +926,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
       showAdmin={session.admin}
       onSignOut={onSignOut}
       sidebar={sidebar}
+      fills
     >
       {current === null ? (
         <div className={styles.empty}>
