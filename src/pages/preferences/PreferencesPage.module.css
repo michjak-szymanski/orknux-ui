@@ -1,10 +1,28 @@
 /* Preferences: one centred column, whatever the window is doing around it. */
 
+/*
+ * This page scrolls itself, and has to.
+ *
+ * `hideSidebar` on the shell means two things at once: draw no sidebar, and
+ * give the content the flush variant - no padding, `overflow: hidden` - which
+ * exists for a page that fills the viewport and manages its own scrolling. The
+ * chat and the workflow editor both do. This one does not, so it inherited the
+ * hidden overflow with nothing to scroll and simply lost everything past the
+ * fold: 611px of it at 900px tall, which is every shortcut below Turn Node,
+ * unreachable rather than merely awkward.
+ *
+ * Fixed here rather than in the shell because those two ideas want separating
+ * properly, and that is a change to every page that passes the flag.
+ */
 .page {
   display: flex;
   justify-content: center;
   width: 100%;
   padding: var(--space-40);
+  /* The flush content is a flex column with hidden overflow; without this the
+     item refuses to shrink below its content and the scroller never engages. */
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .container {
