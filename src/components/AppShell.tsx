@@ -266,21 +266,22 @@ export function AppShell({
             className={collapsed ? `${styles.sidebar} ${styles.sidebarCollapsed}` : styles.sidebar}
             aria-label="Primary"
           >
-            {sidebar}
             {/*
               The toggle belongs to the shell rather than to each sidebar: it is
               the column being collapsed, not what happens to be in it, so every
               screen gets it without having to remember to.
 
-              Last in the column and asked to stay there (issue #108). The
-              complaint was not that the bottom is the wrong end - it is the
-              right one - but that it had drifted off the menu and onto the
-              attribution strip below it, and with nineteen sections on a laptop
-              screen that put it under the fold, so reopening a collapsed column
-              meant scrolling to the foot of the menu first. It is inside the
-              column now and sticks to the bottom of the view rather than to the
-              bottom of the document, which is what "always on the menu" asks
-              for however tall the menu gets.
+              On the first menu row, at its right end (issue #108). It has
+              been three places: the attribution strip below the menu, where it
+              did not belong and fell under the fold; the top as a line of its
+              own; and stuck to the view, which made it float over the menu as
+              the page scrolled. This is the fourth and the one that was asked
+              for - no row of its own, nothing that moves, and on the menu it
+              collapses.
+
+              First in the source so it is reached before the sections rather
+              than after all nineteen of them, and placed against that first row
+              by the stylesheet.
             */}
             <button
               type="button"
@@ -290,8 +291,9 @@ export function AppShell({
               aria-expanded={!collapsed}
               title={collapsed ? 'Expand the menu' : 'Collapse the menu'}
             >
-              <img src={panelCollapseIcon} alt="" width={16} height={16} />
+              <img src={panelCollapseIcon} alt="" width={14} height={14} />
             </button>
+            {sidebar}
           </nav>
         )}
         {/*

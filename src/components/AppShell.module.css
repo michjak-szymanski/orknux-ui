@@ -384,6 +384,8 @@
 .sidebar {
   display: flex;
   flex-direction: column;
+  /* The collapse toggle is placed against the first menu row. */
+  position: relative;
   gap: var(--space-8);
   width: var(--sidebar-width);
   flex-shrink: 0;
@@ -433,29 +435,35 @@
  * column there is then and a button hugging one side of it looks dropped.
  */
 /*
- * The bottom of the menu, and on screen wherever the menu ends.
+ * On the first menu row, at its right end, rather than on a line of its own.
  *
- * `margin-top: auto` puts it after the sections on a short menu; sticky keeps
- * it against the bottom of the view on a long one, which is the whole of issue
- * #108 - it was falling below the fold, nineteen sections down, so a collapsed
- * column could only be reopened by scrolling to the foot of it first.
+ * Out of the flow, so it takes no row and cannot drift: sticking it to the
+ * view made it float over the menu as the page scrolled, which is worse than
+ * the problem it solved. The first item is given room on its right so a long
+ * label never runs underneath.
  *
- * It needs its own background because sticky means it passes over the items
- * above it, and a transparent button would have menu text sliding through it.
+ * Collapsed, there is no room beside a 64px column, so it goes back to being
+ * its own centred row - the one case where a line of its own is the only
+ * option.
  */
 .collapseToggle {
   display: flex;
   align-items: center;
-  align-self: flex-end;
-  margin-top: auto;
-  position: sticky;
-  bottom: var(--space-16);
+  justify-content: center;
+  position: absolute;
+  top: var(--space-16);
+  right: var(--space-16);
+  height: 40px;
   padding: var(--space-6);
-  background: var(--color-surface);
+  background: none;
   border: 0;
   border-radius: var(--radius-6);
   cursor: pointer;
   opacity: 0.7;
+}
+
+.sidebar > :first-child {
+  padding-right: 36px;
 }
 
 .collapseToggle:hover {
@@ -475,7 +483,13 @@
 }
 
 .sidebarCollapsed .collapseToggle {
+  position: static;
   align-self: center;
+  height: auto;
+}
+
+.sidebarCollapsed > :first-child {
+  padding-right: var(--space-8);
 }
 
 .sidebarCollapsed .collapseToggle img {
