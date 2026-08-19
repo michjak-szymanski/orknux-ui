@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 
 import { currentSession, login, logout } from './api/session';
 import styles from './App.module.css';
 import type { Credentials, SessionUser } from './api/session';
 import { fetchWorkspaces } from './api/workspaces';
+import { ForgotPasswordPage } from './pages/login/ForgotPasswordPage';
 import { LoginPage } from './pages/login/LoginPage';
+import { ResetPasswordPage } from './pages/login/ResetPasswordPage';
 import { PAGES } from './navigation';
 import { PAGE_ELEMENTS } from './routes';
 
 export function App() {
+  const navigate = useNavigate();
   const [session, setSession] = useState<SessionUser | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
   // Where this user belongs after signing in: undefined = still resolving,
@@ -104,8 +107,24 @@ export function App() {
     <Routes>
       <Route
         path="/login"
-        element={session ? <Navigate to={signedInHome} replace /> : <LoginPage onSubmit={handleSignIn} />}
+        element={
+          session ? (
+            <Navigate to={signedInHome} replace />
+          ) : (
+            <LoginPage onSubmit={handleSignIn} onResetPassword={() => navigate('/forgot-password')} />
+          )
+        }
       />
+      {/*
+        The two screens somebody reaches without being anybody, and the only ones
+        besides sign-in that are not in `PAGES`: those are the pages the palette
+        offers to a person who is signed in, and neither of these is a place to go
+        - one is a form for somebody who cannot get in, and the other is where a
+        link in a mail lands. Not redirected away when a session exists either: a
+        link followed on a shared machine is still that link's business.
+      */}
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       {/*
         Every page, from the one list that also feeds Go to. Written out as
         forty-nine near-identical blocks before this, each repeating the same guard —

@@ -69,6 +69,26 @@ export interface IssueLink {
   mine: boolean;
 }
 
+/**
+ * Somebody who asked to hear about an issue without being given it.
+ *
+ * A person or an agent; never a model, which has nowhere to read its news.
+ * Only the ones explicitly added - the reporter and the assignee already hear
+ * about everything and are shown in their own places on the page.
+ */
+export interface IssueObserver {
+  kind: AssigneeKind;
+  id: string;
+  name: string;
+  /** The second line: a username, or what kind of thing it is. */
+  hint: string;
+  /** Themselves, in the ordinary case, or the administrator who decided. */
+  addedBy: string;
+  addedAt: string;
+  /** Whether this is the person reading, so the page knows which button to draw. */
+  mine: boolean;
+}
+
 export interface IssueComment {
   id: string;
   author: string;
@@ -97,6 +117,8 @@ export interface Issue {
   attachments: IssueAttachment[];
   /** Addresses hung on the issue, oldest first. */
   links: IssueLink[];
+  /** Whoever asked to hear about it, oldest first. */
+  observers: IssueObserver[];
   comments: IssueComment[];
   createdAt: string;
   lastModifiedAt: string;
@@ -124,12 +146,15 @@ const ATTACHMENT_FIELDS = 'id filename contentType sizeBytes uploadedBy uploaded
 
 const LINK_FIELDS = 'id url title github addedBy addedAt mine';
 
+const OBSERVER_FIELDS = 'kind id name hint addedBy addedAt mine';
+
 const FULL_FIELDS = `
   id workspaceId number title description status reporter
   assignee { kind id name hint }
   labels
   attachments { ${ATTACHMENT_FIELDS} }
   links { ${LINK_FIELDS} }
+  observers { ${OBSERVER_FIELDS} }
   comments { id author content createdAt editedAt mine attachments { ${ATTACHMENT_FIELDS} } }
   createdAt lastModifiedAt lastCommentAt lastModifiedBy
 `;
@@ -328,6 +353,29 @@ export async function addIssueLink(id: string, url: string, title?: string): Pro
   return data.addIssueLink;
 }
 
+/**
+ * Moves an issue to another workspace. Administrators only.
+ *
+ * Its number changes, because numbers are per workspace: it is given one that
+ * is free where it is going, and the one it had is free for the next issue
+ * filed where it came from. So the answer carries the whole issue rather than a
+ * confirmation, and the page has to go to the new address rather than reload
+ * the old one - which now belongs to nothing, or to something else.
+ *
+ * The server refuses rather than tidies where something on the issue could not
+ * exist in the destination, and says which thing. That message is worth putting
+ * in front of somebody unchanged.
+ */
+export async function moveIssue(id: string, workspaceId: string): Promise<Issue> {
+  const data = await graphql<{ moveIssue: Issue }>(
+    `mutation ($id: ID!, $workspaceId: ID!) {
+       moveIssue(id: $id, workspaceId: $workspaceId) { ${FULL_FIELDS} }
+     }`,
+    { id, workspaceId },
+  );
+  return data.moveIssue;
+}
+
 /** Takes one off again. Only whoever added it may, administrators included. */
 export async function removeIssueLink(id: string): Promise<boolean> {
   const data = await graphql<{ removeIssueLink: boolean }>(
@@ -335,6 +383,40 @@ export async function removeIssueLink(id: string): Promise<boolean> {
     { id },
   );
   return data.removeIssueLink;
+}
+
+/**
+ * Asks to hear about an issue, or asks on somebody else's behalf.
+ *
+ * Nobody named means yourself, which anybody in the workspace may do; naming
+ * somebody else needs the administrator role. One mutation for both, because
+ * two would be the same two rules written twice.
+ */
+export async function observeIssue(
+  id: string,
+  observer?: { kind: AssigneeKind; id: string },
+): Promise<Issue> {
+  const data = await graphql<{ observeIssue: Issue }>(
+    `mutation ($id: ID!, $observerKind: AssigneeKind, $observerId: ID) {
+       observeIssue(id: $id, observerKind: $observerKind, observerId: $observerId) { ${FULL_FIELDS} }
+     }`,
+    { id, observerKind: observer?.kind ?? null, observerId: observer?.id ?? null },
+  );
+  return data.observeIssue;
+}
+
+/** Takes one off again, under the same two rules. */
+export async function unobserveIssue(
+  id: string,
+  observer?: { kind: AssigneeKind; id: string },
+): Promise<Issue> {
+  const data = await graphql<{ unobserveIssue: Issue }>(
+    `mutation ($id: ID!, $observerKind: AssigneeKind, $observerId: ID) {
+       unobserveIssue(id: $id, observerKind: $observerKind, observerId: $observerId) { ${FULL_FIELDS} }
+     }`,
+    { id, observerKind: observer?.kind ?? null, observerId: observer?.id ?? null },
+  );
+  return data.unobserveIssue;
 }
 
 /** Where the browser reads one from; checked against the workspace on the way. */

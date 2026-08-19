@@ -30,6 +30,8 @@ import { BackLink } from '../../components/BackLink';
 import { Loader } from '../../components/Loader';
 import { Markdown } from '../../components/Markdown';
 import { MarkdownEditor } from '../../components/MarkdownEditor';
+import { MoveIssueDialog } from '../../components/MoveIssueDialog';
+import { ObserverList } from '../../components/ObserverList';
 import { TrashIcon } from '../../components/TrashIcon';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { useInstallation } from '../../session/installation';
@@ -126,6 +128,12 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
   const [readingComment, setReadingComment] = useState(false);
   const [readingEdit, setReadingEdit] = useState(false);
   const [saving, setSaving] = useState(false);
+  /*
+   * The issue being moved, which is this one or nothing: the dialog is opened
+   * by handing it an issue and closed by handing it null, the way the delete
+   * dialogs elsewhere work.
+   */
+  const [moving, setMoving] = useState<Issue | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -650,6 +658,21 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
             </div>
 
             <div className={styles.actions}>
+              {/*
+                Administrators only, and the button is only drawn for them so
+                that it and the server's refusal agree - a button that exists
+                only to be told no is worse than no button.
+              */}
+              {!creating && session.admin && (
+                <button
+                  type="button"
+                  className={styles.ghost}
+                  title="Move this issue to another workspace"
+                  onClick={() => setMoving(issue)}
+                >
+                  Move
+                </button>
+              )}
               {!creating && (
                 <button
                   type="button"
@@ -1145,6 +1168,22 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
                 )}
               </div>
 
+              {/*
+                Below Labels, where it was asked for, and only once the issue
+                exists - an observer is a row against an issue, and there is
+                nothing to hang one on while the form is still being written.
+                The same reason the Reporter block underneath waits.
+              */}
+              {!creating && issue !== null && (
+                <ObserverList
+                  workspaceId={workspaceId}
+                  issueId={issue.id}
+                  observers={issue.observers}
+                  admin={session.admin}
+                  onChanged={setIssue}
+                />
+              )}
+
               {!creating && (
                 <div className={styles.sideField}>
                   <span className={styles.label}>Reporter</span>
@@ -1174,6 +1213,20 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
         onClose={() => setPreviewId(null)}
         onOpen={setPreviewId}
         urlOf={issueAttachmentUrl}
+      />
+
+      {/*
+        The page goes to the issue's new address rather than reloading this one.
+        The number changed, so the address in the bar now belongs to nothing, or
+        to whatever was filed here next.
+      */}
+      <MoveIssueDialog
+        issue={moving}
+        onClose={() => setMoving(null)}
+        onMoved={(moved) => {
+          setMoving(null);
+          navigate(`/workspace/${moved.workspaceId}/issues/${moved.number}`);
+        }}
       />
     </AppShell>
   );
