@@ -101,13 +101,6 @@
   font-size: var(--text-md);
 }
 
-.colActions {
-  display: flex;
-  flex-shrink: 0;
-  justify-content: flex-end;
-  width: 100px;
-}
-
 .icon {
   flex-shrink: 0;
   opacity: 0.7;
@@ -153,15 +146,38 @@
   color: var(--color-danger);
 }
 
-.rowAction {
-  padding: var(--space-6) var(--space-12);
-  background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-6);
+/*
+ * The name is the way in, so it has to look like one without becoming a button
+ * shape: a list of plugins reads as names, and a row of framed buttons down the
+ * left would be a toolbar.
+ */
+.nameButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: 0;
+  background: none;
+  border: 0;
   font-family: inherit;
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
   cursor: pointer;
+  text-align: left;
+}
+
+.nameButton:hover {
+  color: var(--color-accent-brand);
+}
+
+.nameButton:hover .caret {
+  color: var(--color-accent-brand);
+}
+
+.caret {
+  flex: none;
+  font-size: 10px;
+  color: var(--color-text-muted);
 }
 
 /* ---- One plugin's parameters ---- */
@@ -189,6 +205,7 @@
   background: var(--color-danger-soft);
 }
 
+/* The name on the left, and anything acting on the parameter on the right. */
 .parameterHead {
   display: flex;
   align-items: center;
@@ -196,10 +213,15 @@
   gap: var(--space-8);
 }
 
-.parameterName {
+.parameterNameGroup,
+.parameterActions {
   display: flex;
   align-items: center;
   gap: var(--space-8);
+}
+
+/* The parameter's own name, as the plugin declares it. */
+.parameterName {
   font-family: var(--font-mono);
   font-size: var(--text-md);
   color: var(--color-text-primary);
@@ -224,72 +246,119 @@
   color: var(--color-danger);
 }
 
-.parameterDescription,
-.parameterNote {
-  margin: 0;
-  font-size: var(--text-sm);
-  line-height: 18px;
-  color: var(--color-text-secondary);
-}
-
-.parameterNote {
-  color: var(--color-text-muted);
-}
-
-.parameterControls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-8);
-}
-
-.value,
-.picker {
-  padding: var(--space-6) var(--space-10);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-6);
-  font-family: inherit;
-  font-size: var(--text-md);
-  color: var(--color-text-primary);
-}
-
-.value {
-  flex: 1 0 180px;
-  min-width: 0;
-}
-
-.or {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-}
-
-.save {
-  padding: var(--space-6) var(--space-14);
-  background: var(--color-accent-brand);
+.parameterAction {
+  padding: 0;
+  background: none;
   border: 0;
-  border-radius: var(--radius-6);
   font-family: inherit;
-  font-weight: 500;
-  font-size: var(--text-md);
-  color: var(--color-text-primary);
+  font-size: var(--text-xs);
+  color: var(--color-accent-brand);
   cursor: pointer;
 }
 
-.save:disabled,
-.rowAction:disabled,
-.clear:disabled {
+.parameterAction:hover {
+  text-decoration: underline;
+}
+
+.parameterAction:disabled {
+  opacity: 0.5;
+  cursor: default;
+  text-decoration: none;
+}
+
+/*
+ * The width the same controls have in the editor's inspector, which is where they
+ * were drawn for. This card runs the width of the page, and a two-option switch
+ * stretched across all of it stops reading as a switch.
+ */
+.modeSwitch,
+.inputWrapper,
+.reference {
+  max-width: 420px;
+}
+
+.reference {
+  display: flex;
+}
+
+/* Written, or read from somewhere else. Two states, so a switch rather than a list. */
+.modeSwitch {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+}
+
+.modeOption {
+  flex: 1 0 0;
+  padding: 3px var(--space-6);
+  background: none;
+  border: 0;
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.modeOption:hover {
+  color: var(--color-text-primary);
+}
+
+.modeOptionOn {
+  background: var(--color-surface-raised);
+  color: var(--color-accent-brand);
+}
+
+.modeOption:disabled {
   opacity: 0.5;
   cursor: default;
 }
 
-.clear {
-  padding: var(--space-6) var(--space-12);
-  background: transparent;
+.modeOption:disabled:hover {
+  color: var(--color-text-muted);
+}
+
+.inputWrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: 36px;
+  padding: 0 var(--space-12);
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-6);
+}
+
+.inputWrapper:focus-within {
+  border-color: var(--color-accent-brand);
+}
+
+.input {
+  flex: 1 0 0;
+  min-width: 0;
+  padding: var(--space-8) 0;
+  background: none;
+  border: 0;
   font-family: inherit;
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  cursor: pointer;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.input:focus {
+  outline: none;
+}
+
+/* A plain value is read exactly as written, so it is shown the way it is read. */
+.parameterValue {
+  font-family: var(--font-mono);
+}
+
+.parameterHint {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: 16px;
+  color: var(--color-text-muted);
 }

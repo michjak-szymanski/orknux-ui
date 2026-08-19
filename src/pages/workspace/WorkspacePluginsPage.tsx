@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import {
@@ -12,6 +12,8 @@ import { fetchVariables } from '../../api/variables';
 import type { Variable } from '../../api/variables';
 import puzzleIcon from '../../assets/puzzle.svg';
 import { AppShell } from '../../components/AppShell';
+import { FieldPicker } from '../../components/FieldPicker';
+import type { FieldOption, FieldPickerLabels } from '../../components/FieldPicker';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
@@ -24,6 +26,27 @@ export interface WorkspacePluginsPageProps {
 
 /** More variables than a workspace realistically keeps, so the picker is complete. */
 const VARIABLE_LIMIT = 500;
+
+/**
+ * Written here, or read from somewhere else.
+ *
+ * The same two words a node's parameter offers in the workflow editor, because it
+ * is the same question, and somebody who has answered it once there should not
+ * have to work out that this screen is asking it again.
+ */
+type Answer = 'VALUE' | 'REFERENCE';
+
+/**
+ * What the picker says when the list it offers is this workspace's variables
+ * rather than the fields an earlier node produces.
+ */
+const VARIABLE_LABELS: FieldPickerLabels = {
+  empty: 'Choose a variable…',
+  search: 'Search variables',
+  none: 'This workspace has no variables yet.',
+  noMatch: 'No variable matches',
+  gone: 'no longer in this workspace',
+};
 
 /**
  * What this workspace has told the plugins loaded into the installation.
@@ -162,69 +185,87 @@ export function WorkspacePluginsPage({ session, onSignOut }: WorkspacePluginsPag
             <div className={styles.tableHeader}>
               <span className={styles.colName}>Plugin</span>
               <span className={styles.colParams}>Parameters</span>
-              <span className={styles.colActions} />
             </div>
 
-            {plugins.map((entry) => (
-              <div key={entry.plugin.id} className={styles.group}>
-                <div className={styles.row}>
-                  <span className={styles.colName}>
-                    <img className={styles.icon} src={puzzleIcon} alt="" width={16} height={16} />
-                    <span className={styles.nameBlock}>
-                      <span className={styles.name}>
-                        {entry.plugin.name}
-                        {/*
-                          The red mark the list is read for. Titled rather than
-                          left as decoration, so hovering says which parameters
-                          are missing without opening anything.
-                        */}
-                        {entry.missing.length > 0 && (
-                          <span
-                            className={styles.mark}
-                            title={`Not set: ${entry.missing.join(', ')}`}
-                            aria-label={`Not set: ${entry.missing.join(', ')}`}
-                          >
-                            ●
-                          </span>
-                        )}
+            {plugins.map((entry) => {
+              const opens = entry.parameters.length > 0;
+              const showing = open === entry.plugin.id;
+
+              return (
+                <div key={entry.plugin.id} className={styles.group}>
+                  <div className={styles.row}>
+                    <span className={styles.colName}>
+                      <img className={styles.icon} src={puzzleIcon} alt="" width={16} height={16} />
+                      <span className={styles.nameBlock}>
+                        <span className={styles.name}>
+                          {/*
+                            The name is the way in, because it is what somebody
+                            reaches for first. A real button, so Tab reaches it and
+                            a reader announces it as something that opens - and a
+                            plugin with nothing to open stays plain text rather than
+                            becoming a control that answers a click with nothing.
+                          */}
+                          {opens ? (
+                            <button
+                              type="button"
+                              className={styles.nameButton}
+                              aria-expanded={showing}
+                              aria-controls={`plugin-parameters-${entry.plugin.id}`}
+                              title={`${showing ? 'Close' : 'Open'} what ${entry.plugin.name} asks for`}
+                              onClick={() => setOpen(showing ? null : entry.plugin.id)}
+                            >
+                              {entry.plugin.name}
+                              <span className={styles.caret} aria-hidden="true">
+                                {showing ? '▴' : '▾'}
+                              </span>
+                            </button>
+                          ) : (
+                            <span title={`${entry.plugin.name} declares no parameters, so it has nothing to set`}>
+                              {entry.plugin.name}
+                            </span>
+                          )}
+                          {/*
+                            The red mark the list is read for. Titled rather than
+                            left as decoration, so hovering says which parameters
+                            are missing without opening anything.
+                          */}
+                          {entry.missing.length > 0 && (
+                            <span
+                              className={styles.mark}
+                              title={`Not set: ${entry.missing.join(', ')}`}
+                              aria-label={`Not set: ${entry.missing.join(', ')}`}
+                            >
+                              ●
+                            </span>
+                          )}
+                        </span>
+                        <span className={styles.key}>{entry.plugin.key}</span>
                       </span>
-                      <span className={styles.key}>{entry.plugin.key}</span>
                     </span>
-                  </span>
 
-                  <span className={styles.colParams}>
-                    <Summary entry={entry} />
-                  </span>
-
-                  <span className={styles.colActions}>
-                    {entry.parameters.length > 0 && (
-                      <button
-                        type="button"
-                        className={styles.rowAction}
-                        onClick={() => setOpen(open === entry.plugin.id ? null : entry.plugin.id)}
-                      >
-                        {open === entry.plugin.id ? 'Close' : 'Details'}
-                      </button>
-                    )}
-                  </span>
-                </div>
-
-                {open === entry.plugin.id && (
-                  <div className={styles.details}>
-                    {entry.parameters.map((parameter) => (
-                      <ParameterRow
-                        key={parameter.name}
-                        parameter={parameter}
-                        variables={variables}
-                        busy={busy}
-                        onSet={(answer) => void onSet(entry.plugin.id, parameter.name, answer)}
-                        onClear={() => void onClear(entry.plugin.id, parameter.name)}
-                      />
-                    ))}
+                    <span className={styles.colParams}>
+                      <Summary entry={entry} />
+                    </span>
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {showing && (
+                    <div className={styles.details} id={`plugin-parameters-${entry.plugin.id}`}>
+                      {entry.parameters.map((parameter) => (
+                        <ParameterRow
+                          key={parameter.name}
+                          pluginId={entry.plugin.id}
+                          parameter={parameter}
+                          variables={variables}
+                          busy={busy}
+                          onSet={(answer) => void onSet(entry.plugin.id, parameter.name, answer)}
+                          onClear={() => void onClear(entry.plugin.id, parameter.name)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </section>
@@ -264,6 +305,7 @@ function Summary({ entry }: { entry: WorkspacePlugin }) {
 }
 
 interface ParameterRowProps {
+  pluginId: string;
   parameter: PluginParameterSetting;
   variables: Variable[];
   busy: boolean;
@@ -274,112 +316,167 @@ interface ParameterRowProps {
 /**
  * One parameter, and the two ways of answering it.
  *
- * A secret one offers only the variable, because the server refuses a typed-in
- * value for it — a form that offered the box and then reported a refusal would be
- * inviting somebody to paste a token into a page that shows it back.
+ * Laid out the way a node's parameter is laid out in the workflow editor: the
+ * name, then the Value-or-Reference switch, then whichever control that choice
+ * asks for. It is the same question in both places, and reading as two unrelated
+ * screens was the complaint.
+ *
+ * A secret can only be answered by pointing at a variable, because the server
+ * refuses a typed-in value for one - a form that offered the box and then reported
+ * the refusal would be inviting somebody to paste a token into a page that shows
+ * it back. So the switch still says both words and Value is the one that cannot
+ * be pressed, which says why rather than quietly leaving half the control out.
  */
-function ParameterRow({ parameter, variables, busy, onSet, onClear }: ParameterRowProps) {
+function ParameterRow({ pluginId, parameter, variables, busy, onSet, onClear }: ParameterRowProps) {
   const [typed, setTyped] = useState(parameter.literal ?? '');
 
   // The stored value is the one to edit whenever it changes underneath, which it
   // does every time an answer comes back from the server.
   useEffect(() => setTyped(parameter.literal ?? ''), [parameter.literal]);
 
+  const stored: Answer = parameter.secret || parameter.variableId !== null ? 'REFERENCE' : 'VALUE';
+  const [mode, setMode] = useState<Answer>(stored);
+
+  /*
+   * Switching only changes which control is shown, and sends nothing: an answer
+   * already stored is not thrown away by looking at the other way of giving one.
+   * What is stored wins again the moment the server says anything, so the switch
+   * cannot end up describing something other than what is set.
+   */
+  useEffect(() => setMode(stored), [stored]);
+
   const answered = parameter.literal !== null || parameter.variableId !== null;
+  const unsaved = typed.trim() !== '' && typed.trim() !== (parameter.literal ?? '');
+  const fieldId = `plugin-parameter-${pluginId}-${parameter.name}`;
+
+  /*
+   * A workspace variable in the shape the picker offers things in. Grouped by
+   * catalog for the reason the editor groups by node: a name on its own is not
+   * always enough to know which one was meant.
+   */
+  const options = useMemo<FieldOption[]>(
+    () =>
+      variables.map((variable) => ({
+        groupKey: variable.catalogId,
+        groupName: variable.catalogName,
+        field: variable.name,
+        expression: variable.id,
+        type: variable.type.toLowerCase(),
+      })),
+    [variables],
+  );
 
   return (
     <div className={`${styles.parameter} ${parameter.missing ? styles.parameterMissing : ''}`}>
-      <div className={styles.parameterHead}>
-        <span className={styles.parameterName}>
-          {parameter.name}
+      <span className={styles.parameterHead}>
+        <span className={styles.parameterNameGroup}>
+          <label className={styles.parameterName} htmlFor={fieldId}>
+            {parameter.name}
+          </label>
           <span className={styles.parameterType}>{parameter.type.toLowerCase()}</span>
           {parameter.required && <span className={styles.required}>required</span>}
           {parameter.secret && <span className={styles.secret}>secret</span>}
         </span>
-        {/*
-          Against the parameter itself, which is what the issue asks for: a plugin
-          marked in the list is one thing, being told which of its parameters is
-          the problem is what somebody actually needs to act on.
-        */}
-        {parameter.missing && <span className={styles.parameterMark}>not set</span>}
+        <span className={styles.parameterActions}>
+          {/*
+            Against the parameter itself, which is what the issue asks for: a plugin
+            marked in the list is one thing, being told which of its parameters is
+            the problem is what somebody actually needs to act on.
+          */}
+          {parameter.missing && <span className={styles.parameterMark}>not set</span>}
+          {answered && (
+            <button type="button" className={styles.parameterAction} disabled={busy} onClick={onClear}>
+              Clear
+            </button>
+          )}
+        </span>
+      </span>
+
+      {parameter.description !== null && <p className={styles.parameterHint}>{parameter.description}</p>}
+
+      <div className={styles.modeSwitch} role="group" aria-label={`${parameter.name} source`}>
+        {(['VALUE', 'REFERENCE'] as Answer[]).map((option) => (
+          <button
+            key={option}
+            type="button"
+            className={mode === option ? `${styles.modeOption} ${styles.modeOptionOn}` : styles.modeOption}
+            aria-pressed={mode === option}
+            disabled={parameter.secret && option === 'VALUE'}
+            title={
+              parameter.secret && option === 'VALUE'
+                ? 'A secret is only ever answered by pointing at a variable'
+                : undefined
+            }
+            onClick={() => setMode(option)}
+          >
+            {option === 'VALUE' ? 'Value' : 'Reference'}
+          </button>
+        ))}
       </div>
 
-      {parameter.description !== null && (
-        <p className={styles.parameterDescription}>{parameter.description}</p>
+      {mode === 'REFERENCE' ? (
+        /*
+         * Held to a width rather than filling the row. The picker is built to sit
+         * in the editor's inspector, which is narrow, and a control stretched
+         * across a full-width page stops looking like the same thing.
+         */
+        <div className={styles.reference}>
+          <FieldPicker
+            options={options}
+            value={parameter.variableId ?? ''}
+            label={`${parameter.name} reference`}
+            labels={VARIABLE_LABELS}
+            onChange={(option) => onSet({ variableId: option.expression })}
+          />
+        </div>
+      ) : (
+        <div className={styles.inputWrapper}>
+          <input
+            id={fieldId}
+            className={`${styles.input} ${styles.parameterValue}`}
+            value={typed}
+            disabled={busy}
+            placeholder={`A ${parameter.type.toLowerCase()}`}
+            spellCheck={false}
+            onChange={(event) => setTyped(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && unsaved) onSet({ literal: typed.trim() });
+            }}
+          />
+          {/*
+            A workflow is saved as a whole and this is not: each answer is stored on
+            its own, the moment it is given. Choosing a variable stores itself, so
+            only the typed side needs somewhere to say "that one, then" - always
+            there rather than appearing on the first keystroke, so nothing arrives
+            under the cursor mid-sentence.
+          */}
+          <button
+            type="button"
+            className={styles.parameterAction}
+            disabled={busy || !unsaved}
+            onClick={() => onSet({ literal: typed.trim() })}
+          >
+            Set
+          </button>
+        </div>
       )}
 
-      <div className={styles.parameterControls}>
-        {!parameter.secret && (
-          <>
-            <input
-              className={styles.value}
-              value={typed}
-              disabled={busy}
-              placeholder={`A ${parameter.type.toLowerCase()}`}
-              aria-label={`${parameter.name} value`}
-              onChange={(event) => setTyped(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && typed.trim() !== '') onSet({ literal: typed.trim() });
-              }}
-            />
-            <button
-              type="button"
-              className={styles.save}
-              disabled={busy || typed.trim() === ''}
-              onClick={() => onSet({ literal: typed.trim() })}
-            >
-              Set
-            </button>
-            <span className={styles.or}>or</span>
-          </>
-        )}
-
-        <select
-          className={styles.picker}
-          disabled={busy}
-          value={parameter.variableId ?? ''}
-          aria-label={`${parameter.name} variable`}
-          onChange={(event) => {
-            if (event.target.value !== '') onSet({ variableId: event.target.value });
-          }}
-        >
-          {/*
-            A workspace with no variables gets a picker that opens onto nothing,
-            which is the same complaint one level down: say that it is empty
-            rather than letting it look like it failed to load.
-          */}
-          <option value="">
-            {variables.length === 0
-              ? 'No variables in this workspace'
-              : parameter.secret
-                ? 'Choose a variable'
-                : 'Read a variable'}
-          </option>
-          {variables.map((variable) => (
-            <option key={variable.id} value={variable.id}>
-              {variable.name}
-            </option>
-          ))}
-        </select>
-
-        {answered && (
-          <button type="button" className={styles.clear} disabled={busy} onClick={onClear}>
-            Clear
-          </button>
-        )}
-      </div>
+      <p className={styles.parameterHint}>
+        <strong>Value</strong> is used exactly as written. <strong>Reference</strong> reads one of this
+        workspace&apos;s variables, and what that variable holds is never shown here.
+      </p>
 
       {parameter.secret && variables.length === 0 && (
-        <p className={styles.parameterNote}>
-          A secret is only ever answered by pointing at a variable, and this workspace has none yet.
-          Add one on the Variables page and it will be offered here.
+        <p className={styles.parameterHint}>
+          A secret is only ever answered by pointing at a variable, and this workspace has none yet. Add
+          one on the Variables page and it will be offered here.
         </p>
       )}
 
       {parameter.variableName !== null && (
-        <p className={styles.parameterNote}>
-          Reads {parameter.variableName} when the plugin runs, so changing that variable changes
-          what the plugin is handed. Its value is never shown here.
+        <p className={styles.parameterHint}>
+          Reads {parameter.variableName} when the plugin runs, so changing that variable changes what the
+          plugin is handed.
         </p>
       )}
     </div>

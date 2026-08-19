@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { ASSIGNEE_KIND_LABEL, fetchAssignees } from '../api/issues';
-import type { Assignee } from '../api/issues';
+import type { Assignee, AssigneeKind } from '../api/issues';
 import { initialsOf } from '../api/users';
 import styles from './AssigneePicker.module.css';
 
@@ -11,6 +11,31 @@ export interface AssigneePickerProps {
   chosen: Assignee | null;
   onChoose: (assignee: Assignee | null) => void;
   label?: string;
+  /**
+   * What the closed button says when nothing is chosen.
+   *
+   * "No one" is right where the box holds an answer and wrong where it is a
+   * way of adding one to a list beside it - the observers box is not empty,
+   * it is waiting.
+   */
+  placeholder?: string;
+  /**
+   * Which kinds may be offered, or every kind when it is not said.
+   *
+   * An observer can be a person or an agent and never a model: observing is a
+   * statement about who reads, and a model has nowhere to read its news. Kept
+   * out of the list rather than refused on the way in, so nobody picks a name
+   * that was never going to be accepted.
+   */
+  kinds?: AssigneeKind[];
+  /**
+   * Whether choosing nobody is one of the answers.
+   *
+   * True where the box holds the answer, since clearing an assignee is the
+   * same kind of act as setting one. False where it adds to a list, where
+   * "No one" is a row that would do nothing.
+   */
+  clearable?: boolean;
 }
 
 /** How long typing has to pause before the list is asked again. */
@@ -28,7 +53,15 @@ const SEARCH_PAUSE_MS = 200;
  * The list is the server's answer to the search rather than a filter over a
  * fetched list: a workspace's models alone can run to hundreds.
  */
-export function AssigneePicker({ workspaceId, chosen, onChoose, label = 'Assignee' }: AssigneePickerProps) {
+export function AssigneePicker({
+  workspaceId,
+  chosen,
+  onChoose,
+  label = 'Assignee',
+  placeholder = 'No one',
+  kinds,
+  clearable = true,
+}: AssigneePickerProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [found, setFound] = useState<Assignee[]>([]);
@@ -40,7 +73,7 @@ export function AssigneePicker({ workspaceId, chosen, onChoose, label = 'Assigne
    * empty state - somebody clearing an assignee is doing the same kind of
    * thing as choosing one, and should be able to arrow to it.
    */
-  const [at, setAt] = useState(-1);
+  const [at, setAt] = useState(clearable ? -1 : 0);
   const box = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -49,8 +82,9 @@ export function AssigneePicker({ workspaceId, chosen, onChoose, label = 'Assigne
     setLoading(true);
     const timer = window.setTimeout(() => {
       fetchAssignees(workspaceId, search.trim() || undefined)
-        .then((people) => {
+        .then((everybody) => {
           if (!current) return;
+          const people = kinds === undefined ? everybody : everybody.filter((one) => kinds.includes(one.kind));
           setFound(people);
           // Back to the top whenever the list changes under the cursor:
           // keeping an index into a list that no longer has that row is how a
@@ -69,7 +103,7 @@ export function AssigneePicker({ workspaceId, chosen, onChoose, label = 'Assigne
       current = false;
       window.clearTimeout(timer);
     };
-  }, [open, search, workspaceId]);
+  }, [open, search, workspaceId, kinds]);
 
   /* Clicking anywhere else closes it, which is what a box like this must do. */
   useEffect(() => {
@@ -90,14 +124,16 @@ export function AssigneePicker({ workspaceId, chosen, onChoose, label = 'Assigne
        * list rather than the caret in the search box and Enter does not
        * submit the form the picker sits in.
        */
+      const first = clearable ? -1 : 0;
       if (event.key === 'ArrowDown') {
         event.preventDefault();
-        setAt((held) => (held + 1 > found.length - 1 ? -1 : held + 1));
+        setAt((held) => (held + 1 > found.length - 1 ? first : held + 1));
       } else if (event.key === 'ArrowUp') {
         event.preventDefault();
-        setAt((held) => (held - 1 < -1 ? found.length - 1 : held - 1));
+        setAt((held) => (held - 1 < first ? found.length - 1 : held - 1));
       } else if (event.key === 'Enter') {
         event.preventDefault();
+        if (at === -1 && !clearable) return;
         onChoose(at === -1 ? null : found[at]);
         setOpen(false);
       }
@@ -108,7 +144,7 @@ export function AssigneePicker({ workspaceId, chosen, onChoose, label = 'Assigne
       document.removeEventListener('mousedown', onDown);
       document.removeEventListener('keydown', onKey);
     };
-  }, [open, found, at, onChoose]);
+  }, [open, found, at, onChoose, clearable]);
 
   return (
     <div className={styles.picker} ref={box}>
@@ -125,7 +161,7 @@ export function AssigneePicker({ workspaceId, chosen, onChoose, label = 'Assigne
         aria-expanded={open}
       >
         {chosen === null ? (
-          <span className={styles.nobody}>No one</span>
+          <span className={styles.nobody}>{placeholder}</span>
         ) : (
           <>
             <span className={styles.avatar} aria-hidden="true">
@@ -153,19 +189,21 @@ export function AssigneePicker({ workspaceId, chosen, onChoose, label = 'Assigne
             onChange={(event) => setSearch(event.target.value)}
           />
 
-          <button
-            type="button"
-            className={at === -1 ? `${styles.option} ${styles.optionAt}` : styles.option}
-            // Under the pointer as well as under the arrows: a hand and a
-            // keyboard should not disagree about which row is next.
-            onMouseEnter={() => setAt(-1)}
-            onClick={() => {
-              onChoose(null);
-              setOpen(false);
-            }}
-          >
-            <span className={styles.nobody}>No one</span>
-          </button>
+          {clearable && (
+            <button
+              type="button"
+              className={at === -1 ? `${styles.option} ${styles.optionAt}` : styles.option}
+              // Under the pointer as well as under the arrows: a hand and a
+              // keyboard should not disagree about which row is next.
+              onMouseEnter={() => setAt(-1)}
+              onClick={() => {
+                onChoose(null);
+                setOpen(false);
+              }}
+            >
+              <span className={styles.nobody}>No one</span>
+            </button>
+          )}
 
           {loading && <p className={styles.notice}>Looking…</p>}
           {!loading && found.length === 0 && <p className={styles.notice}>Nobody by that name.</p>}

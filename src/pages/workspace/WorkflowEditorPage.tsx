@@ -786,8 +786,8 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
         const data = node.data as NodeData;
         const produced = ports[node.id]?.outputs ?? data.outputs ?? [];
         return produced.map((port) => ({
-          nodeKey: node.id,
-          nodeName: data.name === '' ? node.id : data.name,
+          groupKey: node.id,
+          groupName: data.name === '' ? node.id : data.name,
           field: port.name,
           expression: data.kind === 'TRIGGER' ? `trigger.${port.name}` : port.name,
           type: port.type,
@@ -2392,6 +2392,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                                 <FieldPicker
                                   options={fieldOptions}
                                   value={mapping.expression}
+                                  label={`${mapping.name} reference`}
                                   onChange={(option) =>
                                     setDraft({
                                       ...draft,
@@ -2400,7 +2401,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                                           ? {
                                               ...held,
                                               expression: option.expression,
-                                              sourceNodeKey: option.nodeKey,
+                                              sourceNodeKey: option.groupKey,
                                             }
                                           : held,
                                       ),
