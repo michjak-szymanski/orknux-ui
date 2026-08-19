@@ -16,6 +16,7 @@ const SAYS: Record<Notification['kind'], string> = {
   STATUS: 'changed state',
   COMMENT: 'new comment',
   MENTIONED: 'mentioned you',
+  OBSERVING: 'you are now an observer',
 };
 
 /**
