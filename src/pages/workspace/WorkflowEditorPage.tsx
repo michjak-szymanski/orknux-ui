@@ -49,6 +49,7 @@ import type { Action } from '../../api/actions';
 import type { Agent } from '../../api/agents';
 import { fetchWorkspaceConditions } from '../../api/conditions';
 import type { Condition } from '../../api/conditions';
+import { startExecution } from '../../api/executions';
 import { createObject, fetchWorkspaceObjects } from '../../api/objects';
 import type { WorkflowObject } from '../../api/objects';
 import { fetchWorkspaceTriggers } from '../../api/triggers';
@@ -738,6 +739,8 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [removing, setRemoving] = useState(false);
+  /** A run is being started, and the editor is on its way to it. */
+  const [running, setRunning] = useState(false);
   const [browsingIcons, setBrowsingIcons] = useState(false);
   const [discarding, setDiscarding] = useState(false);
   /*
@@ -1756,6 +1759,35 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     return () => window.removeEventListener('beforeunload', onLeaving);
   }, [unsaved]);
 
+  /**
+   * Starts a run and follows it to the page that shows what it did.
+   *
+   * The graph is stored first, for the reason `leaveFor` stores it: a run
+   * started by hand is the graph the server last heard about, so running
+   * without saving would run whatever was there before the edits on screen.
+   * A save the server refuses stops here with the reason showing, because a
+   * run of the older graph is not what the button was pressed for.
+   *
+   * A refused start leaves the editor where it is. There is no run at the other
+   * end to look at, and going there anyway would carry the reader away from the
+   * one sentence explaining why - so the refusal goes where every other one in
+   * this toolbar goes, beside the workflow's name.
+   */
+  async function handleRun() {
+    if (busy || running) return;
+    setRunning(true);
+    setError(null);
+    try {
+      if (unsaved && !(await handleSave())) return;
+      const started = await startExecution(workspaceId, workflowId);
+      navigate(`/workspace/${workspaceId}/executions/${started.id}`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not start the run.');
+    } finally {
+      setRunning(false);
+    }
+  }
+
   async function handlePublish() {
     setBusy(true);
     setError(null);
@@ -1892,6 +1924,21 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                 Save <kbd className={styles.shortcutKey}>{save}</kbd>
               </>
             )}
+          </button>
+          {/*
+            Running from the editor, and then watching it: the run's own page is
+            where every step, its input and its log are, and reaching it by going
+            back to the list and hunting for the newest row is a detour past the
+            thing somebody pressed Run to see.
+          */}
+          <button
+            type="button"
+            className={styles.ghostButton}
+            onClick={() => void handleRun()}
+            disabled={busy || running}
+            title="Run the workflow as it is on screen and open the run"
+          >
+            {running ? 'Starting…' : 'Run'}
           </button>
           {/*
             Violet while there is something to publish, quiet once there is not:
