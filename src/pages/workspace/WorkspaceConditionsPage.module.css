@@ -41,9 +41,13 @@
   color: var(--color-text-secondary);
 }
 
+/* A link now, not a button: making one is a page, so ctrl-click gets a tab. */
 .createCondition {
+  display: flex;
   flex-shrink: 0;
+  align-items: center;
   padding: var(--space-8) var(--space-14);
+  text-decoration: none;
   background: var(--color-accent-brand);
   border: 0;
   border-radius: var(--radius-6);
@@ -160,6 +164,7 @@
   background: var(--color-surface-raised);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-6);
+  text-decoration: none;
   cursor: pointer;
 }
 
@@ -182,7 +187,6 @@
 }
 
 /* The name opens the row, so it reads as something to click. */
-.nameButton,
 .nameLink {
   padding: 0;
   background: none;
@@ -193,7 +197,6 @@
   cursor: pointer;
 }
 
-.nameButton:hover,
 .nameLink:hover {
   color: #c084fc;
 }

@@ -1,14 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
 
 import type { PageOf } from '../../api/client';
-import { fetchCondition, fetchWorkspaceConditions } from '../../api/conditions';
+import { fetchWorkspaceConditions } from '../../api/conditions';
 import type { Condition } from '../../api/conditions';
 import type { SessionUser } from '../../api/session';
 import settingsIcon from '../../assets/settings-14.svg';
 import { AppShell } from '../../components/AppShell';
 import { CompactPagination } from '../../components/CompactPagination';
-import { ConditionDialog } from '../../components/ConditionDialog';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
@@ -21,30 +20,21 @@ export interface WorkspaceConditionsPageProps {
 
 const PAGE_SIZE = 5;
 
-/** Reusable conditions for workflow branching and action triggers. */
+/**
+ * Reusable conditions for workflow branching and action triggers.
+ *
+ * A list and nothing else. Making one and opening one both go to the
+ * condition's own page (issue #87), so every way out of here is a real link:
+ * ctrl-clicking a row opens it in a tab, which is what somebody comparing two
+ * conditions wants and what a button could never give them.
+ */
 export function WorkspaceConditionsPage({ session, onSignOut }: WorkspaceConditionsPageProps) {
-  const { workspaceId = '', conditionId } = useParams();
-  const navigate = useNavigate();
+  const { workspaceId = '' } = useParams();
 
   const [conditions, setConditions] = useState<PageOf<Condition> | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [editing, setEditing] = useState<Condition | null>(null);
-  /*
-   * Arriving to wrap a function in a condition.
-   *
-   * The function editor sends `?function=<id>`, and that is the whole of the
-   * handover: the dialog opens on Function with it already chosen. Read from the
-   * query rather than passed through router state so the link can be kept, sent,
-   * or opened in a second tab and still mean the same thing.
-   */
-  const [query, setQuery] = useSearchParams();
-  const wrapping = query.get('function');
-  // One object per function, or the dialog would be handed a new one to look at
-  // on every render of this page.
-  const preset = useMemo(() => (wrapping === null ? null : { functionId: wrapping }), [wrapping]);
 
   const load = useCallback(() => {
     if (workspaceId === '') return;
@@ -64,42 +54,6 @@ export function WorkspaceConditionsPage({ session, onSignOut }: WorkspaceConditi
 
   useEffect(load, [load]);
 
-  /**
-   * `/conditions/:conditionId` opens that condition straight away — it is where a
-   * run links to when it says which question it asked. The condition is fetched
-   * by id rather than looked up in the list, which may be showing another page.
-   */
-  useEffect(() => {
-    if (conditionId === undefined) return;
-    let current = true;
-    fetchCondition(conditionId)
-      .then((condition) => {
-        if (!current) return;
-        if (condition === null) setError('That condition does not exist, or you do not have access to it.');
-        else setEditing(condition);
-      })
-      .catch((cause: unknown) => {
-        if (current) setError(cause instanceof Error ? cause.message : 'Could not open the condition.');
-      });
-    return () => {
-      current = false;
-    };
-  }, [conditionId]);
-
-  /** Closing the dialog leaves the deep link behind, so the list is a list again. */
-  const closeDialog = useCallback(() => {
-    setCreating(false);
-    setEditing(null);
-    if (conditionId !== undefined) navigate(`/workspace/${workspaceId}/conditions`, { replace: true });
-    // The function came in the address, so closing has to take it back out, or
-    // the next Create Condition would open on somebody else's function.
-    if (query.has('function')) {
-      const rest = new URLSearchParams(query);
-      rest.delete('function');
-      setQuery(rest, { replace: true });
-    }
-  }, [conditionId, navigate, workspaceId, query, setQuery]);
-
   return (
     <AppShell
       user={shellUser(session)}
@@ -117,9 +71,9 @@ export function WorkspaceConditionsPage({ session, onSignOut }: WorkspaceConditi
               Define reusable conditions for workflow branching and action triggers.
             </p>
           </div>
-          <button type="button" className={styles.createCondition} onClick={() => setCreating(true)}>
+          <Link className={styles.createCondition} to={`/workspace/${workspaceId}/conditions/new`}>
             + Create Condition
-          </button>
+          </Link>
         </header>
 
         <div className={styles.table}>
@@ -138,28 +92,26 @@ export function WorkspaceConditionsPage({ session, onSignOut }: WorkspaceConditi
 
           {conditions?.content.map((condition) => (
             <div key={condition.id} className={styles.row}>
-              <button
-                type="button"
-                className={`${styles.colName} ${styles.name} ${styles.nameButton}`}
-                onClick={() => setEditing(condition)}
+              <Link
+                className={`${styles.colName} ${styles.name} ${styles.nameLink}`}
+                to={`/workspace/${workspaceId}/conditions/${condition.id}`}
                 title={`Settings for ${condition.name}`}
               >
                 {condition.name}
-              </button>
+              </Link>
               <span className={styles.colType}>
                 <span className={styles.badge}>{condition.typeLabel}</span>
               </span>
               <span className={`${styles.colDescription} ${styles.muted}`}>{condition.description}</span>
               <span className={styles.colActions}>
-                <button
-                  type="button"
+                <Link
                   className={styles.rowAction}
-                  onClick={() => setEditing(condition)}
+                  to={`/workspace/${workspaceId}/conditions/${condition.id}`}
                   aria-label={`Settings for ${condition.name}`}
                   title={`Settings for ${condition.name}`}
                 >
                   <img src={settingsIcon} alt="" width={14} height={14} />
-                </button>
+                </Link>
               </span>
             </div>
           ))}
@@ -173,23 +125,6 @@ export function WorkspaceConditionsPage({ session, onSignOut }: WorkspaceConditi
           />
         </div>
       </section>
-
-      <ConditionDialog
-        open={creating || editing !== null || wrapping !== null}
-        workspaceId={workspaceId}
-        condition={editing}
-        preset={preset}
-        onClose={closeDialog}
-        onSaved={() => {
-          closeDialog();
-          load();
-        }}
-        onDeleted={() => {
-          closeDialog();
-          setPage(1);
-          load();
-        }}
-      />
     </AppShell>
   );
 }

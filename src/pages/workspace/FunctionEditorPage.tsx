@@ -694,7 +694,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                   A function that answers yes or no is a condition waiting to be
                   written, and writing it meant going to Conditions, choosing
                   Function, and finding this one in a list. Only offered for a
-                  function that returns a boolean: the condition dialog lists no
+                  function that returns a boolean: the condition form lists no
                   others, so the button would lead somewhere that could not show
                   what it was opened for.
                 */}
@@ -721,7 +721,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                   <button
                     type="button"
                     className={styles.ghostButton}
-                    onClick={() => navigate(`/workspace/${workspaceId}/conditions?function=${functionId}`)}
+                    onClick={() => navigate(`/workspace/${workspaceId}/conditions/new?function=${functionId}`)}
                   >
                     Wrap in Condition
                   </button>
@@ -932,46 +932,49 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                           setSaved(false);
                         }}
                       />
-                      <select
-                        className={styles.typeBadge}
-                        value={param.type}
-                        aria-label={`Parameter ${index + 1} type`}
-                        onChange={(event) => {
-                          const type = event.target.value as ValueType;
-                          setParams((current) =>
-                            current.map((row, at) =>
-                              at === index
-                                ? {
-                                    ...row,
-                                    type,
-                                    /*
-                                     * An object parameter has to name one, so the
-                                     * first is chosen rather than leaving a row that
-                                     * looks finished and is refused on save. Anything
-                                     * else drops the reference: a stale id under a
-                                     * string is one that comes back later.
-                                     */
-                                    objectId: namesObject(type)
-                                      ? (row.objectId ?? objects[0]?.id ?? null)
-                                      : null,
-                                  }
-                                : row,
-                            ),
-                          );
-                          setSaved(false);
-                        }}
-                      >
-                        {VALUE_TYPES.map((type) => (
-                          <option
-                            key={type}
-                            value={type}
-                            // Nothing to name yet: the workspace has no objects.
-                            disabled={namesObject(type) && objects.length === 0}
-                          >
-                            {valueTypeLabel(type)}
-                          </option>
-                        ))}
-                      </select>
+                      <span className={styles.typeSelect}>
+                        <select
+                          className={styles.typeBadge}
+                          value={param.type}
+                          aria-label={`Parameter ${index + 1} type`}
+                          onChange={(event) => {
+                            const type = event.target.value as ValueType;
+                            setParams((current) =>
+                              current.map((row, at) =>
+                                at === index
+                                  ? {
+                                      ...row,
+                                      type,
+                                      /*
+                                       * An object parameter has to name one, so the
+                                       * first is chosen rather than leaving a row that
+                                       * looks finished and is refused on save. Anything
+                                       * else drops the reference: a stale id under a
+                                       * string is one that comes back later.
+                                       */
+                                      objectId: namesObject(type)
+                                        ? (row.objectId ?? objects[0]?.id ?? null)
+                                        : null,
+                                    }
+                                  : row,
+                              ),
+                            );
+                            setSaved(false);
+                          }}
+                        >
+                          {VALUE_TYPES.map((type) => (
+                            <option
+                              key={type}
+                              value={type}
+                              // Nothing to name yet: the workspace has no objects.
+                              disabled={namesObject(type) && objects.length === 0}
+                            >
+                              {valueTypeLabel(type)}
+                            </option>
+                          ))}
+                        </select>
+                        <img src={chevronDown12Icon} alt="" width={12} height={12} />
+                      </span>
                       <button
                         type="button"
                         className={styles.removeParam}
@@ -1012,6 +1015,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                             </option>
                           ))}
                         </select>
+                        <img src={chevronDown12Icon} alt="" width={12} height={12} />
                       </div>
                     )}
                     </Fragment>

@@ -414,6 +414,37 @@
 
 .selectWrapper select {
   appearance: none;
+  /*
+   * `.input` asks for `--color-background`, which is not a token and resolves
+   * to nothing. A transparent select opens a white menu on a dark page — the
+   * popup is the browser's window and takes its colour from the control.
+   */
+  background-color: var(--color-bg);
+}
+
+/*
+ * The parameter's type, which is a select and now has to say so itself.
+ *
+ * Its own wrapper rather than `.selectWrapper`, which stretches to the width of
+ * a field: this one is a badge at the end of a row and is as wide as the word
+ * in it. `.typeBadge` is worn by a `<span>` elsewhere on this page, so the room
+ * for the chevron is asked for here rather than there.
+ */
+.typeSelect {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.typeSelect > img {
+  position: absolute;
+  right: var(--space-4);
+  pointer-events: none;
+}
+
+.typeSelect > select {
+  padding-right: var(--space-20);
 }
 
 /*
@@ -667,14 +698,22 @@
  * name is longer than a type's — side by side, both would be truncated to nothing.
  */
 .paramObjectRow {
+  position: relative;
   display: flex;
+  align-items: center;
   padding-left: var(--space-12);
+}
+
+.paramObjectRow > img {
+  position: absolute;
+  right: var(--space-8);
+  pointer-events: none;
 }
 
 .paramObject {
   flex: 1 0 0;
   min-width: 0;
-  padding: var(--space-6) var(--space-8);
+  padding: var(--space-6) var(--space-24) var(--space-6) var(--space-8);
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-4);

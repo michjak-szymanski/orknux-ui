@@ -1,0 +1,389 @@
+/*
+ * One condition's page.
+ *
+ * The frame is the settings-page shape every other entity here wears — the
+ * breadcrumb block, the card, the danger zone — and the rest is what the
+ * condition form asks for by name: a toggle, a list of values, a label with a
+ * link on its right. The form itself is shared with the dialog, which paints it
+ * out of `Dialog.module.css`; these are this page's answers to the same
+ * questions.
+ */
+
+/* ---- Header ---- */
+
+.headerBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.crumbLink {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.crumbLink:hover {
+  text-decoration: underline;
+}
+
+.crumbSeparator {
+  color: var(--color-text-muted);
+}
+
+.crumbCurrent {
+  color: var(--color-text-primary);
+}
+
+.pageTitle {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--text-2xl);
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  margin: 0;
+  max-width: 720px;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+/* ---- Cards ---- */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  padding: var(--space-24);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+
+/* ---- Fields ---- */
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+/* A label with something on its right: the way out to a definition. */
+.labelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+
+.jump {
+  font-size: var(--text-sm);
+  color: var(--color-accent-brand);
+  text-decoration: none;
+}
+
+.jump:hover {
+  text-decoration: underline;
+}
+
+/* The chevron is decoration; the select reaches under it and takes the click. */
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.inputWrapper:focus-within {
+  border-color: var(--color-accent-brand);
+}
+
+.inputWrapper > img {
+  position: absolute;
+  right: var(--space-12);
+  pointer-events: none;
+}
+
+.input {
+  flex: 1 0 0;
+  min-width: 0;
+  padding: var(--space-10) 0;
+  background: none;
+  border: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.input:focus {
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.inputMono {
+  font-family: var(--font-mono);
+}
+
+/* The chevron beside it is the one drawn; the control's own is hidden. */
+.select {
+  width: 100%;
+  padding-right: var(--space-20);
+  appearance: none;
+  cursor: pointer;
+}
+
+/*
+ * A select wearing the shared input class. The box already looks right; this is
+ * only so the menu the browser drops has a colour of its own — left transparent
+ * it opens white. Narrower than `.input` on purpose, so real inputs keep theirs.
+ */
+select.input {
+  background-color: var(--color-bg);
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+/* ---- Negate ---- */
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.toggleLabel {
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  width: 44px;
+  height: 22px;
+  padding: 2px;
+  background: var(--color-surface-raised);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.toggleOn {
+  justify-content: flex-end;
+  background: var(--color-success-solid);
+}
+
+.knob {
+  width: 18px;
+  height: 18px;
+  background: var(--color-text-primary);
+  border-radius: 999px;
+}
+
+/* ---- Values, and the conditions a combining one holds ---- */
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: var(--space-6);
+  width: 100%;
+  min-height: 60px;
+  padding: var(--space-10);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.tag {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  height: fit-content;
+  padding: var(--space-4) var(--space-6) var(--space-4) var(--space-8);
+  background: var(--color-surface-raised);
+  border-radius: var(--radius-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.tagRemove {
+  padding: 0;
+  background: none;
+  border: 0;
+  font-size: var(--text-md);
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.tagRemove:hover {
+  color: var(--color-danger);
+}
+
+/* The design has this as a link rather than a button. */
+.addValue {
+  align-self: flex-start;
+  padding: 0;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-accent-brand);
+  cursor: pointer;
+}
+
+/* ---- Actions ---- */
+
+.error {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-danger);
+}
+
+.loadError {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-danger);
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-12);
+  padding-top: var(--space-8);
+}
+
+.save {
+  padding: var(--space-8) var(--space-16);
+  background: var(--color-accent-brand);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.ghost {
+  padding: var(--space-8) var(--space-16);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+/* ---- Danger zone ---- */
+
+.dangerCard {
+  border-color: var(--color-danger-border);
+}
+
+.dangerHeading {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-danger-solid);
+}
+
+.dangerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+}
+
+.dangerText {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.dangerTitle {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.dangerMessage {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+/* Keep and Delete sit together, away from the sentence they answer. */
+.dangerButtons {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.delete {
+  flex-shrink: 0;
+  padding: var(--space-8) var(--space-16);
+  background: var(--color-danger-solid);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.ghost:disabled,
+.save:disabled,
+.delete:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

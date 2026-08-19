@@ -1,34 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { FormEvent } from 'react';
+import { useEffect, useRef } from 'react';
 
-import {
-  CHECKS_BY_PROPERTY,
-  CHECK_LABEL,
-  CONDITION_TYPES,
-  CONDITION_TYPE_LABEL,
-  NEW_CONDITION,
-  PROPERTIES_BY_TYPE,
-  PROPERTY_LABEL,
-  composite,
-  createCondition,
-  deleteCondition,
-  fetchWorkspaceConditions,
-  updateCondition,
-  valuesLabel,
-} from '../api/conditions';
-import type { Condition, ConditionCheck, ConditionProperty, ConditionType } from '../api/conditions';
-import {
-  NEW_FUNCTION,
-  NEW_FUNCTION_NAME,
-  createFunction,
-  fetchWorkspaceFunctions,
-  refusingFunction,
-  validFunctionName,
-} from '../api/functions';
-import type { WorkspaceFunction } from '../api/functions';
-import chevronDown12Icon from '../assets/chevron-down-12.svg';
-import { DefinitionPicker } from './DefinitionPicker';
-import { IconField } from './IconField';
+import type { Condition } from '../api/conditions';
+import { ConditionForm } from './ConditionForm';
+import type { ConditionFormStyles } from './ConditionForm';
 import styles from './Dialog.module.css';
 
 export interface ConditionDialogProps {
@@ -47,10 +21,7 @@ export interface ConditionDialogProps {
   /**
    * What a new condition starts as, when something else decided that for it.
    *
-   * The function editor sends somebody here to wrap a function it already knows
-   * the id of, and asking them to find it again in a list would be asking them
-   * for the one thing they came with. Ignored when editing: a condition that
-   * exists says what it is itself.
+   * Passed straight to the form, which is where it means something.
    */
   preset?: { functionId: string } | null;
   onClose: () => void;
@@ -58,26 +29,51 @@ export interface ConditionDialogProps {
   onDeleted?: () => void;
 }
 
-const PAGE_SIZE = 100;
-
-/*
- * The rows that make a definition instead of choosing one.
- *
- * Held still rather than written into the JSX, because the picker treats a new
- * row object as a new list and puts its cursor back to the top - which, from a
- * form that re-renders on every keystroke, would be a picker nobody can arrow
- * down through.
- */
-const NEW_FUNCTION_ROW = { value: NEW_FUNCTION, label: '+ New function' };
-const NEW_CONDITION_ROW = { value: NEW_CONDITION, label: '+ New condition' };
+/** The dialog's own names for what the form needs. */
+const FORM_STYLES: ConditionFormStyles = {
+  // The padding belongs to the panel around it, which also holds the title.
+  body: styles.fields,
+  fields: styles.fields,
+  field: styles.field,
+  labelRow: styles.labelRow,
+  label: styles.label,
+  jump: styles.jump,
+  input: styles.input,
+  select: styles.select,
+  inputWrapper: styles.inputWrapper,
+  inputMono: styles.inputMono,
+  fieldHint: styles.fieldHint,
+  toggleRow: styles.toggleRow,
+  toggleLabel: styles.toggleLabel,
+  toggle: styles.toggle,
+  toggleOn: styles.toggleOn,
+  knob: styles.knob,
+  tags: styles.tags,
+  tag: styles.tag,
+  tagRemove: styles.tagRemove,
+  addValue: styles.addValue,
+  error: styles.error,
+  actions: styles.actions,
+  danger: styles.danger,
+  ghost: styles.ghost,
+  filled: styles.filled,
+};
 
 /**
- * Create Condition, and the same form for editing one.
+ * Create Condition, and the same form again for a condition that exists, where
+ * something already on the screen is the reason for asking.
  *
- * What it asks for follows the type: a service condition asks which property
- * and how to check it, a function condition asks which function, and a
- * composite asks which conditions to combine. What the condition will mean is
- * shown underneath, in the words the list will use.
+ * The conditions list no longer opens this - a condition has its own page now
+ * (issue #87), which survives a reload and can be linked to. What is left is
+ * the places where a page would be the wrong answer: a workflow node's panel,
+ * where the graph is the reason somebody is reading the condition at all; a
+ * trigger or an action being written, where the condition is one field of a
+ * form that has not been saved; and a combining condition asking for a member
+ * it does not have yet.
+ *
+ * The form is mounted only while this is open, and keyed by which condition it
+ * holds, which is what resets it: it reads its fields as it mounts, so the next
+ * Create Condition starts empty without anything having to empty it.
  */
 export function ConditionDialog({
   open,
@@ -86,553 +82,50 @@ export function ConditionDialog({
   preset = null,
   onClose,
   onSaved,
-  onDeleted, placement = 'modal' }: ConditionDialogProps) {
+  onDeleted,
+  placement = 'modal',
+}: ConditionDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-
-  const [name, setName] = useState('');
-  const [type, setType] = useState<ConditionType>('SLACK');
-  const [property, setProperty] = useState<ConditionProperty>('MESSAGE_AUTHOR');
-  const [check, setCheck] = useState<ConditionCheck>(CHECKS_BY_PROPERTY.MESSAGE_AUTHOR[0]);
-  const [negate, setNegate] = useState(false);
-  const [functionId, setFunctionId] = useState('');
-  /**
-   * What to call the function this condition is about to bring into existence.
-   *
-   * Only read when the picker is on "New function". A condition whose whole job
-   * is to ask one question usually needs a function nobody has written yet, and
-   * sending somebody to the Functions screen to write it loses the half-filled
-   * form they are standing in.
-   */
-  const [newFunctionName, setNewFunctionName] = useState(NEW_FUNCTION_NAME);
-  const [values, setValues] = useState<string[]>([]);
-  const [members, setMembers] = useState<string[]>([]);
-  const [draftValue, setDraftValue] = useState('');
-  const [icon, setIcon] = useState<string | null>(null);
-
-  const [functions, setFunctions] = useState<WorkspaceFunction[]>([]);
-  const [others, setOthers] = useState<Condition[]>([]);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  /**
-   * Whether a second Create Condition is open on top of this one.
-   *
-   * Only ever reached from the member list of a combining condition, where what
-   * is being chosen is a condition - so what makes one is this same dialog. It
-   * is rendered only while open, which is what keeps the recursion finite: a
-   * closed one renders nothing, so nothing renders another.
-   */
-  const [makingMember, setMakingMember] = useState(false);
-
-  const editing = condition !== null;
 
   useEffect(() => {
     const dialog = dialogRef.current;
     if (dialog === null) return;
 
     if (open && !dialog.open) {
-      setName(condition?.name ?? '');
-      setType(condition?.type ?? (preset === null ? 'SLACK' : 'FUNCTION'));
-      const startingProperty = condition?.property ?? 'MESSAGE_AUTHOR';
-      setProperty(startingProperty);
-      // The first check the property offers, so a new condition never opens on
-      // one the dropdown does not list.
-      setCheck(condition?.check ?? CHECKS_BY_PROPERTY[startingProperty][0]);
-      setNegate(condition?.negate ?? false);
-      setFunctionId(condition?.functionId ?? preset?.functionId ?? '');
-      setNewFunctionName(NEW_FUNCTION_NAME);
-      setValues(condition?.values ?? []);
-      setMembers(condition?.members ?? []);
-      setIcon(condition?.icon ?? null);
-      setDraftValue('');
-      setError(null);
-      setSubmitting(false);
       if (placement === 'panel') dialog.show();
       else dialog.showModal();
     } else if (!open && dialog.open) {
       dialog.close();
     }
-  }, [open, condition, preset]);
-
-  useEffect(() => {
-    if (!open || workspaceId === '') return;
-
-    // Only functions that answer a question can be a condition.
-    fetchWorkspaceFunctions(workspaceId, 0, PAGE_SIZE)
-      .then((page) => {
-        const asking = page.content.filter((fn) => fn.returnType === 'BOOLEAN');
-        setFunctions(asking);
-
-        /*
-         * Named after the function it was opened for.
-         *
-         * Somebody arriving from a function to wrap it has already said what
-         * this is about, and an empty Name asks them to say it a second time.
-         * Only when nothing has been typed: what is in the box is theirs from
-         * the moment they touch it, and the functions arrive a moment after the
-         * dialog opens.
-         */
-        if (preset === null) return;
-        const wrapped = asking.find((fn) => fn.id === preset.functionId);
-        if (wrapped !== undefined) setName((present) => (present === '' ? wrapped.name : present));
-      })
-      .catch(() => setFunctions([]));
-
-    fetchWorkspaceConditions(workspaceId, 0, PAGE_SIZE)
-      .then((page) => setOthers(page.content.filter((other) => other.id !== condition?.id)))
-      .catch(() => setOthers([]));
-  }, [open, workspaceId, condition, preset]);
-
-  const isComposite = composite(type);
-  const properties = PROPERTIES_BY_TYPE[type];
-  const checks = useMemo(() => (isComposite ? [] : CHECKS_BY_PROPERTY[property]), [isComposite, property]);
-  const label = valuesLabel(isComposite || type === 'FUNCTION' ? null : check);
-
-  /*
-   * What each picker offers, with a second line saying which one this is.
-   *
-   * The hint is searched alongside the name, so a function can be found by an
-   * argument it takes and a condition by what it asks - which is how somebody
-   * who has forgotten the name still knows the one they mean.
-   */
-  const functionOptions = useMemo(
-    () => functions.map((held) => ({ value: held.id, label: held.name, hint: held.signature })),
-    [functions],
-  );
-
-  const memberOptions = useMemo(
-    () =>
-      others
-        .filter((other) => !members.includes(other.id))
-        .map((other) => ({ value: other.id, label: other.name, hint: other.description })),
-    [others, members],
-  );
-
-  function changeType(next: ConditionType) {
-    setType(next);
-    const first = PROPERTIES_BY_TYPE[next][0];
-    if (first !== undefined) {
-      setProperty(first);
-      setCheck(CHECKS_BY_PROPERTY[first][0]);
-    }
-  }
-
-  function changeProperty(next: ConditionProperty) {
-    setProperty(next);
-    setCheck(CHECKS_BY_PROPERTY[next][0]);
-  }
-
-  /**
-   * What is still missing, in words.
-   *
-   * A disabled button with a form that looks filled in is a puzzle: the reason
-   * is known here and nowhere else, so it says it rather than going quiet. The
-   * value list is the usual culprit — a value typed but not added is not in the
-   * list, and the box it is sitting in looks exactly like a filled-in field.
-   */
-  const blockers = useMemo(() => {
-    const missing: string[] = [];
-
-    if (name.trim() === '') missing.push('Give the condition a name.');
-
-    if (isComposite) {
-      if (members.length < 2) {
-        missing.push(
-          `Combining needs at least two conditions; ${members.length === 0 ? 'none are' : 'only one is'} selected.`,
-        );
-      }
-    } else if (type === 'FUNCTION') {
-      if (functionId === '') missing.push('Choose the function to call.');
-      else if (functionId === NEW_FUNCTION && !validFunctionName(newFunctionName)) {
-        missing.push('Name the new function as a script can call it: a letter, then letters or digits.');
-      }
-    } else if (label !== null) {
-      const needed = check === 'BETWEEN' ? 2 : 1;
-      if (values.length < needed) {
-        missing.push(
-          draftValue.trim() === ''
-            ? `This check compares against ${needed === 2 ? 'two values' : 'a value'}; add ${needed === 2 ? 'them' : 'one'} to the list.`
-            : `“${draftValue.trim()}” has been typed but not added — press Add to put it in the list.`,
-        );
-      }
-    }
-
-    return missing;
-  }, [name, isComposite, members, type, functionId, newFunctionName, label, check, values, draftValue]);
-
-  const complete = blockers.length === 0;
-
-  function addValue() {
-    const value = draftValue.trim();
-    if (value === '') return;
-    setValues((current) => [...current, value]);
-    setDraftValue('');
-  }
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (submitting) return;
-    // Pressed while something is missing: say which thing, rather than doing
-    // nothing and leaving the button looking broken.
-    if (!complete) {
-      setError(blockers.join(' '));
-      return;
-    }
-
-    setSubmitting(true);
-    setError(null);
-
-    try {
-      /*
-       * Named in the picker, made here, before the condition that points at it.
-       *
-       * A condition holding the id of something that does not exist is a broken
-       * condition, so the function goes in first and the condition gets a real id
-       * or nothing at all. What it starts as says no to everything, which is a
-       * condition that is simply never met until somebody opens it in the function
-       * editor and writes the question.
-       *
-       * Boolean, because a question is the only thing a condition can ask.
-       */
-      let chosen = functionId;
-      if (type === 'FUNCTION' && functionId === NEW_FUNCTION) {
-        const called = newFunctionName.trim();
-        const made = await createFunction({
-          workspaceId,
-          name: called,
-          returnType: 'BOOLEAN',
-          ...refusingFunction(called),
-        });
-        chosen = made.id;
-      }
-
-      const settings = {
-        name: name.trim(),
-        type,
-        property: isComposite || type === 'FUNCTION' ? null : property,
-        check: isComposite || type === 'FUNCTION' ? null : check,
-        negate,
-        functionId: type === 'FUNCTION' ? chosen : null,
-        values: isComposite || type === 'FUNCTION' ? [] : values,
-        members: isComposite ? members : [],
-        icon,
-      };
-
-      const saved = editing
-        ? await updateCondition(condition.id, settings)
-        : await createCondition({ workspaceId, ...settings });
-      onSaved(saved);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save the condition.');
-      setSubmitting(false);
-    }
-  }
-
-  async function handleDelete() {
-    if (condition === null) return;
-    setSubmitting(true);
-    try {
-      await deleteCondition(condition.id);
-      onDeleted?.();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not delete the condition.');
-      setSubmitting(false);
-    }
-  }
+  }, [open]);
 
   return (
-    <dialog ref={dialogRef} className={`${styles.dialog} ${placement === 'panel' ? styles.dialogPanel : ''}`} onCancel={onClose} onClose={onClose}>
-      <form className={styles.body} onSubmit={handleSubmit}>
+    <dialog
+      ref={dialogRef}
+      className={`${styles.dialog} ${placement === 'panel' ? styles.dialogPanel : ''}`}
+      onCancel={onClose}
+      onClose={onClose}
+    >
+      <div className={styles.body}>
         <header className={styles.header}>
-          <h2 className={styles.title}>{editing ? 'Condition Settings' : 'Create Condition'}</h2>
+          <h2 className={styles.title}>{condition === null ? 'Create Condition' : 'Condition Settings'}</h2>
         </header>
 
         <p className={styles.dialogMessage}>Define a reusable condition for workflow branching.</p>
 
-        <div className={styles.fields}>
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="condition-name">
-              Condition Name
-            </label>
-            <div className={styles.inputWrapper}>
-              <input
-                id="condition-name"
-                className={styles.input}
-                type="text"
-                placeholder="e.g. Is Workspacemate Message"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                autoFocus
-                required
-              />
-            </div>
-          </div>
-
-          <IconField
-            value={icon}
-            onChange={setIcon}
-            hint="Nodes drawn from this condition start with it; each node can change its own."
+        {open && (
+          <ConditionForm
+            key={condition?.id ?? 'new'}
+            workspaceId={workspaceId}
+            condition={condition}
+            preset={preset}
+            styles={FORM_STYLES}
+            onSaved={onSaved}
+            onDeleted={onDeleted}
+            onCancel={onClose}
           />
-
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="condition-type">
-              Type
-            </label>
-            <div className={styles.inputWrapper}>
-              <select
-                id="condition-type"
-                className={`${styles.input} ${styles.select}`}
-                value={type}
-                onChange={(event) => changeType(event.target.value as ConditionType)}
-              >
-                {/* A type no longer offered still belongs to the condition that has it. */}
-                {(CONDITION_TYPES.includes(type) ? CONDITION_TYPES : [type, ...CONDITION_TYPES]).map(
-                  (candidate) => (
-                    <option key={candidate} value={candidate}>
-                      {CONDITION_TYPE_LABEL[candidate]}
-                    </option>
-                  ),
-                )}
-              </select>
-              <img src={chevronDown12Icon} alt="" width={12} height={12} />
-            </div>
-          </div>
-
-          {!isComposite && type !== 'FUNCTION' && (
-            <>
-              <div className={styles.field}>
-                <label className={styles.label} htmlFor="condition-property">
-                  Property
-                </label>
-                <div className={styles.inputWrapper}>
-                  <select
-                    id="condition-property"
-                    className={`${styles.input} ${styles.select}`}
-                    value={property}
-                    onChange={(event) => changeProperty(event.target.value as ConditionProperty)}
-                  >
-                    {properties.map((candidate) => (
-                      <option key={candidate} value={candidate}>
-                        {PROPERTY_LABEL[candidate]}
-                      </option>
-                    ))}
-                  </select>
-                  <img src={chevronDown12Icon} alt="" width={12} height={12} />
-                </div>
-              </div>
-
-              <div className={styles.field}>
-                <label className={styles.label} htmlFor="condition-check">
-                  Check
-                </label>
-                <div className={styles.inputWrapper}>
-                  <select
-                    id="condition-check"
-                    className={`${styles.input} ${styles.select}`}
-                    value={check}
-                    onChange={(event) => setCheck(event.target.value as ConditionCheck)}
-                  >
-                    {checks.map((candidate) => (
-                      <option key={candidate} value={candidate}>
-                        {CHECK_LABEL[candidate]}
-                      </option>
-                    ))}
-                  </select>
-                  <img src={chevronDown12Icon} alt="" width={12} height={12} />
-                </div>
-              </div>
-            </>
-          )}
-
-          {type === 'FUNCTION' && (
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="condition-function">
-                Function
-              </label>
-              {/* The way to make one sits above the list and outlasts the search:
-                  a workspace's functions fill a hundred rows, and typing a name
-                  that matches none of them is exactly when it is wanted. */}
-              <DefinitionPicker
-                id="condition-function"
-                value={functionId}
-                options={functionOptions}
-                onChoose={setFunctionId}
-                placeholder="Select function…"
-                searchPlaceholder="Search functions…"
-                create={NEW_FUNCTION_ROW}
-              />
-              {functionId === NEW_FUNCTION ? (
-                <>
-                  <div className={styles.inputWrapper}>
-                    <input
-                      id="condition-new-function"
-                      className={`${styles.input} ${styles.inputMono}`}
-                      type="text"
-                      aria-label="New function name"
-                      placeholder={NEW_FUNCTION_NAME}
-                      value={newFunctionName}
-                      // Selected on focus, as the function editor does it: the box
-                      // arrives with a name in it, so typing over it is one gesture.
-                      onFocus={(event) => event.target.select()}
-                      onChange={(event) => setNewFunctionName(event.target.value)}
-                    />
-                  </div>
-                  <p className={styles.fieldHint}>
-                    Created with this condition, saying no to everything. Open it in Functions to write
-                    the question it should be asking.
-                  </p>
-                </>
-              ) : (
-                <p className={styles.fieldHint}>
-                  Only functions that return a boolean can answer a condition. It is handed what the run is
-                  carrying.
-                </p>
-              )}
-            </div>
-          )}
-
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="condition-negate">
-              Negate
-            </label>
-            <div className={styles.toggleRow}>
-              <span className={styles.toggleLabel}>Negate</span>
-              <button
-                type="button"
-                id="condition-negate"
-                className={negate ? `${styles.toggle} ${styles.toggleOn}` : styles.toggle}
-                onClick={() => setNegate((current) => !current)}
-                role="switch"
-                aria-checked={negate}
-              >
-                <span className={styles.knob} />
-              </button>
-            </div>
-          </div>
-
-          {label !== null && (
-            <div className={styles.field}>
-              <p className={styles.label}>{label}</p>
-              <div className={styles.tags}>
-                {values.map((value, index) => (
-                  <span key={`${value}-${index}`} className={styles.tag}>
-                    {value}
-                    <button
-                      type="button"
-                      className={styles.tagRemove}
-                      aria-label={`Remove ${value}`}
-                      onClick={() => setValues((current) => current.filter((_, at) => at !== index))}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-                {values.length === 0 && <span className={styles.fieldHint}>Nothing yet.</span>}
-              </div>
-              <div className={styles.inputWrapper}>
-                <input
-                  className={styles.input}
-                  type="text"
-                  placeholder={check === 'BETWEEN' ? '09:00' : 'Add a value…'}
-                  value={draftValue}
-                  onChange={(event) => setDraftValue(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault();
-                      addValue();
-                    }
-                  }}
-                />
-              </div>
-              <button type="button" className={styles.addValue} onClick={addValue}>
-                + Add Value
-              </button>
-            </div>
-          )}
-
-          {isComposite && (
-            <div className={styles.field}>
-              <p className={styles.label}>Conditions</p>
-              <div className={styles.tags}>
-                {members.map((member) => (
-                  <span key={member} className={styles.tag}>
-                    {others.find((other) => other.id === member)?.name ?? member}
-                    <button
-                      type="button"
-                      className={styles.tagRemove}
-                      aria-label="Remove condition"
-                      onClick={() => setMembers((current) => current.filter((id) => id !== member))}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-                {members.length === 0 && <span className={styles.fieldHint}>Nothing yet.</span>}
-              </div>
-              {/*
-                Held at nothing on purpose: this picks a member and hands it to
-                the list above, so what it says afterwards is the invitation to
-                add another rather than the one just added.
-              */}
-              <DefinitionPicker
-                id="condition-members"
-                value=""
-                options={memberOptions}
-                onChoose={(picked) => {
-                  if (picked === NEW_CONDITION) setMakingMember(true);
-                  else setMembers((current) => [...current, picked]);
-                }}
-                placeholder="+ Add Condition"
-                searchPlaceholder="Search conditions…"
-                ariaLabel="Add a condition"
-                create={NEW_CONDITION_ROW}
-              />
-            </div>
-          )}
-
-          {editing && <p className={styles.fieldHint}>{condition.description}</p>}
-        </div>
-
-        {error !== null && (
-          <p className={styles.error} role="alert">
-            {error}
-          </p>
         )}
-
-        <div className={styles.actions}>
-          {editing && (
-            <button type="button" className={styles.danger} onClick={handleDelete} disabled={submitting}>
-              Delete
-            </button>
-          )}
-          <button type="button" className={styles.ghost} onClick={onClose} disabled={submitting}>
-            Cancel
-          </button>
-          <button type="submit" className={styles.filled} disabled={!complete || submitting}>
-            {submitting ? 'Saving…' : editing ? 'Save Changes' : 'Create Condition'}
-          </button>
-        </div>
-      </form>
-
-      {/*
-        Beside the form rather than inside it. A form nested in a form is not
-        something a browser will keep apart: the inner dialog's submit would
-        bubble into this one's handler and save the condition being filled in.
-      */}
-      {makingMember && (
-        <ConditionDialog
-          open
-          workspaceId={workspaceId}
-          condition={null}
-          onClose={() => setMakingMember(false)}
-          onSaved={(made) => {
-            // Into this dialog's own list as well as into the members, because
-            // nothing is going to fetch the conditions again while it stays open.
-            setOthers((current) => [...current, made]);
-            setMembers((current) => [...current, made.id]);
-            setMakingMember(false);
-          }}
-        />
-      )}
+      </div>
     </dialog>
   );
 }
