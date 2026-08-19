@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 
 import type { Workspace } from '../api/workspaces';
 import activityIcon from '../assets/activity.svg';
@@ -20,10 +19,9 @@ import settingsIcon from '../assets/settings.svg';
 import puzzleIcon from '../assets/puzzle.svg';
 import toolIcon from '../assets/tool.svg';
 import alertTriangleIcon from '../assets/alert-triangle.svg';
-import { workspaceSwitchPath } from '../navigation';
 import { rememberWorkspace } from '../session/lastWorkspace';
 import { cachedWorkspaces, loadWorkspaces } from '../session/workspaces';
-import { SidebarNavItem, WorkspaceSelector } from './AppShell';
+import { SidebarNavItem } from './AppShell';
 
 export type WorkspaceSection =
   | 'executions'
@@ -55,14 +53,8 @@ export interface WorkspaceSidebarProps {
 const WORKSPACE_LIST_SIZE = 100;
 
 export function WorkspaceSidebar({ workspaceId, active, onWorkspacesLoaded }: WorkspaceSidebarProps) {
-  const navigate = useNavigate();
-  const { pathname } = useLocation();
-  // Painting from cache is what stops the selector emptying and refilling on a
-  // navigation that never left the workspace: this sidebar is a new mount, but
-  // the list it needs is the one the last mount already fetched.
-  const [workspaces, setWorkspaces] = useState<Workspace[]>(() => cachedWorkspaces() ?? []);
-
-  // So the top bar's Workspace tab can come back here from the admin side.
+  // So the top bar's Workspace tab and its selector can come back here from the
+  // admin side.
   useEffect(() => rememberWorkspace(workspaceId), [workspaceId]);
 
   useEffect(() => {
@@ -72,15 +64,10 @@ export function WorkspaceSidebar({ workspaceId, active, onWorkspacesLoaded }: Wo
     if (known !== null) onWorkspacesLoaded?.(known);
 
     loadWorkspaces(WORKSPACE_LIST_SIZE)
-      .then((list) => {
-        setWorkspaces(list);
-        onWorkspacesLoaded?.(list);
-      })
-      .catch(() => {
-        // A failed revalidation is not a reason to throw away a list that is
-        // almost certainly still right.
-        if (known === null) setWorkspaces([]);
-      });
+      .then((list) => onWorkspacesLoaded?.(list))
+      // A failed revalidation leaves the page with whatever the cache had, which
+      // is almost certainly still right.
+      .catch(() => undefined);
     // The callback is only a notification; re-running on its identity would loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -88,17 +75,11 @@ export function WorkspaceSidebar({ workspaceId, active, onWorkspacesLoaded }: Wo
   return (
     <>
       {/*
-        Changing workspace used to change page as well: whatever was open, the
-        selector sent you to the front of the new workspace. Now it keeps the
-        screen where the screen exists in both — a list page keeps its place, an
-        entity page falls back to its list, since issue #4 there is a different
-        issue or none. `workspaceSwitchPath` is where that is written down.
+        The workspace selector used to be here, under the logo. It is in the top
+        right now, beside the account (issue #106), because it belongs to every
+        screen and not only to the ones with this column on them. Where switching
+        lands is still `workspaceSwitchPath`; the shell calls it.
       */}
-      <WorkspaceSelector
-        workspaces={workspaces}
-        selectedId={workspaceId}
-        onSelect={(id) => navigate(workspaceSwitchPath(pathname, id))}
-      />
       <SidebarNavItem
         label="Executions"
         icon={gitBranchIcon}

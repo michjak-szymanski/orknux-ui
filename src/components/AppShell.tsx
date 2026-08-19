@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
-import { loadWorkspaces } from '../session/workspaces';
+import type { Workspace } from '../api/workspaces';
+import { cachedWorkspaces, loadWorkspaces } from '../session/workspaces';
+import bookIcon from '../assets/book.svg';
 import chevronDownIcon from '../assets/chevron-down.svg';
 import doorOpenIcon from '../assets/door-open.svg';
 import orknuxMark from '../assets/orknux-mark.svg';
 import panelCollapseIcon from '../assets/panel-collapse.svg';
 import settingsIcon from '../assets/settings.svg';
+import shieldIcon from '../assets/shield.svg';
 import { lastWorkspaceId } from '../session/lastWorkspace';
-import { sectionAt } from '../navigation';
+import { sectionAt, workspaceSwitchPath } from '../navigation';
 import { useInstallation } from '../session/installation';
 import { setSidebarCollapsed, useSidebarCollapsed } from '../session/sidebar';
 import { Attribution } from './Attribution';
@@ -24,6 +27,14 @@ export interface AppShellUser {
   initials: string;
   /** From the directory's mail attribute; the menu drops the line when absent. */
   email?: string;
+  /**
+   * Holds the installation's admin role.
+   *
+   * Carried on the user rather than asked for by each page, because it decides
+   * whether the corner offers the admin section at all — and a page that forgot
+   * to say would otherwise offer it to everybody.
+   */
+  admin: boolean;
 }
 
 export interface AppShellProps {
@@ -32,7 +43,15 @@ export interface AppShellProps {
   section: 'admin' | 'workspace' | 'chat' | 'docs' | 'none';
   /** Destination for the Workspace link; the link is inert while no workspace is known. */
   workspacePath?: string;
-  /** The admin section is only offered to holders of the admin role. */
+  /**
+   * Whether the admin section is offered — the button in the corner, and the
+   * admin pages in Go to.
+   *
+   * Defaults to what [user.admin] says, which is the answer: a page passing it
+   * is only repeating the session. It used to default to `true`, so the pages
+   * that did not pass it — the manual, a workspace's settings — offered an admin
+   * button to anybody who opened them.
+   */
   showAdmin?: boolean;
   /** Page-specific sidebar content. Null when the page hides the sidebar. */
   sidebar: ReactNode;
@@ -132,7 +151,7 @@ export function AppShell({
   sidebar,
   hideSidebar = false,
   scrollContent = false,
-  showAdmin = true,
+  showAdmin,
   title,
   onSignOut,
   children,
@@ -141,6 +160,11 @@ export function AppShell({
   const { pathname } = useLocation();
   const collapsed = useSidebarCollapsed();
   const installation = useInstallation();
+
+  // The session's answer unless a page insisted on one, so the admin button and
+  // the admin half of Go to appear together and only for an administrator.
+  const canAdmin = showAdmin ?? user.admin;
+  const workspaceHere = workspacePath ?? workspaceFallback;
 
   useDocumentTitle(title, pathname);
 
@@ -169,14 +193,15 @@ export function AppShell({
           <p className={styles.wordmark}>ORKNUX</p>
         </a>
 
+        {/*
+          What is left on this side is where the work is: the workspace you are
+          in, and the chat about it. Admin and the manual moved to the corner
+          with the account (issue #106) — both are somewhere you step out to,
+          not a section of the thing being worked on.
+        */}
         <nav className={styles.navLinks} aria-label="Sections">
           <span className={styles.navDivider} aria-hidden="true" />
-          {showAdmin && (
-            <TopNavLink to="/admin" current={section === 'admin'}>
-              Admin
-            </TopNavLink>
-          )}
-          <TopNavLink to={workspacePath ?? workspaceFallback} current={section === 'workspace'}>
+          <TopNavLink to={workspaceHere} current={section === 'workspace'}>
             Workspace
           </TopNavLink>
           {/*
@@ -190,29 +215,47 @@ export function AppShell({
               Chat
             </TopNavLink>
           )}
-          <TopNavLink to="/docs" current={section === 'docs'}>
-            Docs
-          </TopNavLink>
         </nav>
         </div>
 
         {/* Between the sections and the account, where a location bar goes. */}
         <CommandPalette
-          workspacePath={workspacePath ?? workspaceFallback}
-          showAdmin={showAdmin}
+          workspacePath={workspaceHere}
+          showAdmin={canAdmin}
           showChat={installation?.chatEnabled === true}
         />
 
         {/*
-          The bell and the name are one item, not two.
+          The corner: which workspace, then where else to go, then what is
+          waiting, then who you are.
 
-          This bar is a three-column grid - left, the centred search, right -
-          and a fourth child made a fourth cell, which pushed the user block
-          onto a row of its own underneath the header. They belong together
-          anyway: the bell is about the person whose name is beside it.
+          One cell rather than several. This bar is a three-column grid — left,
+          the centred search, right — and a fourth child made a fourth cell,
+          which pushed the user block onto a row of its own underneath the
+          header.
+
+          The order runs from the broadest thing to the most personal, and it is
+          also the order of how often it is used the other way round: the account
+          stays on the outside edge where it has always been, so nothing anybody
+          already knows where to find has moved. Between them a rule separates
+          the selector — the one control that changes what the whole page is
+          about — from the three small round things, which are tighter to each
+          other than to their neighbours so five items read as three groups.
         */}
         <div className={styles.topRight}>
-          <NotificationBell />
+          <WorkspaceSwitcher workspacePath={workspaceHere} />
+          <div className={styles.topRightIcons}>
+            <TopIconLink to="/docs" icon={bookIcon} label="Docs" current={section === 'docs'} />
+            {/*
+              Not rendered at all for anybody else, rather than hidden: a button
+              drawn and then covered is still in the tab order and still read
+              aloud, and the pages behind it refuse them anyway.
+            */}
+            {canAdmin && (
+              <TopIconLink to="/admin" icon={shieldIcon} label="Admin" current={section === 'admin'} />
+            )}
+            <NotificationBell />
+          </div>
           <UserMenu user={user} onSignOut={onSignOut} />
         </div>
       </header>
@@ -273,7 +316,7 @@ export function AppShell({
         floating over the one already open — two boxes to type a question into,
         one of which keeps no history.
       */}
-      {section !== 'chat' && <QuickChat workspacePath={workspacePath ?? workspaceFallback} />}
+      {section !== 'chat' && <QuickChat workspacePath={workspaceHere} />}
 
       {/*
         The attribution the licence asks to be kept visible. In the shell rather
@@ -386,6 +429,83 @@ function UserMenu({ user, onSignOut }: { user: AppShellUser; onSignOut?: () => v
   );
 }
 
+/**
+ * One of the small round destinations in the corner — the manual, the admin
+ * section.
+ *
+ * A link with a name rather than an icon in a div: it is read aloud as "Docs,
+ * link", it is in the tab order where it is on screen, and the browser's own
+ * open-in-a-new-tab works on it. The title says the same thing to a pointer,
+ * since the label itself is not drawn.
+ */
+function TopIconLink({
+  to,
+  icon,
+  label,
+  current,
+}: {
+  to: string;
+  icon: string;
+  label: string;
+  current: boolean;
+}) {
+  return (
+    <Link
+      to={to}
+      className={current ? `${styles.iconLink} ${styles.iconLinkCurrent}` : styles.iconLink}
+      aria-label={label}
+      aria-current={current ? 'page' : undefined}
+      title={label}
+    >
+      <img src={icon} alt="" width={16} height={16} />
+    </Link>
+  );
+}
+
+/**
+ * Which workspace, in the corner.
+ *
+ * It was under the logo, in the sidebar, which meant it was missing from every
+ * screen with no sidebar — the manual, the chat, the admin section — and those
+ * are exactly the screens somebody comes back to a workspace from. Here it is on
+ * every screen, because the shell is.
+ *
+ * Nothing about *where* switching lands is decided here: that is
+ * `workspaceSwitchPath`, unchanged from where the sidebar called it. A list page
+ * keeps its place, a page about one thing falls back to its list, and a screen
+ * belonging to no workspace goes to the new workspace's front page.
+ */
+function WorkspaceSwitcher({ workspacePath }: { workspacePath?: string }) {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  // From the cache first, so moving between pages does not empty and refill it.
+  const [workspaces, setWorkspaces] = useState<Workspace[]>(() => cachedWorkspaces() ?? []);
+
+  useEffect(() => {
+    loadWorkspaces(WORKSPACE_LOOKUP)
+      .then(setWorkspaces)
+      // A list that cannot be fetched is a selector that is not drawn, not an
+      // error over somebody's page.
+      .catch(() => undefined);
+  }, []);
+
+  const selectedId = workspacePath?.split('/').pop() ?? '';
+  // Nothing to select yet — no workspaces, or the fallback still on its way.
+  // Drawn with a value matching no option, a select shows an empty box.
+  if (!workspaces.some((workspace) => workspace.id === selectedId)) return null;
+
+  return (
+    <>
+      <WorkspaceSelector
+        workspaces={workspaces}
+        selectedId={selectedId}
+        onSelect={(id) => navigate(workspaceSwitchPath(pathname, id))}
+      />
+      <span className={styles.topRightRule} aria-hidden="true" />
+    </>
+  );
+}
+
 function TopNavLink({ to, current, children }: { to?: string; current: boolean; children: ReactNode }) {
   const className = current ? `${styles.navLink} ${styles.navLinkCurrent}` : styles.navLink;
 
@@ -417,14 +537,22 @@ export function LdapStatus({ connected = true }: { connected?: boolean }) {
   );
 }
 
-export interface WorkspaceSelectorProps {
+interface WorkspaceSelectorProps {
   workspaces: Array<{ id: string; name: string }>;
   selectedId: string;
   onSelect: (id: string) => void;
 }
 
-/** "Workspaces / <name>" with a chevron; a real select so it stays keyboard-usable. */
-export function WorkspaceSelector({ workspaces, selectedId, onSelect }: WorkspaceSelectorProps) {
+/**
+ * The workspace's name with a chevron; a real select, so it opens with the
+ * keyboard, is announced as a listbox, and behaves as the platform's own.
+ *
+ * The name alone, without the "Workspaces / " it carried in the sidebar: the
+ * heading was worth having in a column with nothing else in it, and is a
+ * hundred pixels of a corner that now holds four other things. What it is, is
+ * what the label says.
+ */
+function WorkspaceSelector({ workspaces, selectedId, onSelect }: WorkspaceSelectorProps) {
   return (
     <div className={styles.workspaceSelector}>
       <select
@@ -435,7 +563,7 @@ export function WorkspaceSelector({ workspaces, selectedId, onSelect }: Workspac
       >
         {workspaces.map((workspace) => (
           <option key={workspace.id} value={workspace.id}>
-            Workspaces / {workspace.name}
+            {workspace.name}
           </option>
         ))}
       </select>

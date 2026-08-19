@@ -117,12 +117,75 @@
   color: var(--color-text-primary);
 }
 
-/* The right of the bar: the bell and the person it belongs to, as one cell. */
+/*
+ * The right of the bar: which workspace, where else to go, what is waiting, and
+ * who you are — one cell holding all four.
+ *
+ * Three groups, spaced apart by --space-12, with the three round buttons closed
+ * up to --space-4 inside their own. Five items at one even spacing read as five
+ * unrelated things; grouped, the corner reads as "the workspace | some places |
+ * you".
+ */
 .topRight {
   display: flex;
   align-items: center;
   gap: var(--space-12);
   justify-self: end;
+  min-width: 0;
+}
+
+.topRightIcons {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+/* Between the selector and the buttons; the same rule the sections have. */
+.topRightRule {
+  flex: none;
+  width: 1px;
+  height: 24px;
+  background: var(--color-border);
+}
+
+/*
+ * A destination drawn as its icon: the manual, the admin section.
+ *
+ * The same 32px square the bell is, so the three of them are one row of round
+ * things rather than three sizes.
+ */
+.iconLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-6);
+}
+
+.iconLink img {
+  opacity: 0.75;
+}
+
+.iconLink:hover,
+.iconLink:focus-visible {
+  background: var(--color-surface-raised);
+  border-color: var(--color-border);
+}
+
+/*
+ * Where you are, marked as a section link is marked. The icons are flat files
+ * with their colour baked in, so being current is said with the background and
+ * the ink rather than by recolouring the glyph.
+ */
+.iconLinkCurrent {
+  background: var(--color-border);
+}
+
+.iconLinkCurrent img {
+  opacity: 1;
 }
 
 .userMenu {
@@ -292,10 +355,29 @@
 
 /* ---- Workspace ---- */
 
+/*
+ * The sidebar and the page, side by side, at least as tall as the window.
+ *
+ * No `min-height: 0` here, deliberately. With it, this row was pinned to
+ * exactly the window's height and a page taller than the window spilled out of
+ * it — which is why the sidebar's background used to stop halfway down a long
+ * settings page, and why bottom padding on the content did nothing at all: the
+ * padding was inside a box that could not grow, so the content that had already
+ * escaped the box carried on past it. Letting the row take its content's height
+ * puts the page back inside the shell. The fixed variety below still needs the
+ * clamp, and keeps it.
+ */
 .workspace {
   display: flex;
   flex: 1 0 0;
   align-items: stretch;
+}
+
+/*
+ * Held to the window, so the scrolling happens inside the content and the top
+ * bar and the sidebar stay where they are.
+ */
+.shellFixed .workspace {
   min-height: 0;
 }
 
@@ -327,7 +409,6 @@
 
 .sidebarCollapsed .navLabel,
 .sidebarCollapsed .activeIndicator,
-.sidebarCollapsed .workspaceSelector,
 .sidebarCollapsed .sidebarFooter {
   display: none;
 }
@@ -369,30 +450,57 @@
 
 /* ---- Workspace selector ---- */
 
+/*
+ * In the top bar now rather than down the sidebar, so it is sized to a corner
+ * instead of to a column.
+ *
+ * The cap is the whole point of the max-width. A native select is as wide as its
+ * widest option, and workspaces are named by whoever made them — one called
+ * "Northwind Support — European Field Operations" made this box six hundred
+ * pixels wide, which pushed the account block off the right of the window and
+ * squashed the bell to nothing. Capped, a long name is cut with an ellipsis and
+ * everything beside it stays where it was.
+ */
 .workspaceSelector {
   position: relative;
   display: flex;
+  flex: 0 1 auto;
   align-items: center;
-  width: 100%;
+  min-width: 0;
+  max-width: 200px;
+  height: 32px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-6);
 }
 
 .workspaceSelect {
-  flex: 1 0 0;
+  flex: 1 1 0;
   min-width: 0;
-  padding: var(--space-10) var(--space-12);
+  padding: 0 var(--space-10);
   padding-right: var(--space-32);
   background: none;
   /* The menu the browser drops takes its colour from here, not from the box. */
   background-color: var(--color-surface);
   border: 0;
   font-family: inherit;
-  font-size: var(--text-base);
-  line-height: 20px;
+  font-size: var(--text-md);
+  line-height: 30px;
   color: var(--color-text-primary);
+  /* A name too long for the cap is cut, not wrapped or clipped mid-letter. */
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   appearance: none;
   cursor: pointer;
+}
+
+.workspaceSelector:hover {
+  border-color: var(--color-text-muted);
+}
+
+/* The keyboard has to be able to see where it is; the select drops its own. */
+.workspaceSelector:focus-within {
+  border-color: var(--color-accent-brand);
 }
 
 .workspaceSelect:focus {
@@ -406,7 +514,7 @@
 
 .workspaceChevron {
   position: absolute;
-  right: var(--space-12);
+  right: var(--space-8);
   pointer-events: none;
 }
 
@@ -516,6 +624,17 @@
   gap: var(--space-24);
   min-width: 0;
   padding: var(--space-40);
+  /*
+   * Room at the bottom for the quick chat's launcher, which floats over this
+   * corner and does not move out of the way of anything.
+   *
+   * With --space-40 here, the last of every page was underneath it — and on a
+   * settings page the last of the page is the Danger Zone, so the launcher sat
+   * squarely on top of "Delete this". Anchored to the token the launcher is
+   * measured by, the same as the attribution strip beside it, so the two cannot
+   * drift apart.
+   */
+  padding-bottom: var(--quick-chat-clearance);
 }
 
 /* Long pages scroll here, under a top bar and a sidebar that stay put. */

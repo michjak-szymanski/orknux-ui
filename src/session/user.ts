@@ -16,5 +16,8 @@ export function shellUser(session: SessionUser): AppShellUser {
     role: roleLabel(session.roles),
     initials: session.username.slice(0, 2).toUpperCase(),
     email: session.email ?? undefined,
+    // The shell decides for itself whether to offer the admin corner, rather
+    // than believing whatever the page it is drawing happened to pass.
+    admin: session.admin,
   };
 }
