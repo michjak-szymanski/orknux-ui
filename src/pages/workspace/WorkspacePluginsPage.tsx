@@ -8,7 +8,6 @@ import {
 } from '../../api/plugins';
 import type { PluginParameterSetting, WorkspacePlugin } from '../../api/plugins';
 import type { SessionUser } from '../../api/session';
-import { fetchVariables } from '../../api/variables';
 import type { Variable } from '../../api/variables';
 import puzzleIcon from '../../assets/puzzle.svg';
 import { AppShell } from '../../components/AppShell';
@@ -17,15 +16,13 @@ import type { FieldOption, FieldPickerLabels } from '../../components/FieldPicke
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
+import { useWorkspaceVariables } from './workspaceVariables';
 import styles from './WorkspacePluginsPage.module.css';
 
 export interface WorkspacePluginsPageProps {
   session: SessionUser;
   onSignOut?: () => void;
 }
-
-/** More variables than a workspace realistically keeps, so the picker is complete. */
-const VARIABLE_LIMIT = 500;
 
 /**
  * Written here, or read from somewhere else.
@@ -64,24 +61,25 @@ export function WorkspacePluginsPage({ session, onSignOut }: WorkspacePluginsPag
   const { workspaceId = '' } = useParams();
 
   const [plugins, setPlugins] = useState<WorkspacePlugin[] | null>(null);
-  const [variables, setVariables] = useState<Variable[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   /** Which plugin's parameters are open. One at a time; this is a list, not a form. */
   const [open, setOpen] = useState<string | null>(null);
+  /*
+   * What the pickers offer, kept current rather than read once with the plugins.
+   * A parameter is answered with a variable, and the variable it wants is often
+   * made on the Variables page after this one was opened.
+   */
+  const { variables, refresh: refreshVariables } = useWorkspaceVariables(workspaceId);
 
   const load = useCallback(() => {
     if (workspaceId === '') return;
     setLoading(true);
     setError(null);
-    Promise.all([
-      fetchWorkspacePlugins(workspaceId),
-      fetchVariables(workspaceId, { size: VARIABLE_LIMIT }),
-    ])
-      .then(([found, held]) => {
+    fetchWorkspacePlugins(workspaceId)
+      .then((found) => {
         setPlugins(found);
-        setVariables(held.content);
         setLoading(false);
       })
       .catch((cause: unknown) => {
@@ -212,7 +210,13 @@ export function WorkspacePluginsPage({ session, onSignOut }: WorkspacePluginsPag
                               aria-expanded={showing}
                               aria-controls={`plugin-parameters-${entry.plugin.id}`}
                               title={`${showing ? 'Close' : 'Open'} what ${entry.plugin.name} asks for`}
-                              onClick={() => setOpen(showing ? null : entry.plugin.id)}
+                              onClick={() => {
+                                // Opening the parameters is reaching for the
+                                // list they are answered from, so it is read
+                                // again; the picker takes what lands.
+                                if (!showing) refreshVariables();
+                                setOpen(showing ? null : entry.plugin.id);
+                              }}
                             >
                               {entry.plugin.name}
                               <span className={styles.caret} aria-hidden="true">

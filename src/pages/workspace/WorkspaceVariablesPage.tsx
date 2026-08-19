@@ -91,6 +91,18 @@ export function WorkspaceVariablesPage({ session, onSignOut }: WorkspaceVariable
   const [selected, setSelected] = useState<string | null>(null);
   const [variables, setVariables] = useState<PageOf<Variable> | null>(null);
   const [search, setSearch] = useState('');
+  /**
+   * The order the rows are held in, by id.
+   *
+   * A list arrives sorted by name, so a variable added or renamed would jump
+   * the moment it was saved — out from under the cursor that had just typed it,
+   * to wherever the new name belongs. So the order is settled when the catalog
+   * is opened and then kept for as long as it stays open: a row saved keeps its
+   * place, and a row added stays at the foot of its table, where the blank row
+   * that made it was. Opening the catalog again sorts, which is the point:
+   * sorting is right for reading a list and wrong for watching one change.
+   */
+  const [arrangement, setArrangement] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   /** Whether the catalog column is folded away; the list is not always the work. */
   const [foldedCatalogs, setFoldedCatalogs] = useState(false);
@@ -116,13 +128,43 @@ export function WorkspaceVariablesPage({ session, onSignOut }: WorkspaceVariable
     [workspaceId],
   );
 
-  const loadVariables = useCallback(async () => {
-    if (workspaceId === '' || selected === null) {
-      setVariables(null);
-      return;
-    }
-    setVariables(await fetchVariables(workspaceId, { catalogId: selected, size: PAGE_SIZE }));
-  }, [workspaceId, selected]);
+  /**
+   * Reads the selected catalog.
+   *
+   * @param options.keepOrder whether the rows already on screen keep the places
+   *   they have. Passed by everything that follows a change; opening a catalog
+   *   does not pass it, and takes the sorted order.
+   * @param options.made the variable just created, kept even when the page it
+   *   sorted onto is not the first one — a catalog longer than a page would
+   *   otherwise swallow the row somebody had just typed.
+   */
+  const loadVariables = useCallback(
+    async (options: { keepOrder?: boolean; made?: Variable } = {}) => {
+      if (workspaceId === '' || selected === null) {
+        setVariables(null);
+        setArrangement([]);
+        return;
+      }
+      const held = await fetchVariables(workspaceId, { catalogId: selected, size: PAGE_SIZE });
+      const made = options.made;
+      const content =
+        made !== undefined && !held.content.some((one) => one.id === made.id)
+          ? [...held.content, made]
+          : held.content;
+      setVariables({ ...held, content });
+      setArrangement((current) =>
+        options.keepOrder === true
+          ? [
+              // What is still there keeps its place; what has appeared since
+              // goes to the end, which is where the row that made it was.
+              ...current.filter((id) => content.some((one) => one.id === id)),
+              ...content.filter((one) => !current.includes(one.id)).map((one) => one.id),
+            ]
+          : content.map((one) => one.id),
+      );
+    },
+    [workspaceId, selected],
+  );
 
   useEffect(() => {
     void guard(() => loadCatalogs());
@@ -161,16 +203,36 @@ export function WorkspaceVariablesPage({ session, onSignOut }: WorkspaceVariable
     });
   }
 
-  async function afterChange() {
-    await loadVariables();
+  function matches(name: string): boolean {
+    const looking = search.trim().toLowerCase();
+    return looking === '' || name.toLowerCase().includes(looking);
+  }
+
+  async function afterChange(made?: Variable) {
+    /*
+     * The search box is cleared when what was just added would not survive it.
+     * A row that vanishes the moment it is saved reads as a save that failed,
+     * and the person can see the box they typed in and put it back.
+     */
+    if (made !== undefined && !matches(made.name)) setSearch('');
+    await loadVariables({ keepOrder: true, made });
     await loadCatalogs(selected ?? undefined);
   }
 
+  /*
+   * In the order the catalog was opened in, rather than the one it arrives in:
+   * see `arrangement`. Anything the list has gained since — added here, or
+   * added by somebody else and picked up by a reload — falls to the end.
+   */
+  const place = new Map(arrangement.map((id, at) => [id, at]));
+  const ordered = (variables?.content ?? [])
+    .map((variable, at) => ({ variable, at: place.get(variable.id) ?? arrangement.length + at }))
+    .sort((one, other) => one.at - other.at)
+    .map((held) => held.variable);
+
   // Filtered here rather than by the server: a catalog is a page's worth, and
   // the box is for finding one you can already see.
-  const showing = (variables?.content ?? []).filter((variable) =>
-    search.trim() === '' ? true : variable.name.toLowerCase().includes(search.trim().toLowerCase()),
-  );
+  const showing = ordered.filter((variable) => matches(variable.name));
 
   return (
     <AppShell
@@ -313,7 +375,7 @@ export function WorkspaceVariablesPage({ session, onSignOut }: WorkspaceVariable
                 workspaceId={workspaceId}
                 catalogId={current.id}
                 variables={showing.filter((variable) => variable.kind === 'VALUE')}
-                onChanged={() => guard(afterChange)}
+                onChanged={(made) => guard(() => afterChange(made))}
                 onError={setError}
               />
 
@@ -325,7 +387,7 @@ export function WorkspaceVariablesPage({ session, onSignOut }: WorkspaceVariable
                 workspaceId={workspaceId}
                 catalogId={current.id}
                 variables={showing.filter((variable) => variable.kind === 'SECRET')}
-                onChanged={() => guard(afterChange)}
+                onChanged={(made) => guard(() => afterChange(made))}
                 onError={setError}
               />
             </>
@@ -361,8 +423,13 @@ function VariableTable({
   workspaceId: string;
   catalogId: string;
   variables: Variable[];
-  /** Reloads the list; awaited, so a row can hold what was typed until it lands. */
-  onChanged: () => Promise<void>;
+  /**
+   * Reloads the list; awaited, so a row can hold what was typed until it lands.
+   *
+   * @param made the variable this change created, so the page can keep it in
+   *   view rather than leave it to sorting and the page size.
+   */
+  onChanged: (made?: Variable) => Promise<void>;
   onError: (message: string | null) => void;
 }) {
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
@@ -475,7 +542,7 @@ function VariableTable({
     if (adding === null || adding.name.trim() === '') return;
 
     await run('new', async () => {
-      await createVariable({
+      const made = await createVariable({
         workspaceId,
         catalogId,
         name: adding.name.trim(),
@@ -484,7 +551,9 @@ function VariableTable({
         kind,
         value: adding.value === '' ? undefined : adding.value,
       });
-      await onChanged();
+      // Handed on, so the row lands where the blank one was rather than where
+      // its name sorts, and is still there when the catalog is a long one.
+      await onChanged(made);
       setAdding(null);
     });
   }
