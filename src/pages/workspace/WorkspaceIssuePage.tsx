@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ClipboardEvent as ReactClipboardEvent } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { formatSize, isShowable } from '../../api/attachments';
 import {
@@ -19,7 +19,7 @@ import {
   updateIssue,
   uploadIssueAttachments,
 } from '../../api/issues';
-import type { Assignee, Issue, IssueAttachment, IssueLink, IssueStatus } from '../../api/issues';
+import type { Assignee, Issue, IssueAttachment, IssueStatus } from '../../api/issues';
 import type { SessionUser } from '../../api/session';
 import { timeAgo } from '../../api/tools';
 import { initialsOf } from '../../api/users';
@@ -51,6 +51,19 @@ export interface WorkspaceIssuePageProps {
 }
 
 /**
+ * An address typed against an issue that has not been filed yet.
+ *
+ * It carries a key of its own because an id is the server's to give and the
+ * server has not been told about this yet - the key exists only so the list on
+ * the screen can tell two rows apart and take the right one off again.
+ */
+interface PendingLink {
+  key: string;
+  url: string;
+  title: string;
+}
+
+/**
  * One issue, in the shape everybody already knows.
  *
  * Title across the top with what can be done to it; the description on the
@@ -69,6 +82,7 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
    */
   const { workspaceId = '', number = '' } = useParams();
   const navigate = useNavigate();
+  const { pathname, state: arrivedWith } = useLocation();
   const creating = number === '';
 
   const [issue, setIssue] = useState<Issue | null>(null);
@@ -149,6 +163,19 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
   const [addingLink, setAddingLink] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkTitle, setLinkTitle] = useState('');
+  /*
+   * Addresses typed while the issue is still being written.
+   *
+   * The same problem the attachments have, with a lighter answer: a link is
+   * hung on an issue by its id and a new issue has no id, so what is typed
+   * waits here and is hung on the issue the moment filing gives it one. There
+   * is nothing to send ahead the way a file is sent ahead, because an address
+   * is text, which also means the server has not seen it yet and a refusal
+   * cannot arrive until the issue exists.
+   */
+  const [pendingLinks, setPendingLinks] = useState<PendingLink[]>([]);
+  /** Counts the rows above so each gets a key of its own; the server gives ids. */
+  const linkKeys = useRef(0);
   const issueFilesRef = useRef<HTMLInputElement>(null);
   const commentFilesRef = useRef<HTMLInputElement>(null);
 
@@ -156,6 +183,23 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
   useEffect(() => {
     if (creating) setWriting(true);
   }, [creating]);
+
+  /*
+   * Something the form could not finish, said on the page it concerns.
+   *
+   * A link refused after the issue has been created leaves the issue standing
+   * and the address unsaid, and the only place to type that address again is
+   * this issue's own Links section - so the refusal travels here with the
+   * navigation rather than dying with the form. Taken off the history entry
+   * once it has been shown, because a refusal describes the moment of filing
+   * and a page reloaded an hour later should not still be reporting it.
+   */
+  const trouble = (arrivedWith as { linkTrouble?: string } | null)?.linkTrouble ?? null;
+  useEffect(() => {
+    if (trouble === null) return;
+    setError(trouble);
+    navigate(pathname, { replace: true, state: null });
+  }, [trouble, pathname, navigate]);
 
   useEffect(() => {
     if (creating) return;
@@ -196,6 +240,9 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
     if (saving || title.trim() === '') return;
     setSaving(true);
     setError(null);
+    // Forgotten as soon as another save begins, so that "filed #12" below can
+    // only ever mean the save that just happened.
+    setFiled(null);
     try {
       const details = {
         title: title.trim(),
@@ -213,6 +260,12 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
           await attachToIssue(made.id, pending.map((file) => file.id));
           setPending([]);
         }
+        // And the addresses, which had nothing to hang on either. Emptied
+        // whatever the server made of them, because they belong to the issue
+        // that was just filed and not to whatever is filed next.
+        const refused = await hangLinks(made.id);
+        setPendingLinks([]);
+        const trouble = refusalOf(made.number, refused);
         if (fileAnother) {
           /*
            * Cleared back to an empty form rather than reloaded: the point is
@@ -223,8 +276,20 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
           setTitle('');
           setDescription('');
           setFiled(made.number);
+          // Said beside the number rather than instead of it: somebody filing
+          // a run of issues asked to stay here, and a refused address is not a
+          // reason to take them somewhere else.
+          if (trouble !== null) setError(trouble);
         } else {
-          navigate(`/workspace/${workspaceId}/issues/${made.number}`, { replace: true });
+          /*
+           * The refusal goes wherever the person was going anyway. The issue
+           * exists either way, so it is still the page to land on - it is just
+           * a page that has to open saying which address it did not get.
+           */
+          navigate(`/workspace/${workspaceId}/issues/${made.number}`, {
+            replace: true,
+            state: trouble === null ? null : { linkTrouble: trouble },
+          });
         }
       } else if (issue !== null) {
         setIssue(await updateIssue(issue.id, details));
@@ -412,7 +477,23 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
    */
   async function addLink() {
     const address = linkUrl.trim();
-    if (address === '' || issue === null || saving) return;
+    if (address === '' || saving) return;
+    if (creating) {
+      /*
+       * Nothing to send: there is no issue to send it to, so the address waits
+       * on the page the way a picked file waits. Whether it may be kept is
+       * still the server's decision and not this page's - it is simply asked
+       * later, which is the whole of what makes this different from the case
+       * below.
+       */
+      const key = `pending-${linkKeys.current++}`;
+      setPendingLinks((current) => [...current, { key, url: address, title: linkTitle }]);
+      setLinkUrl('');
+      setLinkTitle('');
+      setAddingLink(false);
+      return;
+    }
+    if (issue === null) return;
     setSaving(true);
     setError(null);
     try {
@@ -427,6 +508,55 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
     } finally {
       setSaving(false);
     }
+  }
+
+  /**
+   * Hangs the waiting addresses on the issue that has just been filed.
+   *
+   * One at a time, and a refusal is kept rather than thrown, because one bad
+   * address is no reason to drop the good ones typed after it. What comes back
+   * is the addresses the server would not take, each with the words it used.
+   *
+   * The box counts too. Somebody who types an address and then presses File
+   * Issue has plainly asked for that address to be on the issue, and losing it
+   * because they did not press Add first would be the page being pedantic
+   * about its own buttons.
+   */
+  async function hangLinks(id: string): Promise<string[]> {
+    const typed = linkUrl.trim();
+    const wanted =
+      typed === '' ? pendingLinks : [...pendingLinks, { key: 'typed', url: typed, title: linkTitle }];
+    setLinkUrl('');
+    setLinkTitle('');
+    setAddingLink(false);
+
+    const refused: string[] = [];
+    for (const link of wanted) {
+      try {
+        await addIssueLink(id, link.url, link.title);
+      } catch (cause) {
+        refused.push(`${link.url} - ${cause instanceof Error ? cause.message : 'refused'}`);
+      }
+    }
+    return refused;
+  }
+
+  /**
+   * What to say when the issue was filed and an address on it was not.
+   *
+   * The number goes first because that is the part somebody has to know: the
+   * issue is real, whatever else went wrong, and a message that only said "the
+   * link was refused" would read like nothing at all had happened.
+   */
+  function refusalOf(made: number, refused: string[]): string | null {
+    if (refused.length === 0) return null;
+    const what = refused.length === 1 ? 'this address was not added' : 'these addresses were not added';
+    return `Filed as #${made}, but ${what}: ${refused.join('; ')}.`;
+  }
+
+  /** Takes a waiting one off again, before there is an issue to take it off. */
+  function dropPendingLink(key: string) {
+    setPendingLinks((current) => current.filter((link) => link.key !== key));
   }
 
   /** Takes one off again; only whoever added it is offered the button. */
@@ -457,6 +587,23 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
    * waiting for it while it does not.
    */
   const issueFiles = creating ? pending : (issue?.attachments ?? []);
+  /*
+   * The same again for the addresses: what the issue holds once it exists, and
+   * what is waiting to be hung on it while it does not. A waiting one has no
+   * reading of GitHub's shape because the server works that out when it is
+   * given the address, so it shows as what was typed until the issue is filed.
+   */
+  const issueLinks: DrawnLink[] = creating
+    ? pendingLinks.map((link) => ({
+        id: link.key,
+        url: link.url,
+        title: link.title.trim() === '' ? null : link.title,
+        github: null,
+        addedBy: null,
+        addedAt: null,
+        mine: true,
+      }))
+    : (issue?.links ?? []);
   /*
    * Every picture on the page, in the order they are read in, so the viewer's
    * arrows walk the issue rather than only the chip that was clicked.
@@ -552,9 +699,12 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
           {/*
             An emptied form looks exactly like a form that did nothing, so the
             one just filed says so and links to itself - the only way back to it
-            once the page has moved on.
+            once the page has moved on. Shown beside an error rather than
+            instead of one, because filing the issue and failing to put an
+            address on it is both of those things at once; the number is
+            forgotten when the next save begins, so it can never be stale.
           */}
-          {creating && filed !== null && error === null && (
+          {creating && filed !== null && (
             <p className={styles.filed} role="status">
               Filed{' '}
               <Link to={`/workspace/${workspaceId}/issues/${filed}`} className={styles.filedLink}>
@@ -639,84 +789,90 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
               {/*
                 Where the rest of the story is.
 
-                Only on an issue that exists: a link is hung on an issue by its
-                id, and while one is being written there is no id to hang it on.
-                Attachments manage it by holding the files until the issue is
-                saved, which is worth doing for bytes somebody has already
-                picked and not for an address that can be pasted again a second
-                later.
+                Offered while the issue is being filed too. The pull request
+                and the failing page are what somebody has open at the moment
+                they decide to report something, and telling them to file first
+                and come back is telling them to lose the tab they were looking
+                at.
               */}
-              {!creating && (
-                <section className={styles.files}>
-                  <span className={styles.labelRow}>
-                    <span className={styles.label}>Links</span>
+              <section className={styles.files}>
+                <span className={styles.labelRow}>
+                  <span className={styles.label}>Links</span>
+                  <button
+                    type="button"
+                    className={styles.textButton}
+                    onClick={() => {
+                      setAddingLink(!addingLink);
+                      setLinkUrl('');
+                      setLinkTitle('');
+                    }}
+                  >
+                    {addingLink ? 'Cancel' : 'Add a link'}
+                  </button>
+                </span>
+                {addingLink && (
+                  <div className={styles.linkForm}>
+                    <input
+                      className={styles.linkInput}
+                      type="url"
+                      value={linkUrl}
+                      placeholder="https://…"
+                      aria-label="Address"
+                      autoFocus
+                      onChange={(event) => setLinkUrl(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault();
+                          void addLink();
+                        }
+                      }}
+                    />
+                    {/*
+                      Optional, and says so: a GitHub address names itself,
+                      and a box that looks required would have people typing
+                      "PR" into it.
+                    */}
+                    <input
+                      className={styles.linkInput}
+                      type="text"
+                      value={linkTitle}
+                      placeholder="What to call it (optional)"
+                      aria-label="What to call it"
+                      onChange={(event) => setLinkTitle(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault();
+                          void addLink();
+                        }
+                      }}
+                    />
                     <button
                       type="button"
                       className={styles.textButton}
-                      onClick={() => {
-                        setAddingLink(!addingLink);
-                        setLinkUrl('');
-                        setLinkTitle('');
-                      }}
+                      disabled={saving || linkUrl.trim() === ''}
+                      onClick={() => void addLink()}
                     >
-                      {addingLink ? 'Cancel' : 'Add a link'}
+                      Add
                     </button>
-                  </span>
-                  {addingLink && (
-                    <div className={styles.linkForm}>
-                      <input
-                        className={styles.linkInput}
-                        type="url"
-                        value={linkUrl}
-                        placeholder="https://…"
-                        aria-label="Address"
-                        autoFocus
-                        onChange={(event) => setLinkUrl(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter') {
-                            event.preventDefault();
-                            void addLink();
-                          }
-                        }}
-                      />
-                      {/*
-                        Optional, and says so: a GitHub address names itself,
-                        and a box that looks required would have people typing
-                        "PR" into it.
-                      */}
-                      <input
-                        className={styles.linkInput}
-                        type="text"
-                        value={linkTitle}
-                        placeholder="What to call it (optional)"
-                        aria-label="What to call it"
-                        onChange={(event) => setLinkTitle(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter') {
-                            event.preventDefault();
-                            void addLink();
-                          }
-                        }}
-                      />
-                      <button
-                        type="button"
-                        className={styles.textButton}
-                        disabled={saving || linkUrl.trim() === ''}
-                        onClick={() => void addLink()}
-                      >
-                        Add
-                      </button>
-                    </div>
-                  )}
-                  {(issue?.links ?? []).length === 0 ? (
-                    <p className={styles.nothing}>
-                      Nothing linked yet. The pull request, the dashboard, the page that will not load.
-                    </p>
-                  ) : (
-                    <Links links={issue?.links ?? []} onRemove={(id) => void removeLink(id)} />
-                  )}
-                </section>
-              )}
+                  </div>
+                )}
+                {issueLinks.length === 0 ? (
+                  <p className={styles.nothing}>
+                    Nothing linked yet. The pull request, the dashboard, the page that will not load.
+                  </p>
+                ) : (
+                  <Links
+                    links={issueLinks}
+                    onRemove={(id) => {
+                      // While the issue is being written the rows are this
+                      // page's own, so taking one off is a matter for this page
+                      // alone; once it exists the server is what holds them.
+                      if (creating) dropPendingLink(id);
+                      else void removeLink(id);
+                    }}
+                  />
+                )}
+              </section>
 
               {!creating && (
                 <section className={styles.comments}>
@@ -1141,8 +1297,27 @@ function Attachments({ files, onOpen, onRemove }: AttachmentsProps) {
   );
 }
 
+/**
+ * A link as this page draws it, which is one of two things.
+ *
+ * Either one the server holds, or one typed against an issue that has not been
+ * filed yet. The second has nobody recorded as having added it and no reading
+ * of GitHub's shape - the server decides both, and has not been asked - so
+ * those are the parts allowed to be missing. An `IssueLink` is one of these
+ * with nothing missing, which is why it needs no converting.
+ */
+interface DrawnLink {
+  id: string;
+  url: string;
+  title: string | null;
+  github: string | null;
+  addedBy: string | null;
+  addedAt: string | null;
+  mine: boolean;
+}
+
 interface LinksProps {
-  links: IssueLink[];
+  links: DrawnLink[];
   onRemove: (id: string) => void;
 }
 
@@ -1180,13 +1355,21 @@ function Links({ links, onRemove }: LinksProps) {
               {name}
             </a>
             <span className={styles.attachmentMeta}>
-              {/*
-                The GitHub reading beside a name somebody chose, rather than
-                instead of it: both are worth knowing, and they are only
-                repeated when nobody named the link.
-              */}
-              {link.github !== null && link.title !== null && `${link.github} · `}
-              {link.addedBy} · {timeAgo(link.addedAt)}
+              {link.addedAt === null ? (
+                /* Nothing has been added yet, so the line says what will
+                   happen instead of pretending a record exists. */
+                'Added when the issue is filed'
+              ) : (
+                <>
+                  {/*
+                    The GitHub reading beside a name somebody chose, rather than
+                    instead of it: both are worth knowing, and they are only
+                    repeated when nobody named the link.
+                  */}
+                  {link.github !== null && link.title !== null && `${link.github} · `}
+                  {link.addedBy} · {timeAgo(link.addedAt)}
+                </>
+              )}
             </span>
             {link.mine && (
               <button
