@@ -1237,18 +1237,42 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   }, [draft, fieldEdit, selectedKey, setNodes]);
 
   /*
-   * A turned node has to be measured again.
+   * A node whose handles have moved has to be measured again.
    *
    * React Flow finds a node's handles once and remembers where they are, so
    * moving them in the markup moved the dots and nothing else: every line went
    * on leaving and arriving where the handles had been, and a node that looked
-   * turned could not be wired as one. This is the one thing that tells it to
-   * look again, and it is cheap enough to do on every turn.
+   * turned could not be wired as one. Telling it to look again is the only cure,
+   * and the whole question is when.
+   *
+   * Watching the panel's draft was the wrong when. The draft turns the moment
+   * the button is pressed and the canvas follows a quarter of a second later, so
+   * the measurement was taken of the node as it still stood - and once the node
+   * did turn, nothing asked again. A node came out measured one turn behind
+   * itself, which is why pressing Turn four times, all the way round to where it
+   * started, left a node with its dots on the left and right and its lines
+   * leaving from the bottom.
+   *
+   * So what is watched here is the canvas, not the panel: the nodes as they are
+   * actually drawn, and of each one only what decides where its handles are -
+   * which way it faces, and its kind, since a trigger has no input at all and a
+   * condition leaves by two doors rather than one. Anything else a node changes
+   * is left alone, including its size, which React Flow already watches for
+   * itself and measures the handles again when it changes.
    */
+  const shapes = useRef(new Map<string, string>());
   useEffect(() => {
-    if (selectedKey === null || draft === null) return;
-    remeasure(selectedKey);
-  }, [selectedKey, draft?.orientation, remeasure]);
+    const now = new Map<string, string>();
+    const moved: string[] = [];
+    for (const node of nodes) {
+      const data = node.data as NodeData;
+      const shape = `${data.kind}:${data.orientation ?? 'LEFT_TO_RIGHT'}`;
+      now.set(node.id, shape);
+      if (shapes.current.get(node.id) !== shape) moved.push(node.id);
+    }
+    shapes.current = now;
+    if (moved.length > 0) remeasure(moved);
+  }, [nodes, remeasure]);
 
   /**
    * An agent node takes two, and takes them from nowhere else: an agent has no
