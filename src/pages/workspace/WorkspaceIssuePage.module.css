@@ -222,6 +222,16 @@
   color: var(--color-text-muted);
 }
 
+/*
+ * The one place "nothing yet" sits directly above a box somebody is about to
+ * type in, and the section's own gap is not enough between a statement and an
+ * invitation - they read as one crowded thing. Only inside the comments,
+ * because everywhere else this line is the last thing in its section.
+ */
+.comments .nothing {
+  margin-bottom: var(--space-8);
+}
+
 .composer {
   display: flex;
   flex-direction: column;
