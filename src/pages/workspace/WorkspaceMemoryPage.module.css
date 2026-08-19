@@ -11,6 +11,8 @@
   width: 100%;
   min-height: 0;
   margin: calc(var(--space-32) * -1);
+  /* The catalogue handle is placed against this panel's edge. */
+  position: relative;
 }
 
 /* ---- Catalogs ---- */
@@ -34,7 +36,9 @@
  * layout that changes width with no visible cause reads as a bug.
  */
 .catalogsCollapsed {
-  width: auto;
+  /* A number rather than `auto`, because the handle rides this edge and an
+     edge that depends on its contents is one it cannot be anchored to. */
+  width: 48px;
   padding: var(--space-12) var(--space-8);
 }
 
@@ -47,28 +51,55 @@
 }
 
 /* The fold, and the arrow that says which way it goes. */
+/*
+ * The same handle the main menu has, on this panel's edge (issue #118).
+ *
+ * It was a chevron pair inside the panel header, which is a different gesture
+ * from the one a reader has just learned one level up. Drawn and placed alike
+ * so the two collapses are the same control at two depths - a circle
+ * straddling the edge it moves, level with the top of the panel.
+ *
+ * A sibling of the panel rather than a child: the panel scrolls, so anything
+ * straddling that edge from the inside would be clipped.
+ */
 .collapseCatalogs {
+  position: absolute;
+  top: 26px;
+  left: 280px;
+  z-index: 5;
   display: flex;
-  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  padding: var(--space-4);
-  background: none;
-  border: 0;
-  border-radius: var(--radius-4);
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  transform: translate(-50%, -50%);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
   color: var(--color-text-muted);
   cursor: pointer;
+  opacity: 0.85;
+  transition:
+    opacity 150ms ease,
+    left 150ms ease;
 }
 
 .collapseCatalogs:hover {
-  background: var(--color-surface-raised);
+  opacity: 1;
+  border-color: var(--color-accent-brand);
   color: var(--color-text-primary);
+}
+
+/* Follows the edge when the edge moves, as the shell's handle does. */
+.collapseCatalogsShut {
+  left: 48px;
 }
 
 .collapseIcon {
   display: block;
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   background-color: currentColor;
   mask-repeat: no-repeat;
   mask-position: center;
@@ -79,8 +110,13 @@
 }
 
 /* Pointing the other way when the column is already folded. */
+/* Chevron down, turned to point at the edge this is about to pull in. */
+.collapseIcon {
+  transform: rotate(90deg);
+}
+
 .collapseIconOpen {
-  transform: rotate(180deg);
+  transform: rotate(-90deg);
 }
 
 .catalogsTitle {

@@ -164,36 +164,15 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
   return (
     <AppShell
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="skills" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <div className={styles.split}>
         <aside className={foldedCatalogs ? `${styles.catalogs} ${styles.catalogsCollapsed}` : styles.catalogs}>
           <header className={styles.catalogsHeader}>
             {!foldedCatalogs && <p className={styles.catalogsTitle}>SKILL CATALOGS</p>}
-            <button
-              type="button"
-              className={styles.collapseCatalogs}
-              onClick={() => setFoldedCatalogs((folded) => !folded)}
-              aria-expanded={!foldedCatalogs}
-              aria-label={foldedCatalogs ? 'Show catalogs' : 'Hide catalogs'}
-              title={foldedCatalogs ? 'Show catalogs' : 'Hide catalogs'}
-            >
-              <span
-                className={
-                  foldedCatalogs
-                    ? `${styles.collapseIcon} ${styles.collapseIconOpen}`
-                    : styles.collapseIcon
-                }
-                style={{
-                  maskImage: `url("${panelCollapseIcon}")`,
-                  WebkitMaskImage: `url("${panelCollapseIcon}")`,
-                }}
-              />
-            </button>
             {!foldedCatalogs && (
             <button
               type="button"
@@ -230,6 +209,31 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
           </div>
           )}
         </aside>
+        {/*
+          Outside the panel, because the panel scrolls - a handle straddling
+          its edge from the inside would be clipped. Same reasoning, and the
+          same drawing, as the shell handle one level up (issue #118).
+        */}
+          <button
+            type="button"
+            className={foldedCatalogs ? `${styles.collapseCatalogs} ${styles.collapseCatalogsShut}` : styles.collapseCatalogs}
+            onClick={() => setFoldedCatalogs((folded) => !folded)}
+            aria-expanded={!foldedCatalogs}
+            aria-label={foldedCatalogs ? 'Show catalogs' : 'Hide catalogs'}
+            title={foldedCatalogs ? 'Show catalogs' : 'Hide catalogs'}
+          >
+            <span
+              className={
+                foldedCatalogs
+                  ? `${styles.collapseIcon} ${styles.collapseIconOpen}`
+                  : styles.collapseIcon
+              }
+              style={{
+                maskImage: `url("${panelCollapseIcon}")`,
+                WebkitMaskImage: `url("${panelCollapseIcon}")`,
+              }}
+            />
+          </button>
 
         <section className={styles.panel}>
           {error !== null && (
