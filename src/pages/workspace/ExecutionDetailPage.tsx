@@ -18,6 +18,7 @@ import {
   fetchExecution,
   formatDuration,
   rerunExecution,
+  rerunExecutionStep,
 } from '../../api/executions';
 import type { ExecutionDetail, ExecutionStep, StepStatus } from '../../api/executions';
 import { NODE_KIND_LABEL } from '../../api/graph';
@@ -84,13 +85,22 @@ type StepOutcome =
   | 'not-met'
   | 'skipped'
   | 'start'
-  | 'pending';
+  | 'pending'
+  | 'carried';
 
 function outcomeOf(
   step: ExecutionStep,
   runEnded: boolean,
   stoppedAtNodeKey: string | null,
 ): StepOutcome {
+  /*
+   * Carried over answers the question this graph asks - what did this run do
+   * with this node - and the answer is nothing. The status and the times beside
+   * it were copied from the run this one was started from, so reading them as
+   * work done here would be reading them wrong. The status behind the copy is
+   * still in the panel, for anyone who wants it.
+   */
+  if (step.carriedOver) return 'carried';
   if (step.key === stoppedAtNodeKey) return 'not-met';
   if (step.kind === 'TRIGGER') return 'start';
   if (step.status === 'PENDING') return runEnded ? 'skipped' : 'pending';
@@ -110,6 +120,7 @@ const OUTCOME_LABEL: Record<StepOutcome, string> = {
   skipped: 'Skipped',
   start: 'Started here',
   pending: 'Pending',
+  carried: 'Carried over',
 };
 
 /** The mark in the corner: what happened, at a glance. */
@@ -122,6 +133,7 @@ const OUTCOME_MARK: Record<StepOutcome, string> = {
   skipped: '–',
   start: '▶',
   pending: '',
+  carried: '↻',
 };
 
 /** A node as it ran: the editor's card plus the outcome badge and its duration. */
@@ -385,6 +397,17 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
     }
   }
 
+  /*
+   * The panel calls this and shows what comes back out of it. It deliberately
+   * does not catch: which steps can be started from is the server's judgement,
+   * and the panel puts the server's own sentence beside the button it refused.
+   */
+  async function rerunFromStep(nodeKey: string) {
+    const queued = await rerunExecutionStep(executionId, nodeKey);
+    // A run started from a step is still a new run; follow it, as Re-run does.
+    window.location.assign(`/workspace/${workspaceId}/executions/${queued.id}`);
+  }
+
   function downloadLogs() {
     const text = (run?.logs ?? [])
       .map((line) => `[${timeOf(line.at)}] ${line.message}`)
@@ -631,9 +654,13 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
 
         {selected !== null && (
           <NodeDetailsPanel
+            /* Keyed on the step so that moving to another node starts the panel
+               again, rather than carrying one node's refusal over to the next. */
+            key={selected.key}
             step={selected}
             workspaceId={workspaceId}
             runEnded={run !== null && run.status !== 'RUNNING'}
+            onRerunFromHere={rerunFromStep}
             onClose={() => setSelectedKey(null)}
           />
         )}
@@ -656,14 +683,38 @@ function NodeDetailsPanel({
   step,
   workspaceId,
   runEnded,
+  onRerunFromHere,
   onClose,
 }: {
   step: ExecutionStep;
   workspaceId: string;
   /** True once the run has finished, so a pending step was never reached. */
   runEnded: boolean;
+  /** Starts the workflow again from this step; rejects with the server's words. */
+  onRerunFromHere: (nodeKey: string) => Promise<void>;
   onClose: () => void;
 }) {
+  const [rerunning, setRerunning] = useState(false);
+  const [refusal, setRefusal] = useState<string | null>(null);
+
+  async function handleRerunFromHere() {
+    if (rerunning) return;
+    setRerunning(true);
+    setRefusal(null);
+    try {
+      await onRerunFromHere(step.key);
+    } catch (cause) {
+      /*
+       * Shown as the server wrote it. It knows why a step cannot be started
+       * from - the branch the earlier run took, a node the graph has since
+       * lost, a field that was never produced - and guessing at those rules
+       * here would mean a second, worse copy of them going stale on its own.
+       */
+      setRefusal(cause instanceof Error ? cause.message : 'Could not re-run from this step.');
+      setRerunning(false);
+    }
+  }
+
   /** Where the step's catalogue entry lives, when it came from one. */
   const definition =
     step.conditionId != null
@@ -697,10 +748,39 @@ function NodeDetailsPanel({
           {/* A step still pending in a run that has ended was never reached. */}
           {step.status === 'PENDING' && runEnded ? 'Not reached' : STEP_STATUS_LABEL[step.status]}
         </span>
+        {/* The status here, and the duration and times under it, belong to the
+            run this one was started from rather than to this one. Unsaid, they
+            read as work that happened here, which is the misleading part. */}
+        {step.carriedOver && (
+          <span className={styles.carriedNote}>Carried over from the earlier run</span>
+        )}
       </PanelField>
+      {/* Which way the run left a condition by; every other kind has no answer. */}
+      {step.branch !== null && (
+        <PanelField label="Branch">{step.branch === 'YES' ? 'Yes' : 'No'}</PanelField>
+      )}
       <PanelField label="Duration">{formatDuration(step.durationSeconds)}</PanelField>
       <PanelField label="Started">{timeOf(step.startedAt)}</PanelField>
       <PanelField label="Finished">{timeOf(step.finishedAt)}</PanelField>
+
+      {/* The button the issue asked for. Never disabled on a rule worked out in
+          the browser - only while the request it started is still out. */}
+      <div className={styles.panelAction}>
+        <button
+          type="button"
+          className={styles.rerunStep}
+          onClick={handleRerunFromHere}
+          disabled={rerunning}
+        >
+          <img src={refreshIcon} alt="" width={14} height={14} />
+          {rerunning ? 'Queueing…' : 'Re-run from here'}
+        </button>
+        {refusal !== null && (
+          <p className={styles.rerunRefusal} role="alert">
+            {refusal}
+          </p>
+        )}
+      </div>
 
       {step.error !== null && (
         <>

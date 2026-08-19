@@ -784,3 +784,75 @@ a.summaryStopped:focus-visible {
   stroke-dasharray: 4 4;
   opacity: 0.5;
 }
+
+/* ---- A step this run did not perform ----
+ *
+ * Carried over is not a status of its own, so it borrows the language already
+ * here rather than adding a new one: the muted grey the panel uses for
+ * everything it is not asserting, and on the node the same corner mark and word
+ * under the name that every other outcome gets.
+ */
+
+.carriedNote {
+  display: block;
+  margin-top: var(--space-4);
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.outcome-carried {
+  border-color: var(--color-border);
+  opacity: 0.75;
+}
+
+.outcome-carried .outcomeLabel {
+  color: var(--color-text-muted);
+}
+
+.mark-carried {
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+}
+
+/* ---- Re-running from one step ---- */
+
+.panelAction {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+/* The whole-run Re-run button, at the width the panel gives it. */
+.rerunStep {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  width: 100%;
+  padding: var(--space-8) var(--space-16);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.rerunStep:hover:not(:disabled) {
+  border-color: var(--color-accent-brand);
+}
+
+.rerunStep:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* The server's sentence, in the server's words, under the button it refused. */
+.rerunRefusal {
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: 1.5;
+  color: var(--color-danger);
+}

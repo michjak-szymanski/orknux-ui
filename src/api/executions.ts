@@ -1,6 +1,6 @@
 import { graphql } from './client';
 import type { PageOf } from './client';
-import type { NodeKind } from './graph';
+import type { EdgeBranch, NodeKind } from './graph';
 
 export type ExecutionStatus = 'RUNNING' | 'COMPLETED' | 'FAILED';
 export type ExecutionTrigger = 'WEBHOOK' | 'MANUAL' | 'SCHEDULE' | 'API';
@@ -44,6 +44,14 @@ export interface ExecutionStep {
   /** The catalogue entry the step ran, which the run links back to. */
   actionId: string | null;
   conditionId: string | null;
+  /** Which way out of a condition this step sent the run; null for every other kind. */
+  branch: EdgeBranch | null;
+  /**
+   * Copied from an earlier run rather than performed here, which is what every
+   * step ahead of a re-run's starting point is. Its status and its times are
+   * that earlier run's, so the page has to say where they came from.
+   */
+  carriedOver: boolean;
   x: number;
   y: number;
 }
@@ -170,7 +178,7 @@ export function formatRelative(iso: string): string {
 const EXECUTION_DETAIL_FIELDS = `
   id workspaceId workflowId workflowName status trigger startedAt finishedAt durationSeconds error
   stoppedAtNodeKey stoppedReason
-  steps { key kind name description status startedAt finishedAt durationSeconds input output error actionId conditionId x y }
+  steps { key kind name description status startedAt finishedAt durationSeconds input output error actionId conditionId branch carriedOver x y }
   edges { source target }
   logs { id nodeKey at level message }
   temporalUrl
@@ -188,6 +196,12 @@ const RERUN_MUTATION = `
   }
 `;
 
+const RERUN_STEP_MUTATION = `
+  mutation RerunExecutionStep($id: ID!, $nodeKey: String!) {
+    rerunExecutionStep(id: $id, nodeKey: $nodeKey) { ${EXECUTION_DETAIL_FIELDS} }
+  }
+`;
+
 export async function fetchExecution(id: string): Promise<ExecutionDetail | null> {
   const data = await graphql<{ execution: ExecutionDetail | null }>(EXECUTION_QUERY, { id });
   return data.execution;
@@ -197,6 +211,23 @@ export async function fetchExecution(id: string): Promise<ExecutionDetail | null
 export async function rerunExecution(id: string): Promise<ExecutionDetail> {
   const data = await graphql<{ rerunExecution: ExecutionDetail }>(RERUN_MUTATION, { id });
   return data.rerunExecution;
+}
+
+/**
+ * Queues the workflow again from one of this run's steps, carrying what the run
+ * had produced by the time it reached it.
+ *
+ * Whether a given step can be started from is the server's judgement and not
+ * this module's - it knows what the earlier run recorded and what the graph
+ * looks like now - so the call is always made and the refusal comes back as the
+ * sentence the server wrote.
+ */
+export async function rerunExecutionStep(id: string, nodeKey: string): Promise<ExecutionDetail> {
+  const data = await graphql<{ rerunExecutionStep: ExecutionDetail }>(RERUN_STEP_MUTATION, {
+    id,
+    nodeKey,
+  });
+  return data.rerunExecutionStep;
 }
 
 const START_EXECUTION_MUTATION = `
