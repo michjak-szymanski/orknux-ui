@@ -93,6 +93,18 @@ export function VoiceMode({ workspaceId, onSay, onClose, onPhase, ref }: VoiceMo
    * be stopped is the wrong answer.
    */
   const live = useRef(true);
+  /**
+   * Which mount is asking, so an answer meant for an earlier one is refused.
+   *
+   * `live` on its own is not enough: it is a single flag shared by every mount
+   * of this panel, and a mount that arrives while the last one's `getUserMedia`
+   * is still in flight sets it back to true. The microphone then lands in a
+   * panel that never asked for it, takes the place of the one it did ask for,
+   * and is left with nobody to close it — which is a recording light that stays
+   * on until the page is reloaded. A number that only goes up settles which
+   * mount a stream belongs to.
+   */
+  const session = useRef(0);
   /*
    * The sender, held in a ref.
    *
@@ -118,13 +130,29 @@ export function VoiceMode({ workspaceId, onSay, onClose, onPhase, ref }: VoiceMo
   const context = useRef<AudioContext | null>(null);
   const frame = useRef<number | null>(null);
 
-  /** Everything this turn is holding open, closed in the order it was opened. */
+  /**
+   * Everything this turn is holding open, closed in the order it was opened.
+   *
+   * The only place the microphone is given back, so every way out of voice mode
+   * — the panel's own button, the cross beside the control, walking away from
+   * the page mid-sentence — arrives here instead of carrying its own copy of
+   * the stopping. The copy somebody forgets is a light that stays on.
+   *
+   * Safe to call twice, and safe to call on a turn that never started.
+   */
   const release = useCallback(() => {
     if (frame.current !== null) cancelAnimationFrame(frame.current);
     frame.current = null;
+    const held = recorder.current;
+    recorder.current = null;
+    // A recorder still running is holding the stream it was handed; stopping
+    // the tracks under it is not the same thing as stopping it.
+    if (held !== null && held.state !== 'inactive') held.stop();
+    // The light on the machine goes out when the tracks do — not when the
+    // recorder stops, and not when the last reference to the stream is dropped.
     stream.current?.getTracks().forEach((track) => track.stop());
     stream.current = null;
-    recorder.current = null;
+    // A separate resource from the stream, and one the browser counts too.
     void context.current?.close().catch(() => undefined);
     context.current = null;
     setLevel(0);
@@ -238,6 +266,7 @@ export function VoiceMode({ workspaceId, onSay, onClose, onPhase, ref }: VoiceMo
    */
   const listen = useCallback(async () => {
     if (!live.current) return;
+    const mine = session.current;
     setPhase('listening');
 
     let opened: MediaStream;
@@ -247,11 +276,16 @@ export function VoiceMode({ workspaceId, onSay, onClose, onPhase, ref }: VoiceMo
       setError('The microphone could not be opened. The browser may have refused it.');
       return;
     }
-    if (!live.current) {
+    // Asked for by a panel that has since gone. Nobody is going to close this
+    // one later, so it is closed here.
+    if (!live.current || mine !== session.current) {
       opened.getTracks().forEach((track) => track.stop());
       return;
     }
 
+    // Whatever the turn before this one is still holding, in case it ended
+    // without saying so: two open microphones means one of them has nobody.
+    release();
     stream.current = opened;
     const ears = new AudioContext();
     context.current = ears;
@@ -375,10 +409,11 @@ export function VoiceMode({ workspaceId, onSay, onClose, onPhase, ref }: VoiceMo
     void listen();
     return () => {
       live.current = false;
-      // Nothing that arrives after this belongs to anybody.
+      // Nothing that arrives after this belongs to anybody — including a
+      // microphone this mount asked for and is no longer here to receive.
       generation.current += 1;
+      session.current += 1;
       clips.current = [];
-      recorder.current?.stop();
       release();
       hush();
     };
@@ -412,7 +447,9 @@ export function VoiceMode({ workspaceId, onSay, onClose, onPhase, ref }: VoiceMo
       void listen();
       return;
     }
-    if (phase === 'listening') recorder.current?.stop();
+    // Only a recorder that is actually running can be stopped; a second press
+    // while the first one is still ending would otherwise throw.
+    if (phase === 'listening' && recorder.current?.state === 'recording') recorder.current.stop();
   }
 
   const caption =

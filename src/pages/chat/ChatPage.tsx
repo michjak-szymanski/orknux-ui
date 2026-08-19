@@ -120,6 +120,15 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
   const [recording, setRecording] = useState(false);
   /** The open microphone, for the meter to draw from while it is open. */
   const [listening, setListening] = useState<MediaStream | null>(null);
+  /**
+   * The same microphone, in a ref.
+   *
+   * Closing it has to be possible from a cleanup that runs as this page leaves,
+   * and state read in a cleanup is whatever it was when that cleanup was made.
+   */
+  const microphone = useRef<MediaStream | null>(null);
+  /** True once this page is on its way out, so nothing lands in it afterwards. */
+  const leaving = useRef(false);
   const [transcribing, setTranscribing] = useState(false);
   /** What is attached to the message being written, and the menu that adds to it. */
   const [attached, setAttached] = useState<Attachment[]>([]);
@@ -434,6 +443,41 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
   }
 
   /**
+   * Closes the composer's microphone, wherever the closing came from.
+   *
+   * The one place it is given back — pressing stop, a recording that ended by
+   * itself, or this page going away underneath it. The light on the machine
+   * goes out when the tracks do, not when the recorder stops and not when the
+   * last reference is dropped, so both happen here rather than in each caller.
+   *
+   * Safe to call twice, and safe to call when nothing is open.
+   */
+  const releaseMicrophone = useCallback(() => {
+    const held = recorder.current;
+    recorder.current = null;
+    if (held !== null && held.state !== 'inactive') held.stop();
+    microphone.current?.getTracks().forEach((track) => track.stop());
+    microphone.current = null;
+    setRecording(false);
+    setListening(null);
+  }, []);
+
+  /*
+   * Leaving the page closes the microphone.
+   *
+   * Stopping is a button somebody presses, and somebody who walks away
+   * mid-sentence never presses it: without this the device stays open, with the
+   * browser saying so, until the page is reloaded.
+   */
+  useEffect(() => {
+    leaving.current = false;
+    return () => {
+      leaving.current = true;
+      releaseMicrophone();
+    };
+  }, [releaseMicrophone]);
+
+  /**
    * Starts recording, or stops and sends what was said to be transcribed.
    *
    * The transcript is put into the box rather than sent: speech is how the
@@ -442,7 +486,9 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
    */
   async function handleMicrophone() {
     if (recording) {
-      recorder.current?.stop();
+      // The same closing as every other way out, so the transcript still
+      // arrives — stopping the recorder is what produces it.
+      releaseMicrophone();
       return;
     }
     if (workspaceId === null) return;
@@ -457,12 +503,10 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
         if (event.data.size > 0) pieces.push(event.data);
       };
       held.onstop = () => {
-        // The light on the machine goes out when the tracks do, not when the
-        // recorder stops.
-        stream.getTracks().forEach((track) => track.stop());
-        recorder.current = null;
-        setRecording(false);
-        setListening(null);
+        releaseMicrophone();
+        // Stopped on the way out rather than by anybody pressing anything:
+        // there is no box left to put a transcript in.
+        if (leaving.current) return;
 
         const said = new Blob(pieces, { type: held.mimeType });
         if (said.size === 0) return;
@@ -482,6 +526,7 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
       };
 
       recorder.current = held;
+      microphone.current = stream;
       setRecording(true);
       setListening(stream);
       held.start();
