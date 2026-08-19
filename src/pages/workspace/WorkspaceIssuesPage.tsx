@@ -60,8 +60,16 @@ const FILTERS: { label: string; status: IssueStatus | null }[] = [
  * hundred, and sorting ten of them orders the page instead of the tracker -
  * which looks like it worked until the row somebody wanted is on page three.
  */
+/*
+ * Each one names the field it sorts on, which "Newest" did not.
+ *
+ * "Newest" sorts by number - the order things were filed in - and reads as a
+ * date, so a list ordered correctly by number looked wrong against times that
+ * were not in that order. Naming the field is the whole fix: somebody who can
+ * see they asked for Number is not surprised by getting it.
+ */
 const ORDERS: { label: string; order: IssueOrder }[] = [
-  { label: 'Newest', order: 'NUMBER' },
+  { label: 'Number', order: 'NUMBER' },
   { label: 'Title', order: 'TITLE' },
   { label: 'Last change', order: 'UPDATED' },
 ];
