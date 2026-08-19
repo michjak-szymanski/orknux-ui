@@ -1,11 +1,17 @@
 import { useEffect, useState } from 'react';
 
-import { fetchFunction, updateFunction } from '../api/functions';
+import { fetchFunction, parametersOf, sameParameters, updateFunction } from '../api/functions';
+import type { WorkspaceFunction } from '../api/functions';
+import { fetchWorkspaceObjects } from '../api/objects';
+import type { WorkflowObject } from '../api/objects';
 import type { QuickChatSuggestion } from '../api/quickChat';
 import { compile } from './monaco';
 import { diffLines, diffSummary } from './diff';
 import type { DiffLine } from './diff';
 import styles from './CodeSuggestion.module.css';
+
+/** Enough of a workspace's objects that an annotation naming one is found. */
+const OBJECT_PAGE_SIZE = 100;
 
 export interface CodeSuggestionProps {
   suggestion: QuickChatSuggestion;
@@ -36,6 +42,16 @@ export interface CodeSuggestionProps {
  */
 export function CodeSuggestion({ suggestion, onSettled }: CodeSuggestionProps) {
   const [before, setBefore] = useState<string | null>(null);
+  /**
+   * The function as it stands, kept for what accepting has to know about it.
+   *
+   * Not only the code: the parameters the change would be moving away from, and
+   * the workspace's variables it is handed after them. A parameter list read off
+   * the offered code means nothing without both.
+   */
+  const [held, setHeld] = useState<WorkspaceFunction | null>(null);
+  /** What an object annotation can name, for a parameter that is one. */
+  const [objects, setObjects] = useState<WorkflowObject[]>([]);
   const [failed, setFailed] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [settled, setSettled] = useState<'accepted' | 'rejected' | null>(null);
@@ -45,7 +61,14 @@ export function CodeSuggestion({ suggestion, onSettled }: CodeSuggestionProps) {
     fetchFunction(suggestion.functionId)
       .then((found) => {
         if (!current) return;
+        setHeld(found);
         setBefore(found === null ? '' : (found.typescript ?? found.source));
+        if (found?.workspaceId == null) return;
+        return fetchWorkspaceObjects(found.workspaceId, 0, OBJECT_PAGE_SIZE)
+          .then((page) => {
+            if (current) setObjects(page.content);
+          })
+          .catch(() => undefined);
       })
       .catch(() => {
         if (current) setBefore('');
@@ -70,9 +93,27 @@ export function CodeSuggestion({ suggestion, onSettled }: CodeSuggestionProps) {
         return;
       }
 
-      await updateFunction(suggestion.functionId, {
+      /*
+       * The parameter list, read back off the code that was offered — the same
+       * way the editor reads it when the change is shown there instead. It is
+       * the code that says what the function takes, so the two cannot disagree.
+       */
+      const read = parametersOf(suggestion.code, held?.externals ?? [], objects, held?.params ?? []);
+      if ('problem' in read) {
+        setFailed(`The parameters could not be read — ${read.problem}.`);
+        onSettled(
+          `I could not accept it: ${read.problem}. Nothing was saved. Offer it again with a ` +
+            'declaration I can read.',
+        );
+        setSettled('rejected');
+        return;
+      }
+      const moved = held !== null && !sameParameters(read.params, held.params);
+
+      const stored = await updateFunction(suggestion.functionId, {
         source: emitted.javascript,
         typescript: suggestion.code,
+        params: moved ? read.params : undefined,
       });
       setSettled('accepted');
       /*
@@ -83,7 +124,11 @@ export function CodeSuggestion({ suggestion, onSettled }: CodeSuggestionProps) {
       window.dispatchEvent(
         new CustomEvent('orknux:function-saved', { detail: { id: suggestion.functionId } }),
       );
-      onSettled('I accepted the change and it is saved.');
+      onSettled(
+        moved
+          ? `I accepted the change and it is saved. The function now takes ${stored.signature}.`
+          : 'I accepted the change and it is saved.',
+      );
     } catch (cause) {
       const reason = cause instanceof Error ? cause.message : 'It could not be saved.';
       setFailed(reason);

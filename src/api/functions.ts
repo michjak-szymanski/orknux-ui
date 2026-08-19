@@ -75,9 +75,19 @@ export interface FunctionValidation {
   column: number | null;
 }
 
+/*
+ * The object a parameter names is asked for, not only its type.
+ *
+ * Without it an object parameter arrives as the bare word OBJECT, and everything
+ * downstream that has to write it - the annotation in the code, the signature in
+ * the header, the list a suggestion is checked against - falls back to a map. The
+ * function then reads as taking a shapeless structure where it takes a Ticket, and
+ * the first save turns that reading into the truth.
+ */
 const FUNCTION_FIELDS =
   `id workspaceId scope editable plugin { id name } name description source typescript returnType
-   params { name type } externals { variableId name type } signature lastModifiedAt lastModifiedBy`;
+   returnObjectId returnObjectName params { name type objectId objectName }
+   externals { variableId name type } signature lastModifiedAt lastModifiedBy`;
 
 const WORKSPACE_FUNCTIONS_QUERY = `
   query WorkspaceFunctions($workspaceId: ID!, $page: Int!, $size: Int!) {
@@ -121,6 +131,20 @@ const DELETE_FUNCTION_MUTATION = `
   }
 `;
 
+/**
+ * A parameter as the server takes one.
+ *
+ * The name of the object it points at is resolved *by* the server and sent back
+ * with the function, so it belongs to what is read and not to what is written -
+ * and a mutation carrying it is refused outright, for a field the input type does
+ * not have. Narrowed here rather than at each call, so nothing has to remember.
+ */
+function asInput(param: FunctionParam): { name: string; type: ValueType; objectId?: string | null } {
+  return namesObject(param.type)
+    ? { name: param.name, type: param.type, objectId: param.objectId ?? null }
+    : { name: param.name, type: param.type };
+}
+
 /** `page` is 0-based, matching the server. */
 export async function fetchWorkspaceFunctions(
   workspaceId: string,
@@ -159,7 +183,9 @@ export async function createFunction(input: {
   /** Which of the workspace's variables it is handed, in order. */
   externalVariableIds?: string[];
 }): Promise<WorkspaceFunction> {
-  const data = await graphql<{ createFunction: WorkspaceFunction }>(CREATE_FUNCTION_MUTATION, { input });
+  const data = await graphql<{ createFunction: WorkspaceFunction }>(CREATE_FUNCTION_MUTATION, {
+    input: { ...input, params: input.params?.map(asInput) },
+  });
   return data.createFunction;
 }
 
@@ -297,6 +323,191 @@ export function withParameters(source: string, names: string[]): string {
 }
 
 /**
+ * The written parameter list, split at the commas that separate parameters.
+ *
+ * Not `text.split(',')`: an annotation has commas of its own — `Record<string,
+ * unknown>` is one parameter and contains one — so the split counts what it is
+ * inside first. Angle brackets are counted with the others because the
+ * annotations here are types, where `<` opens something; quotes are skipped
+ * whole, so a literal union like `'eur' | 'usd'` survives.
+ */
+function splitParameters(text: string): string[] {
+  const found: string[] = [];
+  let depth = 0;
+  let quote: string | null = null;
+  let start = 0;
+
+  for (let at = 0; at < text.length; at += 1) {
+    const ch = text[at];
+    if (quote !== null) {
+      if (ch === '\\') at += 1;
+      else if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === '`') quote = ch;
+    else if (ch === '(' || ch === '[' || ch === '{' || ch === '<') depth += 1;
+    else if (ch === ')' || ch === ']' || ch === '}' || ch === '>') depth -= 1;
+    else if (ch === ',' && depth === 0) {
+      found.push(text.slice(start, at));
+      start = at + 1;
+    }
+  }
+  found.push(text.slice(start));
+  return found.map((piece) => piece.trim()).filter((piece) => piece !== '');
+}
+
+/**
+ * The shape a written annotation stands for, or null if orknux has no such shape.
+ *
+ * The inverse of `tsType`, and it has to stay its inverse: what the editor writes
+ * when a parameter is added is what this has to read back when somebody — or
+ * something — writes a parameter into the code by hand. An object is matched by
+ * name against the workspace's own, which is how `payload: Ticket` becomes an
+ * object parameter pointing at Ticket rather than a type nobody declared.
+ */
+function typeOfAnnotation(
+  annotation: string,
+  objects: { id: string; name: string }[],
+): FunctionParam | null {
+  const written = annotation.trim();
+  switch (written) {
+    case 'string':
+      return { name: '', type: 'STRING' };
+    case 'number':
+      return { name: '', type: 'NUMBER' };
+    case 'boolean':
+      return { name: '', type: 'BOOLEAN' };
+    case 'Record<string, unknown>':
+    case 'Record<string,unknown>':
+      return { name: '', type: 'MAP' };
+    case 'unknown[]':
+      return { name: '', type: 'ARRAY' };
+    default: {
+      const named = objects.find((object) => object.name === written);
+      return named === undefined
+        ? null
+        : { name: '', type: 'OBJECT', objectId: named.id, objectName: named.name };
+    }
+  }
+}
+
+/**
+ * What the code says this function takes, read back off its own declaration.
+ *
+ * The point of reading it rather than being told it: the assistant offers a whole
+ * function, and the parameter list *is* in what it offered. Deriving the details
+ * panel from the same text that will be compiled is what makes it impossible for
+ * the two to disagree — a parameter added to the signature and not to the code, or
+ * the other way round, cannot be expressed.
+ *
+ * The workspace's variables are handed to a function after the parameters it
+ * declares, so the last few entries are theirs and are checked rather than read:
+ * code that has dropped one, or renamed it, is refused here instead of being saved
+ * as a function whose externals arrive under other names.
+ *
+ * Either the parameters or a sentence saying what is wrong with the declaration,
+ * which is what the assistant is told so its next attempt is at the real problem.
+ */
+export function parametersOf(
+  source: string,
+  externals: { name: string }[],
+  objects: { id: string; name: string }[],
+  known: FunctionParam[],
+): { params: FunctionParam[] } | { problem: string } {
+  const written = sourceParameters(source);
+  if (written === null) {
+    return { problem: 'it has no `export default function` declaration to read a parameter list from' };
+  }
+
+  const entries = splitParameters(written);
+  if (entries.length < externals.length) {
+    return {
+      problem:
+        `it does not accept the ${externals.length === 1 ? 'variable' : 'variables'} this function is handed ` +
+        `after its own parameters (${externals.map((external) => external.name).join(', ')}), which come last`,
+    };
+  }
+
+  const declared = entries.slice(0, entries.length - externals.length);
+  const handed = entries.slice(entries.length - externals.length);
+  const mismatch = handed.findIndex((entry, at) => nameOf(entry) !== externals[at].name);
+  if (mismatch !== -1) {
+    return {
+      problem:
+        `the workspace variable \`${externals[mismatch].name}\` is handed to this function after its own ` +
+        'parameters, and the code has to go on accepting it, in that position and under that name',
+    };
+  }
+
+  const params: FunctionParam[] = [];
+  for (const entry of declared) {
+    const name = nameOf(entry);
+    if (name === null || !/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name)) {
+      return { problem: `\`${entry}\` is not a parameter this can describe — each one has to be a plain name` };
+    }
+    /*
+     * An unannotated parameter is only a question where it is a new one.
+     *
+     * JavaScript without annotations is valid TypeScript, and a function stored
+     * before the editor annotated anything still reads that way - so a rewrite of
+     * the body that leaves `(text)` alone has to go on meaning what `text` already
+     * meant. A name nobody has seen before genuinely has no type, and saying so is
+     * better than picking one.
+     */
+    const at = entry.indexOf(':');
+    if (at === -1) {
+      const already = known.find((param) => param.name === name);
+      if (already === undefined) {
+        return { problem: `\`${name}\` has no type — write it as \`${name}: string\`, or whatever it really is` };
+      }
+      params.push(already);
+      continue;
+    }
+    const read = typeOfAnnotation(entry.slice(at + 1), objects);
+    if (read === null) {
+      return {
+        problem:
+          `\`${entry.trim()}\` is not a type a parameter can have here. They are \`string\`, \`number\`, ` +
+          '`boolean`, `Record<string, unknown>`, `unknown[]`, or the name of one of this workspace\'s objects',
+      };
+    }
+    /*
+     * One annotation stands for two shapes, and the parameter it already was
+     * settles which.
+     *
+     * `tsType` writes `Record<string, unknown>` for a map, and for an object
+     * whose name it could not resolve - so an object parameter read straight
+     * back would come out a map, and accepting a change to the body would
+     * quietly retype it. A parameter of the same name that is already an object
+     * keeps being one; only a rename or a real retype moves it.
+     */
+    const was = known.find((param) => param.name === name);
+    const kept = read.type === 'MAP' && was?.type === 'OBJECT' ? was : { ...read, name };
+    params.push({ ...kept, name });
+  }
+  return { params };
+}
+
+/** The name a written parameter starts with, ignoring what it was annotated with. */
+function nameOf(entry: string): string | null {
+  const name = /^\s*([A-Za-z_$][A-Za-z0-9_$]*)\s*\??\s*(?::|=|$)/.exec(entry);
+  return name === null ? null : name[1];
+}
+
+/** Whether two parameter lists describe the same thing, name, type and object alike. */
+export function sameParameters(one: FunctionParam[], other: FunctionParam[]): boolean {
+  if (one.length !== other.length) return false;
+  return one.every((param, at) => {
+    const against = other[at];
+    return (
+      param.name === against.name &&
+      param.type === against.type &&
+      (param.objectId ?? null) === (against.objectId ?? null)
+    );
+  });
+}
+
+/**
  * The code a function starts from, before there is a function to ask for it.
  *
  * The server prints this stub for anything created without code of its own, and
@@ -354,7 +565,10 @@ export async function updateFunction(
     externalVariableIds?: string[];
   },
 ): Promise<WorkspaceFunction> {
-  const data = await graphql<{ updateFunction: WorkspaceFunction }>(UPDATE_FUNCTION_MUTATION, { id, input });
+  const data = await graphql<{ updateFunction: WorkspaceFunction }>(UPDATE_FUNCTION_MUTATION, {
+    id,
+    input: { ...input, params: input.params?.map(asInput) },
+  });
   return data.updateFunction;
 }
 

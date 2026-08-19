@@ -11,6 +11,8 @@ import {
   fetchFunction,
   timeAgo,
   namesObject,
+  parametersOf,
+  sameParameters,
   starterSource,
   tsType,
   updateFunction,
@@ -24,8 +26,7 @@ import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import codeIcon from '../../assets/code.svg';
 import plusIcon from '../../assets/plus.svg';
 import wandIcon from '../../assets/wand.svg';
-import { VARIABLE_TYPE_LABEL, fetchVariables } from '../../api/variables';
-import type { Variable } from '../../api/variables';
+import { VARIABLE_TYPE_LABEL } from '../../api/variables';
 import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
 import { CodeDiff } from '../../components/CodeDiff';
@@ -39,6 +40,7 @@ import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { TrashIcon } from '../../components/TrashIcon';
 import { matches, useFormatShortcut, useSaveShortcut } from '../../session/shortcut';
 import { shellUser } from '../../session/user';
+import { useWorkspaceVariables } from './workspaceVariables';
 import styles from './FunctionEditorPage.module.css';
 
 export interface FunctionEditorPageProps {
@@ -122,7 +124,6 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
   const [params, setParams] = useState<FunctionParam[]>([]);
   /** The workspace's variables this function is handed, by id and in order. */
   const [externals, setExternals] = useState<string[]>([]);
-  const [variables, setVariables] = useState<Variable[]>([]);
   /** What a parameter or a return type can name, and what the editor declares. */
   const [objects, setObjects] = useState<WorkflowObject[]>([]);
   const [returnObjectId, setReturnObjectId] = useState<string | null>(null);
@@ -130,13 +131,12 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
   /*
    * What there is to choose from. Their values are not here and cannot be: an
    * external parameter is chosen by name, and read only inside the sandbox.
+   *
+   * Read again when the window comes back and when the list is reached for,
+   * rather than once: an editor is left open for a long time, and the variable
+   * it should be offering is made on another page — see `useWorkspaceVariables`.
    */
-  useEffect(() => {
-    if (workspaceId === '') return;
-    fetchVariables(workspaceId, { size: 100 })
-      .then((page) => setVariables(page.content))
-      .catch(() => setVariables([]));
-  }, [workspaceId]);
+  const { variables, refresh: refreshVariables } = useWorkspaceVariables(workspaceId);
   /*
    * The objects this workspace defines, fetched for two jobs at once: filling the
    * pickers, and being declared to the editor so an annotation naming one resolves.
@@ -301,12 +301,55 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
         );
         return;
       }
-      const stored = await updateFunction(functionId, { source: emitted.javascript, typescript: offered.code });
+      /*
+       * The parameter list, read back off the code that was offered.
+       *
+       * This is what lets the assistant change a signature at all. It offers a
+       * whole function, and the parameters are written into the declaration of
+       * it; taking them from there rather than from a second field is what makes
+       * the two impossible to disagree - a parameter added to the panel and not
+       * to the code cannot be expressed, because there is only the code.
+       *
+       * A declaration this cannot describe is refused rather than half-saved,
+       * with what is wrong with it, which the assistant is then told.
+       */
+      const read = parametersOf(offered.code, handed, objects, params);
+      if ('problem' in read) {
+        failOffer(
+          `The parameters could not be read — ${read.problem}.`,
+          `I could not accept it: ${read.problem}. Nothing was saved. Offer it again with a ` +
+            'declaration I can read.',
+        );
+        return;
+      }
+
+      const moved = !sameParameters(read.params, params);
+      const stored = await updateFunction(functionId, {
+        source: emitted.javascript,
+        typescript: offered.code,
+        // Left out when they have not moved, so a change to the code alone goes
+        // up as a change to the code alone.
+        params: moved ? read.params : undefined,
+      });
       setFn(stored);
       setSource(offered.code);
+      /*
+       * The panel follows the code in the same breath as the save. Without this
+       * the details still describe the version before, and the effect that keeps
+       * the code in step with the panel would put the old parameter list straight
+       * back into the code somebody has just accepted.
+       */
+      setParams(stored.params);
       setSaved(true);
-      setStatus({ ok: true, message: 'The suggested change is saved.' });
-      settleOffer('I accepted the change and it is saved.');
+      setStatus({
+        ok: true,
+        message: moved ? 'The suggested change is saved, parameters and all.' : 'The suggested change is saved.',
+      });
+      settleOffer(
+        moved
+          ? `I accepted the change and it is saved. The function now takes ${stored.signature}.`
+          : 'I accepted the change and it is saved.',
+      );
     } catch (cause) {
       const reason = cause instanceof Error ? cause.message : 'It could not be saved.';
       failOffer(
@@ -362,6 +405,21 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
    * added in the panel arrives in the code with the type the panel says it has, so
    * the language service can check the first line of the body against it.
    */
+  /**
+   * The workspace's variables this function is handed, by name and in order.
+   *
+   * The tail of every declaration: the sandbox passes the declared parameters
+   * first and these after them, so reading a parameter list back off the code
+   * means knowing which of its entries are not parameters at all.
+   */
+  const handed = useMemo(
+    () =>
+      externals.map((variableId) => ({
+        name: variables.find((candidate) => candidate.id === variableId)?.name ?? 'external',
+      })),
+    [externals, variables],
+  );
+
   const declarations = useMemo(
     () => [
       ...params
@@ -985,6 +1043,13 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                           className={`${styles.paramName} ${styles.inputMono}`}
                           value={variableId}
                           aria-label={`External parameter ${index + 1}`}
+                          /*
+                            Reaching for the list is a reason to read it again:
+                            somebody about to change what this function is handed
+                            has often just been to the Variables page to make it.
+                          */
+                          onMouseDown={refreshVariables}
+                          onFocus={refreshVariables}
                           onChange={(event) => {
                             setExternals((current) =>
                               current.map((row, at) => (at === index ? event.target.value : row)),
