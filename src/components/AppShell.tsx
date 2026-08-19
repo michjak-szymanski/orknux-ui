@@ -8,7 +8,7 @@ import bookIcon from '../assets/book.svg';
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
 import doorOpenIcon from '../assets/door-open.svg';
 import orknuxMark from '../assets/orknux-mark.svg';
-import panelCollapseIcon from '../assets/panel-collapse.svg';
+import panelCollapseIcon from '../assets/panel-left.svg';
 import settingsIcon from '../assets/settings.svg';
 import shieldIcon from '../assets/shield.svg';
 import { lastWorkspaceId } from '../session/lastWorkspace';

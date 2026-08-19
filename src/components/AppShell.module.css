@@ -435,31 +435,36 @@
  * column there is then and a button hugging one side of it looks dropped.
  */
 /*
- * On the first menu row, at its right end, rather than on a line of its own.
+ * On the first menu row, at the column's edge, drawn as lightly as the menu
+ * draws its own icons.
  *
- * Out of the flow, so it takes no row and cannot drift: sticking it to the
- * view made it float over the menu as the page scrolled, which is worse than
- * the problem it solved. The first item is given room on its right so a long
- * label never runs underneath.
+ * No button chrome: a circle or a border makes it the loudest thing in a column
+ * of quiet rows, and it is the least important control there. Same 16px, same
+ * muted colour as a section icon, and it only comes up on hover.
  *
- * Collapsed, there is no room beside a 64px column, so it goes back to being
- * its own centred row - the one case where a line of its own is the only
- * option.
+ * Out of the flow, so it takes no row of its own and cannot drift - sticking it
+ * to the view made it float over the menu as the page scrolled. The first item
+ * keeps room on its right so a long label never runs underneath.
+ *
+ * Collapsed, there is no room beside a 64px column, so it becomes its own
+ * centred row - the one case where a line of its own is the only option.
  */
 .collapseToggle {
   display: flex;
   align-items: center;
   justify-content: center;
   position: absolute;
-  top: var(--space-16);
-  right: var(--space-16);
-  height: 40px;
-  padding: var(--space-6);
+  top: calc(var(--space-16) + 8px);
+  right: var(--space-8);
+  width: 24px;
+  height: 24px;
+  padding: 0;
   background: none;
   border: 0;
   border-radius: var(--radius-6);
   cursor: pointer;
-  opacity: 0.7;
+  opacity: 0.55;
+  transition: opacity 150ms ease;
 }
 
 .sidebar > :first-child {
@@ -467,7 +472,6 @@
 }
 
 .collapseToggle:hover {
-  background: var(--color-surface-raised);
   opacity: 1;
 }
 
@@ -478,8 +482,9 @@
  * opposite of what this rule used to do, and the reason a menu about to be
  * pulled in showed an arrow pushing out.
  */
-.collapseToggle img {
-  transform: rotate(180deg);
+/* Mirrored when the column is shut, so the divided edge is the one that moves. */
+.sidebarCollapsed .collapseToggle img {
+  transform: scaleX(-1);
 }
 
 .sidebarCollapsed .collapseToggle {
