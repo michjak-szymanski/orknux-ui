@@ -116,7 +116,7 @@ export interface IssuePage {
  * the more the tracker is used.
  */
 const ROW_FIELDS =
-  'id workspaceId number title status reporter assignee { kind id name hint } labels lastModifiedAt lastModifiedBy';
+  'id workspaceId number title status reporter assignee { kind id name hint } labels createdAt lastModifiedAt lastModifiedBy';
 
 const ATTACHMENT_FIELDS = 'id filename contentType sizeBytes uploadedBy uploadedAt mine';
 

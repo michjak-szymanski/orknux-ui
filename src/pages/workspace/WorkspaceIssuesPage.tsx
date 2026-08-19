@@ -431,7 +431,23 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
                     >
                       {ISSUE_STATUS_LABEL[issue.status]}
                     </span>
-                    #{issue.number} opened by {issue.reporter} · {timeAgo(issue.lastModifiedAt)}
+                    {/*
+                      The time it says it is showing.
+
+                      This read `opened by alice - 18 minutes ago` beside the
+                      time the issue last *changed*, which on a list of closed
+                      ones is when each was closed. Sorted by number, the times
+                      down the page then ran in no order at all, and the list
+                      looked like sorting had failed - which is exactly what it
+                      was reported as.
+                    */}
+                    #{issue.number} opened by {issue.reporter} · {timeAgo(issue.createdAt)}
+                    {/*
+                      And when the sort is by last change, the thing sorted on
+                      is shown as well. A list ordered by something invisible is
+                      a list nobody can check.
+                    */}
+                    {order === 'UPDATED' && <> · changed {timeAgo(issue.lastModifiedAt)}</>}
                   </span>
                 </span>
 
