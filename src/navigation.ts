@@ -14,6 +14,7 @@ import alertTriangleIcon from './assets/alert-triangle.svg';
 import userIcon from './assets/user.svg';
 import filterIcon from './assets/filter.svg';
 import gitBranchIcon from './assets/git-branch.svg';
+import globeIcon from './assets/globe.svg';
 import lockKeyholeIcon from './assets/lock-keyhole.svg';
 import memoryIcon from './assets/memory.svg';
 import messageSquareIcon from './assets/message-square.svg';
@@ -21,6 +22,7 @@ import plugIcon from './assets/plug.svg';
 import puzzleIcon from './assets/puzzle.svg';
 import settingsIcon from './assets/settings.svg';
 import slidersIcon from './assets/sliders-horizontal.svg';
+import terminalIcon from './assets/terminal.svg';
 import toolIcon from './assets/tool.svg';
 
 /**
@@ -224,6 +226,26 @@ export const PAGES = [
     path: '/admin/plugins',
     access: 'admin',
     goTo: { label: 'Plugins', where: 'Admin', icon: puzzleIcon, also: 'extensions javascript' },
+  },
+  {
+    path: '/admin/networking',
+    access: 'admin',
+    goTo: {
+      label: 'Networking',
+      where: 'Admin',
+      icon: globeIcon,
+      also: 'proxy rules egress outbound firewall',
+    },
+  },
+  {
+    path: '/admin/shell',
+    access: 'admin',
+    goTo: {
+      label: 'Shell',
+      where: 'Admin',
+      icon: terminalIcon,
+      also: 'ssh machines hosts nodes commands remote',
+    },
   },
   {
     path: '/admin/roles',

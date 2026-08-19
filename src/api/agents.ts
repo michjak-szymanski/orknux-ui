@@ -24,6 +24,8 @@ export interface Agent {
    * already inside.
    */
   orknuxAccess: boolean;
+  /** Whether it may open a shell on one of the installation's machines. */
+  shellAccess: boolean;
   /** Memory catalogs this agent may read, by name. */
   memoryCatalogs: string[];
   /** Which skill catalogs it may draw on. */
@@ -35,7 +37,7 @@ export interface Agent {
 }
 
 const AGENT_FIELDS =
-  'id workspaceId name type description systemPrompt enabled modelId modelName mcpServers orknuxAccess memoryCatalogs skillCatalogs tools icon';
+  'id workspaceId name type description systemPrompt enabled modelId modelName mcpServers orknuxAccess shellAccess memoryCatalogs skillCatalogs tools icon';
 
 const WORKSPACE_AGENTS_QUERY = `
   query WorkspaceAgents($workspaceId: ID!, $page: Int!, $size: Int!) {
@@ -111,6 +113,8 @@ export async function updateAgent(
     mcpServers?: string[];
     /** Whether it may ask orknux about orknux; left out, the grant is unchanged. */
     orknuxAccess?: boolean;
+    /** Whether it may open a shell on a machine; left out, the grant is unchanged. */
+    shellAccess?: boolean;
     memoryCatalogs?: string[];
     /** Which skill catalogs it may draw on; left out, the grant is unchanged. */
     skillCatalogs?: string[];

@@ -1,0 +1,283 @@
+/*
+  The same layout as the other admin tables - networking, integrations, plugins -
+  because this is another list of things the installation holds. What is
+  different is the status column, which is first rather than last: the question
+  somebody comes to this page with is "is that machine reachable", and an answer
+  they have to scan across a row for is an answer they will not read.
+*/
+
+.titleBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.titleBlock {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--text-2xl);
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+.addShell {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-10) var(--space-14);
+  background: var(--color-accent-brand);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+/* ---- Table ---- */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  overflow: clip;
+}
+
+.tableHeader,
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.tableHeader {
+  padding: var(--space-12) var(--space-16);
+  background: var(--color-surface-raised);
+  border-bottom: 1px solid var(--color-border);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.row {
+  padding: var(--space-14) var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.colStatus {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-8);
+  width: 130px;
+}
+
+.colName {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 200px;
+  min-width: 0;
+}
+
+.colAddress {
+  display: flex;
+  flex: 1 0 0;
+  min-width: 0;
+}
+
+.colKey {
+  flex-shrink: 0;
+  width: 180px;
+}
+
+.colEnabled {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: center;
+  width: 60px;
+}
+
+.colActions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-8);
+  width: 130px;
+}
+
+/*
+  A dot rather than a word alone, because the whole point of the column is to be
+  readable at a glance down a list of machines.
+*/
+.dotConnected,
+.dotFailed,
+.dotIdle {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+}
+
+.dotConnected {
+  background: var(--color-success);
+}
+
+.dotFailed {
+  background: var(--color-danger-solid);
+}
+
+.dotIdle {
+  background: var(--color-text-muted);
+}
+
+.statusLabel {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.name {
+  overflow: hidden;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A shell that is off is still listed, and has to read as off at a glance. */
+.nameDisabled {
+  color: var(--color-text-muted);
+}
+
+.fingerprint {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.address {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.keyState {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.checkAction {
+  padding: var(--space-6) var(--space-10);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.checkAction:hover:not(:disabled) {
+  border-color: var(--color-text-muted);
+  color: var(--color-text-primary);
+}
+
+.checkAction:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.rowAction {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  cursor: pointer;
+}
+
+.rowAction:hover {
+  border-color: var(--color-text-muted);
+}
+
+/* ---- Loading / empty / error ---- */
+
+.notice {
+  margin: 0;
+  padding: var(--space-14) var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.noticeError {
+  color: var(--color-danger);
+}
+
+/* ---- Footer note ---- */
+
+.disclaimer {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  width: 100%;
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.disclaimer img {
+  flex-shrink: 0;
+  margin-top: 3px;
+}

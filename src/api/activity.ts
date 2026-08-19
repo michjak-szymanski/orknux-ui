@@ -9,7 +9,9 @@ export type ActivityCategory =
   | 'MODEL'
   | 'MEMORY'
   | 'OBJECT'
-  | 'CHAT';
+  | 'CHAT'
+  /** Commands run on a machine over SSH, and the shells they ran on. */
+  | 'SHELL';
 
 export interface ActivityEntry {
   id: string;

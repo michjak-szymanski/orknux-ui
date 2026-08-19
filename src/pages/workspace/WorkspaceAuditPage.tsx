@@ -17,6 +17,7 @@ import plugIcon from '../../assets/plug.svg';
 import refreshIcon from '../../assets/refresh-cw.svg';
 import searchIcon from '../../assets/search.svg';
 import shieldIcon from '../../assets/shield.svg';
+import terminalIcon from '../../assets/terminal.svg';
 import { AppShell } from '../../components/AppShell';
 import { AutoRefresh } from '../../components/AutoRefresh';
 import { CompactPagination } from '../../components/CompactPagination';
@@ -42,6 +43,7 @@ const CATEGORY_ICON: Record<ActivityCategory, string> = {
   MEMORY: bookIcon,
   OBJECT: boxIcon,
   CHAT: messageSquareIcon,
+  SHELL: terminalIcon,
 };
 
 export function WorkspaceAuditPage({ session, onSignOut }: WorkspaceAuditPageProps) {
@@ -135,6 +137,7 @@ export function WorkspaceAuditPage({ session, onSignOut }: WorkspaceAuditPagePro
             <option value="AGENT">Agents</option>
             <option value="WORKSPACE">Workspace</option>
             <option value="INTEGRATION">Integrations</option>
+            <option value="SHELL">Shell commands</option>
             <option value="MODEL">Models</option>
             <option value="MEMORY">Memory</option>
             <option value="OBJECT">Objects</option>

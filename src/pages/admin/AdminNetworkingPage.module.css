@@ -1,0 +1,336 @@
+/*
+  The same layout as the other admin tables - integrations, plugins - because
+  this is another list of things the installation holds. What is different is
+  the order column and the tester below the table, and both are here because a
+  rule that never fires is the failure this page exists to make visible.
+*/
+
+.titleBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.titleBlock {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--text-2xl);
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+.addRule {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-10) var(--space-14);
+  background: var(--color-accent-brand);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+/* ---- Table ---- */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  overflow: clip;
+}
+
+.tableHeader,
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.tableHeader {
+  padding: var(--space-12) var(--space-16);
+  background: var(--color-surface-raised);
+  border-bottom: 1px solid var(--color-border);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.row {
+  padding: var(--space-14) var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/*
+  The order is a column of its own rather than something implied by where a row
+  happens to sit, because the whole answer to "which rule wins" is a number and
+  hiding it would leave the question to be guessed at.
+*/
+.colOrder {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-6);
+  width: 84px;
+}
+
+.colName {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 180px;
+  min-width: 0;
+}
+
+.colPattern {
+  display: flex;
+  flex: 1 0 0;
+  min-width: 0;
+}
+
+.colProxy {
+  flex-shrink: 0;
+  width: 220px;
+}
+
+.colEnabled {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: center;
+  width: 60px;
+}
+
+.colActions {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  width: 70px;
+}
+
+.position {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.move {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.move:hover:not(:disabled) {
+  color: var(--color-text-primary);
+}
+
+.move:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.name {
+  overflow: hidden;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A rule that is off is still listed, and has to read as off at a glance. */
+.nameDisabled {
+  color: var(--color-text-muted);
+}
+
+.credentials {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.pattern,
+.proxy {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.rowAction {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  cursor: pointer;
+}
+
+.rowAction:hover {
+  border-color: var(--color-text-muted);
+}
+
+/* ---- Loading / empty / error ---- */
+
+.notice {
+  margin: 0;
+  padding: var(--space-14) var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.noticeError {
+  color: var(--color-danger);
+}
+
+/* ---- The tester ---- */
+
+.testCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  width: 100%;
+  padding: var(--space-16);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+
+.testTitle {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.testHint {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.testRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+.testInput {
+  flex: 1 0 0;
+  min-width: 0;
+  padding: var(--space-10) var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.testButton {
+  flex-shrink: 0;
+  padding: var(--space-10) var(--space-14);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.testButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.testAnswer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.testAnswer strong {
+  color: var(--color-text-primary);
+}
+
+.testWarning {
+  margin: 0;
+  color: var(--color-danger);
+}
+
+/* ---- Footer note ---- */
+
+.disclaimer {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  width: 100%;
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.disclaimer img {
+  flex-shrink: 0;
+  margin-top: 3px;
+}

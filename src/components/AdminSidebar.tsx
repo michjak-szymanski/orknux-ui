@@ -1,10 +1,12 @@
 import commandIcon from '../assets/command.svg';
 import chartLineIcon from '../assets/chart-line.svg';
 import fileTextIcon from '../assets/file-text.svg';
+import globeIcon from '../assets/globe.svg';
 import plugIcon from '../assets/plug.svg';
 import puzzleIcon from '../assets/puzzle.svg';
 import settingsIcon from '../assets/settings.svg';
 import stethoscopeIcon from '../assets/activity.svg';
+import terminalIcon from '../assets/terminal.svg';
 import shieldIcon from '../assets/lock-keyhole.svg';
 import userIcon from '../assets/user.svg';
 import { SidebarNavItem } from './AppShell';
@@ -17,6 +19,8 @@ export type AdminSection =
   | 'audit'
   | 'integrations'
   | 'plugins'
+  | 'networking'
+  | 'shell'
   | 'monitoring'
   | 'doctor'
   | 'settings';
@@ -46,6 +50,26 @@ export function AdminSidebar({ active }: { active: AdminSection }) {
         icon={puzzleIcon}
         active={active === 'plugins'}
         to="/admin/plugins"
+      />
+      {/*
+        Beside Plugins rather than beside Monitoring: this is something the
+        installation is configured with, not something observed about it.
+      */}
+      <SidebarNavItem
+        label="Networking"
+        icon={globeIcon}
+        active={active === 'networking'}
+        to="/admin/networking"
+      />
+      {/*
+        Beside Networking, because both are about how this installation reaches
+        something that is not it: one over HTTP and one over SSH.
+      */}
+      <SidebarNavItem
+        label="Shell"
+        icon={terminalIcon}
+        active={active === 'shell'}
+        to="/admin/shell"
       />
       <SidebarNavItem
         label="Monitoring"

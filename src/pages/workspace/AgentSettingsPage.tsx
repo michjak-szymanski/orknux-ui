@@ -40,6 +40,7 @@ export function AgentSettingsPage({ session, onSignOut }: AgentSettingsPageProps
   const [mcpServers, setMcpServers] = useState<string[]>([]);
   /** Whether it may ask orknux about orknux; the built-in server. */
   const [orknuxAccess, setOrknuxAccess] = useState(false);
+  const [shellAccess, setShellAccess] = useState(false);
   const [modelId, setModelId] = useState('');
   const [models, setModels] = useState<Model[]>([]);
   const [memoryCatalogs, setMemoryCatalogs] = useState<string[]>([]);
@@ -72,6 +73,7 @@ export function AgentSettingsPage({ session, onSignOut }: AgentSettingsPageProps
         setSystemPrompt(found.systemPrompt ?? '');
         setMcpServers(found.mcpServers);
         setOrknuxAccess(found.orknuxAccess);
+        setShellAccess(found.shellAccess);
         setMemoryCatalogs(found.memoryCatalogs);
         setSkillCatalogs(found.skillCatalogs);
         setTools(found.tools);
@@ -133,6 +135,7 @@ export function AgentSettingsPage({ session, onSignOut }: AgentSettingsPageProps
         modelId: modelId === '' ? null : modelId,
         mcpServers,
         orknuxAccess,
+        shellAccess,
         memoryCatalogs,
         skillCatalogs,
         tools,
@@ -141,6 +144,7 @@ export function AgentSettingsPage({ session, onSignOut }: AgentSettingsPageProps
       setAgent(updated);
       setMcpServers(updated.mcpServers);
       setOrknuxAccess(updated.orknuxAccess);
+      setShellAccess(updated.shellAccess);
       setMemoryCatalogs(updated.memoryCatalogs);
       setSkillCatalogs(updated.skillCatalogs);
       setTools(updated.tools);
@@ -387,6 +391,31 @@ export function AgentSettingsPage({ session, onSignOut }: AgentSettingsPageProps
               <p className={styles.hint}>
                 Its workspace’s workflows, runs and agents — and it can start a workflow, which really runs
                 it. An agent that starts a workflow which asks an agent is a loop nothing here breaks.
+              </p>
+            </div>
+
+            {/*
+              Beside Orknux because it is the same kind of switch - a grant of
+              something the agent is not otherwise offered - and plural on
+              purpose. An agent asks for a shell rather than for a named
+              machine; which one it gets is decided when the session opens.
+            */}
+            <div className={styles.field}>
+              <span className={styles.label}>Shells</span>
+              <label className={styles.checkRow}>
+                <input
+                  type="checkbox"
+                  checked={shellAccess}
+                  onChange={(event) => setShellAccess(event.target.checked)}
+                />
+                <span>Let this agent open a shell and run commands on it</span>
+              </label>
+              <p className={styles.hint}>
+                It opens a session on one of the machines an administrator set up under Admin →
+                Shell, gets a working directory of its own on it, and runs commands there. What
+                contains that is the machine and the account named on it, not anything here: an
+                agent given this can do whatever that account can. Every command is written down in
+                the audit log under this agent&apos;s name.
               </p>
             </div>
 

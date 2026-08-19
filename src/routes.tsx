@@ -6,6 +6,8 @@ import { AdminAuditPage } from './pages/admin/AdminAuditPage';
 import { AdminDoctorPage } from './pages/admin/AdminDoctorPage';
 import { AdminIntegrationsPage } from './pages/admin/AdminIntegrationsPage';
 import { AdminMonitoringPage } from './pages/admin/AdminMonitoringPage';
+import { AdminNetworkingPage } from './pages/admin/AdminNetworkingPage';
+import { AdminShellPage } from './pages/admin/AdminShellPage';
 import { AdminPage } from './pages/admin/AdminPage';
 import { AdminPluginsPage } from './pages/admin/AdminPluginsPage';
 import { AdminRolesPage } from './pages/admin/AdminRolesPage';
@@ -116,6 +118,10 @@ export const PAGE_ELEMENTS: Record<PagePath, PageElement> = {
   '/admin/audit': (session, onSignOut) => <AdminAuditPage session={session} onSignOut={onSignOut} />,
   '/admin/integrations': (session, onSignOut) => <AdminIntegrationsPage session={session} onSignOut={onSignOut} />,
   '/admin/plugins': (session, onSignOut) => <AdminPluginsPage session={session} onSignOut={onSignOut} />,
+  '/admin/networking': (session, onSignOut) => (
+    <AdminNetworkingPage session={session} onSignOut={onSignOut} />
+  ),
+  '/admin/shell': (session, onSignOut) => <AdminShellPage session={session} onSignOut={onSignOut} />,
   '/admin/roles': (session, onSignOut) => <AdminRolesPage session={session} onSignOut={onSignOut} />,
   '/admin/users': (session, onSignOut) => <AdminUsersPage session={session} onSignOut={onSignOut} />,
   /* Before the one with an id in it: `new` is a page, not a user called new. */
