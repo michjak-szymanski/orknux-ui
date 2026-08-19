@@ -91,6 +91,12 @@
   background: var(--color-surface-raised);
 }
 
+/* The row the arrows are on, marked the way the assignee box marks its own. */
+.mentionOptionAt {
+  background: var(--color-surface-raised);
+  outline: 1px solid var(--color-accent-brand);
+}
+
 .mentionName {
   font-size: var(--text-md);
   color: var(--color-text-primary);

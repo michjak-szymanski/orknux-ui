@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { ClipboardEvent as ReactClipboardEvent } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import type { ClipboardEvent as ReactClipboardEvent, KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import { fetchAssignees } from '../api/issues';
 import type { Assignee } from '../api/issues';
@@ -141,14 +141,32 @@ export function MarkdownEditor({
   const [candidates, setCandidates] = useState<Assignee[]>([]);
   /** Where the list is drawn, in the editor's own coordinates. */
   const [spot, setSpot] = useState<{ top: number; left: number } | null>(null);
+  /** Which row the arrows are on, the way the assignee box holds it. */
+  const [at, setAt] = useState(0);
+  /*
+   * The rows need names a screen reader can be pointed at, and there are three
+   * of these editors on an issue, so the identity comes from the instance
+   * rather than from a constant two of them would share.
+   */
+  const rowId = useId();
 
   useEffect(() => {
-    if (mentioning === null) return;
+    if (mentioning === null) {
+      // Back to the top the moment the list is put away, so the next @ does
+      // not open on the row somebody left behind on the last word.
+      setAt(0);
+      return;
+    }
     let current = true;
     const timer = window.setTimeout(() => {
       fetchAssignees(workspaceId, mentioning.search || undefined)
         .then((found) => {
-          if (current) setCandidates(found.slice(0, 8));
+          if (!current) return;
+          setCandidates(found.slice(0, 8));
+          // Back to the top whenever the list changes under the cursor:
+          // keeping an index into a list that no longer has that row is how a
+          // search ends up mentioning somebody nobody looked at.
+          setAt(0);
         })
         .catch(() => {
           if (current) setCandidates([]);
@@ -246,6 +264,43 @@ export function MarkdownEditor({
     }, 0);
   }
 
+  /** Whether there is a list to steer: an @ open with names under it. */
+  const open = mentioning !== null && candidates.length > 0;
+
+  /**
+   * Up and down move, Enter or Tab takes what is under the cursor, Escape puts
+   * the list away without taking anything.
+   *
+   * Every one of them is prevented while the list is open and left alone when
+   * it is not, so the arrows move the list rather than the caret and Enter
+   * writes a mention rather than a newline, and the same keys go back to being
+   * ordinary writing keys the moment the list is gone. The ends wrap, the way
+   * the assignee box wraps: a list of eight is short enough that carrying on
+   * past the bottom means the top rather than a dead key.
+   */
+  function onKey(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
+    if (!open) return;
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setAt((held) => (held + 1 > candidates.length - 1 ? 0 : held + 1));
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setAt((held) => (held - 1 < 0 ? candidates.length - 1 : held - 1));
+    } else if (event.key === 'Enter' || event.key === 'Tab') {
+      const chosen = candidates[at];
+      if (chosen === undefined) return;
+      event.preventDefault();
+      mention(chosen);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      // Held here rather than let go: an Escape meant for the list should not
+      // also reach whatever else on the page listens for one.
+      event.stopPropagation();
+      setMentioning(null);
+    }
+  }
+
   return (
     <div className={styles.editor}>
       <div className={styles.toolbar} role="toolbar" aria-label="Formatting">
@@ -276,24 +331,41 @@ export function MarkdownEditor({
         rows={rows}
         placeholder={placeholder}
         aria-label={ariaLabel}
+        // The focus stays in the writing while the arrows walk the list, so
+        // the row under the cursor is named here rather than focused there.
+        aria-expanded={open}
+        aria-controls={open ? `${rowId}-list` : undefined}
+        aria-activedescendant={open ? `${rowId}-${at}` : undefined}
         onChange={(event) => onType(event.target.value)}
+        onKeyDown={onKey}
         onPaste={onPaste}
         onBlur={() => window.setTimeout(() => setMentioning(null), 150)}
       />
 
-      {mentioning !== null && candidates.length > 0 && (
+      {open && (
         <div
           ref={list}
+          id={`${rowId}-list`}
           className={styles.mentions}
           role="listbox"
           aria-label="Mention someone"
           style={spot === null ? undefined : { top: spot.top, left: spot.left }}
         >
-          {candidates.map((candidate) => (
+          {candidates.map((candidate, index) => (
             <button
               key={`${candidate.kind}-${candidate.id}`}
+              id={`${rowId}-${index}`}
               type="button"
-              className={styles.mentionOption}
+              className={index === at ? `${styles.mentionOption} ${styles.mentionOptionAt}` : styles.mentionOption}
+              role="option"
+              aria-selected={index === at}
+              // Kept in view as the arrows move past the bottom of the list.
+              ref={(node) => {
+                if (index === at) node?.scrollIntoView({ block: 'nearest' });
+              }}
+              // Under the pointer as well as under the arrows: a hand and a
+              // keyboard should not disagree about which row is next.
+              onMouseEnter={() => setAt(index)}
               onMouseDown={(event) => {
                 event.preventDefault();
                 mention(candidate);
