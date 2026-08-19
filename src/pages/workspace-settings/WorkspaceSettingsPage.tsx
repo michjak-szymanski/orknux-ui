@@ -31,6 +31,13 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
   const [description, setDescription] = useState('');
   /** Which roles open this workspace, and everything there is to choose from. */
   const [roleIds, setRoleIds] = useState<string[]>([]);
+  /**
+   * Which of those also administer it. A subset of the list above by
+   * construction: taking a role off the workspace takes it off this too, since a
+   * role that administers a workspace it cannot open is a permission that does
+   * nothing, and the server refuses that save anyway.
+   */
+  const [adminRoleIds, setAdminRoleIds] = useState<string[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
 
   /*
@@ -65,6 +72,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         setName(found.name);
         setDescription(found.description ?? '');
         setRoleIds(found.roles.map((role) => role.id));
+        setAdminRoleIds(found.adminRoles.map((role) => role.id));
       })
       .catch((cause: unknown) => {
         setLoadError(cause instanceof Error ? cause.message : 'Could not load the workspace.');
@@ -83,6 +91,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         name: name.trim(),
         description: description.trim() || undefined,
         roleIds,
+        adminRoleIds,
       });
       // A rename has to reach the selector, which paints from the cached list.
       forgetWorkspaces();
@@ -180,11 +189,15 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                           className={styles.roleSelect}
                           value={roleId}
                           aria-label={`Role ${index + 1}`}
-                          onChange={(event) =>
+                          onChange={(event) => {
+                            const chosen = event.target.value;
                             setRoleIds((held) =>
-                              held.map((id, at) => (at === index ? event.target.value : id)),
-                            )
-                          }
+                              held.map((id, at) => (at === index ? chosen : id)),
+                            );
+                            // The row now names a different role, so whatever was
+                            // ticked was ticked about the old one.
+                            setAdminRoleIds((held) => held.filter((id) => id !== roleId));
+                          }}
                         >
                           {roles.map((role) => (
                             <option
@@ -200,11 +213,37 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                         </select>
                         <img src={chevronDown12Icon} alt="" width={12} height={12} />
                       </div>
+                      {/*
+                        The second half of the row, and the whole of what the
+                        workspace administrator role is: this role opens the
+                        workspace, and ticked, it also administers it. Beside the
+                        picker rather than in a list of its own, because it is one
+                        decision about one role and two lists would have to be kept
+                        in step by whoever reads them.
+                      */}
+                      <label className={styles.administers}>
+                        <input
+                          type="checkbox"
+                          checked={adminRoleIds.includes(roleId)}
+                          aria-label={`${roles.find((role) => role.id === roleId)?.name ?? 'This role'} administers this workspace`}
+                          onChange={(event) =>
+                            setAdminRoleIds((held) =>
+                              event.target.checked
+                                ? [...held.filter((id) => id !== roleId), roleId]
+                                : held.filter((id) => id !== roleId),
+                            )
+                          }
+                        />
+                        Administers
+                      </label>
                       <button
                         type="button"
                         className={styles.roleRemove}
                         aria-label={`Remove ${roles.find((role) => role.id === roleId)?.name ?? 'role'}`}
-                        onClick={() => setRoleIds((held) => held.filter((_, at) => at !== index))}
+                        onClick={() => {
+                          setRoleIds((held) => held.filter((_, at) => at !== index));
+                          setAdminRoleIds((held) => held.filter((id) => id !== roleId));
+                        }}
                       >
                         ×
                       </button>
@@ -239,7 +278,9 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                     ) : (
                       <>
                         Whoever holds one of these can see the workspace. None assigned keeps it
-                        administrators-only.
+                        administrators-only. Administers adds this workspace&rsquo;s settings, its
+                        issue observers and moving an issue in or out &mdash; here only, and
+                        nothing installation-wide.
                       </>
                     )}
                   </p>

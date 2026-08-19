@@ -142,3 +142,51 @@ select.input {
 .checkRow input {
   accent-color: var(--color-accent-brand);
 }
+
+/*
+ * The General card, which only somebody who administers this workspace is shown.
+ *
+ * The fields above are model ids, which is why the shared input is monospaced;
+ * a workspace's name and description are prose and read wrong in it.
+ */
+.prose {
+  font-family: inherit;
+}
+
+.inputWrapperTall {
+  height: auto;
+  min-height: 80px;
+  padding: var(--space-10) var(--space-12);
+  align-items: flex-start;
+}
+
+.textarea {
+  align-self: stretch;
+  min-height: 60px;
+  resize: vertical;
+  line-height: 20px;
+}
+
+.formActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-12);
+}
+
+.save {
+  padding: var(--space-10) var(--space-16);
+  background: var(--color-accent-brand);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

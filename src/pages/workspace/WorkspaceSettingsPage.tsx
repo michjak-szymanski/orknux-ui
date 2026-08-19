@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { answers, fetchModels } from '../../api/models';
@@ -6,6 +7,7 @@ import type { Model } from '../../api/models';
 import type { SessionUser } from '../../api/session';
 import {
   fetchWorkspace,
+  updateWorkspace,
   setWorkspaceCompanionModel,
   setWorkspaceQuickChatModel,
   setWorkspaceQuickChatWrites,
@@ -17,6 +19,7 @@ import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import { AppShell } from '../../components/AppShell';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
+import { forgetWorkspaces } from '../../session/workspaces';
 import styles from './WorkspaceSettingsPage.module.css';
 
 export interface WorkspaceSettingsPageProps {
@@ -27,9 +30,17 @@ export interface WorkspaceSettingsPageProps {
 /**
  * What the workspace decides for itself.
  *
- * One card so far: the companion model, which is what the workspace uses for
- * its own small jobs rather than for anything a person asked for. Naming a chat
- * from what was said is the first of them.
+ * Two cards. The models it uses for its own small jobs, which anybody who can
+ * see the workspace may choose, and above them its name and description, which
+ * only somebody who administers *this* workspace may change.
+ *
+ * That card is here rather than only in the Admin section because this is where
+ * a workspace administrator can actually get to. They are not an installation
+ * administrator, so the Admin section is not theirs and the page under it is not
+ * reachable; the workspace's own settings page is, and the setting is a
+ * workspace's. It is hidden rather than disabled for anybody else, since a
+ * greyed-out field for a permission somebody will never hold is a permanent
+ * advertisement for something they cannot have.
  */
 export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsPageProps) {
   const { workspaceId = '' } = useParams();
@@ -39,10 +50,21 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /** The General card's own draft, and its own saved and failed states. */
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [namingSaved, setNamingSaved] = useState(false);
+  const [namingError, setNamingError] = useState<string | null>(null);
+  const [naming, setNaming] = useState(false);
+
   useEffect(() => {
     if (workspaceId === '') return;
     fetchWorkspace(workspaceId)
-      .then(setWorkspace)
+      .then((found) => {
+        setWorkspace(found);
+        setName(found?.name ?? '');
+        setDescription(found?.description ?? '');
+      })
       .catch((cause: unknown) => {
         setError(cause instanceof Error ? cause.message : 'Could not load the workspace.');
       });
@@ -101,6 +123,36 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
     }
   }
 
+  /**
+   * The name and description, saved without either role list.
+   *
+   * Both are left out rather than sent back unchanged: this form never shows
+   * them, so it has nothing to say about them, and a mutation that posts a list
+   * it did not display is one bug away from clearing it.
+   */
+  async function rename(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (name.trim() === '' || naming) return;
+
+    setNaming(true);
+    setNamingError(null);
+    setNamingSaved(false);
+    try {
+      const updated = await updateWorkspace(workspaceId, {
+        name: name.trim(),
+        description: description.trim() || undefined,
+      });
+      // A rename has to reach the selector, which paints from the cached list.
+      forgetWorkspaces();
+      setWorkspace(updated);
+      setNamingSaved(true);
+    } catch (cause) {
+      setNamingError(cause instanceof Error ? cause.message : 'Could not save the workspace.');
+    } finally {
+      setNaming(false);
+    }
+  }
+
   async function choose(modelId: string) {
     setError(null);
     setSaved(false);
@@ -125,6 +177,69 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       <header className={styles.header}>
         <h1 className={styles.title}>Workspace Settings</h1>
       </header>
+
+      {/*
+        Only for somebody who administers this workspace, which an installation
+        administrator does everywhere and a workspace administrator does here.
+        The server decides the same thing again on the save; this only decides
+        whether to offer it.
+      */}
+      {workspace?.administered === true && (
+        <form className={styles.card} onSubmit={rename}>
+          <div className={styles.sectionTitle}>
+            <h2 className={styles.sectionHeading}>General</h2>
+            <div className={styles.rule} />
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="workspace-name">
+              Workspace Name
+            </label>
+            <div className={styles.inputWrapper}>
+              <input
+                id="workspace-name"
+                className={`${styles.input} ${styles.prose}`}
+                type="text"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="workspace-description">
+              Description
+            </label>
+            <div className={`${styles.inputWrapper} ${styles.inputWrapperTall}`}>
+              <textarea
+                id="workspace-description"
+                className={`${styles.input} ${styles.prose} ${styles.textarea}`}
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+              />
+            </div>
+          </div>
+
+          <p className={styles.hint}>
+            Who can see this workspace is set on the Roles screen by an installation administrator, not
+            here.
+          </p>
+
+          {namingError !== null && (
+            <p className={styles.error} role="alert">
+              {namingError}
+            </p>
+          )}
+
+          <div className={styles.formActions}>
+            {namingSaved && namingError === null && <p className={styles.saved}>Saved.</p>}
+            <button type="submit" className={styles.save} disabled={name.trim() === '' || naming}>
+              {naming ? 'Saving…' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      )}
 
       <section className={styles.card}>
         <div className={styles.sectionTitle}>

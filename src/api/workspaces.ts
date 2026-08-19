@@ -8,6 +8,18 @@ export interface Workspace {
   /** The roles that open this workspace. Empty means administrators only. */
   roles: WorkspaceRole[];
   /**
+   * The roles that also administer it - its name and description, observers on its
+   * issues, and moving an issue in or out. A subset of `roles`; empty means
+   * installation administrators only.
+   */
+  adminRoles: WorkspaceRole[];
+  /**
+   * Whether the signed-in caller administers this workspace. True for an
+   * installation administrator everywhere, and it can differ between two
+   * workspaces for the same person - which is what the role is for.
+   */
+  administered: boolean;
+  /**
    * The model used for the workspace's own small jobs — naming a chat from what
    * was said. Null means those jobs do not happen.
    */
@@ -35,8 +47,8 @@ export interface Workspace {
 }
 
 const WORKSPACE_FIELDS =
-  'id name description roles { id name } companionModelId transcriptionModelId speechModelId ' +
-  'quickChatModelId quickChatMayWrite';
+  'id name description roles { id name } adminRoles { id name } administered ' +
+  'companionModelId transcriptionModelId speechModelId quickChatModelId quickChatMayWrite';
 
 /** Just enough of a role to name it where a workspace lists what opens it. */
 export interface WorkspaceRole {
@@ -197,11 +209,7 @@ export async function createWorkspace(input: NewWorkspace): Promise<Workspace> {
 
 const UPDATE_WORKSPACE_MUTATION = `
   mutation UpdateWorkspace($id: ID!, $input: UpdateWorkspaceInput!) {
-    updateWorkspace(id: $id, input: $input) {
-      id
-      name
-      description
-    }
+    updateWorkspace(id: $id, input: $input) { ${WORKSPACE_FIELDS} }
   }
 `;
 
@@ -210,6 +218,12 @@ export interface WorkspaceSettings {
   description?: string;
   /** The roles that open it. Omitted leaves them alone; empty means administrators only. */
   roleIds?: string[];
+  /**
+   * Which of those also administer it. Omitted leaves them alone; empty means
+   * installation administrators only. Only an installation administrator may
+   * change either list, so the workspace-side form omits both.
+   */
+  adminRoleIds?: string[];
 }
 
 export async function updateWorkspace(id: string, input: WorkspaceSettings): Promise<Workspace> {
