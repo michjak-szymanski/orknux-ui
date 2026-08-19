@@ -69,6 +69,12 @@ const SHELLS_QUERY = `
   }
 `;
 
+const SHELL_QUERY = `
+  query Shell($id: ID!) {
+    shell(id: $id) { ${SHELL_FIELDS} }
+  }
+`;
+
 const CREATE_SHELL_MUTATION = `
   mutation CreateShell($input: ShellInput!) {
     createShell(input: $input) { ${SHELL_FIELDS} }
@@ -100,6 +106,18 @@ const DELETE_SHELL_MUTATION = `
 export async function fetchShells(): Promise<Shell[]> {
   const data = await graphql<{ shells: Shell[] }>(SHELLS_QUERY);
   return data.shells;
+}
+
+/**
+ * One shell, by id, or null when there is no such shell.
+ *
+ * Null rather than an error on purpose: the page that opens on an id somebody
+ * typed or bookmarked has to be able to say the shell is gone, and a thrown
+ * error would send it down the path meant for a server that failed.
+ */
+export async function fetchShell(id: string): Promise<Shell | null> {
+  const data = await graphql<{ shell: Shell | null }>(SHELL_QUERY, { id });
+  return data.shell;
 }
 
 export async function createShell(input: ShellInput): Promise<Shell> {

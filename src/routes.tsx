@@ -8,6 +8,7 @@ import { AdminIntegrationsPage } from './pages/admin/AdminIntegrationsPage';
 import { AdminMonitoringPage } from './pages/admin/AdminMonitoringPage';
 import { AdminNetworkingPage } from './pages/admin/AdminNetworkingPage';
 import { AdminShellPage } from './pages/admin/AdminShellPage';
+import { AdminShellSettingsPage } from './pages/admin/AdminShellSettingsPage';
 import { AdminPage } from './pages/admin/AdminPage';
 import { AdminPluginsPage } from './pages/admin/AdminPluginsPage';
 import { AdminRolesPage } from './pages/admin/AdminRolesPage';
@@ -122,6 +123,9 @@ export const PAGE_ELEMENTS: Record<PagePath, PageElement> = {
     <AdminNetworkingPage session={session} onSignOut={onSignOut} />
   ),
   '/admin/shell': (session, onSignOut) => <AdminShellPage session={session} onSignOut={onSignOut} />,
+  /* Before the one with an id in it: `new` is a page, not a shell called new. */
+  '/admin/shell/new': (session, onSignOut) => <AdminShellSettingsPage session={session} onSignOut={onSignOut} />,
+  '/admin/shell/:shellId': (session, onSignOut) => <AdminShellSettingsPage session={session} onSignOut={onSignOut} />,
   '/admin/roles': (session, onSignOut) => <AdminRolesPage session={session} onSignOut={onSignOut} />,
   '/admin/users': (session, onSignOut) => <AdminUsersPage session={session} onSignOut={onSignOut} />,
   /* Before the one with an id in it: `new` is a page, not a user called new. */

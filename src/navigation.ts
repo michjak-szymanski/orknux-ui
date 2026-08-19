@@ -247,6 +247,9 @@ export const PAGES = [
       also: 'ssh machines hosts nodes commands remote',
     },
   },
+  /* Before the one with an id in it: `new` is a page, not a shell called new. */
+  { path: '/admin/shell/new', access: 'admin', goTo: false },
+  { path: '/admin/shell/:shellId', access: 'admin', goTo: false },
   {
     path: '/admin/roles',
     access: 'admin',

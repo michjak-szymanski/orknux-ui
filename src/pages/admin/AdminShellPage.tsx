@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { checkShell, fetchShells, setShellEnabled, shellStatusLabel } from '../../api/shell';
 import type { Shell, ShellStatus } from '../../api/shell';
@@ -11,7 +12,6 @@ import toggleOnIcon from '../../assets/toggle-on.svg';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { AppShell } from '../../components/AppShell';
 import { Loader } from '../../components/Loader';
-import { ShellDialog } from '../../components/ShellDialog';
 import { shellUser } from '../../session/user';
 import styles from './AdminShellPage.module.css';
 
@@ -46,8 +46,6 @@ export function AdminShellPage({ session, onSignOut }: AdminShellPageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  // False when closed, true when adding, the shell itself when editing.
-  const [dialog, setDialog] = useState<boolean | Shell>(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -117,10 +115,10 @@ export function AdminShellPage({ session, onSignOut }: AdminShellPageProps) {
             the audit log.
           </p>
         </div>
-        <button type="button" className={styles.addShell} onClick={() => setDialog(true)}>
+        <Link className={styles.addShell} to="/admin/shell/new">
           <img src={plusIcon} alt="" width={14} height={14} />
           Add Shell
-        </button>
+        </Link>
       </header>
 
       <section className={styles.card}>
@@ -208,15 +206,14 @@ export function AdminShellPage({ session, onSignOut }: AdminShellPageProps) {
               >
                 {busy === shell.id ? 'Checking…' : 'Check'}
               </button>
-              <button
-                type="button"
+              <Link
                 className={styles.rowAction}
-                onClick={() => setDialog(shell)}
+                to={`/admin/shell/${shell.id}`}
                 aria-label={`Edit ${shell.name}`}
                 title="Edit"
               >
                 <img src={settingsIcon} alt="" width={14} height={14} />
-              </button>
+              </Link>
             </div>
           </div>
         ))}
@@ -231,15 +228,6 @@ export function AdminShellPage({ session, onSignOut }: AdminShellPageProps) {
         containers you are willing to lose. Keys are stored encrypted and are never shown again, and
         every command an agent runs is written down under its own name in the audit log.
       </p>
-
-      <ShellDialog
-        open={dialog}
-        onClose={() => setDialog(false)}
-        onSaved={() => {
-          setDialog(false);
-          load();
-        }}
-      />
     </AppShell>
   );
 }

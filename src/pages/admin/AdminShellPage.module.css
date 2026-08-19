@@ -48,6 +48,7 @@
   font-weight: 600;
   font-size: var(--text-md);
   color: var(--color-text-primary);
+  text-decoration: none;
   cursor: pointer;
 }
 
@@ -243,6 +244,7 @@
   background: var(--color-surface-raised);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-6);
+  text-decoration: none;
   cursor: pointer;
 }
 
