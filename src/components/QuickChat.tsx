@@ -5,7 +5,8 @@ import { useLocation } from 'react-router-dom';
 import { askQuickChat } from '../api/quickChat';
 import type { QuickChatSuggestion } from '../api/quickChat';
 import { CodeSuggestion } from './CodeSuggestion';
-import type { QuickChatTurn } from '../api/quickChat';
+import { ToolSuggestion } from './ToolSuggestion';
+import type { QuickChatToolSuggestion, QuickChatTurn } from '../api/quickChat';
 import { fetchWorkspace } from '../api/workspaces';
 import botIcon from '../assets/bot.svg';
 import { Markdown } from './Markdown';
@@ -82,6 +83,10 @@ export function QuickChat({ workspacePath }: QuickChatProps) {
    * what they just agreed to.
    */
   const [offers, setOffers] = useState<Record<number, { suggestion: QuickChatSuggestion; inEditor: boolean }>>({});
+  /** The same, for a change offered to a tool: same rule, different editor. */
+  const [toolOffers, setToolOffers] = useState<
+    Record<number, { suggestion: QuickChatToolSuggestion; inEditor: boolean }>
+  >({});
   const [error, setError] = useState<string | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -171,6 +176,15 @@ export function QuickChat({ workspacePath }: QuickChatProps) {
         const unclaimed = window.dispatchEvent(announced);
         setOffers((held) => ({ ...held, [grown.length - 1]: { suggestion, inEditor: !unclaimed } }));
       }
+      // A change to a tool, announced the same way and to the same rule: the
+      // tool editor claims one for the tool it has open, and anything it does
+      // not claim is drawn here.
+      if (answer.toolSuggestion !== undefined) {
+        const suggestion = answer.toolSuggestion;
+        const announced = new CustomEvent('orknux:tool-suggestion', { detail: suggestion, cancelable: true });
+        const unclaimed = window.dispatchEvent(announced);
+        setToolOffers((held) => ({ ...held, [grown.length - 1]: { suggestion, inEditor: !unclaimed } }));
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'That could not be answered.');
     } finally {
@@ -207,7 +221,14 @@ export function QuickChat({ workspacePath }: QuickChatProps) {
       if (typeof said === 'string') void send(said);
     }
     window.addEventListener('orknux:function-suggestion-settled', onSettled);
-    return () => window.removeEventListener('orknux:function-suggestion-settled', onSettled);
+    // The tool editor settles its own the same way, under its own name: the
+    // two editors know nothing about each other, and both answers are just the
+    // next thing said in this conversation.
+    window.addEventListener('orknux:tool-suggestion-settled', onSettled);
+    return () => {
+      window.removeEventListener('orknux:function-suggestion-settled', onSettled);
+      window.removeEventListener('orknux:tool-suggestion-settled', onSettled);
+    };
   });
 
   /** Enter sends, Shift+Enter is a new line — the way the Chat page does it. */
@@ -255,6 +276,15 @@ export function QuickChat({ workspacePath }: QuickChatProps) {
                       <p className={styles.inEditor}>The change is shown in the editor, against the code it would change.</p>
                     ) : (
                       <CodeSuggestion suggestion={offers[index].suggestion} onSettled={(detail) => void send(detail)} />
+                    ))}
+                  {toolOffers[index] !== undefined &&
+                    (toolOffers[index].inEditor ? (
+                      <p className={styles.inEditor}>The change is shown in the editor, against the code it would change.</p>
+                    ) : (
+                      <ToolSuggestion
+                        suggestion={toolOffers[index].suggestion}
+                        onSettled={(detail) => void send(detail)}
+                      />
                     ))}
                 </div>
               ),

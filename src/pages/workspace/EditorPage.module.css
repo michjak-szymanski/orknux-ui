@@ -406,7 +406,7 @@
 /* Drawn as the badge the design shows, but it is the picker. */
 .propertyType {
   max-width: 100%;
-  padding: var(--space-4) var(--space-8);
+  padding: var(--space-4) var(--space-24) var(--space-4) var(--space-8);
   background: var(--color-surface-raised);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-4);
@@ -567,6 +567,50 @@
   font-family: var(--font-mono);
 }
 
+/*
+ * A select's chevron, drawn by us rather than by the platform — the wrapper is
+ * what it is positioned against, and the control keeps room for it on the right.
+ *
+ * The same shape the rest of the app uses: `position: relative` around the
+ * select, a 12px chevron pinned to its right edge, and nothing between them a
+ * click could land on.
+ */
+.selectWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.selectWrapper > img {
+  position: absolute;
+  right: var(--space-10);
+  pointer-events: none;
+}
+
+.selectWrapper > select {
+  padding-right: var(--space-32);
+}
+
+/*
+ * The inline variant, for a select that is as wide as the word in it rather
+ * than as wide as the column it stands in — a property's type. The chevron has
+ * to be pinned to the control, not to the column, or it sits alone in the empty
+ * half of a 220px cell.
+ */
+.typeSelect {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+}
+
+.typeSelect > img {
+  position: absolute;
+  right: var(--space-6);
+  pointer-events: none;
+}
+
 .textarea {
   min-height: 72px;
   line-height: 18px;
@@ -667,4 +711,56 @@
 
 .tokenProperty {
   color: #7dd3fc;
+}
+
+/*
+ * The wand looks like what it does.
+ *
+ * In a ghost button it read as one more grey control; the thing it summons is
+ * the one colourful act on the page, so the button says so - a violet-to-brand
+ * wash, and a glow when the pointer finds it. The same button as the function
+ * editor's, because it opens the same panel onto the same kind of help.
+ */
+.wandButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--space-10);
+  background: linear-gradient(135deg, #7c5cff 0%, var(--color-accent-brand) 100%);
+  border: 0;
+  border-radius: var(--radius-6);
+  cursor: pointer;
+  transition: box-shadow 120ms ease, transform 120ms ease;
+}
+
+.wandButton:hover {
+  box-shadow: 0 0 12px rgba(124, 92, 255, 0.55);
+  transform: translateY(-1px);
+}
+
+/* What the assistant is offering, across the top of the code it would change. */
+.suggestionBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-16);
+  background: var(--color-accent-brand-soft);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.suggestionNote {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+/* The same bar, wearing the reason the accept did not land. */
+.suggestionBarFailed {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-16);
+  background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+  border-bottom: 1px solid var(--color-border);
 }

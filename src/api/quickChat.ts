@@ -31,9 +31,26 @@ export interface QuickChatSuggestion {
   code: string;
 }
 
+/**
+ * The same offer, made about a tool's code.
+ *
+ * Its own type rather than the one above with the names changed, because the
+ * two are settled in different places: a function's change is saved with a
+ * parameter list read off the declaration, and a tool has no parameter list —
+ * it is a default export handed one argument.
+ */
+export interface QuickChatToolSuggestion {
+  toolId: string;
+  /** What the tool is called, for the line above the diff. */
+  tool: string;
+  note: string | null;
+  code: string;
+}
+
 export interface QuickChatAnswer {
   answer: string;
   suggestion?: QuickChatSuggestion;
+  toolSuggestion?: QuickChatToolSuggestion;
 }
 
 /**
@@ -56,8 +73,13 @@ export async function askQuickChat(
   });
 
   const said = (await answer.json().catch(() => null)) as
-    | { answer?: string; error?: string; suggestion?: QuickChatSuggestion }
+    | {
+        answer?: string;
+        error?: string;
+        suggestion?: QuickChatSuggestion;
+        toolSuggestion?: QuickChatToolSuggestion;
+      }
     | null;
   if (!answer.ok) throw new Error(said?.error ?? 'That could not be answered.');
-  return { answer: said?.answer ?? '', suggestion: said?.suggestion };
+  return { answer: said?.answer ?? '', suggestion: said?.suggestion, toolSuggestion: said?.toolSuggestion };
 }
