@@ -23,6 +23,14 @@
      item refuses to shrink below its content and the scroller never engages. */
   min-height: 0;
   overflow-y: auto;
+  /*
+   * The same clearance every other page gets from the content itself (#105).
+   * It has to be repeated here because the flush variant zeroes the padding
+   * this page then supplies for itself - so without this line the last
+   * setting ends underneath the floating launcher, which is the very fault
+   * #105 was about.
+   */
+  padding-bottom: var(--quick-chat-clearance);
 }
 
 .container {
