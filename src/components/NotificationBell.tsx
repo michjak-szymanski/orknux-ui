@@ -12,6 +12,7 @@ const ASK_EVERY_MS = 60_000;
 
 /** What each kind reads as, in the words somebody would use about it. */
 const SAYS: Record<Notification['kind'], string> = {
+  OPENED: 'new issue',
   ASSIGNED: 'assigned to you',
   STATUS: 'changed state',
   COMMENT: 'new comment',

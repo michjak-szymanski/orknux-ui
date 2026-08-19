@@ -1,7 +1,7 @@
 import { graphql } from './client';
 
 /** What kind of thing happened on an issue. */
-export type NotificationKind = 'ASSIGNED' | 'STATUS' | 'COMMENT' | 'MENTIONED' | 'OBSERVING';
+export type NotificationKind = 'OPENED' | 'ASSIGNED' | 'STATUS' | 'COMMENT' | 'MENTIONED' | 'OBSERVING';
 
 /**
  * One thing that happened, as the bell shows it.
