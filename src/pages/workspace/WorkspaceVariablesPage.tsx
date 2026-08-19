@@ -21,7 +21,6 @@ import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import folderOpenIcon from '../../assets/folder-open.svg';
 import folderIcon from '../../assets/folder.svg';
 import penIcon from '../../assets/pen.svg';
-import panelCollapseIcon from '../../assets/panel-collapse.svg';
 import plusIcon from '../../assets/plus.svg';
 import searchIcon from '../../assets/search.svg';
 import trashIcon from '../../assets/trash-grey.svg';
@@ -306,8 +305,8 @@ export function WorkspaceVariablesPage({ session, onSignOut }: WorkspaceVariable
                   : styles.collapseIcon
               }
               style={{
-                maskImage: `url("${panelCollapseIcon}")`,
-                WebkitMaskImage: `url("${panelCollapseIcon}")`,
+                maskImage: `url("${chevronDown12Icon}")`,
+                WebkitMaskImage: `url("${chevronDown12Icon}")`,
               }}
             />
           </button>

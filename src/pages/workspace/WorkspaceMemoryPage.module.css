@@ -10,7 +10,15 @@
   flex: 1 0 0;
   width: 100%;
   min-height: 0;
-  margin: calc(var(--space-32) * -1);
+  /*
+   * Cancels the content's own padding so this column runs edge to edge like the
+   * menu beside it. Written as the three values the content actually uses
+   * rather than one number: the bottom is the launcher clearance, not the side
+   * padding, so a single -32 left the panel 80px short of the menu and 8px
+   * below its top (issue #118).
+   */
+  margin: calc(var(--space-40) * -1) calc(var(--space-40) * -1)
+    calc(var(--quick-chat-clearance) * -1);
   /* The catalogue handle is placed against this panel's edge. */
   position: relative;
 }

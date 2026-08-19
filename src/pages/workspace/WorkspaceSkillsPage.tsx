@@ -18,7 +18,7 @@ import { timeAgo } from '../../api/tools';
 import folderOpenIcon from '../../assets/folder-open.svg';
 import folderIcon from '../../assets/folder.svg';
 import penIcon from '../../assets/pen.svg';
-import panelCollapseIcon from '../../assets/panel-collapse.svg';
+import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import plusIcon from '../../assets/plus.svg';
 import searchIcon from '../../assets/search.svg';
 import toggleOffIcon from '../../assets/toggle-off.svg';
@@ -28,6 +28,8 @@ import { AppShell } from '../../components/AppShell';
 import {
   ExportComponentButton,
   ImportComponentsButton,
+  SaveAsTemplateButton,
+  UseTemplateButton,
 } from '../../components/ComponentTransfer';
 import { Loader } from '../../components/Loader';
 import { NameDialog } from '../../components/NameDialog';
@@ -229,8 +231,8 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
                   : styles.collapseIcon
               }
               style={{
-                maskImage: `url("${panelCollapseIcon}")`,
-                WebkitMaskImage: `url("${panelCollapseIcon}")`,
+                maskImage: `url("${chevronDown12Icon}")`,
+                WebkitMaskImage: `url("${chevronDown12Icon}")`,
               }}
             />
           </button>
@@ -298,6 +300,17 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
                     })
                   }
                 />
+                <UseTemplateButton
+                  workspaceId={workspaceId}
+                  kind="SKILL"
+                  onImported={() =>
+                    void guard(async () => {
+                      // The catalogs too, for the reason Import gives above.
+                      await loadCatalogs();
+                      await loadSkills();
+                    })
+                  }
+                />
                 <button type="button" className={styles.addMemory} onClick={() => setCreating(true)}>
                   + Add Skill
                 </button>
@@ -357,6 +370,14 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
                           id={skill.id}
                           name={skill.name}
                           className={styles.iconButton}
+                        />
+                        <SaveAsTemplateButton
+                          workspaceId={workspaceId}
+                          kind="SKILL"
+                          id={skill.id}
+                          name={skill.name}
+                          className={styles.iconButton}
+                          canPublish={session.admin}
                         />
                         <Link
                           className={styles.iconButton}
