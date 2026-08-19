@@ -77,6 +77,16 @@
   color: var(--color-success-solid);
 }
 
+/*
+ * Switched off is not an error and not a state of the graph, so it sits beside
+ * the published badge rather than in the error slot - but it is amber, because
+ * a graph nothing will start is a thing to notice before publishing it.
+ */
+.badgeOff {
+  background: var(--color-amber-soft);
+  color: var(--color-amber);
+}
+
 .error {
   font-size: var(--text-md);
   color: var(--color-danger);

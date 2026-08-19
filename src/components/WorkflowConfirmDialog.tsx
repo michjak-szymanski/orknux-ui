@@ -55,8 +55,9 @@ export function WorkflowConfirmDialog({ workflowName, kind, onClose, onConfirm }
       title: 'Disable workflow',
       message: (
         <>
-          Are you sure you want to disable {name}? Active executions will continue but no new ones will be
-          triggered.
+          Are you sure you want to disable {name}? Runs already going will finish, and nothing will start it
+          by itself again - no trigger, no schedule, no tool call. Pressing Run yourself still works, so it can
+          be tried while you fix it.
         </>
       ),
       button: submitting ? 'Disabling…' : 'Disable',

@@ -112,6 +112,11 @@ export interface WorkflowGraph {
   name: string;
   description: string | null;
   status: WorkflowStatus;
+  /**
+   * Whether the workspace has it switched on. Off means nothing starts it by
+   * itself - no trigger, no schedule, no tool call - while Run still does.
+   */
+  enabled: boolean;
   nodes: GraphNode[];
   edges: GraphEdge[];
   /** What the graph is missing, worst first; empty when it holds together. */
@@ -123,6 +128,7 @@ const GRAPH_FIELDS = `
   name
   description
   status
+  enabled
   nodes {
     key kind name description agentId triggerId actionId conditionId objectId outputName icon orientation
     yesLabel noLabel x y

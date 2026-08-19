@@ -27,7 +27,8 @@ export type FiringOutcome =
   | 'UNAUTHENTICATED'
   | 'CONDITION_DID_NOT_HOLD'
   | 'UNDECIDED'
-  | 'FAILED';
+  | 'FAILED'
+  | 'WORKFLOW_DISABLED';
 
 export interface TriggerFiring {
   id: string;
@@ -48,6 +49,7 @@ export const FIRING_OUTCOME_LABEL: Record<FiringOutcome, string> = {
   UNDECIDED: 'Could not decide',
   FAILED: 'Failed',
   UNAUTHENTICATED: 'Not authenticated',
+  WORKFLOW_DISABLED: 'Workflow switched off',
 };
 
 export interface Trigger {

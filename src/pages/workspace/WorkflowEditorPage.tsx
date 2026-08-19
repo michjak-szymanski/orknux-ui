@@ -730,6 +730,14 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [name, setName] = useState('');
   const [status, setStatus] = useState<WorkflowStatus>('DRAFT');
+  /**
+   * Whether the workspace has this workflow switched on.
+   *
+   * Run works either way - trying the graph in front of you is how a workflow
+   * that is off gets fixed - so the editor says so instead of refusing, and
+   * nobody publishes into a silence they cannot see from here.
+   */
+  const [enabled, setEnabled] = useState(true);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [draft, setDraft] = useState<NodeData | null>(null);
   /** The field whose name is mid-edit, if any, and the name it had. */
@@ -1036,6 +1044,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
         setSteps({ back: 0, forward: 0 });
         setName(graph.name);
         setStatus(graph.status);
+        setEnabled(graph.enabled);
         setNodes(
           graph.nodes.map((node) => ({
             id: node.key,
@@ -1598,6 +1607,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     try {
       const graph = await saveWorkflowGraph(workspaceId, workflowId, toGraph());
       setStatus(graph.status);
+      setEnabled(graph.enabled);
       // What is left to fix is decided by the server, and saving is when it
       // decides again. Keeping the list from the last load means the panel
       // describes a graph that is no longer on screen. The save is the newest
@@ -1795,6 +1805,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       await saveWorkflowGraph(workspaceId, workflowId, toGraph());
       const graph = await publishWorkflow(workspaceId, workflowId);
       setStatus(graph.status);
+      setEnabled(graph.enabled);
       asked.current += 1;
       applyGraphFeedback(graph);
       setSaved(true);
@@ -1846,6 +1857,14 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           <span className={status === 'PUBLISHED' ? `${styles.badge} ${styles.badgeLive}` : styles.badge}>
             {status === 'PUBLISHED' ? 'Published' : 'Draft'}
           </span>
+          {!enabled && (
+            <span
+              className={`${styles.badge} ${styles.badgeOff}`}
+              title="No trigger, schedule or tool call will start this workflow while it is switched off. Run still will."
+            >
+              Switched off
+            </span>
+          )}
           {error !== null && (
             <span className={styles.error} role="alert">
               {error}

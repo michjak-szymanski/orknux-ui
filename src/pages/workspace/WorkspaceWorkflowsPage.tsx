@@ -176,7 +176,14 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
                 )}
               </span>
               <span className={styles.colLastRun}>
-                {workflow.nextRun === null ? (
+                {/*
+                  A workflow that is switched off has no next run, whatever its
+                  triggers say, so the column says which of the two silences
+                  this is rather than calling both of them "not scheduled".
+                */}
+                {!workflow.enabled ? (
+                  <span className={styles.neverRun}>Switched off</span>
+                ) : workflow.nextRun === null ? (
                   <span className={styles.neverRun}>Not scheduled</span>
                 ) : (
                   <span className={styles.nextRun} title={workflow.nextRun}>
