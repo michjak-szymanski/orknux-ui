@@ -295,7 +295,31 @@ const SHOTS = [
     },
   },
   { name: 'users', path: '/admin/users' },
-  internal && { name: 'user', path: `/admin/users/${internal.id}` },
+  internal && {
+    name: 'user',
+    path: `/admin/users/${internal.id}`,
+    /*
+     * The token names, and only the names - no value is ever shown here, and a
+     * token is stored as a hash so there is none to show. What is hidden is
+     * that these are the live tokens of whoever ran the capture: three near
+     * duplicates called after the tool that holds them, which reads as somebody
+     * else's account rather than as an illustration of what tokens are for.
+     */
+    redact: () => {
+      // Text nodes again, and only the names - a token's value is never on this
+      // page, because only its hash was ever stored.
+      const instead = new Map([
+        ['Claude Code', 'Nightly export'],
+        ['Claude Code (issue tools)', 'Rota sync'],
+        ['Claude Code issue tools', 'Status page'],
+      ]);
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+        const given = instead.get(node.nodeValue?.trim() ?? '');
+        if (given !== undefined) node.nodeValue = given;
+      }
+    },
+  },
   {
     name: 'doctor',
     path: '/admin/doctor',
@@ -327,7 +351,37 @@ const SHOTS = [
       }
     },
   },
-  { name: 'plugins', path: '/admin/plugins' },
+  {
+    name: 'plugins',
+    path: '/admin/plugins',
+    /*
+     * Installation-wide, so it lists whatever this machine holds - which on a
+     * developer's is a row of scratch uploads called `template` and `tsdemo`.
+     * They give nothing away, but a manual whose plugin page is somebody's
+     * workbench teaches the reader that a plugin is a thing you test with
+     * rather than a thing you ship. Named for what a plugin is actually for,
+     * the same way the workspaces page above is.
+     */
+    redact: () => {
+      /*
+       * By the text rather than by the shape of the page, the way the doctor
+       * page's redaction is: this list is spans with hashed class names, and a
+       * selector written against them is one that breaks the next time the
+       * stylesheet is touched.
+       */
+      const instead = new Map([
+        ['class-template', 'zendesk-bridge'],
+        ['template', 'pagerduty'],
+        ['tsdemo', 'statuspage'],
+        ['isTeammate(email: string): boolean', 'raiseTicket(subject: string, body: string): string'],
+      ]);
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+        const given = instead.get(node.nodeValue?.trim() ?? '');
+        if (given !== undefined) node.nodeValue = given;
+      }
+    },
+  },
   { name: 'roles', path: '/admin/roles' },
   { name: 'monitoring', path: '/admin/monitoring' },
   { name: 'admin-settings', path: '/admin/settings' },
