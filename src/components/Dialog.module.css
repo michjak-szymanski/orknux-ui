@@ -678,6 +678,17 @@ select.input {
   width: min(34vw, 520px);
   max-width: none;
   max-height: none;
+  /*
+   * From the header to the bottom of the window, and no further.
+   *
+   * A dialog is `height: fit-content` by the browser's own stylesheet, which
+   * over-constrains a box given both a top and a bottom: the bottom is dropped,
+   * the panel grows as tall as its form, and the part of it below the window
+   * cannot be reached - the scrollbar this asks for never appears, because
+   * nothing is overflowing. A trigger opened from a node is exactly that form,
+   * and its Save sat off the bottom of the screen.
+   */
+  height: auto;
   margin: 0;
   overflow-y: auto;
   border-top: 0;

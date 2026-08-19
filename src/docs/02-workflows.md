@@ -11,7 +11,10 @@ always the graph you are looking at; see Draft and published, below.
 
 The canvas is the workflow. Drag nodes to arrange them, drag from a node's
 handle to another node to join them, and select a node to open its panel on the
-right.
+right. An edge is dragged by either of its ends: take hold of the arrow and drop
+it on another node's input to send it somewhere else, or take hold of the other
+end to change where it leaves from. A line dropped on nothing goes back where it
+was, and one dropped on wiring the graph already has is left alone.
 
 - **Things to fix** lists what is not yet valid, and refreshes as you edit.
   A workflow with entries here can be saved but should not be trusted to run.

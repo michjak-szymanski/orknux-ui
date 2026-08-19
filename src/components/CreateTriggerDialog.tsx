@@ -16,7 +16,10 @@ export interface CreateTriggerDialogProps {
   placement?: 'modal' | 'panel';
   open: boolean;
   workspaceId: string;
+  /** Null makes one; a trigger opens it as it stands, with its type fixed. */
+  trigger?: Trigger | null;
   onClose: () => void;
+  /** What was made, or what was saved. */
   onCreated: (trigger: Trigger) => void;
 }
 
@@ -46,18 +49,20 @@ const FORM_STYLES: TriggerFormStyles = {
 };
 
 /**
- * Create Trigger, from the trigger list.
+ * Create Trigger, from the trigger list — and the same form again for a trigger
+ * that exists, where the frame around it is a panel rather than a modal.
  *
- * Only creating: a trigger that exists has a page of its own, which is where
- * everything about it is changed. A modal is right for the one moment when there
- * is nothing to look at yet, and wrong for the settings of something real —
- * those want a URL, room, and somewhere to keep a Danger Zone.
+ * A modal still only creates: settings for something real want a URL, room, and
+ * somewhere to keep a Danger Zone, which is what the trigger's own page is for.
+ * Beside a workflow graph the bargain is different — the reason somebody is
+ * reading a trigger there is the node in front of them, and a page would take
+ * that off the screen to show a form this one already holds.
  *
- * The form is mounted only while this is open, which is what resets it: it reads
- * its fields as it mounts, so the next Create Trigger starts empty without
- * anything having to empty it.
+ * The form is mounted only while this is open, and keyed by which trigger it
+ * holds, which is what resets it: it reads its fields as it mounts, so the next
+ * Create Trigger starts empty without anything having to empty it.
  */
-export function CreateTriggerDialog({ open, workspaceId, onClose, onCreated, placement = 'modal' }: CreateTriggerDialogProps) {
+export function CreateTriggerDialog({ open, workspaceId, trigger = null, onClose, onCreated, placement = 'modal' }: CreateTriggerDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -78,12 +83,14 @@ export function CreateTriggerDialog({ open, workspaceId, onClose, onCreated, pla
     >
       <div className={styles.body}>
         <header className={styles.header}>
-          <h2 className={styles.title}>Create Trigger</h2>
+          <h2 className={styles.title}>{trigger === null ? 'Create Trigger' : 'Trigger Settings'}</h2>
         </header>
 
         {open && (
           <TriggerForm
+            key={trigger?.id ?? 'new'}
             workspaceId={workspaceId}
+            trigger={trigger}
             styles={FORM_STYLES}
             onSaved={onCreated}
             onCancel={onClose}

@@ -15,6 +15,7 @@ import {
   ReactFlowProvider,
   addEdge,
   getBezierPath,
+  reconnectEdge,
   useEdgesState,
   useNodesState,
   useReactFlow,
@@ -298,6 +299,22 @@ export interface LabelOffset {
 }
 
 const NO_OFFSET: LabelOffset = { x: 0, y: 0 };
+
+/**
+ * What an edge is called, which is where it leaves from and where it arrives.
+ *
+ * The branch is in it as well as on the handle: two edges between the same pair
+ * of nodes - one for each answer - are a shape somebody will draw, and they
+ * would otherwise share an id.
+ *
+ * Written once because three places need the same answer: the graph arriving
+ * from the server, a line just drawn, and a line dragged onto somewhere else.
+ * An id worked out differently in any of them would be a second edge where
+ * there is one.
+ */
+function edgeName(connection: { source: string; sourceHandle?: string | null; target: string }): string {
+  return `${connection.source}-${connection.sourceHandle ?? 'plain'}->${connection.target}`;
+}
 
 /**
  * Where a node's input and output sit, for each way round it can face.
@@ -663,6 +680,20 @@ function opensAway(event: ReactMouseEvent): boolean {
   return event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0;
 }
 
+/**
+ * A catalogue with this definition in it: in place where it was already there,
+ * at the front where it is new.
+ *
+ * The panel saves both kinds - New makes one, Open definition changes one - and
+ * a list that only ever grew would answer the next picker with the definition
+ * twice, once as it was and once as it is now.
+ */
+function withDefinition<T extends { id: string }>(all: T[], one: T): T[] {
+  return all.some((held) => held.id === one.id)
+    ? all.map((held) => (held.id === one.id ? one : held))
+    : [one, ...all];
+}
+
 export function WorkflowEditorPage(props: WorkflowEditorPageProps) {
   // The canvas hooks need the provider above them.
   return (
@@ -714,6 +745,33 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     },
     [labelKey],
   );
+
+  /**
+   * Takes a label's position from one edge id to another.
+   *
+   * An edge is named after the two nodes it joins, so rewiring one renames it,
+   * and a position kept against the old name would be left behind on a line
+   * that no longer exists. Nothing is stored for a label still sitting where
+   * its line put it, so there is usually nothing to carry.
+   */
+  const carryLabel = useCallback(
+    (from: string, to: string) => {
+      if (from === to) return;
+      setLabelOffsets((held) => {
+        const moved = held[from];
+        if (moved === undefined) return held;
+        const next = { ...held, [to]: moved };
+        delete next[from];
+        try {
+          window.localStorage.setItem(labelKey, JSON.stringify(next));
+        } catch {
+          // As above: a browser that will not remember is not an error here.
+        }
+        return next;
+      });
+    },
+    [labelKey],
+  );
   const navigate = useNavigate();
   const { updateNode } = useReactFlow();
   /*
@@ -752,12 +810,14 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   const [browsingIcons, setBrowsingIcons] = useState(false);
   const [discarding, setDiscarding] = useState(false);
   /*
-   * Which definition is being made from the panel, if any.
+   * Which definition the builder panel is holding, if any.
    *
    * A node kind rather than a boolean per picker: only one node is selected, so
-   * only one of these dialogs can be open, and the kind says which.
+   * only one of these forms can be open, and the kind says which. The id says
+   * which one of that kind - null for one being made, so New and Open
+   * definition are the same panel asked for two different things.
    */
-  const [creating, setCreating] = useState<NodeKind | null>(null);
+  const [building, setBuilding] = useState<{ kind: NodeKind; id: string | null } | null>(null);
   const [triggers, setTriggers] = useState<Trigger[]>([]);
   const [problems, setProblems] = useState<GraphProblem[]>([]);
   /** What the server said each node needs and gives, from the last save or load. */
@@ -882,6 +942,14 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
         selectable: false,
         deletable: false,
         focusable: false,
+        /*
+         * Nor rewired. This line is drawn because a node reads a field from
+         * somewhere it is not wired to; where it runs is worked out from the
+         * references, and dragging its end would be an instruction the graph
+         * has nowhere to keep. Wiring the two nodes together is what makes it
+         * a real edge.
+         */
+        reconnectable: false,
       }));
 
     return [...carrying, ...loose];
@@ -1071,17 +1139,21 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
         setProblems(graph.problems);
         setPorts(Object.fromEntries(graph.nodes.map((node) => [node.key, { inputs: node.inputs, outputs: node.outputs }])));
         setEdges(
-          graph.edges.map((edge) => ({
-            /*
-             * The branch is in the id as well as on the handle: two edges
-             * between the same pair of nodes - one for each answer - are a
-             * shape somebody will draw, and they would otherwise share an id.
-             */
-            id: `${edge.source}-${edge.branch ?? 'plain'}->${edge.target}`,
-            source: edge.source,
-            target: edge.target,
-            sourceHandle: edge.branch === 'YES' ? 'yes' : edge.branch === 'NO' ? 'no' : null,
-          })),
+          graph.edges.map((edge) => {
+            const sourceHandle = edge.branch === 'YES' ? 'yes' : edge.branch === 'NO' ? 'no' : null;
+            return {
+              /*
+               * Named from the handle, not from the branch as it is stored. The
+               * two differ only in case, but a loaded `-YES->` and a drawn
+               * `-yes->` are two ids for one line, and the editor would let the
+               * same wiring be drawn twice without noticing.
+               */
+              id: edgeName({ source: edge.source, sourceHandle, target: edge.target }),
+              source: edge.source,
+              target: edge.target,
+              sourceHandle,
+            };
+          }),
         );
         // Freshly loaded is in step with the server, which is what `saved`
         // means to the buttons. Leaving it false lights Publish on a graph
@@ -1147,18 +1219,65 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
 
   const onConnect = useCallback(
     (connection: Connection) => {
-      setEdges((current) =>
-        addEdge(
-          {
-            ...connection,
-            id: `${connection.source}-${connection.sourceHandle ?? 'plain'}->${connection.target}`,
-          },
-          current,
-        ),
-      );
+      setEdges((current) => addEdge({ ...connection, id: edgeName(connection) }, current));
       setSaved(false);
     },
     [setEdges],
+  );
+
+  /**
+   * A line picked up by one of its ends and dropped on a different handle.
+   *
+   * This is React Flow's own reconnection rather than a delete and a redraw:
+   * the edge is the same edge afterwards, which is what keeps the label sitting
+   * on it and keeps the history reading as one step. Redrawing it would be two
+   * changes to undo, and would lose whatever was hanging off the line.
+   *
+   * Rewiring is a change to the graph like any other, so it marks the workflow
+   * unsaved, and the undo stack picks it up on its own - a step is a copy of
+   * the graph, and the graph now says something different.
+   */
+  const onReconnect = useCallback(
+    (edge: Edge, connection: Connection) => {
+      /*
+       * Put back where it came from. React Flow reports the drop either way,
+       * and taking it would move the edge to the end of the list - which is a
+       * different graph as far as the history is concerned, and would leave an
+       * undo step for a drag that changed nothing.
+       */
+      const same =
+        edge.source === connection.source &&
+        edge.target === connection.target &&
+        (edge.sourceHandle ?? null) === (connection.sourceHandle ?? null);
+      if (same) return;
+
+      const name = edgeName(connection);
+      /*
+       * Dropped onto a wiring the graph already has. Two edges would then share
+       * an id, so the line goes back where it was - the same silence as drawing
+       * a duplicate by hand, which `addEdge` refuses just as quietly.
+       */
+      if (edges.some((one) => one.id !== edge.id && one.id === name)) return;
+
+      /*
+       * Renamed as well as rewired. An edge is called after the two ends it
+       * joins, and one left under its old name would be a line called
+       * `a->b` running from a to c - which the next line drawn from a to b
+       * would then collide with.
+       */
+      setEdges((current) =>
+        reconnectEdge(edge, connection, current, { shouldReplaceId: true, getEdgeId: () => name }),
+      );
+      /*
+       * The label goes with the line. Where it has been dragged to is kept
+       * against the edge's id, and rewiring gives the edge a new one - so
+       * without this a label somebody had placed would jump back onto a line
+       * that had merely moved, which is the one thing dragging it was for.
+       */
+      carryLabel(edge.id, name);
+      setSaved(false);
+    },
+    [carryLabel, edges, setEdges],
   );
 
   function addNode(kind: NodeKind) {
@@ -1689,13 +1808,13 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
    * right button - which is worse than the modal it replaced.
    */
   useEffect(() => {
-    if (creating === null) return;
+    if (building === null) return;
     function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') setCreating(null);
+      if (event.key === 'Escape') setBuilding(null);
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [creating]);
+  }, [building]);
 
   /**
    * The turn keystroke, R until somebody changes it in Preferences.
@@ -1749,6 +1868,59 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       event.preventDefault();
       void leaveFor(destination);
     };
+  }
+
+  /**
+   * What Open definition does where the panel can hold the definition itself.
+   *
+   * New opens the builder down the left and keeps the graph on the screen;
+   * reading what a node already points at wanted the same thing and got a
+   * page instead, which took the graph away to answer a question about it.
+   * The form is the same one either way - a trigger, an action and a condition
+   * are edited by exactly the form that makes them - so this opens it on the
+   * one that exists.
+   *
+   * Still an anchor, and still handed back to the browser when the click asks
+   * for a tab of its own: the definition has a page, and somebody who wants it
+   * beside the graph rather than over it should keep having that.
+   */
+  function openingIn(kind: NodeKind, id: string, destination: string) {
+    return (event: ReactMouseEvent<HTMLAnchorElement>) => {
+      if (opensAway(event)) return;
+      event.preventDefault();
+      /*
+       * A definition the picker was not handed - a workspace with more of them
+       * than a page holds - is still readable where it always was. Opening the
+       * panel on nothing would offer to make one instead, under a link that
+       * promised to show this one.
+       */
+      if (!catalogue(kind).some((held) => held.id === id)) {
+        void leaveFor(destination);
+        return;
+      }
+      setBuilding({ kind, id });
+    };
+  }
+
+  /** The catalogue behind a picker, for the kinds the panel can hold. */
+  function catalogue(kind: NodeKind): { id: string }[] {
+    if (kind === 'TRIGGER') return triggers;
+    if (kind === 'ACTION') return actions;
+    if (kind === 'CONDITION') return conditions;
+    return [];
+  }
+
+  /**
+   * The definition the panel was opened on, or null while it is making one.
+   *
+   * Read out of the catalogue the picker is already offering rather than asked
+   * for again: these lists arrive with every field the form needs, so a second
+   * request would fetch what is on the screen.
+   */
+  function beingBuilt<T extends { id: string }>(kind: NodeKind, all: T[]): T | null {
+    if (building === null || building.kind !== kind || building.id === null) return null;
+    const id = building.id;
+    return all.find((held) => held.id === id) ?? null;
   }
 
   /*
@@ -1993,6 +2165,14 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
               }}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
+              onReconnect={onReconnect}
+              /*
+               * Room to take hold of a line's end. The grab circle sits just
+               * beyond the handle, so a wider one is easier to aim at without
+               * covering the handle itself - which is where a new line is
+               * drawn from, and has to stay reachable.
+               */
+              reconnectRadius={14}
               fitView
               proOptions={{ hideAttribution: true }}
             >
@@ -2077,7 +2257,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                         <button
                           type="button"
                           className={styles.definitionLink}
-                          onClick={() => setCreating('AGENT')}
+                          onClick={() => setBuilding({ kind: 'AGENT', id: null })}
                         >
                           New
                         </button>
@@ -2092,16 +2272,14 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                         )}
                       </span>
                     </span>
-                    <div className={styles.inputWrapper}>
-                      <DefinitionPicker
-                        id="node-agent"
-                        value={draft.agentId ?? ''}
-                        options={agents.map((agent) => ({ value: agent.id, label: agent.name }))}
-                        onChoose={(chosen) => setDraft({ ...draft, agentId: chosen || null })}
-                        placeholder="Choose an agent…"
-                        searchPlaceholder="Search agents…"
-                      />
-                    </div>
+                    <DefinitionPicker
+                      id="node-agent"
+                      value={draft.agentId ?? ''}
+                      options={agents.map((agent) => ({ value: agent.id, label: agent.name }))}
+                      onChoose={(chosen) => setDraft({ ...draft, agentId: chosen || null })}
+                      placeholder="Choose an agent…"
+                      searchPlaceholder="Search agents…"
+                    />
                     {/* The agent brings its own, so the node chooses no model. */}
                     <p className={styles.parameterHint}>
                       The agent supplies the model it answers on, its instructions, and the catalogs it was granted.
@@ -2119,7 +2297,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                         <button
                           type="button"
                           className={styles.definitionLink}
-                          onClick={() => setCreating('TRIGGER')}
+                          onClick={() => setBuilding({ kind: 'TRIGGER', id: null })}
                         >
                           New
                         </button>
@@ -2128,23 +2306,25 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                           <Link
                             to={`/workspace/${workspaceId}/triggers/${draft.triggerId}`}
                             className={styles.definitionLink}
-                            onClick={leavingFor(`/workspace/${workspaceId}/triggers/${draft.triggerId}`)}
+                            onClick={openingIn(
+                              'TRIGGER',
+                              draft.triggerId,
+                              `/workspace/${workspaceId}/triggers/${draft.triggerId}`,
+                            )}
                           >
                             Open definition
                           </Link>
                         )}
                       </span>
                     </span>
-                    <div className={styles.inputWrapper}>
-                      <DefinitionPicker
-                        id="node-trigger"
-                        value={draft.triggerId ?? ''}
-                        options={triggers.map((trigger) => ({ value: trigger.id, label: trigger.name }))}
-                        onChoose={(chosen) => setDraft({ ...draft, triggerId: chosen || null })}
-                        placeholder="Choose a trigger…"
-                        searchPlaceholder="Search triggers…"
-                      />
-                    </div>
+                    <DefinitionPicker
+                      id="node-trigger"
+                      value={draft.triggerId ?? ''}
+                      options={triggers.map((trigger) => ({ value: trigger.id, label: trigger.name }))}
+                      onChoose={(chosen) => setDraft({ ...draft, triggerId: chosen || null })}
+                      placeholder="Choose a trigger…"
+                      searchPlaceholder="Search triggers…"
+                    />
                   </div>
                 )}
 
@@ -2158,7 +2338,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                         <button
                           type="button"
                           className={styles.definitionLink}
-                          onClick={() => setCreating('ACTION')}
+                          onClick={() => setBuilding({ kind: 'ACTION', id: null })}
                         >
                           New
                         </button>
@@ -2166,23 +2346,25 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                           <Link
                             to={`/workspace/${workspaceId}/actions/${draft.actionId}`}
                             className={styles.definitionLink}
-                            onClick={leavingFor(`/workspace/${workspaceId}/actions/${draft.actionId}`)}
+                            onClick={openingIn(
+                              'ACTION',
+                              draft.actionId,
+                              `/workspace/${workspaceId}/actions/${draft.actionId}`,
+                            )}
                           >
                             Open definition
                           </Link>
                         )}
                       </span>
                     </span>
-                    <div className={styles.inputWrapper}>
-                      <DefinitionPicker
-                        id="node-action"
-                        value={draft.actionId ?? ''}
-                        options={actions.map((action) => ({ value: action.id, label: action.name }))}
-                        onChoose={(chosen) => setDraft({ ...draft, actionId: chosen || null })}
-                        placeholder="Choose an action…"
-                        searchPlaceholder="Search actions…"
-                      />
-                    </div>
+                    <DefinitionPicker
+                      id="node-action"
+                      value={draft.actionId ?? ''}
+                      options={actions.map((action) => ({ value: action.id, label: action.name }))}
+                      onChoose={(chosen) => setDraft({ ...draft, actionId: chosen || null })}
+                      placeholder="Choose an action…"
+                      searchPlaceholder="Search actions…"
+                    />
                   </div>
                 )}
 
@@ -2201,7 +2383,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                         <button
                           type="button"
                           className={styles.definitionLink}
-                          onClick={() => setCreating('OBJECT')}
+                          onClick={() => setBuilding({ kind: 'OBJECT', id: null })}
                         >
                           New
                         </button>
@@ -2216,16 +2398,14 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                         )}
                       </span>
                     </span>
-                    <div className={styles.inputWrapper}>
-                      <DefinitionPicker
-                        id="node-object"
-                        value={draft.objectId ?? ''}
-                        options={objects.map((shape) => ({ value: shape.id, label: shape.name }))}
-                        onChoose={(chosen) => setDraft({ ...draft, objectId: chosen || null })}
-                        placeholder="Choose a shape…"
-                        searchPlaceholder="Search objects…"
-                      />
-                    </div>
+                    <DefinitionPicker
+                      id="node-object"
+                      value={draft.objectId ?? ''}
+                      options={objects.map((shape) => ({ value: shape.id, label: shape.name }))}
+                      onChoose={(chosen) => setDraft({ ...draft, objectId: chosen || null })}
+                      placeholder="Choose a shape…"
+                      searchPlaceholder="Search objects…"
+                    />
                     <p className={styles.parameterHint}>
                       A saved shape fixes which fields there are; this node decides what goes in them.
                       Custom means the fields are this node&apos;s own.
@@ -2499,7 +2679,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                         <button
                           type="button"
                           className={styles.definitionLink}
-                          onClick={() => setCreating('CONDITION')}
+                          onClick={() => setBuilding({ kind: 'CONDITION', id: null })}
                         >
                           New
                         </button>
@@ -2507,23 +2687,25 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                           <Link
                             to={`/workspace/${workspaceId}/conditions/${draft.conditionId}`}
                             className={styles.definitionLink}
-                            onClick={leavingFor(`/workspace/${workspaceId}/conditions/${draft.conditionId}`)}
+                            onClick={openingIn(
+                              'CONDITION',
+                              draft.conditionId,
+                              `/workspace/${workspaceId}/conditions/${draft.conditionId}`,
+                            )}
                           >
                             Open definition
                           </Link>
                         )}
                       </span>
                     </span>
-                    <div className={styles.inputWrapper}>
-                      <DefinitionPicker
-                        id="node-condition"
-                        value={draft.conditionId ?? ''}
-                        options={conditions.map((condition) => ({ value: condition.id, label: condition.name }))}
-                        onChoose={(chosen) => setDraft({ ...draft, conditionId: chosen || null })}
-                        placeholder="Choose a condition…"
-                        searchPlaceholder="Search conditions…"
-                      />
-                    </div>
+                    <DefinitionPicker
+                      id="node-condition"
+                      value={draft.conditionId ?? ''}
+                      options={conditions.map((condition) => ({ value: condition.id, label: condition.name }))}
+                      onChoose={(chosen) => setDraft({ ...draft, conditionId: chosen || null })}
+                      placeholder="Choose a condition…"
+                      searchPlaceholder="Search conditions…"
+                    />
                   </div>
                 )}
 
@@ -2700,52 +2882,80 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       />
 
       {/*
-        Making a definition without leaving the graph.
+        Making a definition, and changing one, without leaving the graph.
 
         Each of these is the builder its own page uses, so a trigger made here is
-        made exactly as it would be there. What is added is picked straight away:
+        made exactly as it would be there - and a trigger opened here is the same
+        form its settings page shows. What is added is picked straight away:
         somebody who reached for New wanted this node to use it.
 
         Shown as a panel down the left rather than as a modal over the middle.
         The graph is the reason somebody is making the thing, and covering it to
         ask about it means answering from memory - so the canvas stays visible
         and about two thirds of the width stays usable while the form is open.
+
+        What is saved here is the definition itself, not the node: it lands in
+        the workspace at once, and every other workflow pointing at it gets the
+        new version. The graph's own Save and Publish are unaffected either way.
       */}
       <CreateTriggerDialog
         placement="panel"
-        open={creating === 'TRIGGER'}
+        open={building?.kind === 'TRIGGER'}
         workspaceId={workspaceId}
-        onClose={() => setCreating(null)}
+        trigger={beingBuilt('TRIGGER', triggers)}
+        onClose={() => setBuilding(null)}
         onCreated={(trigger) => {
-          setTriggers((all) => [trigger, ...all]);
+          setTriggers((all) => withDefinition(all, trigger));
           setDraft((current) => (current === null ? current : { ...current, triggerId: trigger.id }));
-          setCreating(null);
+          setBuilding(null);
         }}
       />
 
       <ActionDialog
         placement="panel"
-        open={creating === 'ACTION'}
+        open={building?.kind === 'ACTION'}
         workspaceId={workspaceId}
-        action={null}
-        onClose={() => setCreating(null)}
+        action={beingBuilt('ACTION', actions)}
+        onClose={() => setBuilding(null)}
         onSaved={(action) => {
-          setActions((all) => [action, ...all]);
+          setActions((all) => withDefinition(all, action));
           setDraft((current) => (current === null ? current : { ...current, actionId: action.id }));
-          setCreating(null);
+          setBuilding(null);
+        }}
+        /*
+         * Deleted from the panel, the node is left pointing at nothing rather
+         * than at an action the workspace no longer has - which the validator
+         * can say something useful about, where a dead id reads as a node that
+         * works.
+         */
+        onDeleted={() => {
+          const gone = building?.id ?? null;
+          setActions((all) => all.filter((held) => held.id !== gone));
+          setDraft((current) =>
+            current === null || current.actionId !== gone ? current : { ...current, actionId: null },
+          );
+          setBuilding(null);
         }}
       />
 
       <ConditionDialog
         placement="panel"
-        open={creating === 'CONDITION'}
+        open={building?.kind === 'CONDITION'}
         workspaceId={workspaceId}
-        condition={null}
-        onClose={() => setCreating(null)}
+        condition={beingBuilt('CONDITION', conditions)}
+        onClose={() => setBuilding(null)}
         onSaved={(condition) => {
-          setConditions((all) => [condition, ...all]);
+          setConditions((all) => withDefinition(all, condition));
           setDraft((current) => (current === null ? current : { ...current, conditionId: condition.id }));
-          setCreating(null);
+          setBuilding(null);
+        }}
+        onDeleted={() => {
+          const gone = building?.id ?? null;
+          setConditions((all) => all.filter((held) => held.id !== gone));
+          setDraft((current) =>
+            current === null || current.conditionId !== gone ? current : { ...current, conditionId: null },
+          );
+          setBuilding(null);
         }}
       />
 
@@ -2761,31 +2971,31 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       */}
       <NameDialog
         placement="panel"
-        open={creating === 'OBJECT'}
+        open={building?.kind === 'OBJECT'}
         title="Create Object"
         message="An object names a shape, so a mapping can be offered rather than typed blind."
         nameLabel="Name"
         namePlaceholder="SlackMessage"
         descriptionPlaceholder="Represents an incoming Slack message with metadata"
         submitLabel="Create Object"
-        onClose={() => setCreating(null)}
+        onClose={() => setBuilding(null)}
         onSubmit={async (name, description) => {
           const made = await createObject(workspaceId, { name, description: description || undefined });
-          setObjects((all) => [made, ...all]);
+          setObjects((all) => withDefinition(all, made));
           setDraft((current) => (current === null ? current : { ...current, objectId: made.id }));
-          setCreating(null);
+          setBuilding(null);
         }}
       />
 
       <CreateAgentDialog
         placement="panel"
-        open={creating === 'AGENT'}
+        open={building?.kind === 'AGENT'}
         workspaceId={workspaceId}
-        onClose={() => setCreating(null)}
+        onClose={() => setBuilding(null)}
         onCreated={(agent) => {
-          setAgents((all) => [agent, ...all]);
+          setAgents((all) => withDefinition(all, agent));
           setDraft((current) => (current === null ? current : { ...current, agentId: agent.id }));
-          setCreating(null);
+          setBuilding(null);
         }}
       />
     </AppShell>

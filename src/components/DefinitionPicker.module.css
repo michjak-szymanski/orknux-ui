@@ -112,20 +112,27 @@
   cursor: pointer;
 }
 
+/*
+ * The whole name, over as many lines as it takes.
+ *
+ * The closed box cuts one off, and should: it is a single line standing in for
+ * what was chosen, and the name is known by then. The open list is where the
+ * choosing happens, and a row cut to "Slack message rec…" above another cut to
+ * "Slack message rec…" is a list nobody can choose from. The narrowest frame
+ * this stands in is the workflow editor's properties panel, which leaves a row
+ * about 200px wide - room for three or four words, and no catalogue keeps its
+ * names that short.
+ */
 .optionLabel {
-  overflow: hidden;
   font-size: var(--text-md);
   color: var(--color-text-primary);
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .optionHint {
-  overflow: hidden;
   font-size: var(--text-xs);
   color: var(--color-text-muted);
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 /* The way to make one reads as an offer rather than as another name in the list. */
