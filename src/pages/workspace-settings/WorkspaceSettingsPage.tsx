@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
+import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import { fetchRoles } from '../../api/roles';
 import type { Role } from '../../api/roles';
 import type { SessionUser } from '../../api/session';
@@ -174,28 +175,31 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                 <div className={styles.roleList}>
                   {roleIds.map((roleId, index) => (
                     <div key={`${roleId}-${index}`} className={styles.roleRow}>
-                      <select
-                        className={styles.roleSelect}
-                        value={roleId}
-                        aria-label={`Role ${index + 1}`}
-                        onChange={(event) =>
-                          setRoleIds((held) =>
-                            held.map((id, at) => (at === index ? event.target.value : id)),
-                          )
-                        }
-                      >
-                        {roles.map((role) => (
-                          <option
-                            key={role.id}
-                            value={role.id}
-                            // Already on another row: choosing it twice would
-                            // assign it once and leave a row that does nothing.
-                            disabled={role.id !== roleId && roleIds.includes(role.id)}
-                          >
-                            {role.name}
-                          </option>
-                        ))}
-                      </select>
+                      <div className={styles.selectWrapper}>
+                        <select
+                          className={styles.roleSelect}
+                          value={roleId}
+                          aria-label={`Role ${index + 1}`}
+                          onChange={(event) =>
+                            setRoleIds((held) =>
+                              held.map((id, at) => (at === index ? event.target.value : id)),
+                            )
+                          }
+                        >
+                          {roles.map((role) => (
+                            <option
+                              key={role.id}
+                              value={role.id}
+                              // Already on another row: choosing it twice would
+                              // assign it once and leave a row that does nothing.
+                              disabled={role.id !== roleId && roleIds.includes(role.id)}
+                            >
+                              {role.name}
+                            </option>
+                          ))}
+                        </select>
+                        <img src={chevronDown12Icon} alt="" width={12} height={12} />
+                      </div>
                       <button
                         type="button"
                         className={styles.roleRemove}

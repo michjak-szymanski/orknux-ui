@@ -75,9 +75,31 @@
   gap: var(--space-4);
 }
 
+/*
+ * The chevron the browser no longer draws, drawn by us: the wrapper is the
+ * ground it is positioned against, and the select keeps room for it on the
+ * right so a three-digit page size does not run underneath.
+ */
+.selectWrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.selectWrapper > img {
+  position: absolute;
+  right: var(--space-2);
+  pointer-events: none;
+}
+
 .perPageSelect {
-  padding: 1px var(--space-4);
-  background: var(--color-background);
+  padding: 1px var(--space-16) 1px var(--space-4);
+  /*
+   * `--color-bg`, not `--color-background`, which is not a token and resolved
+   * to nothing — leaving the control transparent, and the menu it drops white
+   * on a dark page, which is what a select takes its popup colour from.
+   */
+  background-color: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-4);
   font: inherit;

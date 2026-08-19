@@ -5,7 +5,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import type { Workspace } from '../api/workspaces';
 import { cachedWorkspaces, loadWorkspaces } from '../session/workspaces';
 import bookIcon from '../assets/book.svg';
-import chevronDownIcon from '../assets/chevron-down.svg';
+import chevronDown12Icon from '../assets/chevron-down-12.svg';
 import doorOpenIcon from '../assets/door-open.svg';
 import orknuxMark from '../assets/orknux-mark.svg';
 import panelCollapseIcon from '../assets/panel-collapse.svg';
@@ -266,11 +266,17 @@ export function AppShell({
             className={collapsed ? `${styles.sidebar} ${styles.sidebarCollapsed}` : styles.sidebar}
             aria-label="Primary"
           >
-            {sidebar}
             {/*
               The toggle belongs to the shell rather than to each sidebar: it is
               the column being collapsed, not what happens to be in it, so every
               screen gets it without having to remember to.
+
+              First in the column, before whatever the page put in it. It used to
+              be last, which on this menu meant last of nineteen — off the bottom
+              of a laptop screen, sitting against the attribution strip it has
+              nothing to do with, so the way to reopen a collapsed column was to
+              scroll to the foot of it (issue #108). At the top it is on the
+              menu it collapses, and on screen however tall that menu gets.
             */}
             <button
               type="button"
@@ -282,6 +288,7 @@ export function AppShell({
             >
               <img src={panelCollapseIcon} alt="" width={16} height={16} />
             </button>
+            {sidebar}
           </nav>
         )}
         {/*
@@ -567,7 +574,7 @@ function WorkspaceSelector({ workspaces, selectedId, onSelect }: WorkspaceSelect
           </option>
         ))}
       </select>
-      <img className={styles.workspaceChevron} src={chevronDownIcon} alt="" width={16} height={16} />
+      <img className={styles.workspaceChevron} src={chevronDown12Icon} alt="" width={12} height={12} />
     </div>
   );
 }

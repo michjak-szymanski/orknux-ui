@@ -12,6 +12,7 @@ import {
 } from '../../api/skills';
 import type { Skill, SkillCatalog } from '../../api/skills';
 import { timeAgo } from '../../api/tools';
+import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import fileTextIcon from '../../assets/file-text.svg';
 import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
@@ -306,21 +307,24 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
                   <label className={styles.label} htmlFor="skill-catalog">
                     Catalog
                   </label>
-                  <select
-                    id="skill-catalog"
-                    className={styles.input}
-                    value={catalogId}
-                    onChange={(event) => {
-                      setCatalogId(event.target.value);
-                      setSaved(false);
-                    }}
-                  >
-                    {catalogs.map((catalog) => (
-                      <option key={catalog.id} value={catalog.id}>
-                        {catalog.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className={styles.selectWrapper}>
+                    <select
+                      id="skill-catalog"
+                      className={styles.input}
+                      value={catalogId}
+                      onChange={(event) => {
+                        setCatalogId(event.target.value);
+                        setSaved(false);
+                      }}
+                    >
+                      {catalogs.map((catalog) => (
+                        <option key={catalog.id} value={catalog.id}>
+                          {catalog.name}
+                        </option>
+                      ))}
+                    </select>
+                    <img src={chevronDown12Icon} alt="" width={12} height={12} />
+                  </div>
                 </div>
                 <div className={styles.field}>
                   <label className={styles.label} htmlFor="skill-description">

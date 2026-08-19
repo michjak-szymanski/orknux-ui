@@ -6,6 +6,7 @@ import type { Issue, IssueOrder, IssuePage, IssueStatus } from '../../api/issues
 import type { SessionUser } from '../../api/session';
 import { timeAgo } from '../../api/tools';
 import { initialsOf } from '../../api/users';
+import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import plusIcon from '../../assets/plus.svg';
 import searchIcon from '../../assets/search.svg';
 import { AppShell } from '../../components/AppShell';
@@ -330,18 +331,21 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
             <label className={styles.sortLabel} htmlFor="issue-order">
               Sort
             </label>
-            <select
-              id="issue-order"
-              className={styles.sortSelect}
-              value={order}
-              onChange={(event) => filterBy({ order: event.target.value })}
-            >
-              {ORDERS.map((one) => (
-                <option key={one.order} value={one.order}>
-                  {one.label}
-                </option>
-              ))}
-            </select>
+            <span className={styles.selectWrapper}>
+              <select
+                id="issue-order"
+                className={styles.sortSelect}
+                value={order}
+                onChange={(event) => filterBy({ order: event.target.value })}
+              >
+                {ORDERS.map((one) => (
+                  <option key={one.order} value={one.order}>
+                    {one.label}
+                  </option>
+                ))}
+              </select>
+              <img src={chevronDown12Icon} alt="" width={12} height={12} />
+            </span>
             {/*
               One button rather than two options, because a direction has two
               states and a control with two states is a switch. The arrow says

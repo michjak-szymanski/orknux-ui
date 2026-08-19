@@ -270,10 +270,28 @@ select.input {
   gap: var(--space-8);
 }
 
+/*
+ * The chevron the platform used to draw inside its own box, drawn by us now —
+ * the shape every other select in the app already had.
+ */
+.selectWrapper {
+  position: relative;
+  display: flex;
+  flex: 1 0 0;
+  min-width: 0;
+  align-items: center;
+}
+
+.selectWrapper > img {
+  position: absolute;
+  right: var(--space-10);
+  pointer-events: none;
+}
+
 .roleSelect {
   flex: 1 0 0;
   min-width: 0;
-  padding: var(--space-8) var(--space-10);
+  padding: var(--space-8) var(--space-32) var(--space-8) var(--space-10);
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-6);

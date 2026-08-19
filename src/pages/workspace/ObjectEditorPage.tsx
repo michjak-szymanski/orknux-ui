@@ -5,6 +5,7 @@ import { deleteObject, fetchObject, fetchWorkspaceObjects, updateObject, validat
 import type { ObjectPropertyInput, PropertyKind, WorkflowObject } from '../../api/objects';
 import type { SessionUser } from '../../api/session';
 import { timeAgo } from '../../api/tools';
+import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import fileTextIcon from '../../assets/file-text.svg';
 import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
@@ -265,30 +266,33 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
                     onChange={(event) => edit(index, { name: event.target.value })}
                   />
                   <span className={styles.propertyTypeCol}>
-                    <select
-                      className={styles.propertyType}
-                      value={row.type}
-                      aria-label={`Type of ${row.name || `property ${index + 1}`}`}
-                      onChange={(event) => edit(index, { type: event.target.value })}
-                    >
-                      <option value="STRING">string</option>
-                      <option value="NUMBER">number</option>
-                      <option value="BOOLEAN">boolean</option>
-                      <option value="ARRAY:STRING">array&lt;string&gt;</option>
-                      <option value="ARRAY:NUMBER">array&lt;number&gt;</option>
-                      <option value="ARRAY:BOOLEAN">array&lt;boolean&gt;</option>
-                      {/* An object may hold one of itself, which is how a tree is described. */}
-                      {others.map((other) => (
-                        <option key={`o-${other.id}`} value={`OBJECT:${other.id}`}>
-                          {other.name}
-                        </option>
-                      ))}
-                      {others.map((other) => (
-                        <option key={`a-${other.id}`} value={`ARRAY:OBJECT:${other.id}`}>
-                          array&lt;{other.name}&gt;
-                        </option>
-                      ))}
-                    </select>
+                    <span className={styles.typeSelect}>
+                      <select
+                        className={styles.propertyType}
+                        value={row.type}
+                        aria-label={`Type of ${row.name || `property ${index + 1}`}`}
+                        onChange={(event) => edit(index, { type: event.target.value })}
+                      >
+                        <option value="STRING">string</option>
+                        <option value="NUMBER">number</option>
+                        <option value="BOOLEAN">boolean</option>
+                        <option value="ARRAY:STRING">array&lt;string&gt;</option>
+                        <option value="ARRAY:NUMBER">array&lt;number&gt;</option>
+                        <option value="ARRAY:BOOLEAN">array&lt;boolean&gt;</option>
+                        {/* An object may hold one of itself, which is how a tree is described. */}
+                        {others.map((other) => (
+                          <option key={`o-${other.id}`} value={`OBJECT:${other.id}`}>
+                            {other.name}
+                          </option>
+                        ))}
+                        {others.map((other) => (
+                          <option key={`a-${other.id}`} value={`ARRAY:OBJECT:${other.id}`}>
+                            array&lt;{other.name}&gt;
+                          </option>
+                        ))}
+                      </select>
+                      <img src={chevronDown12Icon} alt="" width={12} height={12} />
+                    </span>
                   </span>
                   <span className={styles.propertyActionCol}>
                     <button

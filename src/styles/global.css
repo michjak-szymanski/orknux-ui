@@ -55,11 +55,31 @@ input[type='search']::-webkit-search-cancel-button {
  *
  * Global rather than per screen: there is no select anywhere that wants the
  * default, and one that is added tomorrow should not have to remember this.
+ *
+ * `appearance: none` is here for the same reason. Most selects in the app
+ * already asked for it one stylesheet at a time, and the handful that never
+ * did were the ones that looked wrong: a platform box with a platform arrow
+ * inside a row of controls the page had drawn itself (issue #103). Turning it
+ * off globally means the box is always ours; what it cannot turn off is the
+ * menu, which is the browser's own window and is only ever tinted, never
+ * shaped, by anything written here.
+ *
+ * A select with the box off shows nothing to say it opens, so each one is given
+ * a chevron beside it — an `<img>` in a `position: relative` wrapper, which is
+ * how the twenty-odd that were already styled do it. That part cannot be
+ * global: the chevron is an element, not a property.
  */
 select {
+  appearance: none;
   font: inherit;
   color: var(--color-text-primary);
   background-color: var(--color-surface-raised);
+  cursor: pointer;
+}
+
+/* The pointer says "this opens", so one that does not opens nothing. */
+select:disabled {
+  cursor: not-allowed;
 }
 
 option {

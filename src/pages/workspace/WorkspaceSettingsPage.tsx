@@ -13,7 +13,7 @@ import {
   setWorkspaceTranscriptionModel,
 } from '../../api/workspaces';
 import type { Workspace } from '../../api/workspaces';
-import chevronDownIcon from '../../assets/chevron-down.svg';
+import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import { AppShell } from '../../components/AppShell';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
@@ -154,7 +154,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                   </option>
                 ))}
             </select>
-            <img src={chevronDownIcon} alt="" width={16} height={16} />
+            <img src={chevronDown12Icon} alt="" width={12} height={12} />
           </div>
           <p className={styles.hint}>
             Used for the workspace&rsquo;s own small jobs rather than for the conversation — naming a chat from
@@ -194,7 +194,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                   </option>
                 ))}
             </select>
-            <img src={chevronDownIcon} alt="" width={16} height={16} />
+            <img src={chevronDown12Icon} alt="" width={12} height={12} />
           </div>
           <p className={styles.hint}>
             {models.some((model) => model.kind === 'TRANSCRIPTION')
@@ -229,7 +229,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                   </option>
                 ))}
             </select>
-            <img src={chevronDownIcon} alt="" width={16} height={16} />
+            <img src={chevronDown12Icon} alt="" width={12} height={12} />
           </div>
           <p className={styles.hint}>
             {models.some((model) => model.kind === 'SPEECH')
@@ -263,7 +263,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                   </option>
                 ))}
             </select>
-            <img src={chevronDownIcon} alt="" width={16} height={16} />
+            <img src={chevronDown12Icon} alt="" width={12} height={12} />
           </div>
           <p className={styles.hint}>
             Answers questions about the page somebody is on, and can look up this workspace’s workflows and

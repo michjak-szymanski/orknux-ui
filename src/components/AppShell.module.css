@@ -419,12 +419,24 @@
   padding-inline: var(--space-8);
 }
 
-/* The toggle sits at the bottom, below whatever the page put in the column. */
+/*
+ * The toggle sits at the top of the column, above whatever the page put in it.
+ *
+ * It used to be last, with `margin-top: auto` — which on a menu of nineteen
+ * sections put it below the fold of a laptop screen and hard against the
+ * attribution strip along the bottom of the window, so it read as part of the
+ * copyright line rather than as part of the menu, and reopening a collapsed
+ * column meant scrolling to the end of it first (issue #108).
+ *
+ * Against the right edge while the column is open, which is the edge it pulls
+ * in; centred over the icons while it is closed, because that is the only
+ * column there is then and a button hugging one side of it looks dropped.
+ */
 .collapseToggle {
   display: flex;
   align-items: center;
-  margin-top: auto;
-  padding: var(--space-10) var(--space-12);
+  align-self: flex-end;
+  padding: var(--space-6);
   background: none;
   border: 0;
   border-radius: var(--radius-6);
@@ -437,9 +449,23 @@
   opacity: 1;
 }
 
-/* Pointing the other way says what pressing it does now. */
-.sidebarCollapsed .collapseToggle img {
+/*
+ * The chevrons point the way the edge of the column is about to move: inwards
+ * while it is open, outwards while it is closed. The icon file is drawn
+ * pointing right, so it is the open state that turns it round — which is the
+ * opposite of what this rule used to do, and the reason a menu about to be
+ * pulled in showed an arrow pushing out.
+ */
+.collapseToggle img {
   transform: rotate(180deg);
+}
+
+.sidebarCollapsed .collapseToggle {
+  align-self: center;
+}
+
+.sidebarCollapsed .collapseToggle img {
+  transform: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

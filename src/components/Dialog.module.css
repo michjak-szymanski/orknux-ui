@@ -326,6 +326,14 @@
 
 .select {
   appearance: none;
+  /*
+   * `.input` asks for no background at all, because the wrapper around it draws
+   * the box. That is right for a text field and wrong for a select: the menu
+   * the browser drops takes its colour from the control, and a transparent
+   * control opens a white list in the middle of a dark page. It is given the
+   * wrapper's own surface, so the box still looks like one box.
+   */
+  background-color: var(--color-bg);
   cursor: pointer;
 }
 

@@ -84,6 +84,16 @@
   outline: none;
 }
 
+/*
+ * The keyboard has to be able to see where it is. The control drops its own
+ * outline above, and the box it sits in is what is actually on screen — so the
+ * box carries the mark, the way every other field in the app does. Without this
+ * the four selects on this page took focus and showed nothing at all.
+ */
+.inputWrapper:focus-within {
+  border-color: var(--color-accent-brand);
+}
+
 /* The chevron beside it is the one drawn; the control's own is hidden. */
 .select {
   appearance: none;

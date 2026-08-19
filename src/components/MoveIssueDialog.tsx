@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+import chevronDown12Icon from '../assets/chevron-down-12.svg';
 import { moveIssue } from '../api/issues';
 import type { Issue } from '../api/issues';
 import { fetchWorkspaces } from '../api/workspaces';
@@ -112,20 +113,29 @@ export function MoveIssueDialog({ issue, onClose, onMoved }: MoveIssueDialogProp
             <label className={styles.label} htmlFor="move-issue-workspace">
               Move to
             </label>
-            <select
-              id="move-issue-workspace"
-              className={`${styles.input} ${styles.select}`}
-              value={chosen}
-              onChange={(event) => setChosen(event.target.value)}
-              disabled={submitting}
-            >
-              <option value="">Choose a workspace…</option>
-              {workspaces.map((workspace) => (
-                <option key={workspace.id} value={workspace.id}>
-                  {workspace.name}
-                </option>
-              ))}
-            </select>
+            {/*
+              In a wrapper with a chevron beside it, like every other select in
+              a dialog. It had neither: `.input` draws no box of its own — the
+              wrapper is the box — so this one was a bare platform control in a
+              row of fields the page had drawn itself.
+            */}
+            <div className={styles.inputWrapper}>
+              <select
+                id="move-issue-workspace"
+                className={`${styles.input} ${styles.select}`}
+                value={chosen}
+                onChange={(event) => setChosen(event.target.value)}
+                disabled={submitting}
+              >
+                <option value="">Choose a workspace…</option>
+                {workspaces.map((workspace) => (
+                  <option key={workspace.id} value={workspace.id}>
+                    {workspace.name}
+                  </option>
+                ))}
+              </select>
+              <img src={chevronDown12Icon} alt="" width={12} height={12} />
+            </div>
             <p className={styles.fieldHint}>
               Its comments, labels, links, observers and files come with it. It is given a number that is free where it
               lands, so <strong>#{issue?.number}</strong> stops being this issue: the address people have been using
