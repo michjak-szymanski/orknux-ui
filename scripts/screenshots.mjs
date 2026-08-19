@@ -452,33 +452,50 @@ const SHOTS = [
     path: '/admin/users',
     /*
      * Installation-wide, like the workspaces and plugins lists above, so it
-     * shows whoever this machine knows - and one of them is the account an AI
-     * assistant signs in with here, called after the vendor whose assistant it
-     * is.
+     * shows whoever this machine happens to know - and a development machine
+     * knows accounts that were never meant to be in a manual.
      *
-     * That name cannot ship in a manual for a reason that has nothing to do
-     * with privacy. A reader who meets "Claude" in the users table of a product
-     * that also has agents in it will conclude the product is that assistant,
-     * or ships with it, or requires it - and none of those are true. Orknux
-     * talks to whatever model provider it is pointed at. An accident of whose
-     * machine took the picture would be read as a statement about the product.
+     * Written as a rule rather than as a list of names to paint over, which is
+     * the difference between this and the two redactions above it. Those know
+     * what is on this particular machine; a list like that is wrong the moment
+     * somebody else runs the capture, and worse, it has to write down the very
+     * names it exists to keep out of the picture. So the cast the seed makes is
+     * kept and everybody else is given an invented colleague's name, in the
+     * order they appear.
      *
-     * So the row is given a colleague's name, the same way the workspaces above
-     * are given invented names: what the page is - three accounts, two kinds,
-     * one of them holding two roles - is unchanged, and only whose account it
-     * is stops being visible.
+     * The reason is not privacy. A reader who meets an unexplained account in
+     * the users table of a product that also has agents in it draws conclusions
+     * about what the product is or ships with, and an accident of whose machine
+     * took the picture gets read as a statement about the software. What the
+     * page is - three accounts, two kinds, one of them holding two roles - is
+     * unchanged. Only whose accounts they are stops being visible.
      */
-    redact: () => {
-      const instead = new Map([
-        ['Claude', 'Priya Raman'],
-        // The avatar, which is initials rather than a name and so is missed by
-        // a map written only against names.
-        ['CL', 'PR'],
-      ]);
-      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-      for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
-        const given = instead.get(node.nodeValue?.trim() ?? '');
-        if (given !== undefined) node.nodeValue = given;
+    redactWith: { keep: [USER, COLLEAGUE] },
+    redact: ({ keep }) => {
+      const invented = [
+        ['Priya Raman', 'PR', 'priya'],
+        ['Tomas Lindqvist', 'TL', 'tomas'],
+        ['Ruth Adeyemi', 'RA', 'ruth'],
+      ];
+      let next = 0;
+      const main = document.querySelector('main');
+      if (main === null) return;
+      for (const link of main.querySelectorAll('a[href^="/admin/users/"]')) {
+        const row = link.parentElement?.parentElement;
+        const cell = row?.children[0];
+        if (cell === undefined) continue;
+        // The cell reads as initials, then the display name, then the username
+        // where there is one: `ALalice`, `DWDana Whitfielddana`.
+        const text = cell.textContent ?? '';
+        if (keep.some((username) => text.endsWith(username))) continue;
+        const [name, initials, username] = invented[next] ?? ['A colleague', 'AC', 'colleague'];
+        next += 1;
+        const nodes = [];
+        const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+        for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) nodes.push(node);
+        if (nodes[0] !== undefined) nodes[0].nodeValue = initials;
+        if (nodes[1] !== undefined) nodes[1].nodeValue = name;
+        if (nodes[2] !== undefined) nodes[2].nodeValue = username;
       }
     },
   },
@@ -781,7 +798,7 @@ for (const shot of CHOSEN) {
     // Animations settle, and a refresh already in flight lands.
     await page.waitForTimeout(700);
     if (shot.prepare) await shot.prepare(page);
-    if (shot.redact) await page.evaluate(shot.redact);
+    if (shot.redact) await page.evaluate(shot.redact, shot.redactWith);
     await page.evaluate(hideTheEndpoint, { real: REAL_ENDPOINT, shown: SHOWN_ENDPOINT });
     await page.screenshot({ path: `${OUT}${shot.name}.png` });
     taken += 1;
