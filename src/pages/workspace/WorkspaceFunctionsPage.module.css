@@ -111,8 +111,11 @@
 .colActions {
   display: flex;
   flex-shrink: 0;
+  align-items: center;
   justify-content: flex-end;
-  width: 70px;
+  /* Duplicate, Export and the way in. */
+  gap: var(--space-6);
+  width: 112px;
 }
 
 .name {

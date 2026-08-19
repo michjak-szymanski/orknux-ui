@@ -25,6 +25,10 @@ import toggleOffIcon from '../../assets/toggle-off.svg';
 import toggleOnIcon from '../../assets/toggle-on.svg';
 import trashIcon from '../../assets/trash-grey.svg';
 import { AppShell } from '../../components/AppShell';
+import {
+  ExportComponentButton,
+  ImportComponentsButton,
+} from '../../components/ComponentTransfer';
 import { Loader } from '../../components/Loader';
 import { NameDialog } from '../../components/NameDialog';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
@@ -279,6 +283,17 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
                     aria-label="Search skills"
                   />
                 </div>
+                <ImportComponentsButton
+                  workspaceId={workspaceId}
+                  onImported={() =>
+                    void guard(async () => {
+                      // The catalogs too: an imported skill names its folder, and
+                      // a folder this workspace did not have was just made.
+                      await loadCatalogs();
+                      await loadSkills();
+                    })
+                  }
+                />
                 <button type="button" className={styles.addMemory} onClick={() => setCreating(true)}>
                   + Add Skill
                 </button>
@@ -332,6 +347,13 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
                             data-keeps-colour
                           />
                         </button>
+                        <ExportComponentButton
+                          workspaceId={workspaceId}
+                          kind="SKILL"
+                          id={skill.id}
+                          name={skill.name}
+                          className={styles.iconButton}
+                        />
                         <Link
                           className={styles.iconButton}
                           to={`/workspace/${workspaceId}/skills/${skill.id}`}

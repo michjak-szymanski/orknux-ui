@@ -8,6 +8,11 @@ import type { SessionUser } from '../../api/session';
 import settingsIcon from '../../assets/settings-14.svg';
 import { AppShell } from '../../components/AppShell';
 import { CompactPagination } from '../../components/CompactPagination';
+import {
+  ExportComponentButton,
+  ImportComponentsButton,
+  transferStyles,
+} from '../../components/ComponentTransfer';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
@@ -71,9 +76,12 @@ export function WorkspaceConditionsPage({ session, onSignOut }: WorkspaceConditi
               Define reusable conditions for workflow branching and action triggers.
             </p>
           </div>
-          <Link className={styles.createCondition} to={`/workspace/${workspaceId}/conditions/new`}>
-            + Create Condition
-          </Link>
+          <div className={transferStyles.headerActions}>
+            <ImportComponentsButton workspaceId={workspaceId} onImported={load} />
+            <Link className={styles.createCondition} to={`/workspace/${workspaceId}/conditions/new`}>
+              + Create Condition
+            </Link>
+          </div>
         </header>
 
         <div className={styles.table}>
@@ -104,6 +112,12 @@ export function WorkspaceConditionsPage({ session, onSignOut }: WorkspaceConditi
               </span>
               <span className={`${styles.colDescription} ${styles.muted}`}>{condition.description}</span>
               <span className={styles.colActions}>
+                <ExportComponentButton
+                  workspaceId={workspaceId}
+                  kind="CONDITION"
+                  id={condition.id}
+                  name={condition.name}
+                />
                 <Link
                   className={styles.rowAction}
                   to={`/workspace/${workspaceId}/conditions/${condition.id}`}

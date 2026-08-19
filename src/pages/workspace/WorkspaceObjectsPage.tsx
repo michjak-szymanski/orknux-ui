@@ -9,6 +9,11 @@ import { timeAgo } from '../../api/tools';
 import settingsIcon from '../../assets/settings-14.svg';
 import { AppShell } from '../../components/AppShell';
 import { CompactPagination } from '../../components/CompactPagination';
+import {
+  ExportComponentButton,
+  ImportComponentsButton,
+  transferStyles,
+} from '../../components/ComponentTransfer';
 import { Loader } from '../../components/Loader';
 import { NameDialog } from '../../components/NameDialog';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
@@ -65,9 +70,12 @@ export function WorkspaceObjectsPage({ session, onSignOut }: WorkspaceObjectsPag
           <h1 className={styles.title}>Objects</h1>
           <p className={styles.subtitle}>Named data structures the workspace's workflows pass around.</p>
         </div>
-        <button type="button" className={styles.createButton} onClick={() => setCreating(true)}>
-          + Create Object
-        </button>
+        <div className={transferStyles.headerActions}>
+          <ImportComponentsButton workspaceId={workspaceId} onImported={load} />
+          <button type="button" className={styles.createButton} onClick={() => setCreating(true)}>
+            + Create Object
+          </button>
+        </div>
       </header>
 
       {error !== null && (
@@ -107,6 +115,7 @@ export function WorkspaceObjectsPage({ session, onSignOut }: WorkspaceObjectsPag
             <span className={`${styles.colStatus} ${styles.modified}`}>{held.propertyCount}</span>
             <span className={`${styles.colModified} ${styles.modified}`}>{timeAgo(held.lastModifiedAt)}</span>
             <span className={styles.colActions}>
+              <ExportComponentButton workspaceId={workspaceId} kind="OBJECT" id={held.id} name={held.name} />
               <Link
                 className={styles.rowAction}
                 to={`/workspace/${workspaceId}/objects/${held.id}`}

@@ -10,6 +10,11 @@ import toggleOffIcon from '../../assets/toggle-off.svg';
 import toggleOnIcon from '../../assets/toggle-on.svg';
 import { AppShell } from '../../components/AppShell';
 import { CompactPagination } from '../../components/CompactPagination';
+import {
+  ExportComponentButton,
+  ImportComponentsButton,
+  transferStyles,
+} from '../../components/ComponentTransfer';
 import { Loader } from '../../components/Loader';
 import { NameDialog } from '../../components/NameDialog';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
@@ -68,9 +73,12 @@ export function WorkspaceToolsPage({ session, onSignOut }: WorkspaceToolsPagePro
           <h1 className={styles.title}>Tools</h1>
           <p className={styles.subtitle}>Custom JavaScript tools callable by agents during execution.</p>
         </div>
-        <button type="button" className={styles.createButton} onClick={() => setCreating(true)}>
-          + Create Tool
-        </button>
+        <div className={transferStyles.headerActions}>
+          <ImportComponentsButton workspaceId={workspaceId} onImported={load} />
+          <button type="button" className={styles.createButton} onClick={() => setCreating(true)}>
+            + Create Tool
+          </button>
+        </div>
       </header>
 
       {error !== null && (
@@ -118,6 +126,7 @@ export function WorkspaceToolsPage({ session, onSignOut }: WorkspaceToolsPagePro
             </span>
             <span className={`${styles.colModified} ${styles.modified}`}>{timeAgo(tool.lastModifiedAt)}</span>
             <span className={styles.colActions}>
+              <ExportComponentButton workspaceId={workspaceId} kind="TOOL" id={tool.id} name={tool.name} />
               <Link
                 className={styles.rowAction}
                 to={`/workspace/${workspaceId}/tools/${tool.id}`}

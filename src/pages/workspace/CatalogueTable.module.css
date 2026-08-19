@@ -126,7 +126,9 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 80px;
+  /* Wide enough for Export beside the way in, which every list now offers. */
+  gap: var(--space-6);
+  width: 112px;
 }
 
 /* The name opens the editor, so it reads as something to click. */

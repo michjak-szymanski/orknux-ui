@@ -14,6 +14,11 @@ import copyIcon from '../../assets/copy.svg';
 import settingsIcon from '../../assets/settings-14.svg';
 import { AppShell } from '../../components/AppShell';
 import { CompactPagination } from '../../components/CompactPagination';
+import {
+  ExportComponentButton,
+  ImportComponentsButton,
+  transferStyles,
+} from '../../components/ComponentTransfer';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
@@ -144,13 +149,16 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
             it handed you to a moment later - no code, no removing a parameter, no
             naming the object a parameter meant. There is one form now.
           */}
-          <button
-            type="button"
-            className={styles.createFunction}
-            onClick={() => navigate(`/workspace/${workspaceId}/functions/new`)}
-          >
-            + Create Function
-          </button>
+          <div className={transferStyles.headerActions}>
+            <ImportComponentsButton workspaceId={workspaceId} onImported={load} />
+            <button
+              type="button"
+              className={styles.createFunction}
+              onClick={() => navigate(`/workspace/${workspaceId}/functions/new`)}
+            >
+              + Create Function
+            </button>
+          </div>
         </header>
 
         <div className={styles.table}>
@@ -203,6 +211,19 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
                   >
                     <img src={copyIcon} alt="" width={14} height={14} />
                   </button>
+                )}
+                {/*
+                  A plugin's function is not the workspace's to take a copy of.
+                  Exporting one would write a file that imports as a workspace
+                  function nobody can point back at the plugin.
+                */}
+                {fn.editable && (
+                  <ExportComponentButton
+                    workspaceId={workspaceId}
+                    kind="FUNCTION"
+                    id={fn.id}
+                    name={fn.name}
+                  />
                 )}
                 <button
                   type="button"
