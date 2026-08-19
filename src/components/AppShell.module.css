@@ -368,6 +368,8 @@
  * clamp, and keeps it.
  */
 .workspace {
+  /* The collapse handle is placed against the sidebar's edge. */
+  position: relative;
   display: flex;
   flex: 1 0 0;
   align-items: stretch;
@@ -435,70 +437,51 @@
  * column there is then and a button hugging one side of it looks dropped.
  */
 /*
- * On the first menu row, at the column's edge, drawn as lightly as the menu
- * draws its own icons.
+ * A circle sitting on the column's edge, half over the menu and half over the
+ * page, level with the first row.
  *
- * No button chrome: a circle or a border makes it the loudest thing in a column
- * of quiet rows, and it is the least important control there. Same 16px, same
- * muted colour as a section icon, and it only comes up on hover.
- *
- * Out of the flow, so it takes no row of its own and cannot drift - sticking it
- * to the view made it float over the menu as the page scrolled. The first item
- * keeps room on its right so a long label never runs underneath.
- *
- * Collapsed, there is no room beside a 64px column, so it becomes its own
- * centred row - the one case where a line of its own is the only option.
+ * `left` follows the column's own width, so the handle rides the edge when it
+ * moves rather than being told twice where the edge is. Translated back by half
+ * itself, which is what makes it straddle rather than sit beside.
  */
-.collapseToggle {
+.edgeHandle {
+  position: absolute;
+  top: 36px;
+  left: var(--sidebar-width);
+  z-index: 5;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: absolute;
-  top: calc(var(--space-16) + 8px);
-  right: var(--space-8);
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   padding: 0;
-  background: none;
-  border: 0;
-  border-radius: var(--radius-6);
+  transform: translate(-50%, -50%);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
   cursor: pointer;
-  opacity: 0.55;
-  transition: opacity 150ms ease;
+  opacity: 0.85;
+  transition:
+    opacity 150ms ease,
+    left 150ms ease;
 }
 
-.sidebar > :first-child {
-  padding-right: 36px;
-}
-
-.collapseToggle:hover {
+.edgeHandle:hover {
   opacity: 1;
+  border-color: var(--color-accent-brand);
 }
 
-/*
- * The chevrons point the way the edge of the column is about to move: inwards
- * while it is open, outwards while it is closed. The icon file is drawn
- * pointing right, so it is the open state that turns it round — which is the
- * opposite of what this rule used to do, and the reason a menu about to be
- * pulled in showed an arrow pushing out.
- */
-/* Mirrored when the column is shut, so the divided edge is the one that moves. */
-.sidebarCollapsed .collapseToggle img {
-  transform: scaleX(-1);
+/* Chevron down, turned to point at the edge it is about to pull in. */
+.edgeHandle img {
+  transform: rotate(90deg);
 }
 
-.sidebarCollapsed .collapseToggle {
-  position: static;
-  align-self: center;
-  height: auto;
+.edgeHandleShut {
+  left: 64px;
 }
 
-.sidebarCollapsed > :first-child {
-  padding-right: var(--space-8);
-}
-
-.sidebarCollapsed .collapseToggle img {
-  transform: none;
+.edgeHandleShut img {
+  transform: rotate(-90deg);
 }
 
 @media (prefers-reduced-motion: reduce) {
