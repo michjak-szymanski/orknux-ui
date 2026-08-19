@@ -139,6 +139,24 @@ export function WorkspacePluginsPage({ session, onSignOut }: WorkspacePluginsPag
           </p>
         )}
 
+        {/*
+          Said outright, because a page listing plugins and offering nothing against
+          any of them reads as broken rather than as finished. What can be set here
+          is what a plugin asked for, so plugins that ask for nothing leave a list
+          with nothing to open — and that sentence is the difference between a
+          screen that is working and one somebody reports.
+        */}
+        {!loading && error === null && plugins !== null && plugins.length > 0 && asksForNothing(plugins) && (
+          <p className={styles.notice}>
+            None of the plugins loaded into this installation ask for anything, so there is nothing for
+            this workspace to set. A plugin declares what it has to be told and only what it declares can
+            be answered here
+            {session.admin
+              ? ' — the template on the admin plugins page shows how a plugin declares a parameter.'
+              : '.'}
+          </p>
+        )}
+
         {plugins !== null && plugins.length > 0 && (
           <div className={styles.table}>
             <div className={styles.tableHeader}>
@@ -214,10 +232,20 @@ export function WorkspacePluginsPage({ session, onSignOut }: WorkspacePluginsPag
   );
 }
 
+/** Whether every plugin in the list declared no parameters at all. */
+function asksForNothing(plugins: WorkspacePlugin[]): boolean {
+  return plugins.every((one) => one.parameters.length === 0);
+}
+
 /** What the row says about a plugin without opening it. */
 function Summary({ entry }: { entry: WorkspacePlugin }) {
+  /*
+   * "Declares no parameters" rather than "needs nothing": the first says whose
+   * doing it is that the row cannot be opened, and the second reads as if this
+   * page had decided there was nothing worth showing.
+   */
   if (entry.parameters.length === 0) {
-    return <span className={styles.muted}>needs nothing</span>;
+    return <span className={styles.muted}>declares no parameters</span>;
   }
   if (entry.missing.length > 0) {
     return (
@@ -315,8 +343,17 @@ function ParameterRow({ parameter, variables, busy, onSet, onClear }: ParameterR
             if (event.target.value !== '') onSet({ variableId: event.target.value });
           }}
         >
+          {/*
+            A workspace with no variables gets a picker that opens onto nothing,
+            which is the same complaint one level down: say that it is empty
+            rather than letting it look like it failed to load.
+          */}
           <option value="">
-            {parameter.secret ? 'Choose a variable' : 'Read a variable'}
+            {variables.length === 0
+              ? 'No variables in this workspace'
+              : parameter.secret
+                ? 'Choose a variable'
+                : 'Read a variable'}
           </option>
           {variables.map((variable) => (
             <option key={variable.id} value={variable.id}>
@@ -331,6 +368,13 @@ function ParameterRow({ parameter, variables, busy, onSet, onClear }: ParameterR
           </button>
         )}
       </div>
+
+      {parameter.secret && variables.length === 0 && (
+        <p className={styles.parameterNote}>
+          A secret is only ever answered by pointing at a variable, and this workspace has none yet.
+          Add one on the Variables page and it will be offered here.
+        </p>
+      )}
 
       {parameter.variableName !== null && (
         <p className={styles.parameterNote}>
