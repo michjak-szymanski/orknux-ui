@@ -75,7 +75,7 @@ export function WorkspaceConditionsPage({ session, onSignOut }: WorkspaceConditi
     fetchCondition(conditionId)
       .then((condition) => {
         if (!current) return;
-        if (condition === null) setError('That condition no longer exists.');
+        if (condition === null) setError('That condition does not exist, or you do not have access to it.');
         else setEditing(condition);
       })
       .catch((cause: unknown) => {

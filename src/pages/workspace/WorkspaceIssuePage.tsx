@@ -216,7 +216,7 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
       .then((found) => {
         if (!current) return;
         if (found === null) {
-          setLoadError('That issue no longer exists.');
+          setLoadError('That issue does not exist, or you do not have access to it.');
           return;
         }
         setIssue(found);

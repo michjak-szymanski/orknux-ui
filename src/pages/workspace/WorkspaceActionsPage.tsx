@@ -58,7 +58,7 @@ export function WorkspaceActionsPage({ session, onSignOut }: WorkspaceActionsPag
     fetchAction(actionId)
       .then((action) => {
         if (!current) return;
-        if (action === null) setError('That action no longer exists.');
+        if (action === null) setError('That action does not exist, or you do not have access to it.');
         else setEditing(action);
       })
       .catch((cause: unknown) => {
