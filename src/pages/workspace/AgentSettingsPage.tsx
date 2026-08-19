@@ -160,6 +160,7 @@ export function AgentSettingsPage({ session, onSignOut }: AgentSettingsPageProps
 
   return (
     <AppShell
+      title={agent?.name}
       user={shellUser(session)}
       section="workspace"
       workspacePath={`/workspace/${workspaceId}`}

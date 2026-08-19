@@ -182,6 +182,7 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
 
   return (
     <AppShell
+      title={held?.name}
       user={shellUser(session)}
       section="workspace"
       workspacePath={`/workspace/${workspaceId}`}

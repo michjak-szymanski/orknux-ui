@@ -76,6 +76,7 @@ export function WorkflowSettingsPage({ session, onSignOut }: WorkflowSettingsPag
 
   return (
     <AppShell
+      title={workflow?.name}
       user={shellUser(session)}
       section="workspace"
       workspacePath={`/workspace/${workspaceId}`}

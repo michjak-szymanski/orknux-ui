@@ -190,6 +190,7 @@ export function MemoryEditorPage({ session, onSignOut }: MemoryEditorPageProps) 
 
   return (
     <AppShell
+      title={adding ? 'New note' : memory?.title}
       user={shellUser(session)}
       section="workspace"
       workspacePath={`/workspace/${workspaceId}`}

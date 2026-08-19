@@ -624,6 +624,7 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
 
   return (
     <AppShell
+      title={creating ? 'New issue' : issue === null ? undefined : `#${issue.number} ${issue.title}`}
       user={shellUser(session)}
       section="workspace"
       workspacePath={`/workspace/${workspaceId}`}

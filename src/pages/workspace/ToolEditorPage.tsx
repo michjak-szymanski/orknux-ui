@@ -158,6 +158,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
 
   return (
     <AppShell
+      title={tool?.name}
       user={shellUser(session)}
       section="workspace"
       workspacePath={`/workspace/${workspaceId}`}

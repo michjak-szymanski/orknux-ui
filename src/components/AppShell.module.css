@@ -44,10 +44,20 @@
   min-width: 0;
 }
 
+/* A link out to the product's own site; it should still read as the wordmark. */
 .brand {
   display: flex;
   align-items: center;
   gap: var(--space-12);
+  text-decoration: none;
+}
+
+.brand:hover .wordmark {
+  color: var(--color-accent-brand);
+}
+
+.brand:hover .logoIcon {
+  border-color: var(--color-accent-brand);
 }
 
 .logoIcon {

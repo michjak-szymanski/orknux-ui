@@ -194,6 +194,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
 
   return (
     <AppShell
+      title={connection?.name}
       user={shellUser(session)}
       section="workspace"
       workspacePath={`/workspace/${workspaceId}`}

@@ -422,6 +422,7 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
 
   return (
     <AppShell
+      title={run?.workflowName}
       user={shellUser(session)}
       section="workspace"
       workspacePath={`/workspace/${workspaceId}`}

@@ -110,6 +110,7 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
 
   return (
     <AppShell
+      title={server?.name}
       user={shellUser(session)}
       section="workspace"
       workspacePath={`/workspace/${workspaceId}`}

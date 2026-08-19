@@ -1,3 +1,5 @@
+import { matchPath } from 'react-router-dom';
+
 import activityIcon from './assets/activity.svg';
 import bellIcon from './assets/bell.svg';
 import bookIcon from './assets/book.svg';
@@ -331,4 +333,66 @@ export function goToPages(options: { workspacePath: string | null; showAdmin: bo
 
     return [{ ...page.goTo, to }];
   });
+}
+
+/**
+ * A page that is somewhere to be, rather than one of something.
+ *
+ * The distinction is already written down above: a page carrying a `goTo` entry
+ * can be gone to by name, and `goTo: false` marks the ones that cannot because
+ * they are about a particular thing. Two questions turn on that same line — what
+ * the browser tab should say while an entity is still loading, and where
+ * switching workspace lands — so it is worth having a name.
+ */
+export type SectionPage = Page & { goTo: GoTo };
+
+/** Which page a real address is, or undefined where it is none of them. */
+function pageAt(pathname: string): Page | undefined {
+  // In registry order, which is why `.../issues/new` is listed before
+  // `.../issues/:number`: both patterns match that address, and the first one
+  // wins here exactly as it does in the router.
+  return PAGES.find((page) => matchPath(page.path, pathname) !== null);
+}
+
+/**
+ * The nearest page at or above [pathname] that is a section in its own right.
+ *
+ * Walks up a segment at a time, so the editor of one workflow answers Workflows
+ * and one user under Admin answers Users. Undefined for an address that is no
+ * page of this application at all.
+ */
+export function sectionAt(pathname: string): SectionPage | undefined {
+  let candidate = pathname;
+
+  while (candidate !== '') {
+    const page = pageAt(candidate);
+    // Spread rather than returned as it stands: narrowing a property does not
+    // narrow the object it is on, and `SectionPage` is the whole point here.
+    if (page !== undefined && page.goTo !== false) return { ...page, goTo: page.goTo };
+    candidate = candidate.slice(0, candidate.lastIndexOf('/'));
+  }
+
+  return undefined;
+}
+
+/**
+ * Where switching to another workspace lands, from the page open now.
+ *
+ * The rule is: a list page keeps its place, an entity page falls back to its
+ * list. Issues, workflows and the audit log exist in every workspace, so
+ * somebody comparing two of them stays on the screen they were reading. One
+ * particular thing does not travel — issue #4 over there is a different issue,
+ * or none — so a page about one thing lands on the list it was opened from.
+ *
+ * Everything else, including a page belonging to no workspace, goes to the
+ * workspace's own front page. Any query string is dropped: it describes what was
+ * being looked at here, and a filter naming this workspace's labels or ids means
+ * nothing in the next one.
+ */
+export function workspaceSwitchPath(pathname: string, workspaceId: string): string {
+  const home = `/workspace/${workspaceId}`;
+  const section = sectionAt(pathname);
+
+  if (section === undefined || !section.path.startsWith('/workspace/:workspaceId')) return home;
+  return section.path.replace('/workspace/:workspaceId', home);
 }

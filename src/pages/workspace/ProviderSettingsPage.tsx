@@ -269,6 +269,7 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
 
   return (
     <AppShell
+      title={adding ? 'New provider' : provider?.name}
       user={shellUser(session)}
       section="workspace"
       workspacePath={`/workspace/${workspaceId}`}

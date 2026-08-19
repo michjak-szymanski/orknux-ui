@@ -9,6 +9,7 @@ import orknuxMark from '../assets/orknux-mark.svg';
 import panelCollapseIcon from '../assets/panel-collapse.svg';
 import settingsIcon from '../assets/settings.svg';
 import { lastWorkspaceId } from '../session/lastWorkspace';
+import { sectionAt } from '../navigation';
 import { useInstallation } from '../session/installation';
 import { setSidebarCollapsed, useSidebarCollapsed } from '../session/sidebar';
 import { Attribution } from './Attribution';
@@ -37,6 +38,16 @@ export interface AppShellProps {
   sidebar: ReactNode;
   /** The workflow editor fills the workspace itself. */
   hideSidebar?: boolean;
+  /**
+   * What is open here — the workflow being edited, the issue being read — for
+   * the browser tab.
+   *
+   * Left out by a page that is a list rather than a thing, and left out while
+   * the thing is still on its way: the shell falls back to the section's own
+   * name, so a tab says "Tools" for the moment before it can say which tool,
+   * and never says `undefined` or an id.
+   */
+  title?: string;
   /**
    * Scrolls the content rather than the window.
    *
@@ -79,6 +90,41 @@ function useWorkspaceFallback(needed: boolean): string | undefined {
   return path;
 }
 
+/** The product's own site, where the mark in the corner goes. */
+const WEBSITE = 'https://orknux.ai';
+
+/** What the tab says when there is nothing else to say. */
+const PRODUCT = 'Orknux';
+
+/**
+ * Names the tab after whatever this page is showing: `<what is open> - Orknux`.
+ *
+ * The product name goes last because a tab strip with a dozen tabs in it cuts
+ * the end off, and the half worth keeping is the half that says which of the
+ * dozen this one is. Somebody with three of these open is looking for an issue
+ * and a workflow, not for three tabs all beginning "Orknux".
+ *
+ * Here rather than on each page, which is the point: a page written tomorrow is
+ * named after its section without anybody remembering to do anything, because
+ * every screen in this application is drawn inside this shell and the section
+ * is already written down in `navigation.ts`. A page that opens one thing says
+ * so by passing its name, and that is the only line it has to write.
+ */
+function useDocumentTitle(title: string | undefined, pathname: string) {
+  // The section is what the tab says until the thing arrives — and on the pages
+  // that are a section and nothing else, what it keeps saying.
+  const named = title ?? sectionAt(pathname)?.goTo.label;
+
+  useEffect(() => {
+    document.title = named === undefined ? PRODUCT : `${named} - ${PRODUCT}`;
+    // Back to the bare product name on the way out, so the tab does not still
+    // name a tool while the login form is on screen.
+    return () => {
+      document.title = PRODUCT;
+    };
+  }, [named]);
+}
+
 export function AppShell({
   user,
   section,
@@ -87,6 +133,7 @@ export function AppShell({
   hideSidebar = false,
   scrollContent = false,
   showAdmin = true,
+  title,
   onSignOut,
   children,
 }: AppShellProps) {
@@ -95,18 +142,32 @@ export function AppShell({
   const collapsed = useSidebarCollapsed();
   const installation = useInstallation();
 
+  useDocumentTitle(title, pathname);
+
   return (
     <div className={scrollContent ? `${styles.shell} ${styles.shellFixed}` : styles.shell}>
       <header className={styles.topNav}>
         {/* Brand and sections travel together; the box between them is centred. */}
         <div className={styles.topLeft}>
-        <div className={styles.brand}>
+        {/*
+          Out to the product's own site, and in a tab of its own.
+
+          It leaves the application, which is the whole reason for the target:
+          somebody with a half-written workflow open should not lose it to a
+          click on the logo. That is how the two links in the footer already
+          behave — the licence and the source — and this is the third link out
+          of an interface that otherwise only goes to itself.
+
+          Nothing is lost by it. The mark was inert before this, and the way
+          back to a workspace is the Workspace tab immediately beside it.
+        */}
+        <a className={styles.brand} href={WEBSITE} target="_blank" rel="noreferrer noopener">
           <span className={styles.logoIcon}>
             {/* 24x20 is the mark's own ratio, and the size the website header uses. */}
             <img src={orknuxMark} alt="" width={24} height={20} />
           </span>
           <p className={styles.wordmark}>ORKNUX</p>
-        </div>
+        </a>
 
         <nav className={styles.navLinks} aria-label="Sections">
           <span className={styles.navDivider} aria-hidden="true" />

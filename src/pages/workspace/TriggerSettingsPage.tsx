@@ -101,6 +101,7 @@ export function TriggerSettingsPage({ session, onSignOut }: TriggerSettingsPageP
 
   return (
     <AppShell
+      title={trigger?.name}
       user={shellUser(session)}
       section="workspace"
       workspacePath={`/workspace/${workspaceId}`}

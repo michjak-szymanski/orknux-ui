@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import type { Workspace } from '../api/workspaces';
 import activityIcon from '../assets/activity.svg';
@@ -20,6 +20,7 @@ import settingsIcon from '../assets/settings.svg';
 import puzzleIcon from '../assets/puzzle.svg';
 import toolIcon from '../assets/tool.svg';
 import alertTriangleIcon from '../assets/alert-triangle.svg';
+import { workspaceSwitchPath } from '../navigation';
 import { rememberWorkspace } from '../session/lastWorkspace';
 import { cachedWorkspaces, loadWorkspaces } from '../session/workspaces';
 import { SidebarNavItem, WorkspaceSelector } from './AppShell';
@@ -55,6 +56,7 @@ const WORKSPACE_LIST_SIZE = 100;
 
 export function WorkspaceSidebar({ workspaceId, active, onWorkspacesLoaded }: WorkspaceSidebarProps) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   // Painting from cache is what stops the selector emptying and refilling on a
   // navigation that never left the workspace: this sidebar is a new mount, but
   // the list it needs is the one the last mount already fetched.
@@ -85,7 +87,18 @@ export function WorkspaceSidebar({ workspaceId, active, onWorkspacesLoaded }: Wo
 
   return (
     <>
-      <WorkspaceSelector workspaces={workspaces} selectedId={workspaceId} onSelect={(id) => navigate(`/workspace/${id}`)} />
+      {/*
+        Changing workspace used to change page as well: whatever was open, the
+        selector sent you to the front of the new workspace. Now it keeps the
+        screen where the screen exists in both — a list page keeps its place, an
+        entity page falls back to its list, since issue #4 there is a different
+        issue or none. `workspaceSwitchPath` is where that is written down.
+      */}
+      <WorkspaceSelector
+        workspaces={workspaces}
+        selectedId={workspaceId}
+        onSelect={(id) => navigate(workspaceSwitchPath(pathname, id))}
+      />
       <SidebarNavItem
         label="Executions"
         icon={gitBranchIcon}

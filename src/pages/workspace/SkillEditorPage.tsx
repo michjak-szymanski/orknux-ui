@@ -171,6 +171,7 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
 
   return (
     <AppShell
+      title={skill?.name}
       user={shellUser(session)}
       section="workspace"
       workspacePath={`/workspace/${workspaceId}`}

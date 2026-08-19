@@ -197,6 +197,7 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
 
   return (
     <AppShell
+      title={displayName.trim() || username.trim() || (creating ? 'New user' : undefined)}
       user={shellUser(session)}
       section="admin"
       showAdmin={session.admin}
