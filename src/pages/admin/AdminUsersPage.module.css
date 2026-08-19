@@ -88,7 +88,7 @@
 .tableHeader,
 .row {
   display: grid;
-  grid-template-columns: minmax(0, 3fr) 100px minmax(0, 2fr) minmax(0, 2fr) 44px;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr) 100px minmax(0, 2fr) minmax(0, 2fr) 44px;
   align-items: center;
   gap: var(--space-12);
   padding: var(--space-12) var(--space-8);
@@ -176,6 +176,7 @@
   color: var(--color-text-secondary);
 }
 
+.colEmail,
 .colRoles,
 .colModified {
   overflow: hidden;

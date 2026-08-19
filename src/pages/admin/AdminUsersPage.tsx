@@ -106,6 +106,7 @@ export function AdminUsersPage({ session, onSignOut }: AdminUsersPageProps) {
         <div className={styles.table}>
           <div className={styles.tableHeader}>
             <span className={styles.colUser}>User</span>
+            <span className={styles.colEmail}>Email</span>
             <span className={styles.colType}>Type</span>
             <span className={styles.colRoles}>Roles</span>
             <span className={styles.colModified}>Last Modified</span>
@@ -137,6 +138,9 @@ export function AdminUsersPage({ session, onSignOut }: AdminUsersPageProps) {
                     )}
                   </span>
                 </span>
+                <span className={styles.colEmail} title={user.email ?? undefined}>
+                  {user.email ?? '—'}
+                </span>
                 <span className={styles.colType}>
                   <span className={user.type === 'INTERNAL' ? styles.badgeInternal : styles.badgeExternal}>
                     {user.type === 'INTERNAL' ? 'Internal' : 'External'}
@@ -149,17 +153,20 @@ export function AdminUsersPage({ session, onSignOut }: AdminUsersPageProps) {
                   {timeAgo(user.lastModifiedAt)} by {user.lastModifiedBy}
                 </span>
                 <span className={styles.colActions}>
-                  {/* Only what this installation made up is this installation's to change. */}
-                  {user.editable && (
-                    <Link
-                      className={styles.edit}
-                      to={`/admin/users/${user.id}`}
-                      aria-label={`Edit ${user.displayName}`}
-                      title="Edit"
-                    >
-                      <img src={pencilIcon} alt="" width={14} height={14} />
-                    </Link>
-                  )}
+                  {/*
+                    Offered for both kinds now. What an external user's page
+                    lets an administrator change is their address and nothing
+                    else - everything else about them is the provider's, and an
+                    edit here would lose at their next sign-in.
+                  */}
+                  <Link
+                    className={styles.edit}
+                    to={`/admin/users/${user.id}`}
+                    aria-label={user.editable ? `Edit ${user.displayName}` : `Edit ${user.displayName}'s email`}
+                    title={user.editable ? 'Edit' : 'Edit email'}
+                  >
+                    <img src={pencilIcon} alt="" width={14} height={14} />
+                  </Link>
                 </span>
               </div>
             ))}

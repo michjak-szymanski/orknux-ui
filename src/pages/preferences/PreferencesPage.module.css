@@ -126,3 +126,57 @@
     transition: none;
   }
 }
+
+/* An address and the button that saves it, on one line the way a form reads. */
+.row {
+  display: flex;
+  gap: var(--space-8);
+  width: 100%;
+  align-items: center;
+}
+
+.input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: var(--space-8) var(--space-12);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.input:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -1px;
+}
+
+.save {
+  padding: var(--space-8) var(--space-16);
+  border: 0;
+  border-radius: var(--radius-6);
+  background: var(--color-accent);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-accent-foreground);
+  cursor: pointer;
+}
+
+.save:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.done {
+  margin: var(--space-8) 0 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.error {
+  margin: var(--space-8) 0 0;
+  font-size: var(--text-xs);
+  color: var(--color-danger);
+}

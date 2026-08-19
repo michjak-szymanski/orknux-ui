@@ -21,6 +21,10 @@ export interface AppUser {
   id: string;
   username: string;
   displayName: string;
+  /** Where to write to them. Null where neither the provider nor anybody here has said. */
+  email: string | null;
+  /** True where the address was typed here, so sign-in leaves it alone. */
+  emailChosen: boolean;
   type: UserType;
   roles: RoleRef[];
   /** False for anybody the identity provider defines. */
@@ -32,7 +36,7 @@ export interface AppUser {
 }
 
 const USER_FIELDS =
-  'id username displayName type roles { id name } editable hasPassword lastModifiedAt lastModifiedBy';
+  'id username displayName email emailChosen type roles { id name } editable hasPassword lastModifiedAt lastModifiedBy';
 
 /** A token, as it is listed: never its secret, which is shown once. */
 export interface UserToken {
@@ -89,6 +93,20 @@ export async function setUserPassword(id: string, password: string): Promise<App
     { id, password },
   );
   return data.setUserPassword;
+}
+
+/**
+ * Sets an address: yours when no id is given, anybody's for an administrator.
+ *
+ * An empty one clears it and hands the field back to the provider, which is why
+ * this takes a plain string rather than refusing to send nothing.
+ */
+export async function setUserEmail(email: string, id?: string): Promise<AppUser> {
+  const data = await graphql<{ setUserEmail: AppUser }>(
+    `mutation ($id: ID, $email: String) { setUserEmail(id: $id, email: $email) { ${USER_FIELDS} } }`,
+    { id: id ?? null, email },
+  );
+  return data.setUserEmail;
 }
 
 export async function changeMyPassword(currentPassword: string, newPassword: string): Promise<boolean> {

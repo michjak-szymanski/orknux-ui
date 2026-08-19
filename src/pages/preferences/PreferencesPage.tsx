@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import type { SessionUser } from '../../api/session';
+import { setUserEmail } from '../../api/users';
 import moonIcon from '../../assets/moon.svg';
 import sunIcon from '../../assets/sun.svg';
 import { AppShell } from '../../components/AppShell';
@@ -39,9 +40,11 @@ export interface PreferencesPageProps {
 /**
  * What one person has decided about their own interface.
  *
- * Only appearance so far. A profile and security keys belong here too, and when
- * they arrive they belong on the server — they follow a person between
- * machines, where the theme is a property of the machine they are sitting at.
+ * Appearance, and the one thing about a person the server keeps for them: the
+ * address to write to. The theme is a property of the machine somebody is
+ * sitting at and stays in the browser; an address follows them between
+ * machines, so it lives on the server. Security keys belong here too, when they
+ * arrive.
  */
 export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
   const shortcut = usePaletteShortcut();
@@ -108,6 +111,43 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
 
   const [theme, setTheme] = useState<Theme>(currentTheme);
 
+  /*
+   * The address, as it is now and as it is being typed.
+   *
+   * Seeded from the session because that is where the answer already arrives -
+   * the recorded one where there is one, and the provider's until somebody
+   * changes it. Kept here after saving rather than re-read: the session was
+   * fetched once, when the application started, and it would go on saying the
+   * old address until the next reload.
+   */
+  const [email, setEmail] = useState(session.email ?? '');
+  /** What the server last said, so the button knows whether anything has changed. */
+  const [savedEmail, setSavedEmail] = useState(session.email ?? '');
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [emailSaid, setEmailSaid] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+
+  async function saveEmail() {
+    if (savingEmail) return;
+    setSavingEmail(true);
+    setEmailError(null);
+    setEmailSaid(null);
+    try {
+      const held = await setUserEmail(email.trim());
+      setEmail(held.email ?? '');
+      setSavedEmail(held.email ?? '');
+      setEmailSaid(
+        held.email === null
+          ? 'Cleared. Your directory entry fills it in again at your next sign-in.'
+          : 'Saved. Signing in no longer overwrites it.',
+      );
+    } catch (cause) {
+      setEmailError(cause instanceof Error ? cause.message : 'Could not save the address.');
+    } finally {
+      setSavingEmail(false);
+    }
+  }
+
   function choose(next: Theme) {
     // Applied first: the page it changes is the page being looked at.
     applyTheme(next);
@@ -132,6 +172,49 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
               Manage your developer profile, app appearance, models, and security keys.
             </p>
           </header>
+
+          <section className={styles.card}>
+            <h2 className={styles.sectionTitle}>Profile</h2>
+
+            <div className={styles.setting}>
+              <label className={styles.settingLabel} htmlFor="profile-email">
+                Email Address
+              </label>
+              <div className={styles.row}>
+                <input
+                  id="profile-email"
+                  className={styles.input}
+                  type="email"
+                  value={email}
+                  placeholder="nobody@example.com"
+                  autoComplete="email"
+                  onChange={(event) => {
+                    setEmail(event.target.value);
+                    setEmailSaid(null);
+                    setEmailError(null);
+                  }}
+                />
+                <button
+                  type="button"
+                  className={styles.save}
+                  onClick={() => void saveEmail()}
+                  disabled={savingEmail || email.trim() === savedEmail}
+                >
+                  {savingEmail ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+              <p className={styles.settingNote}>
+                Taken from your directory entry to begin with, and refreshed from it each time you
+                sign in until you set one here. Emptying it hands it back.
+              </p>
+              {emailSaid !== null && <p className={styles.done}>{emailSaid}</p>}
+              {emailError !== null && (
+                <p className={styles.error} role="alert">
+                  {emailError}
+                </p>
+              )}
+            </div>
+          </section>
 
           <section className={styles.card}>
             <h2 className={styles.sectionTitle}>Appearance</h2>

@@ -11,6 +11,7 @@ import {
   fetchUser,
   fetchUserTokens,
   initialsOf,
+  setUserEmail,
   setUserPassword,
   updateUser,
 } from '../../api/users';
@@ -39,6 +40,11 @@ export interface AdminUserPageProps {
  * What is absent is a password. An internal user is an identity - somebody to
  * assign an issue to, a name to show - not a login; signing in stays with the
  * identity provider.
+ *
+ * An external user opens here too, with everything read-only but their address.
+ * That one field is this installation's to set - the provider seeds it and
+ * stops overwriting it once somebody has typed one - and refusing to open the
+ * page at all would leave an administrator nowhere to do it.
  */
 export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
   const { userId = '' } = useParams();
@@ -47,6 +53,18 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
 
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
+  /**
+   * Whether the provider owns this row.
+   *
+   * Loaded rather than refused, unlike before: an address is the one thing on
+   * an external user this installation may change, so the page opens for them
+   * with everything else read-only instead of turning them away at the door.
+   */
+  const [external, setExternal] = useState(false);
+  const [email, setEmail] = useState('');
+  /** What the server last said, so the button knows whether anything has changed. */
+  const [savedEmail, setSavedEmail] = useState('');
+  const [emailSaid, setEmailSaid] = useState<string | null>(null);
   const [chosen, setChosen] = useState<Set<string>>(new Set());
   const [roles, setRoles] = useState<Role[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -75,19 +93,20 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
         if (!current) return;
         if (found === null) {
           setLoadError('That user no longer exists.');
-        } else if (!found.editable) {
-          // The list never links here for one, but an address can be typed.
-          setLoadError(
-            `${found.displayName} comes from the identity provider and cannot be edited here.`,
-          );
         } else {
           setUsername(found.username);
           setDisplayName(found.displayName);
+          setEmail(found.email ?? '');
+          setSavedEmail(found.email ?? '');
+          setExternal(!found.editable);
           setHasPassword(found.hasPassword);
           setChosen(new Set(found.roles.map((role) => role.id)));
-          fetchUserTokens(userId)
-            .then(setTokens)
-            .catch(() => setTokens([]));
+          // An external user has none, and asking would only be a refused call.
+          if (found.editable) {
+            fetchUserTokens(userId)
+              .then(setTokens)
+              .catch(() => setTokens([]));
+          }
         }
       })
       .catch((cause: unknown) => {
@@ -132,6 +151,27 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
       setPasswordSaid('Set. They can sign in with it now.');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not set the password.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveEmail() {
+    if (saving) return;
+    setSaving(true);
+    setError(null);
+    setEmailSaid(null);
+    try {
+      const held = await setUserEmail(email.trim(), userId);
+      setEmail(held.email ?? '');
+      setSavedEmail(held.email ?? '');
+      setEmailSaid(
+        held.email === null
+          ? 'Cleared. The provider fills it in again at their next sign-in.'
+          : 'Saved. Signing in no longer overwrites it.',
+      );
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not save the address.');
     } finally {
       setSaving(false);
     }
@@ -187,18 +227,25 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
               <div className={styles.titleGroup}>
                 <h1 className={styles.title}>{called}</h1>
                 <p className={styles.subtitle}>
-                  {creating ? 'A new internal user.' : 'Internal — managed here.'}
+                  {creating
+                    ? 'A new internal user.'
+                    : external
+                      ? 'External — the identity provider’s, apart from the address below.'
+                      : 'Internal — managed here.'}
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              className={styles.save}
-              onClick={() => void save()}
-              disabled={saving || username.trim() === ''}
-            >
-              {saving ? 'Saving…' : creating ? 'Create User' : 'Save Changes'}
-            </button>
+            {/* Nothing here to save for an external user: the address has its own button. */}
+            {!external && (
+              <button
+                type="button"
+                className={styles.save}
+                onClick={() => void save()}
+                disabled={saving || username.trim() === ''}
+              >
+                {saving ? 'Saving…' : creating ? 'Create User' : 'Save Changes'}
+              </button>
+            )}
           </header>
 
           {error !== null && (
@@ -234,11 +281,55 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
                 type="text"
                 value={displayName}
                 placeholder={username.trim() || 'How they are shown'}
+                // The provider says what an external user is called, and would
+                // say it again at their next sign-in.
+                disabled={external}
                 onChange={(event) => setDisplayName(event.target.value)}
               />
             </div>
 
-            <fieldset className={styles.rolesBox}>
+            {/*
+              The address, once the user exists. Its own button rather than the
+              form's, because it is the one field an external user has here and
+              a Save Changes that only saved one field would be a lie on their
+              page.
+            */}
+            {!creating && (
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="user-email">
+                  Email
+                </label>
+                <p className={styles.hint}>
+                  {external
+                    ? 'Taken from their directory entry, and refreshed from it at every sign-in until one is set here. Emptying it hands it back.'
+                    : 'Where to write to them. Internal users have no directory entry to inherit one from.'}
+                </p>
+                <div className={styles.row}>
+                  <input
+                    id="user-email"
+                    className={styles.input}
+                    type="email"
+                    value={email}
+                    placeholder="nobody@example.com"
+                    onChange={(event) => {
+                      setEmail(event.target.value);
+                      setEmailSaid(null);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className={styles.save}
+                    onClick={() => void saveEmail()}
+                    disabled={saving || email.trim() === savedEmail}
+                  >
+                    Save
+                  </button>
+                </div>
+                {emailSaid !== null && <p className={styles.done}>{emailSaid}</p>}
+              </div>
+            )}
+
+            <fieldset className={styles.rolesBox} disabled={external}>
               <legend className={styles.label}>Roles</legend>
               {roles.length === 0 ? (
                 <p className={styles.hint}>No roles are defined yet.</p>
@@ -269,7 +360,7 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
               second: most never need one, since an identity that only ever
               receives work does not sign in.
             */}
-            {!creating && (
+            {!creating && !external && (
               <>
                 <div className={styles.field}>
                   <span className={styles.label}>Password</span>
