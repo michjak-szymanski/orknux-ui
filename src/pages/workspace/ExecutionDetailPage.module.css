@@ -308,6 +308,17 @@ a.refresh {
   color: var(--color-danger);
 }
 
+.summaryLink {
+  color: var(--color-accent-brand);
+  text-decoration: none;
+}
+
+/* A link only underlines when it is asked to be one. */
+.summaryLink:hover,
+.summaryLink:focus-visible {
+  text-decoration: underline;
+}
+
 /* ---- Graph ---- */
 
 .graphHeader {

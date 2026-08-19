@@ -71,6 +71,11 @@ export interface ExecutionDetail extends Execution {
   error: string | null;
   /** The node that ended the run early; null for a run that went all the way through. */
   stoppedAtNodeKey: string | null;
+  /**
+   * The run this one was started from, when it came of re-running an earlier
+   * one - all of it, or from one of its steps. Null for a run nobody re-ran.
+   */
+  startedFrom: string | null;
   steps: ExecutionStep[];
   edges: Array<{ source: string; target: string }>;
   logs: ExecutionLogLine[];
@@ -177,7 +182,7 @@ export function formatRelative(iso: string): string {
 
 const EXECUTION_DETAIL_FIELDS = `
   id workspaceId workflowId workflowName status trigger startedAt finishedAt durationSeconds error
-  stoppedAtNodeKey stoppedReason
+  stoppedAtNodeKey stoppedReason startedFrom
   steps { key kind name description status startedAt finishedAt durationSeconds input output error actionId conditionId branch carriedOver x y }
   edges { source target }
   logs { id nodeKey at level message }

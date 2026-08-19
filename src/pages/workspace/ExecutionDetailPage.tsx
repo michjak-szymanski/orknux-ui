@@ -521,6 +521,19 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
                 <h2 className={styles.cardTitle}>Summary</h2>
                 <dl className={styles.summary}>
                   <SummaryRow label="Run ID">#{executionId}</SummaryRow>
+                  {/* Where this run came from, for a run that came of re-running
+                      another. Only the id is kept, and only the id is needed:
+                      the workflow is the same one named two rows below. */}
+                  {run?.startedFrom != null && (
+                    <SummaryRow label="Started from">
+                      <Link
+                        className={styles.summaryLink}
+                        to={`/workspace/${workspaceId}/executions/${run.startedFrom}`}
+                      >
+                        Run #{run.startedFrom}
+                      </Link>
+                    </SummaryRow>
+                  )}
                   <SummaryRow label="Status">
                     {run !== null && (
                       <span className={`${styles.statusBadge} ${styles[run.status.toLowerCase()]}`}>
