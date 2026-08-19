@@ -12,6 +12,7 @@ import {
   deleteIssue,
   editIssueComment,
   fetchIssue,
+  fetchIssueHistory,
   fetchIssueLabels,
   issueAttachmentUrl,
   removeIssueAttachment,
@@ -19,7 +20,14 @@ import {
   updateIssue,
   uploadIssueAttachments,
 } from '../../api/issues';
-import type { Assignee, Issue, IssueAttachment, IssueStatus } from '../../api/issues';
+import type {
+  Assignee,
+  Issue,
+  IssueAttachment,
+  IssueEvent,
+  IssueHistory,
+  IssueStatus,
+} from '../../api/issues';
 import type { SessionUser } from '../../api/session';
 import { timeAgo } from '../../api/tools';
 import { initialsOf } from '../../api/users';
@@ -138,6 +146,17 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
   const [error, setError] = useState<string | null>(null);
 
   /*
+   * Which half of the issue is being read: what it says, or how it got here.
+   *
+   * The history is not part of the issue the page loads. Everybody who follows
+   * a link to a report loads that; the history is read by whoever wants to know
+   * why it is closed, so it is fetched when this turns and not before.
+   */
+  const [tab, setTab] = useState<'issue' | 'history'>('issue');
+  const [history, setHistory] = useState<IssueHistory | null>(null);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+
+  /*
    * Whether this installation carries files at all.
    *
    * The same switch the chat reads, because it is the same disk: an operator
@@ -236,6 +255,34 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
       current = false;
     };
   }, [creating, workspaceId, number]);
+
+  /*
+   * The history, once somebody asks for it and again whenever the issue moves.
+   *
+   * Depending on the issue rather than on its number is what keeps the tab
+   * honest while it is open: closing an issue or saying something replaces the
+   * issue this page holds, and the line that just happened should be in the
+   * list a moment later without anybody reloading the page.
+   */
+  useEffect(() => {
+    if (creating || tab !== 'history' || issue === null) return;
+    let current = true;
+    setHistoryError(null);
+    fetchIssueHistory(workspaceId, issue.number)
+      .then((found) => {
+        // Null is an issue that has gone or was never visible, which the page
+        // above has already said; an empty list says so once rather than
+        // leaving a spinner turning over nothing.
+        if (current) setHistory(found ?? { entries: [], earlier: 0 });
+      })
+      .catch((cause: unknown) => {
+        if (!current) return;
+        setHistoryError(cause instanceof Error ? cause.message : 'Could not load the history.');
+      });
+    return () => {
+      current = false;
+    };
+  }, [creating, tab, workspaceId, issue]);
 
   useEffect(() => {
     if (workspaceId === '') return;
@@ -738,7 +785,64 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
             </p>
           )}
 
+          {/*
+            Below the header and above everything else, because it divides the
+            page rather than the description: what the issue says, and what has
+            happened to it. Not drawn while one is being filed - an issue that
+            does not exist yet has no history, and a tab that is always empty is
+            a tab that teaches people not to press it.
+          */}
+          {!creating && (
+            <div className={styles.tabs} role="tablist" aria-label="Issue">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tab === 'issue'}
+                className={tab === 'issue' ? styles.tabActive : styles.tab}
+                onClick={() => setTab('issue')}
+              >
+                Issue
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tab === 'history'}
+                className={tab === 'history' ? styles.tabActive : styles.tab}
+                onClick={() => setTab('history')}
+              >
+                History
+              </button>
+            </div>
+          )}
+
+          {/*
+            The side keeps its place under both tabs. What the issue is right
+            now - who has it, what it is called, whether it is closed - is the
+            context somebody reads a history against, and taking it away to show
+            them how it got here would be answering half the question.
+          */}
           <div className={styles.split}>
+            {tab === 'history' ? (
+              <div className={styles.main}>
+                <History
+                  history={history}
+                  error={historyError}
+                  onShowComment={(id) => {
+                    setTab('issue');
+                    /*
+                      After the tab has been drawn, which is why this waits: the
+                      comment is not on the page at the moment the button is
+                      pressed, so anything looking for it now finds nothing.
+                    */
+                    window.setTimeout(() => {
+                      document
+                        .getElementById(`comment-${id}`)
+                        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 0);
+                  }}
+                />
+              </div>
+            ) : (
             <div className={styles.main}>
               <span className={styles.labelRow}>
                 <span className={styles.label}>Description</span>
@@ -904,7 +1008,7 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
                   {issue?.comments.length === 0 && <p className={styles.nothing}>Nothing said yet.</p>}
 
                   {issue?.comments.map((said) => (
-                    <article key={said.id} className={styles.comment}>
+                    <article key={said.id} id={`comment-${said.id}`} className={styles.comment}>
                       <span className={styles.avatar} aria-hidden="true">
                         {initialsOf(said.author)}
                       </span>
@@ -1072,6 +1176,7 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
                 </section>
               )}
             </div>
+            )}
 
             <aside className={styles.side}>
               <div className={styles.sideField}>
@@ -1441,4 +1546,154 @@ function Links({ links, onRemove }: LinksProps) {
       })}
     </div>
   );
+}
+
+interface HistoryProps {
+  /** Null while it is being fetched, which is only ever the first moment. */
+  history: IssueHistory | null;
+  error: string | null;
+  /** Takes the reader to a comment in full, on the tab that has the thread. */
+  onShowComment: (commentId: string) => void;
+}
+
+/**
+ * What happened to this issue, oldest first.
+ *
+ * Oldest first because it is read as a story: it opened, then this, then that.
+ * Every line names somebody, including the ones nothing used to record - a
+ * label going on, an issue changing hands - and the line where recording began
+ * is drawn as plainly as the rest, because an issue older than the record has
+ * to say so rather than show a quiet week it never had.
+ */
+function History({ history, error, onShowComment }: HistoryProps) {
+  if (error !== null) {
+    return (
+      <p className={styles.error} role="alert">
+        {error}
+      </p>
+    );
+  }
+  if (history === null) return <Loader />;
+  if (history.entries.length === 0) return <p className={styles.nothing}>Nothing recorded here.</p>;
+
+  return (
+    <section className={styles.history}>
+      {/*
+        A list that simply stopped would be a list implying the issue was quiet
+        before it, which is the one thing a history must never say.
+      */}
+      {history.earlier > 0 && (
+        <p className={styles.historyEarlier}>
+          {history.earlier} earlier {history.earlier === 1 ? 'entry is' : 'entries are'} not shown.
+        </p>
+      )}
+
+      {history.entries.map((event) =>
+        event.kind === 'RECORDING' ? (
+          /*
+            Not a line about somebody doing something, so it is not drawn as
+            one. Everything above it is what survived from before there was a
+            record: when the issue was opened, and what was said on it.
+          */
+          <p key={event.id} className={styles.historyRecording}>
+            Changes have been recorded from here on. What happened before{' '}
+            <time dateTime={event.at} title={new Date(event.at).toLocaleString()}>
+              {timeAgo(event.at)}
+            </time>{' '}
+            was not written down.
+          </p>
+        ) : (
+          <article key={event.id} className={styles.historyRow}>
+            <span className={styles.avatar} aria-hidden="true">
+              {initialsOf(event.actor)}
+            </span>
+            <div className={styles.historyBody}>
+              <p className={styles.historyText}>
+                {said(event)}{' '}
+                <time
+                  className={styles.historyWhen}
+                  dateTime={event.at}
+                  /* The exact moment on hover: "3 days ago" is the right thing
+                     to read and the wrong thing to work from. */
+                  title={new Date(event.at).toLocaleString()}
+                >
+                  {timeAgo(event.at)}
+                </time>
+                {event.edited && <span className={styles.edited}> · edited</span>}
+              </p>
+              {event.said !== null && (
+                <button
+                  type="button"
+                  className={styles.historySaid}
+                  onClick={() => event.commentId !== null && onShowComment(event.commentId)}
+                  title="Read it in full"
+                >
+                  {event.said}
+                </button>
+              )}
+            </div>
+          </article>
+        ),
+      )}
+    </section>
+  );
+}
+
+/**
+ * One entry as a sentence.
+ *
+ * Written out per kind rather than assembled from the columns, because "took
+ * this away from Bob" and "handed it from Bob to Carol" are the same two
+ * columns and different sentences - and a history nobody can read at a glance
+ * is a history nobody reads.
+ */
+function said(event: IssueEvent) {
+  const who = <strong>{event.actor}</strong>;
+  switch (event.kind) {
+    case 'OPENED':
+      return <>{who} opened this issue</>;
+    case 'STATUS':
+      return (
+        <>
+          {who} changed the status from {statusName(event.was)} to {statusName(event.became)}
+        </>
+      );
+    case 'LABEL':
+      return event.became !== null ? (
+        <>
+          {who} added the label <span className={styles.historyChip}>{event.became}</span>
+        </>
+      ) : (
+        <>
+          {who} removed the label <span className={styles.historyChip}>{event.was}</span>
+        </>
+      );
+    case 'ASSIGNEE':
+      if (event.was === null) return <>{who} assigned this to <strong>{event.became}</strong></>;
+      if (event.became === null) return <>{who} took this away from <strong>{event.was}</strong></>;
+      return (
+        <>
+          {who} handed this from <strong>{event.was}</strong> to <strong>{event.became}</strong>
+        </>
+      );
+    case 'OBSERVER':
+      return event.became !== null ? (
+        <>
+          {who} added <strong>{event.became}</strong> as an observer
+        </>
+      ) : (
+        <>
+          {who} took <strong>{event.was}</strong> off the observers
+        </>
+      );
+    default:
+      return <>{who} commented</>;
+  }
+}
+
+/** A status in the words the rest of the page uses, or as it arrived. */
+function statusName(status: string | null) {
+  if (status === null) return 'nothing';
+  const known = ISSUE_STATUS_LABEL[status as IssueStatus];
+  return <em>{known ?? status}</em>;
 }

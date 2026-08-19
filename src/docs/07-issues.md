@@ -112,6 +112,29 @@ issue's own page, where a number after a hash is an issue and nothing else, and
 only where it reads as one: inside code it is left alone, and so is anything
 longer than five digits, which is a colour.
 
+## History
+
+Below the header are two tabs: **Issue**, which is everything above, and
+**History**, which is what has happened to it. Every line names somebody and
+when: it being opened, comments, the status moving, labels going on and coming
+off, it changing hands, and observers arriving and leaving. Oldest first,
+because it is read as a story.
+
+The history is fetched when the tab is opened and not before, so an issue read
+by somebody who never presses it costs exactly what it always did.
+
+Two things it says out loud rather than leaving to be guessed. A comment shows
+its first line, and pressing it goes to the comment itself on the Issue tab -
+the conversation lives there, and a history that reprinted it would be a second
+copy of the same page. And an issue that existed before this was recorded shows
+the line where recording began: everything above it is what survived from before
+- when it was opened, and what was said on it, because comments were always kept
+- and everything below it was written down as it happened. An old issue showing
+an empty history would be claiming a quiet week it never had.
+
+Changes made by an assistant through the tools are in the same list, under the
+name of whoever the assistant is signed in as.
+
 ## Observers
 
 News about an issue used to reach exactly two people: whoever filed it and

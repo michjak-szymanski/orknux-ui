@@ -133,6 +133,73 @@ export interface IssuePage {
 }
 
 /**
+ * What kind of change one line in an issue's history is.
+ *
+ * Five of these are recorded when they happen; OPENED is read off the issue
+ * itself and COMMENT off its comments, because both were already kept
+ * faithfully and a second copy of a comment goes stale the moment somebody
+ * edits it.
+ */
+export type IssueEventKind =
+  | 'OPENED'
+  | 'RECORDING'
+  | 'STATUS'
+  | 'LABEL'
+  | 'ASSIGNEE'
+  | 'OBSERVER'
+  | 'COMMENT';
+
+export interface IssueEvent {
+  /** Unique across all three sources: an event and a comment can both be row 5. */
+  id: string;
+  kind: IssueEventKind;
+  /** Who did it. Every entry names somebody. */
+  actor: string;
+  at: string;
+  /** What it was: the old status, who it was taken from, the label removed. */
+  was: string | null;
+  /** What it became: the new status, who it went to, the label added. */
+  became: string | null;
+  /** What a comment said, shortened. Null for everything that is not one. */
+  said: string | null;
+  /** Whether that comment has been changed since it was written. */
+  edited: boolean;
+  /** Which comment it is, so the page can go and show it in full. */
+  commentId: string | null;
+}
+
+export interface IssueHistory {
+  /** Oldest first. */
+  entries: IssueEvent[];
+  /** How many older entries were not returned. */
+  earlier: number;
+}
+
+/**
+ * What happened to one issue.
+ *
+ * Its own query rather than a field on the issue, and asked for only when the
+ * tab is opened: the issue page is loaded by everybody who reads a report, and
+ * the history is read by the few who want to know how it got here.
+ */
+export async function fetchIssueHistory(
+  workspaceId: string,
+  number: number,
+  limit?: number,
+): Promise<IssueHistory | null> {
+  const data = await graphql<{ issueHistory: IssueHistory | null }>(
+    `query ($workspaceId: ID!, $number: Int!, $limit: Int) {
+       issueHistory(workspaceId: $workspaceId, number: $number, limit: $limit) {
+         earlier
+         entries { id kind actor at was became said edited commentId }
+       }
+     }`,
+    { workspaceId, number, limit: limit ?? null },
+  );
+  return data.issueHistory;
+}
+
+/**
  * A row's worth, without the comments.
  *
  * The list shows what an issue is, not what was said about it, and fetching
