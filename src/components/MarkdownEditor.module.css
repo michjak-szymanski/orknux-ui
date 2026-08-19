@@ -52,17 +52,20 @@
 /*
  * The names an @ offers, over the page rather than in the flow: a list that
  * pushed the layout down would move the text under the cursor mid-sentence.
+ *
+ * No top or left here on purpose: the component measures where the @ was
+ * typed and sets both. A `top: 100%` written here instead hung the list off
+ * the bottom of the whole box, which on a ten-row description is a long way
+ * from the word it is offering names for, and in a comment box near the foot
+ * of the page is off the window altogether.
  */
 .mentions {
   position: absolute;
-  top: 100%;
-  left: var(--space-12);
   z-index: 20;
   display: flex;
   flex-direction: column;
   min-width: 240px;
   max-height: 260px;
-  margin-top: var(--space-4);
   padding: var(--space-6);
   overflow-y: auto;
   background: var(--color-surface);

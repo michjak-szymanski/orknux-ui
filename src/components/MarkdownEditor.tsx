@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ClipboardEvent as ReactClipboardEvent } from 'react';
 
 import { fetchAssignees } from '../api/issues';
@@ -35,6 +35,82 @@ const MARKS: { label: string; title: string; before: string; after: string; bloc
 /** How long typing after an @ waits before the names are asked for. */
 const MENTION_PAUSE_MS = 200;
 
+/** The gap between the line being written and the list of names under it. */
+const MENTION_GAP = 4;
+
+/**
+ * The properties a copy of a textarea has to wear to break its text in the
+ * same places the real one does. Anything that moves a character sideways or
+ * changes where a line ends belongs here.
+ */
+const LAID_OUT = [
+  'width',
+  'padding-top',
+  'padding-right',
+  'padding-bottom',
+  'padding-left',
+  'border-top-width',
+  'border-right-width',
+  'border-bottom-width',
+  'border-left-width',
+  'font-family',
+  'font-size',
+  'font-weight',
+  'font-style',
+  'font-variant',
+  'line-height',
+  'letter-spacing',
+  'word-spacing',
+  'text-indent',
+  'text-transform',
+  'tab-size',
+];
+
+/**
+ * Where a character sits inside a textarea, in pixels from its top left corner,
+ * along with the height of the line it is on.
+ *
+ * A textarea will not say where its caret is, so the text is laid out a second
+ * time in a hidden div wearing the same font, width and padding, and the
+ * position of a marker dropped at the same index is read off that. The div is
+ * built and thrown away on the spot rather than kept between calls, because it
+ * has to agree with the box as it stands now - a box somebody has dragged
+ * taller, or a font that has finished loading, would leave a kept one measuring
+ * something that is no longer true.
+ */
+function caretPoint(box: HTMLTextAreaElement, index: number) {
+  const worn = window.getComputedStyle(box);
+  const mirror = document.createElement('div');
+  for (const name of LAID_OUT) mirror.style.setProperty(name, worn.getPropertyValue(name));
+  /*
+   * Content-box on purpose: the width read off the real box is its content
+   * width, so adding the padding back on top of it is what reproduces the
+   * same wrapping rather than squeezing the text into a narrower column.
+   */
+  mirror.style.setProperty('box-sizing', 'content-box');
+  mirror.style.setProperty('position', 'absolute');
+  mirror.style.setProperty('top', '0');
+  mirror.style.setProperty('left', '0');
+  mirror.style.setProperty('visibility', 'hidden');
+  mirror.style.setProperty('white-space', 'pre-wrap');
+  mirror.style.setProperty('overflow-wrap', 'break-word');
+
+  mirror.textContent = box.value.slice(0, index);
+  const marker = document.createElement('span');
+  // One real character rather than nothing, so the marker has the height of a
+  // line and the width of a place where text could stand.
+  marker.textContent = '.';
+  mirror.appendChild(marker);
+  // The rest of the writing after it, because a word that wraps decides which
+  // line the caret is on, and a marker with nothing after it would never wrap.
+  mirror.appendChild(document.createTextNode(box.value.slice(index)));
+
+  document.body.appendChild(mirror);
+  const at = { top: marker.offsetTop, left: marker.offsetLeft, line: marker.offsetHeight };
+  mirror.remove();
+  return at;
+}
+
 /**
  * Writing that ends up rendered: a textarea, a few marks, and mentions.
  *
@@ -59,9 +135,12 @@ export function MarkdownEditor({
   onPaste,
 }: MarkdownEditorProps) {
   const area = useRef<HTMLTextAreaElement>(null);
+  const list = useRef<HTMLDivElement>(null);
   /** Where the @ that opened the list is, or null when nothing is being mentioned. */
   const [mentioning, setMentioning] = useState<{ at: number; search: string } | null>(null);
   const [candidates, setCandidates] = useState<Assignee[]>([]);
+  /** Where the list is drawn, in the editor's own coordinates. */
+  const [spot, setSpot] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
     if (mentioning === null) return;
@@ -80,6 +159,41 @@ export function MarkdownEditor({
       window.clearTimeout(timer);
     };
   }, [mentioning, workspaceId]);
+
+  /*
+   * The list put where the @ was typed rather than under the whole box.
+   *
+   * A ten-row description offered its names two hundred pixels below the word
+   * they belonged to, and the comment box - being near the foot of the page -
+   * offered them off the bottom of the window entirely. Measured in a layout
+   * effect rather than worked out while typing, because the decision to open
+   * upwards instead needs the height the list actually came out at, and doing
+   * it before the browser paints means nobody sees the first guess.
+   */
+  useLayoutEffect(() => {
+    const box = area.current;
+    const panel = list.current;
+    if (box === null || panel === null || mentioning === null) return;
+
+    const at = caretPoint(box, mentioning.at);
+    const caretTop = at.top - box.scrollTop;
+    const under = box.offsetTop + caretTop + at.line + MENTION_GAP;
+    const over = box.offsetTop + caretTop - panel.offsetHeight - MENTION_GAP;
+
+    // Upwards only when there is no room below and there is room above, so a
+    // list near the foot of the page stays on screen and one near the top does
+    // not swap a cut-off bottom for a cut-off top.
+    const onScreen = box.getBoundingClientRect().top + caretTop;
+    const below = window.innerHeight - (onScreen + at.line);
+    const flip = below < panel.offsetHeight + MENTION_GAP && onScreen > panel.offsetHeight + MENTION_GAP;
+
+    // Held inside the box it belongs to, so a mention typed at the end of a
+    // long line does not hang the list off the right-hand edge.
+    const room = box.offsetLeft + box.offsetWidth - panel.offsetWidth;
+    const left = Math.max(box.offsetLeft, Math.min(box.offsetLeft + at.left - box.scrollLeft, room));
+
+    setSpot({ top: flip ? over : under, left });
+  }, [mentioning, candidates]);
 
   /** Wraps what is selected, or opens the marks where the caret is. */
   function mark(before: string, after: string, block = false) {
@@ -168,7 +282,13 @@ export function MarkdownEditor({
       />
 
       {mentioning !== null && candidates.length > 0 && (
-        <div className={styles.mentions} role="listbox" aria-label="Mention someone">
+        <div
+          ref={list}
+          className={styles.mentions}
+          role="listbox"
+          aria-label="Mention someone"
+          style={spot === null ? undefined : { top: spot.top, left: spot.left }}
+        >
           {candidates.map((candidate) => (
             <button
               key={`${candidate.kind}-${candidate.id}`}
