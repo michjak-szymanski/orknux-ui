@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { formatSize, isShowable } from '../../api/attachments';
 import {
   ISSUE_STATUS_LABEL,
+  addIssueLink,
   attachToIssue,
   commentOnIssue,
   createIssue,
@@ -14,10 +15,11 @@ import {
   fetchIssueLabels,
   issueAttachmentUrl,
   removeIssueAttachment,
+  removeIssueLink,
   updateIssue,
   uploadIssueAttachments,
 } from '../../api/issues';
-import type { Assignee, Issue, IssueAttachment, IssueStatus } from '../../api/issues';
+import type { Assignee, Issue, IssueAttachment, IssueLink, IssueStatus } from '../../api/issues';
 import type { SessionUser } from '../../api/session';
 import { timeAgo } from '../../api/tools';
 import { initialsOf } from '../../api/users';
@@ -128,6 +130,16 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
   const [uploading, setUploading] = useState(false);
   /** Which picture is open over the page, or null when none is. */
   const [previewId, setPreviewId] = useState<string | null>(null);
+  /*
+   * The address being added, and whether the boxes for it are showing.
+   *
+   * Behind a word rather than always on the page: most issues never get a
+   * link, and two empty text boxes under every one of them would be two boxes
+   * nobody fills in sitting where the conversation should start.
+   */
+  const [addingLink, setAddingLink] = useState(false);
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkTitle, setLinkTitle] = useState('');
   const issueFilesRef = useRef<HTMLInputElement>(null);
   const commentFilesRef = useRef<HTMLInputElement>(null);
 
@@ -378,6 +390,46 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
     }
   }
 
+  /**
+   * Hangs an address on the issue.
+   *
+   * What may be kept is the server's decision, not this page's - only http and
+   * https, because a link is rendered as an anchor other people click - so
+   * nothing is checked here beyond there being something to send, and the
+   * refusal is shown in the words the server used.
+   */
+  async function addLink() {
+    const address = linkUrl.trim();
+    if (address === '' || issue === null || saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      setIssue(await addIssueLink(issue.id, address, linkTitle));
+      setLinkUrl('');
+      setLinkTitle('');
+      setAddingLink(false);
+    } catch (cause) {
+      // The boxes are left as they were: a refused address is usually one
+      // keystroke from an accepted one.
+      setError(cause instanceof Error ? cause.message : 'That link could not be added.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  /** Takes one off again; only whoever added it is offered the button. */
+  async function removeLink(id: string) {
+    if (issue === null) return;
+    setError(null);
+    try {
+      await removeIssueLink(id);
+      const again = await fetchIssue(workspaceId, Number(number));
+      if (again !== null) setIssue(again);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not remove the link.');
+    }
+  }
+
   function addLabel() {
     const wanted = labelDraft.trim();
     if (wanted === '' || labels.includes(wanted)) {
@@ -579,6 +631,88 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
                     aria-hidden="true"
                     tabIndex={-1}
                   />
+                </section>
+              )}
+
+              {/*
+                Where the rest of the story is.
+
+                Only on an issue that exists: a link is hung on an issue by its
+                id, and while one is being written there is no id to hang it on.
+                Attachments manage it by holding the files until the issue is
+                saved, which is worth doing for bytes somebody has already
+                picked and not for an address that can be pasted again a second
+                later.
+              */}
+              {!creating && (
+                <section className={styles.files}>
+                  <span className={styles.labelRow}>
+                    <span className={styles.label}>Links</span>
+                    <button
+                      type="button"
+                      className={styles.textButton}
+                      onClick={() => {
+                        setAddingLink(!addingLink);
+                        setLinkUrl('');
+                        setLinkTitle('');
+                      }}
+                    >
+                      {addingLink ? 'Cancel' : 'Add a link'}
+                    </button>
+                  </span>
+                  {addingLink && (
+                    <div className={styles.linkForm}>
+                      <input
+                        className={styles.linkInput}
+                        type="url"
+                        value={linkUrl}
+                        placeholder="https://…"
+                        aria-label="Address"
+                        autoFocus
+                        onChange={(event) => setLinkUrl(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault();
+                            void addLink();
+                          }
+                        }}
+                      />
+                      {/*
+                        Optional, and says so: a GitHub address names itself,
+                        and a box that looks required would have people typing
+                        "PR" into it.
+                      */}
+                      <input
+                        className={styles.linkInput}
+                        type="text"
+                        value={linkTitle}
+                        placeholder="What to call it (optional)"
+                        aria-label="What to call it"
+                        onChange={(event) => setLinkTitle(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault();
+                            void addLink();
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className={styles.textButton}
+                        disabled={saving || linkUrl.trim() === ''}
+                        onClick={() => void addLink()}
+                      >
+                        Add
+                      </button>
+                    </div>
+                  )}
+                  {(issue?.links ?? []).length === 0 ? (
+                    <p className={styles.nothing}>
+                      Nothing linked yet. The pull request, the dashboard, the page that will not load.
+                    </p>
+                  ) : (
+                    <Links links={issue?.links ?? []} onRemove={(id) => void removeLink(id)} />
+                  )}
                 </section>
               )}
 
@@ -912,6 +1046,71 @@ function Attachments({ files, onOpen, onRemove }: AttachmentsProps) {
           )}
         </span>
       ))}
+    </div>
+  );
+}
+
+interface LinksProps {
+  links: IssueLink[];
+  onRemove: (id: string) => void;
+}
+
+/**
+ * The addresses hung on an issue, oldest first.
+ *
+ * Each shown by the first of three things that is there: what somebody called
+ * it, what GitHub would call it, and failing both the address itself. The
+ * server decides the middle one, so the same link reads the same wherever it
+ * appears rather than each page having its own opinion.
+ *
+ * A new tab, unlike the links inside the interface: this one leaves for
+ * somewhere else entirely, and taking the issue with it would lose whatever was
+ * half-typed in the comment box.
+ */
+function Links({ links, onRemove }: LinksProps) {
+  return (
+    <div className={styles.attachments}>
+      {links.map((link) => {
+        const name = link.title ?? link.github ?? link.url;
+        return (
+          <span key={link.id} className={styles.attachment}>
+            <a
+              className={styles.attachmentName}
+              href={link.url}
+              target="_blank"
+              rel="noreferrer"
+              /*
+               * The address in full on hover, because the label is often a
+               * short name for it and a link nobody can check before clicking
+               * is a link nobody should click.
+               */
+              title={link.url}
+            >
+              {name}
+            </a>
+            <span className={styles.attachmentMeta}>
+              {/*
+                The GitHub reading beside a name somebody chose, rather than
+                instead of it: both are worth knowing, and they are only
+                repeated when nobody named the link.
+              */}
+              {link.github !== null && link.title !== null && `${link.github} · `}
+              {link.addedBy} · {timeAgo(link.addedAt)}
+            </span>
+            {link.mine && (
+              <button
+                type="button"
+                className={styles.attachmentRemove}
+                onClick={() => onRemove(link.id)}
+                aria-label={`Remove ${name}`}
+                title="Remove"
+              >
+                ×
+              </button>
+            )}
+          </span>
+        );
+      })}
     </div>
   );
 }

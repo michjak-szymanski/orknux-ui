@@ -47,6 +47,28 @@ export interface IssueAttachment {
   mine: boolean;
 }
 
+/**
+ * A web address hung on an issue.
+ *
+ * Three things to show it by, in order: what somebody called it, what GitHub
+ * would call it, and failing both the address itself. The server works the
+ * middle one out from the shape of the address alone and never asks GitHub
+ * anything, so `github` means "this is shaped like pull request 12" rather than
+ * "pull request 12 exists".
+ */
+export interface IssueLink {
+  id: string;
+  url: string;
+  /** What whoever added it called it, or null when they let the address speak. */
+  title: string | null;
+  /** `owner/repo`, `owner/repo#12`, `owner/repo@abc1234`, or null when it is not GitHub's. */
+  github: string | null;
+  addedBy: string;
+  addedAt: string;
+  /** Whether the person reading this added it, and so may remove it. */
+  mine: boolean;
+}
+
 export interface IssueComment {
   id: string;
   author: string;
@@ -73,6 +95,8 @@ export interface Issue {
   labels: string[];
   /** What is on the issue itself; a comment's files are on the comment. */
   attachments: IssueAttachment[];
+  /** Addresses hung on the issue, oldest first. */
+  links: IssueLink[];
   comments: IssueComment[];
   createdAt: string;
   lastModifiedAt: string;
@@ -96,11 +120,14 @@ const ROW_FIELDS =
 
 const ATTACHMENT_FIELDS = 'id filename contentType sizeBytes uploadedBy uploadedAt mine';
 
+const LINK_FIELDS = 'id url title github addedBy addedAt mine';
+
 const FULL_FIELDS = `
   id workspaceId number title description status reporter
   assignee { kind id name hint }
   labels
   attachments { ${ATTACHMENT_FIELDS} }
+  links { ${LINK_FIELDS} }
   comments { id author content createdAt editedAt mine attachments { ${ATTACHMENT_FIELDS} } }
   createdAt lastModifiedAt lastModifiedBy
 `;
@@ -280,6 +307,32 @@ export async function removeIssueAttachment(id: string): Promise<boolean> {
     { id },
   );
   return data.removeIssueAttachment;
+}
+
+/**
+ * Hangs an address on an issue.
+ *
+ * Refused by the server unless it is http or https - a link is rendered as an
+ * anchor on a page other people click, and the check is there rather than here
+ * so that it holds for anything else that ever writes one.
+ */
+export async function addIssueLink(id: string, url: string, title?: string): Promise<Issue> {
+  const data = await graphql<{ addIssueLink: Issue }>(
+    `mutation ($id: ID!, $url: String!, $title: String) {
+       addIssueLink(id: $id, url: $url, title: $title) { ${FULL_FIELDS} }
+     }`,
+    { id, url, title: title?.trim() || null },
+  );
+  return data.addIssueLink;
+}
+
+/** Takes one off again. Only whoever added it may, administrators included. */
+export async function removeIssueLink(id: string): Promise<boolean> {
+  const data = await graphql<{ removeIssueLink: boolean }>(
+    `mutation ($id: ID!) { removeIssueLink(id: $id) }`,
+    { id },
+  );
+  return data.removeIssueLink;
 }
 
 /** Where the browser reads one from; checked against the workspace on the way. */
