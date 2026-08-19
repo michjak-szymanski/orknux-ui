@@ -305,7 +305,15 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
         labels,
         status,
         assigneeKind: assignee?.kind ?? null,
-        assigneeId: assignee?.id ?? null,
+        /*
+         * "No one" is an empty id, not an absent one.
+         *
+         * Absent is how a caller says it did not touch the assignee - which is
+         * what the status buttons below send - so the form cannot use it to
+         * mean the opposite. The page posts what its boxes show, and an empty
+         * box shows nobody.
+         */
+        assigneeId: assignee?.id ?? '',
       };
       if (creating) {
         const made = await createIssue({ workspaceId, ...details });
