@@ -87,8 +87,9 @@ hand-written elements: `src/navigation.ts` holds `PAGES` — the path, who may s
 it, and how it is named in Go to — and `src/routes.tsx` maps each of those paths
 to a component. `PAGE_ELEMENTS` is typed as an exact record over the paths in
 `PAGES`, so a page added to one file and not the other is a compile error rather
-than a route that quietly does nothing. `src/App.tsx` writes out only `/login`
-and the catch-all.
+than a route that quietly does nothing. `src/App.tsx` writes out only the routes
+that exist before anybody is signed in - `/login`, `/forgot-password`,
+`/reset-password` - and the catch-all.
 
 ## Admin page
 
@@ -105,6 +106,10 @@ yet" page when no role of theirs opens one.
 | `/admin/roles`                       | The roles a workspace can be opened by, and which of them administer |
 | `/admin/integrations`                | Default connections assigned to new workspaces               |
 | `/admin/plugins`                     | Plugins loaded into this installation                        |
+| `/admin/networking`                  | Proxy rules: where this installation's outbound calls go     |
+| `/admin/shell`                       | The machines an agent may run commands on                    |
+| `/admin/shell/new`                   | Add a shell                                                  |
+| `/admin/shell/:shellId`              | One shell: its host, its user, its key, and whether it answers |
 | `/admin/monitoring`                  | Health of the server and its dependencies, and both versions |
 | `/admin/doctor`                      | Whether this installation is configured correctly, which is not the same question |
 | `/admin/settings`                    | Installation settings: whether there is a chat, whether files may be attached |
@@ -115,6 +120,8 @@ And outside any section:
 | route          | page                                                    |
 |----------------|---------------------------------------------------------|
 | `/login`       | Sign in                                                 |
+| `/forgot-password` | Ask for a reset link, whether or not the address is known here |
+| `/reset-password` | Set a new password from the link that was mailed        |
 | `/chat`        | Chats with the workspace's models                       |
 | `/chat/:chatId` | One chat                                               |
 | `/docs`        | The manual, served from inside the app                  |
@@ -146,6 +153,7 @@ And outside any section:
 | `/workspace/:workspaceId/objects`                            | The shapes this workspace's workflows pass around |
 | `/workspace/:workspaceId/objects/:objectId`                  | One object: its properties    |
 | `/workspace/:workspaceId/variables`                          | The workspace's own values and secrets |
+| `/workspace/:workspaceId/plugins`                            | The plugins this workspace uses, and what it sets on each |
 | `/workspace/:workspaceId/memory`                             | Memory catalogs, and the notes in them |
 | `/workspace/:workspaceId/memory/new`                         | Write a memory                |
 | `/workspace/:workspaceId/memory/:memoryId`                   | One memory: markdown editor   |

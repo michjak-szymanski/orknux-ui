@@ -25,6 +25,19 @@ A webhook trigger takes two things:
   match that shape is answered `404`, the same as a path nobody has claimed:
   an endpoint that only half exists is not an endpoint.
 
+A body that is not JSON at all gets the same `404`, and so does a path whose
+trigger is switched off. The point is that every no reads alike. The
+endpoint is open to the internet by necessity - a build server cannot sign in -
+so anything that answered a real path differently from an absent one would let a
+stranger map out which paths this installation has armed, one request at a time.
+Nothing is lost by it: the owner is told, in the trigger's own history, which of
+those it actually was.
+
+A body is capped at **1 MB**. Anything larger is refused with `413` before it is
+read, and never reaches a trigger or its history - an anonymous caller should
+not get to choose how much memory a request costs. `ORKNUX_WEBHOOK_MAX_BODY_SIZE`
+raises it where a sender genuinely posts more.
+
 ### Authentication
 
 Webhook authentication is chosen per trigger.
@@ -33,6 +46,12 @@ Webhook authentication is chosen per trigger.
 - **Function** — a workspace function is called with the request, and must
   return a boolean. `true` fires the trigger; anything else is answered `401`,
   and the refusal is written to the trigger's history.
+
+The `401` is deliberately not folded into the `404` above. By the time it is
+answered the caller has already sent something shaped like the contract, which
+is not a thing found by guessing - and an integration whose credential has
+expired is owed the difference between "you are not who you say" and "there is
+nothing here".
 
 ## What a trigger runs
 

@@ -134,6 +134,10 @@ workflows.
 The from-address is the connection's and is not a parameter: a provider that has
 not authorised an address will refuse the message however good the password is.
 
+Mail does not go through the installation's proxy rules. Those match an address
+and cover outbound HTTP, and a mail server is named by host here rather than by
+URL; see Administration.
+
 A node with nothing to send - no recipients, or neither a subject nor a body -
 is skipped rather than failed. A server that refuses the message fails the step,
 and the failure says whether trying again is worth anything.

@@ -20,7 +20,12 @@ on the workspace's default so there is always something to talk to.
 
 The **+** to the left of the composer attaches files — several at once. They
 are stored on the server, in a directory of their own per workspace, and can be
-opened from the message they were sent with. Images are previewed in the chat
+opened from the message they were sent with. A chat's files are as private as
+the chat: they are readable by whoever the conversation belongs to rather than
+by everybody who can see the workspace, and one still sitting in a composer
+belongs to whoever uploaded it until the message carrying it is sent. An issue's
+files are different, and deliberately so - those belong to the people working
+the issue, which is the whole workspace. Images are previewed in the chat
 and are sent to the model as images, so a model that can see will describe what
 is in the picture.
 

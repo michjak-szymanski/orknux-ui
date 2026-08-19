@@ -97,6 +97,30 @@ recorded in the audit log.
 An agent that starts a workflow which asks an agent is a loop nothing here
 breaks, so grant it where that is not a risk.
 
+## Letting an agent run commands on a machine
+
+An agent's settings carry a second switch of that kind: **Shells**. An agent
+that has it can open a session on a machine an administrator has configured, run
+commands in a working directory of its own on it, and close the session - which
+destroys that directory and everything in it.
+
+It is plural because from where the agent sits the question is "may I run a
+command somewhere" rather than "may I run one on build-box-3". Which machine a
+session lands on is decided when it opens, and the answer names it.
+
+This is the one thing here that acts outside the application, and nothing in the
+application decides which commands are safe. There is no denylist, deliberately:
+reading a shell command and saying what it will do cannot be done reliably, and
+a list that is nearly right is worse than none because it tells an administrator
+they are protected. What contains this is the machine - point a shell at
+something you are willing to lose, and give the account the least privilege that
+is useful.
+
+Every command an agent runs is written to the workspace's audit log under the
+agent's own name, with what it exited with. Which machines there are, and
+whether there are any at all, is an administrator's decision; see
+Administration.
+
 ## Driving orknux from outside
 
 The same tools are offered over **MCP**, for an agent that runs somewhere else —
@@ -135,6 +159,13 @@ down, which is the failure a tracker exists to prevent. A filed issue is under
 the name of whoever is asking, and assigned to nobody: deciding who should look
 at something is a judgement for a person, and an assistant that assigned its own
 findings would be handing out work.
+
+Instead it names **observers**: the people or agents who should hear about it,
+who then get everything the reporter and the assignee get without being given
+the work. Naming nobody tells the installation's administrators, because an
+issue assigned to no one and watched by no one is a report written into an empty
+room. A name it cannot find is refused and nothing is filed, so a report that
+reached nobody is never mistaken for one that landed. See Issues.
 
 ### Waiting to be told
 

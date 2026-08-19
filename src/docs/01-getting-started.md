@@ -33,6 +33,11 @@ but enter them again by hand. It is the thing to get right before you save your
 first provider key rather than after, and it belongs wherever you already keep
 secrets, backed up somewhere other than the database it protects.
 
+That file runs Postgres, which is what a deployment should use. An installation
+for one person or one team can run on a SQLite file instead and drop the
+container entirely; see **The database** under Administration for what that
+costs.
+
 The `compose.yaml` at the *root* of the repository is a different file and not a
 smaller version of this one. It brings up only the dependencies, for working on
 Orknux rather than for running it.
@@ -45,10 +50,24 @@ to look at when it does not come up.
 
 ![The sign-in screen](/screens/sign-in.png)
 
-Accounts come from your organisation's provider, not from Orknux — there is no
-sign-up form, and nobody is created here. Depending on how the installation is
-configured, that is either a directory you sign in to with the same username and
-password you use elsewhere, or a single sign-on provider that answers for you.
+Accounts come from your organisation's provider - there is no sign-up form, and
+nobody signs themselves up. Depending on how the installation is configured,
+that is either a directory you sign in to with the same username and password
+you use elsewhere, or a single sign-on provider that answers for you. An
+administrator can also make an account here for somebody the provider does not
+know; see Administration.
+
+**Reset**, beside the password box, is for a forgotten password on one of those
+locally made accounts. It sends a link to the address on the account; the link
+works once and stops working an hour after it was sent, and using it signs that
+account out everywhere. A directory or single sign-on password belongs to the
+provider, and there is nothing here to reset.
+
+Wrong passwords are counted. Enough of them in a row bring a pause that grows
+before each further try, and you are told how long to leave it. Nothing locks -
+the pause always ends, and getting it right clears the count - because a lockout
+would let anybody shut a colleague out by guessing at their name badly on
+purpose.
 
 What you can see afterwards depends on the **roles** your provider's groups and
 claims are mapped to.
@@ -63,6 +82,13 @@ nothing leaks between them.
 
 Which workspaces you see is decided by the roles you hold. Administrators see
 all of them and are the only ones who can create one.
+
+A workspace you cannot see is one you cannot address either. Anything named by
+an id your roles do not reach answers exactly as an id nobody ever used does:
+there is no such thing. That holds whether you were reading it or changing it.
+It is a strange answer the first time you meet it, and it is the right one - the
+alternative tells anybody with an account roughly how much this installation
+holds and what of, one number at a time.
 
 The workspace picker sits at the top of the sidebar. The tab bar above it moves
 between the three parts of the product:

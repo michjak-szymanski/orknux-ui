@@ -89,7 +89,7 @@ to see how their markdown lands is before they have handed it over. All of them
 go through the same renderer as the page itself, so a preview cannot differ from
 what gets saved.
 
-Down the right are the four things somebody wants at a glance.
+Down the right are the things somebody wants at a glance.
 
 - **Status** is one button that cycles Open, In progress, Closed. There is also
   a **Close issue** button beside the comment box, where the decision usually
@@ -103,12 +103,45 @@ Down the right are the four things somebody wants at a glance.
   underneath. They have no colours and no meaning of their own - `p1` is a
   convention this project keeps, not a field. A label exists because an issue
   carries it, so removing the last one that used it removes it from the list.
+- **Observers**, under the labels, are whoever else asked to hear about it.
+  Below.
 - **Reporter** is whoever filed it, and is not editable.
 
 A `#12` written in a description or a comment becomes a link to #12. Only on an
 issue's own page, where a number after a hash is an issue and nothing else, and
 only where it reads as one: inside code it is left alone, and so is anything
 longer than five digits, which is a colour.
+
+## Observers
+
+News about an issue used to reach exactly two people: whoever filed it and
+whoever holds it. That is the right pair for work somebody has been handed, and
+nobody at all for work that has not - an assistant filing what it found,
+assigned to no one because handing out work is not its judgement, writes a
+careful report into an empty room.
+
+**Observers** are the people and agents who asked to hear about it anyway. An
+observer gets everything the reporter and the assignee get: it being picked up,
+closed, commented on, and reopened long after it was closed - which is the one
+most worth having, since the person who cared about a bug is rarely still
+looking at it the day it comes back.
+
+Being an observer grants nothing. Anyone who can see the workspace can already
+read the issue, so this is a subscription rather than a permission, and taking
+somebody off does not shut them out of anything.
+
+**Watch this issue** puts you on the list, and anybody who can see the workspace
+may press it for themselves. Putting somebody *else* on, or taking them off,
+needs the administrator role: a list anybody could add you to is a way to send
+you mail, and one anybody could take you off is a way to keep news from you.
+An administrator can take anybody off, including somebody who put themselves
+on. That is deliberately not the rule that governs comments and files, where
+only the person who put a thing there may remove it: those are a record of what
+somebody said, and this is a subscription to news.
+
+A person or an agent can observe; a **model cannot**. The assignee box takes all
+three because work can be handed to any of them, but observing is a statement
+about who reads, and a model has nowhere to read its news.
 
 ## Moving it elsewhere
 
@@ -191,8 +224,12 @@ looks like. Raw HTML is not rendered.
 Typing **@** offers the same list the assignee box does, and choosing somebody
 inserts their name as text. Mentions are text rather than references on purpose:
 a name still reads correctly when it is quoted somewhere else, and nothing
-breaks when a display name changes. Only people are notified by one - an agent
-can be named in a sentence, but naming it does not summon it.
+breaks when a display name changes. The list opens at the mention rather than at
+the foot of the whole box, and the **arrow keys** move through it, with Enter or
+Tab taking the name under the cursor and Escape closing it - the comment box
+sits low on a long issue, and a list that has to be clicked there is a list half
+of which is off the bottom of the window. Only people are notified by one - an
+agent can be named in a sentence, but naming it does not summon it.
 
 A comment is its author's to change. Editing is offered on your own and refused
 on everybody else's, administrators included, and an edited comment says so. A
@@ -227,9 +264,10 @@ waiting.
 | It says | It happened because |
 | --- | --- |
 | assigned to you | somebody put an issue in your hands |
-| changed state | an issue you filed or hold was opened, closed or picked up |
-| new comment | somebody said something on an issue you filed or hold |
+| changed state | an issue you filed, hold or watch was opened, closed or picked up |
+| new comment | somebody said something on an issue you filed, hold or watch |
 | mentioned you | somebody wrote your name in a comment |
+| you are now an observer | somebody put you on an issue's observers |
 
 You are never told about your own doing, and the feed crosses workspaces: it is
 everything on the issues that concern you, in every workspace your roles let you
@@ -248,20 +286,27 @@ looked. It is the same workspace and the same permissions, and an issue is
 addressed by the number people say, so #4 to an assistant is #4 here. See
 Models and agents.
 
+Opening one takes **observers**, by name, so an assistant can put a finding in
+front of the person who should see it without assigning them the work. Naming
+nobody puts the installation's administrators on instead, which is the answer to
+the empty room above: a report nobody was told about is a report nobody read.
+
 ## Who can do what
 
 Anyone who can see the workspace can read its issues, file one, comment, assign,
-label, attach, link and delete. There is no second set of permissions here and
-no per-issue access: an issue is part of the workspace, like everything else in
-it.
+label, attach, link, watch and delete. There is no second set of permissions
+here and no per-issue access: an issue is part of the workspace, like everything
+else in it.
 
-The exceptions all protect authorship rather than the workspace: a comment is
-edited only by whoever wrote it, and a file or a link is removed only by
-whoever put it there.
+Some of it protects authorship rather than the workspace: a comment is edited
+only by whoever wrote it, and a file or a link is removed only by whoever put it
+there.
 
-Moving an issue to another workspace is the one thing here that needs the
-administrator role, since it is the one thing that changes which workspace an
-issue belongs to.
+Two things need the **administrator** role, and for different reasons. Moving an
+issue to another workspace, because it is the one thing that changes which
+workspace an issue belongs to. And putting somebody *other than yourself* on the
+observers, or taking them off, because that is deciding what news reaches
+another person. Watching an issue yourself needs nothing.
 
-Filing, closing, reopening, attaching, linking, moving and deleting are written
-to the workspace's audit log.
+Filing, closing, reopening, attaching, linking, watching, moving and deleting
+are written to the workspace's audit log.
