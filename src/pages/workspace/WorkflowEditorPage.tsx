@@ -486,23 +486,24 @@ function CarriedEdge({
    */
   const at = { x: labelX + offset.x, y: labelY + offset.y };
   const moved = offset.x !== 0 || offset.y !== 0;
-  const [into] = getBezierPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX: at.x,
-    targetY: at.y,
-    targetPosition: Position.Left,
-  });
-  const [outOf] = getBezierPath({
-    sourceX: at.x,
-    sourceY: at.y,
-    sourcePosition: Position.Right,
-    targetX,
-    targetY,
-    targetPosition,
-  });
-  const path = moved ? `${into} ${outOf}` : straight;
+  /*
+   * One curve through the point, not two curves meeting at it.
+   *
+   * It was drawn as two half-beziers - in to the point from its left, out of
+   * it to the right - and forcing those two sides made the shape jump the
+   * moment the point was touched: a line that had been nearly straight became
+   * a wide S, because each half now had to leave and arrive horizontally. A
+   * pixel of drag moved the line much further than a pixel. Pulled back past
+   * its own source it curled into a loop with the handle inside it, which is
+   * not something anybody can drag straight again.
+   *
+   * A quadratic has no such preference. Its control point is placed so the
+   * curve passes through exactly where the handle was put - B(0.5) is `at`
+   * when the control sits at twice `at` less the midpoint of the ends - so the
+   * line follows the pointer, and no placement can make it cross itself.
+   */
+  const control = { x: 2 * at.x - (sourceX + targetX) / 2, y: 2 * at.y - (sourceY + targetY) / 2 };
+  const path = moved ? `M${sourceX},${sourceY} Q${control.x},${control.y} ${targetX},${targetY}` : straight;
   // The label sits in flow coordinates; a pointer moves in screen ones, and the
   // difference between them is exactly the zoom.
   const zoom = useStore((state) => state.transform[2]);
