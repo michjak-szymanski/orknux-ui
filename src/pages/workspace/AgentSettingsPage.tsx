@@ -20,6 +20,7 @@ import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
 import { DeleteAgentDialog } from '../../components/DeleteAgentDialog';
 import { IconField } from '../../components/IconField';
+import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './AgentSettingsPage.module.css';
@@ -184,6 +185,10 @@ export function AgentSettingsPage({ session, onSignOut }: AgentSettingsPageProps
           <p className={styles.loadError} role="alert">
             {loadError}
           </p>
+        </section>
+      ) : agent === null ? (
+        <section className={styles.card}>
+          <Loader />
         </section>
       ) : (
         <>

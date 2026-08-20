@@ -11,6 +11,7 @@ import { BackLink } from '../../components/BackLink';
 import { CodeDiff } from '../../components/CodeDiff';
 import { CodeEditor } from '../../components/CodeEditor';
 import type { CodeEditorHandle } from '../../components/CodeEditor';
+import { Loader } from '../../components/Loader';
 import { compile } from '../../components/monaco';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
@@ -331,6 +332,8 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
         <p className={styles.loadError} role="alert">
           {loadError}
         </p>
+      ) : tool === null ? (
+        <Loader />
       ) : (
         <>
           {saveError !== null && (

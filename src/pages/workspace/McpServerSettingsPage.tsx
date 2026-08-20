@@ -16,6 +16,7 @@ import penIcon from '../../assets/pen.svg';
 import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
 import { HeaderRowsEditor } from '../../components/HeaderRowsEditor';
+import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './IntegrationSettings.module.css';
@@ -137,6 +138,10 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
           <p className={styles.loadError} role="alert">
             {loadError}
           </p>
+        </section>
+      ) : server === null ? (
+        <section className={styles.card}>
+          <Loader />
         </section>
       ) : (
         <>

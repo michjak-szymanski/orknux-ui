@@ -11,6 +11,7 @@ import type { Workspace } from '../../api/workspaces';
 import { AppShell } from '../../components/AppShell';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { DeleteWorkspaceDialog } from '../../components/DeleteWorkspaceDialog';
+import { Loader } from '../../components/Loader';
 import { shellUser } from '../../session/user';
 import { forgetWorkspaces } from '../../session/workspaces';
 import styles from './WorkspaceSettingsPage.module.css';
@@ -126,6 +127,10 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
           <p className={styles.loadError} role="alert">
             {loadError}
           </p>
+        </section>
+      ) : workspace === null ? (
+        <section className={styles.card}>
+          <Loader />
         </section>
       ) : (
         <>

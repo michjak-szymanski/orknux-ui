@@ -18,6 +18,7 @@ import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import infoIcon from '../../assets/info.svg';
 import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
+import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './ProviderSettingsPage.module.css';
@@ -294,6 +295,10 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
           <p className={styles.loadError} role="alert">
             {loadError}
           </p>
+        </section>
+      ) : !adding && provider === null ? (
+        <section className={styles.card}>
+          <Loader />
         </section>
       ) : (
         <form className={styles.form} onSubmit={handleSubmit}>

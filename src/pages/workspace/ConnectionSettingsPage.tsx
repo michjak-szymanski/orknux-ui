@@ -21,6 +21,7 @@ import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import dialogStyles from '../../components/Dialog.module.css';
+import { Loader } from '../../components/Loader';
 import { shellUser } from '../../session/user';
 import styles from './IntegrationSettings.module.css';
 
@@ -218,6 +219,10 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
           <p className={styles.loadError} role="alert">
             {loadError}
           </p>
+        </section>
+      ) : connection === null ? (
+        <section className={styles.card}>
+          <Loader />
         </section>
       ) : (
         <>

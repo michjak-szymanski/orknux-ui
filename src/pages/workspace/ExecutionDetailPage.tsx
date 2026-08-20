@@ -32,6 +32,7 @@ import terminalIcon from '../../assets/terminal.svg';
 import { AppShell } from '../../components/AppShell';
 import { AutoRefresh } from '../../components/AutoRefresh';
 import { BackLink } from '../../components/BackLink';
+import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './ExecutionDetailPage.module.css';
@@ -514,6 +515,10 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
               <p className={styles.loadError} role="alert">
                 {loadError}
               </p>
+            </section>
+          ) : run === null ? (
+            <section className={styles.card}>
+              <Loader />
             </section>
           ) : (
             <>

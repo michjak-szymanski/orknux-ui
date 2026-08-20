@@ -9,6 +9,7 @@ import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import fileTextIcon from '../../assets/file-text.svg';
 import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
+import { Loader } from '../../components/Loader';
 import { TrashIcon } from '../../components/TrashIcon';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
@@ -224,6 +225,8 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
         <p className={styles.loadError} role="alert">
           {loadError}
         </p>
+      ) : held === null ? (
+        <Loader />
       ) : (
         <>
           {saveError !== null && (

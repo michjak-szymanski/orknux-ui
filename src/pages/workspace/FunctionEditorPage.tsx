@@ -32,6 +32,7 @@ import { BackLink } from '../../components/BackLink';
 import { CodeDiff } from '../../components/CodeDiff';
 import { CodeEditor } from '../../components/CodeEditor';
 import type { CodeEditorHandle } from '../../components/CodeEditor';
+import { Loader } from '../../components/Loader';
 import { compile, declareObjects } from '../../components/monaco';
 import { objectTypes } from '../../components/objectTypes';
 import { fetchWorkspaceObjects } from '../../api/objects';
@@ -664,6 +665,10 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
           <p className={styles.loadError} role="alert">
             {loadError}
           </p>
+        </section>
+      ) : !creating && fn === null ? (
+        <section className={styles.card}>
+          <Loader />
         </section>
       ) : (
         <>

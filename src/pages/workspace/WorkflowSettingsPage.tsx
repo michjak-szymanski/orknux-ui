@@ -6,6 +6,7 @@ import type { SessionUser } from '../../api/session';
 import { fetchWorkspaceWorkflows, removeWorkflow, updateWorkflow } from '../../api/workflows';
 import type { WorkspaceWorkflow } from '../../api/workflows';
 import { AppShell } from '../../components/AppShell';
+import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { WorkflowConfirmDialog } from '../../components/WorkflowConfirmDialog';
 import { shellUser } from '../../session/user';
@@ -99,6 +100,10 @@ export function WorkflowSettingsPage({ session, onSignOut }: WorkflowSettingsPag
           <p className={styles.loadError} role="alert">
             {loadError}
           </p>
+        </section>
+      ) : workflow === null ? (
+        <section className={styles.card}>
+          <Loader />
         </section>
       ) : (
         <>

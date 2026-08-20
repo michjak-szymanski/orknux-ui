@@ -16,6 +16,7 @@ import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import fileTextIcon from '../../assets/file-text.svg';
 import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
+import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import { highlightMarkdown } from './highlightMarkdown';
@@ -224,6 +225,8 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
         <p className={styles.loadError} role="alert">
           {loadError}
         </p>
+      ) : skill === null ? (
+        <Loader />
       ) : (
         <>
           {saveError !== null && (

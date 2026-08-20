@@ -19,6 +19,7 @@ import listOrderedIcon from '../../assets/list-ordered.svg';
 import listIcon from '../../assets/list.svg';
 import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
+import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './MemoryEditorPage.module.css';
@@ -217,112 +218,120 @@ export function MemoryEditorPage({ session, onSignOut }: MemoryEditorPageProps) 
         </p>
       )}
 
-      <div className={styles.split}>
-        <section className={styles.editorCard}>
-          <div className={styles.section}>
-            <label className={styles.sectionLabel} htmlFor="memory-title">
-              MEMORY TITLE
-            </label>
-            <input
-              id="memory-title"
-              className={styles.titleInput}
-              type="text"
-              placeholder="REST API Authentication Flow"
-              value={title}
+      {!adding && memory === null ? (
+        <div className={styles.split}>
+          <section className={styles.editorCard}>
+            <Loader />
+          </section>
+        </div>
+      ) : (
+        <div className={styles.split}>
+          <section className={styles.editorCard}>
+            <div className={styles.section}>
+              <label className={styles.sectionLabel} htmlFor="memory-title">
+                MEMORY TITLE
+              </label>
+              <input
+                id="memory-title"
+                className={styles.titleInput}
+                type="text"
+                placeholder="REST API Authentication Flow"
+                value={title}
+                onChange={(event) => {
+                  setTitle(event.target.value);
+                  setSaved(false);
+                }}
+              />
+            </div>
+
+            <div className={styles.contentLabelRow}>
+              <span className={styles.sectionLabel}>MEMORY CONTENT</span>
+            </div>
+
+            {/* Markdown, put in rather than hidden: what is stored is what was typed. */}
+            <div className={styles.toolbar}>
+              {MARKS.map((entry) => (
+                <button
+                  key={entry.key}
+                  type="button"
+                  className={styles.tool}
+                  onClick={() => apply(entry.mark)}
+                  title={entry.title}
+                  aria-label={entry.title}
+                >
+                  {entry.label !== undefined ? (
+                    <span className={entry.key === 'italic' ? styles.toolItalic : styles.toolLetter}>{entry.label}</span>
+                  ) : (
+                    <img src={entry.icon} alt="" width={14} height={14} />
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <textarea
+              ref={contentRef}
+              className={styles.content}
+              value={content}
+              spellCheck={false}
+              aria-label="Memory content"
+              placeholder="What should be remembered, and anything an agent would need to act on it."
               onChange={(event) => {
-                setTitle(event.target.value);
+                setContent(event.target.value);
                 setSaved(false);
               }}
             />
-          </div>
+          </section>
 
-          <div className={styles.contentLabelRow}>
-            <span className={styles.sectionLabel}>MEMORY CONTENT</span>
-          </div>
+          <aside className={styles.properties}>
+            <div className={styles.propertySection}>
+              <p className={styles.propertyHeading}>MEMORY DETAILS</p>
 
-          {/* Markdown, put in rather than hidden: what is stored is what was typed. */}
-          <div className={styles.toolbar}>
-            {MARKS.map((entry) => (
-              <button
-                key={entry.key}
-                type="button"
-                className={styles.tool}
-                onClick={() => apply(entry.mark)}
-                title={entry.title}
-                aria-label={entry.title}
-              >
-                {entry.label !== undefined ? (
-                  <span className={entry.key === 'italic' ? styles.toolItalic : styles.toolLetter}>{entry.label}</span>
-                ) : (
-                  <img src={entry.icon} alt="" width={14} height={14} />
-                )}
-              </button>
-            ))}
-          </div>
+              <div className={styles.field}>
+                <label className={styles.fieldLabel} htmlFor="memory-catalog">
+                  Catalog
+                </label>
+                <div className={styles.selectWrapper}>
+                  <select
+                    id="memory-catalog"
+                    className={styles.select}
+                    value={catalogId}
+                    onChange={(event) => {
+                      setCatalogId(event.target.value);
+                      setSaved(false);
+                    }}
+                  >
+                    {catalogs.map((catalog) => (
+                      <option key={catalog.id} value={catalog.id}>
+                        {catalog.name}
+                      </option>
+                    ))}
+                  </select>
+                  <img src={chevronDown12Icon} alt="" width={8} height={8} />
+                </div>
+              </div>
 
-          <textarea
-            ref={contentRef}
-            className={styles.content}
-            value={content}
-            spellCheck={false}
-            aria-label="Memory content"
-            placeholder="What should be remembered, and anything an agent would need to act on it."
-            onChange={(event) => {
-              setContent(event.target.value);
-              setSaved(false);
-            }}
-          />
-        </section>
-
-        <aside className={styles.properties}>
-          <div className={styles.propertySection}>
-            <p className={styles.propertyHeading}>MEMORY DETAILS</p>
-
-            <div className={styles.field}>
-              <label className={styles.fieldLabel} htmlFor="memory-catalog">
-                Catalog
-              </label>
-              <div className={styles.selectWrapper}>
-                <select
-                  id="memory-catalog"
-                  className={styles.select}
-                  value={catalogId}
-                  onChange={(event) => {
-                    setCatalogId(event.target.value);
-                    setSaved(false);
-                  }}
-                >
-                  {catalogs.map((catalog) => (
-                    <option key={catalog.id} value={catalog.id}>
-                      {catalog.name}
-                    </option>
-                  ))}
-                </select>
-                <img src={chevronDown12Icon} alt="" width={8} height={8} />
+              {/* Who wrote it, which editing does not change. */}
+              <div className={styles.field}>
+                <span className={styles.fieldLabel}>Author</span>
+                <span className={styles.fieldValue}>{adding ? session.username : (memory?.createdBy ?? '…')}</span>
               </div>
             </div>
 
-            {/* Who wrote it, which editing does not change. */}
-            <div className={styles.field}>
-              <span className={styles.fieldLabel}>Author</span>
-              <span className={styles.fieldValue}>{adding ? session.username : (memory?.createdBy ?? '…')}</span>
-            </div>
-          </div>
+            {memory !== null && (
+              <div className={styles.field}>
+                <span className={styles.metaLabel}>Last modified</span>
+                <span className={styles.fieldValue}>{timeAgo(memory.lastModifiedAt)}</span>
+              </div>
+            )}
 
-          {memory !== null && (
-            <div className={styles.field}>
-              <span className={styles.metaLabel}>Last modified</span>
-              <span className={styles.fieldValue}>{timeAgo(memory.lastModifiedAt)}</span>
-            </div>
-          )}
-
-          {memory !== null && (
-            <button type="button" className={styles.delete} onClick={() => void handleDelete()}>
-              Delete
-            </button>
-          )}
-        </aside>
-      </div>
+            {memory !== null && (
+              <button type="button" className={styles.delete} onClick={() => void handleDelete()}>
+                Delete
+              </button>
+            )}
+          </aside>
+        </div>
+      )}
     </AppShell>
   );
 }

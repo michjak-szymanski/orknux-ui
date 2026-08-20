@@ -17,6 +17,7 @@ import {
 import type { Workspace } from '../../api/workspaces';
 import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import { AppShell } from '../../components/AppShell';
+import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import { forgetWorkspaces } from '../../session/workspaces';
@@ -176,6 +177,25 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       <header className={styles.header}>
         <h1 className={styles.title}>Workspace Settings</h1>
       </header>
+
+      {/*
+        Two things this page had no way to say. Until the workspace arrives
+        every section below is behind `workspace?.administered`, so the page was
+        a heading over nothing - and a load that failed was the same heading
+        over the same nothing, because the error is drawn inside a form that a
+        failed load never reaches.
+      */}
+      {workspace === null && (
+        <section className={styles.card}>
+          {error !== null ? (
+            <p className={styles.error} role="alert">
+              {error}
+            </p>
+          ) : (
+            <Loader />
+          )}
+        </section>
+      )}
 
       {/*
         Only for somebody who administers this workspace, which an installation

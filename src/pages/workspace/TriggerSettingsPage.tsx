@@ -6,6 +6,7 @@ import { deleteTrigger, fetchTrigger } from '../../api/triggers';
 import type { Trigger } from '../../api/triggers';
 import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
+import { Loader } from '../../components/Loader';
 import { TriggerForm } from '../../components/TriggerForm';
 import type { TriggerFormStyles } from '../../components/TriggerForm';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
@@ -126,8 +127,12 @@ export function TriggerSettingsPage({ session, onSignOut }: TriggerSettingsPageP
             {loadError}
           </p>
         </section>
+      ) : trigger === null ? (
+        <section className={styles.card}>
+          <Loader />
+        </section>
       ) : (
-        trigger !== null && (
+        (
           <>
             {/*
               Keyed by which trigger this is: the form reads its fields as it
