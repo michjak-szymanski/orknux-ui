@@ -119,15 +119,15 @@ interface NodeData extends Record<string, unknown> {
   yesLabel?: string | null;
   noLabel?: string | null;
   /**
-   * Whether this action has a second way out for the case where it fails.
+   * Whether this node has a second way out for the case where it fails.
    *
    * On, the node grows a failure handle and a line drawn from it is where a run
-   * goes when the action could not do its work. Only an action has one: every
-   * other kind stops the run when it fails, as it always did.
+   * goes when the node could not do its work. An action and an agent have one:
+   * every other kind stops the run when it fails, as it always did.
    */
   fallbackEnabled?: boolean;
   /**
-   * How many times in all a run may attempt this action; null or 1 is once.
+   * How many times in all a run may attempt this node; null or 1 is once.
    * The server holds it between 1 and 10.
    */
   retryAttempts?: number | null;
@@ -799,24 +799,37 @@ const KIND_CLASS: Record<NodeKind, string> = {
 /**
  * What a node's two ways out are called when nobody has named them.
  *
- * A condition answers a question, so Yes and No. An action either did its work
- * or did not, so If works and If fails. The server keeps one pair of words for
- * both kinds and leaves the wording to here, so the defaults are written once
- * rather than in each place that draws them.
+ * A condition answers a question, so Yes and No. A node that handles its own
+ * failure either did its work or did not, so If works and If fails. The server
+ * keeps one pair of words for both and leaves the wording to here, so the
+ * defaults are written once rather than in each place that draws them.
  */
-const BRANCH_DEFAULTS: Record<'CONDITION' | 'ACTION', { yes: string; no: string }> = {
+const BRANCH_DEFAULTS: Record<'CONDITION' | 'FAILURE', { yes: string; no: string }> = {
   CONDITION: { yes: 'Yes', no: 'No' },
-  ACTION: { yes: 'If works', no: 'If fails' },
+  FAILURE: { yes: 'If works', no: 'If fails' },
 };
+
+/**
+ * Whether failing is this node's own business rather than the run's.
+ *
+ * An action calls something outside the installation and an agent calls a
+ * model, which is the same bet with a longer wait and a bill attached: both
+ * fail for reasons that have nothing to do with the graph, so both get the two
+ * settings and the second door. Nothing else does — a condition that does not
+ * hold has answered, and an object node assembles what it was already handed.
+ */
+function handlesFailure(kind: NodeKind): boolean {
+  return kind === 'ACTION' || kind === 'AGENT';
+}
 
 /** Whether this node leaves by two doors rather than one. */
 function branches(node: NodeData): boolean {
-  return node.kind === 'CONDITION' || (node.kind === 'ACTION' && node.fallbackEnabled === true);
+  return node.kind === 'CONDITION' || (handlesFailure(node.kind) && node.fallbackEnabled === true);
 }
 
 /** The words on a node's two ways out, its own or the kind's. */
 function waysOut(node: NodeData): { yes: string; no: string } {
-  const fallback = BRANCH_DEFAULTS[node.kind === 'CONDITION' ? 'CONDITION' : 'ACTION'];
+  const fallback = BRANCH_DEFAULTS[node.kind === 'CONDITION' ? 'CONDITION' : 'FAILURE'];
   return { yes: node.yesLabel ?? fallback.yes, no: node.noLabel ?? fallback.no };
 }
 
@@ -934,13 +947,14 @@ function GraphNodeView({ data, selected }: NodeProps) {
       )}
       {/*
         A condition leaves by one of two doors, and each says which answer it
-        is; so does an action that has been given a fallback, where the two
-        doors are worked and did not. Everything else has the one way out it
-        always had - a node with nothing to decide has nothing to leave by.
+        is; so does an action or an agent that has been given a fallback, where
+        the two doors are worked and did not. Everything else has the one way
+        out it always had - a node with nothing to decide has nothing to leave
+        by.
       */}
       {node.kind === 'CONDITION' ? (
         <WaysOut facing={facing.output} upperId="yes" lowerId="no" labels={waysOut(node)} failure={false} />
-      ) : node.kind === 'ACTION' && node.fallbackEnabled === true ? (
+      ) : handlesFailure(node.kind) && node.fallbackEnabled === true ? (
         <WaysOut facing={facing.output} lowerId="fail" labels={waysOut(node)} failure />
       ) : (
         <Handle className={`${styles.handle} ${styles.handleOut}`} type="source" position={facing.output} />
@@ -3666,11 +3680,11 @@ Change the keystroke in Preferences.`}
                 {/*
                   What the node does about failing, which is two decisions and
                   not one: how many goes it gets, and where the run goes once it
-                  has used them up. Only an action has either - every other kind
-                  either asks a question or hands something on, and neither can
-                  fail in a way a second go would fix.
+                  has used them up. An action and an agent have both - every
+                  other kind either asks a question or hands something on, and
+                  neither can fail in a way a second go would fix.
                 */}
-                {draft.kind === 'ACTION' && (
+                {handlesFailure(draft.kind) && (
                   <div className={styles.field}>
                     <span className={styles.label}>Retries</span>
                     <div className={styles.retryFields}>
@@ -3730,15 +3744,25 @@ Change the keystroke in Preferences.`}
                       </label>
                     </div>
                     <p className={styles.parameterHint}>
-                      How many goes in all, not extra ones: one is the single attempt every action has
-                      always had. The same wait before each retry, in seconds. A failure the server has
-                      already settled — a channel that does not exist, a request refused for what it
-                      said — is never tried again however many are asked for.
+                      How many goes in all, not extra ones: one is the single attempt every step has
+                      always had. The same wait before each retry, in seconds.{' '}
+                      {draft.kind === 'AGENT' ? (
+                        <>
+                          A model that refused the request for what it said is settled and is never asked
+                          again, however many attempts are allowed; one that timed out, was rate limited or
+                          could not be reached is. Every attempt is another call you are billed for.
+                        </>
+                      ) : (
+                        <>
+                          A failure the server has already settled — a channel that does not exist, a request
+                          refused for what it said — is never tried again however many are asked for.
+                        </>
+                      )}
                     </p>
                   </div>
                 )}
 
-                {draft.kind === 'ACTION' && (
+                {handlesFailure(draft.kind) && (
                   <div className={styles.field}>
                     <span className={styles.label}>When it fails</span>
                     <label className={styles.checkRow}>
@@ -3785,14 +3809,14 @@ Change the keystroke in Preferences.`}
                           <input
                             className={`${styles.input} ${styles.branchInput}`}
                             value={draft.yesLabel ?? ''}
-                            placeholder={BRANCH_DEFAULTS.ACTION.yes}
+                            placeholder={BRANCH_DEFAULTS.FAILURE.yes}
                             aria-label="What the working path is called"
                             onChange={(event) => setDraft({ ...draft, yesLabel: event.target.value || null })}
                           />
                           <input
                             className={`${styles.input} ${styles.branchInput}`}
                             value={draft.noLabel ?? ''}
-                            placeholder={BRANCH_DEFAULTS.ACTION.no}
+                            placeholder={BRANCH_DEFAULTS.FAILURE.no}
                             aria-label="What the failure path is called"
                             onChange={(event) => setDraft({ ...draft, noLabel: event.target.value || null })}
                           />

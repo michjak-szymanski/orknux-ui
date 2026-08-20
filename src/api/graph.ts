@@ -50,16 +50,19 @@ export interface GraphNode {
   yesLabel?: string | null;
   noLabel?: string | null;
   /**
-   * Whether this action has a second way out for the case where it fails.
+   * Whether this node has a second way out for the case where it fails.
    *
    * On, the node grows a FAILURE handle and a run that could not do the work
-   * follows that edge instead of stopping. Only an action has one; every other
-   * kind ignores it.
+   * follows that edge instead of stopping. An action and an agent have one -
+   * both call something outside the graph and both fail for reasons the graph
+   * knows nothing about; every other kind ignores it.
    */
   fallbackEnabled?: boolean;
   /**
-   * How many times in all a run may attempt this action; null or 1 is once.
-   * Held between 1 and 10 by the server.
+   * How many times in all a run may attempt this node; null or 1 is once.
+   * Held between 1 and 10 by the server. A failure the server has already
+   * settled - a channel that does not exist, a model that refused the request
+   * for what it said - never spends one of them.
    */
   retryAttempts?: number | null;
   /** How long a failed attempt is left alone before the next, in seconds. */
@@ -111,9 +114,9 @@ export interface GraphPort {
 /**
  * Which way out of its source an edge leaves by.
  *
- * YES or NO out of a condition, FAILURE out of an action that handles its own
- * failure. An action's happy path is deliberately not marked: it stays the
- * unmarked edge it has always been, so switching a fallback on adds a line
+ * YES or NO out of a condition, FAILURE out of an action or an agent that
+ * handles its own failure. The happy path is deliberately not marked: it stays
+ * the unmarked edge it has always been, so switching a fallback on adds a line
  * rather than rewriting the one already drawn.
  */
 export type EdgeBranch = 'YES' | 'NO' | 'FAILURE';
