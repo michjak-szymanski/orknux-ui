@@ -1,4 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 
 import styles from './FieldHint.module.css';
@@ -65,6 +66,8 @@ export function FieldHint({ label, children }: FieldHintProps) {
   const [at, setAt] = useState<{ top: number; left: number } | null>(null);
   const box = useRef<HTMLSpanElement>(null);
   const control = useRef<HTMLButtonElement>(null);
+  /** The note itself, which is not inside [box] once it is portalled out. */
+  const note = useRef<HTMLSpanElement>(null);
   const id = useId();
 
   const stopClosing = () => {
@@ -137,7 +140,11 @@ export function FieldHint({ label, children }: FieldHintProps) {
       // A pinned note is dismissed by its own control and nothing else - that
       // is what pinning it asked for. Only the glance goes on a press away.
       if (pinned) return;
-      if (box.current !== null && !box.current.contains(event.target as globalThis.Node)) shut();
+      const target = event.target as globalThis.Node;
+      const inside =
+        (box.current !== null && box.current.contains(target)) ||
+        (note.current !== null && note.current.contains(target));
+      if (!inside) shut();
     }
 
     function onKey(event: KeyboardEvent) {
@@ -219,14 +226,41 @@ export function FieldHint({ label, children }: FieldHintProps) {
       >
         ?
       </button>
-      {open && at !== null && (
+      {/*
+        Portalled to the body, and this is not cosmetic.
+
+        `position: fixed` is measured against the window only while no ancestor
+        carries a transform, a filter or a containing-block contain. The shell
+        animates its content in with `animation-fill-mode: both`, which leaves a
+        filling transform on `main` for as long as the page is up - so on every
+        page inside the shell the note was landing offset by exactly the content
+        area's origin. The editor never showed it, being the one page that hides
+        the sidebar and skips that animation, which is precisely the kind of
+        accident that keeps a positioning bug hidden until it is everywhere.
+
+        Placing it on the body means no ancestor can capture it, whatever the
+        page it is used on decides to animate later.
+      */}
+      {open && at !== null && createPortal(
         // A note rather than a dialog: there is nothing in here to do, and a
         // dialog would take the focus away from the panel to say so.
         <span
+          ref={note}
           className={pinned ? `${styles.popover} ${styles.popoverPinned}` : styles.popover}
           id={id}
           role="note"
           style={{ top: at.top, left: at.left }}
+          /*
+            Its own enter and leave. Portalled out of the wrapper, the note is
+            no longer inside what the pointer left, so travelling into it would
+            otherwise read as leaving and close the thing being read.
+          */
+          onPointerEnter={(event) => {
+            if (event.pointerType === 'mouse') stopClosing();
+          }}
+          onPointerLeave={(event) => {
+            if (event.pointerType === 'mouse') release();
+          }}
         >
           {/*
             Only on a pinned note. A hovered one goes when the pointer does, so
@@ -239,7 +273,8 @@ export function FieldHint({ label, children }: FieldHintProps) {
             </button>
           )}
           {children}
-        </span>
+        </span>,
+        document.body,
       )}
     </span>
   );
