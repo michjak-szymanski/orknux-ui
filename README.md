@@ -8,6 +8,10 @@
 [**orknux.io**](https://orknux.io) &nbsp;·&nbsp; [Documentation](https://orknux.io/docs)
 &nbsp;·&nbsp; [Marketplace](https://orknux.io/market)
 
+The same site answers to [orkx.io](https://orkx.io), [orknux.ai](https://orknux.ai)
+and [orkx.ai](https://orkx.ai). `orkx` is the short form, kept for links and the
+command line; `orknux` is the name.
+
 The front end for
 [orknux-server](https://github.com/michjak-szymanski/orknux-server): React +
 TypeScript, built with Vite, styled with CSS Modules over the design tokens in
