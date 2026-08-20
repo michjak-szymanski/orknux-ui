@@ -469,32 +469,94 @@
 }
 
 .paramRow {
+  /*
+   * The whole parameter, in one box.
+   *
+   * The name, the type and - when the type names one - the object are one
+   * thing, so they share one outline. The object selector used to sit outside
+   * it, which left it belonging to nothing in particular.
+   */
   display: flex;
-  align-items: center;
-  gap: var(--space-8);
+  flex-direction: column;
+  gap: var(--space-12);
   width: 100%;
-  padding: var(--space-6) var(--space-10);
+  /*
+   * Roomier on top than it was. The fields now carry labels notched into their
+   * own outlines, and those sit half above the field - so the row has to give
+   * them somewhere to sit that is not on top of its own border.
+   */
+  padding: var(--space-16) var(--space-10) var(--space-10);
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-6);
 }
 
-.paramName {
-  flex: 1 0 0;
+/*
+ * A labelled field, the same one the object editor uses.
+ *
+ * The name box had no label, and an empty one reads as empty space rather than
+ * as somewhere to type - it was mistaken for a gap in the layout. The label is
+ * notched into the field's own outline: it needs an anchor, which is this.
+ */
+.paramTopLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  width: 100%;
+}
+
+.paramField {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   min-width: 0;
-  padding: 0;
+}
+
+.paramFieldName {
+  flex: 1 0 0;
+}
+
+.paramLabel {
+  position: absolute;
+  top: 0;
+  left: var(--space-8);
+  z-index: 1;
+  /* Half above the line and half below, so the outline runs through it. */
+  transform: translateY(-50%);
+  padding: 0 var(--space-4);
+  /* The row behind, so the outline breaks for the word rather than crossing it. */
+  background: var(--color-background);
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.paramName {
+  width: 100%;
+  min-width: 0;
+  /* An outline of its own, because that is what the label is notched into. */
+  padding: var(--space-8) var(--space-8) var(--space-6);
   background: none;
-  border: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
   outline: none;
   font-size: var(--text-md);
   color: var(--color-text-primary);
 }
 
+.paramName:focus {
+  border-color: var(--color-accent-brand);
+}
+
 .typeBadge {
   flex-shrink: 0;
-  padding: var(--space-2) var(--space-6);
+  padding: var(--space-8) var(--space-6) var(--space-6);
   background: var(--color-surface-raised);
-  border: 0;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-4);
   font-family: var(--font-mono);
   font-size: var(--text-xs);

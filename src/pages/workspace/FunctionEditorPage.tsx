@@ -922,7 +922,13 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                   {params.map((param, index) => (
                     <Fragment key={index}>
                     <div className={styles.paramRow}>
+                      <div className={styles.paramTopLine}>
+                      <span className={`${styles.paramField} ${styles.paramFieldName}`}>
+                        <label className={styles.paramLabel} htmlFor={`param-name-${index}`}>
+                          Name
+                        </label>
                       <input
+                        id={`param-name-${index}`}
                         className={`${styles.paramName} ${styles.inputMono}`}
                         type="text"
                         value={param.name}
@@ -936,8 +942,14 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                           setSaved(false);
                         }}
                       />
+                      </span>
+                      <span className={styles.paramField}>
+                        <label className={styles.paramLabel} htmlFor={`param-type-${index}`}>
+                          Type
+                        </label>
                       <span className={styles.typeSelect}>
                         <select
+                          id={`param-type-${index}`}
                           className={styles.typeBadge}
                           value={param.type}
                           aria-label={`Parameter ${index + 1} type`}
@@ -979,6 +991,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                         </select>
                         <img src={chevronDown12Icon} alt="" width={12} height={12} />
                       </span>
+                      </span>
                       <button
                         type="button"
                         className={styles.removeParam}
@@ -990,11 +1003,15 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                       >
                         ×
                       </button>
-                    </div>
+                      </div>
 
                     {/*
-                      Which object, on its own line: the row above is already three
-                      controls wide, and an object's name is longer than a type's.
+                      Which object, on a second line inside the same box: the line
+                      above is already three controls wide, and an object's name is
+                      longer than a type's. Inside, because the name, the type and
+                      the object it names are one parameter - a selector sitting
+                      below the box read as belonging to nothing.
+
                       Only ever shown for a parameter that names one — for anything
                       else there is nothing to choose.
                     */}
@@ -1048,6 +1065,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                         )}
                       </div>
                     )}
+                    </div>
                     </Fragment>
                   ))}
                   <button
