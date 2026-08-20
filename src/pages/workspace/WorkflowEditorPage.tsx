@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
+import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Background,
@@ -56,8 +56,21 @@ import type { WorkflowObject } from '../../api/objects';
 import { fetchWorkspaceTriggers } from '../../api/triggers';
 import type { Trigger } from '../../api/triggers';
 import { removeWorkflow } from '../../api/workflows';
+import activityIcon from '../../assets/activity.svg';
 import arrowLeftIcon from '../../assets/arrow-left.svg';
+import bellIcon from '../../assets/bell.svg';
+import botIcon from '../../assets/bot.svg';
+import boxIcon from '../../assets/box.svg';
+import cloudUploadIcon from '../../assets/cloud-upload.svg';
+import copyIcon from '../../assets/copy.svg';
+import filterIcon from '../../assets/filter.svg';
+import messageSquareIcon from '../../assets/message-square.svg';
 import pencilIcon from '../../assets/pencil.svg';
+import playIcon from '../../assets/play.svg';
+import plusIcon from '../../assets/plus.svg';
+import redoIcon from '../../assets/redo.svg';
+import saveIcon from '../../assets/save.svg';
+import undoIcon from '../../assets/undo.svg';
 import { ActionDialog } from '../../components/ActionDialog';
 import { AppShell } from '../../components/AppShell';
 import { ConditionDialog } from '../../components/ConditionDialog';
@@ -797,6 +810,70 @@ function withDefinition<T extends { id: string }>(all: T[], one: T): T[] {
     : [one, ...all];
 }
 
+/**
+ * What each kind of node is drawn as in the Add menu.
+ *
+ * The same pictures the command palette and the sidebars already use for these
+ * things, rather than a second set chosen here: a trigger is a bell everywhere
+ * else in the app, and a menu that called it something different would be one
+ * more thing to learn. A session has no catalogue entry to take an icon from,
+ * so it uses the one `addNode` gives a new session node.
+ */
+const ADD_ICON: Record<NodeKind, string> = {
+  TRIGGER: bellIcon,
+  AGENT: botIcon,
+  ACTION: activityIcon,
+  CONDITION: filterIcon,
+  OBJECT: boxIcon,
+  SESSION: messageSquareIcon,
+};
+
+export interface ToolButtonProps {
+  /** What the control is called: shown on hover, and read aloud as its name. */
+  label: string;
+  /**
+   * The keystroke that does the same thing, exactly as it is bound. Shown in
+   * brackets after the label. Passed from the setting the handler obeys rather
+   * than written out here, so a rebinding cannot leave the two disagreeing.
+   */
+  shortcut?: string | null;
+  /** A second line - why it is grey, or where the keystroke is changed. */
+  note?: string | null;
+  /** The look of the button; the plain icon square unless something else is wanted. */
+  className?: string;
+  disabled?: boolean;
+  onClick: () => void;
+  /** The picture. Nothing else is drawn, so the label has to carry the words. */
+  children: ReactNode;
+}
+
+/**
+ * One picture in the toolbar, with its words kept where they can still be found.
+ *
+ * The toolbar used to spell every button out and took the width of the canvas
+ * doing it. Dropping to icons only works if the words survive somewhere, so they
+ * go three places at once: `aria-label` names the control for a screen reader
+ * and for anything driving the page by label, `data-tip` is drawn as a card by
+ * the stylesheet on hover *and* on keyboard focus - a `title` would be neither -
+ * and the keystroke is appended to both from the same string, so what is read
+ * aloud and what is shown can never say different things.
+ */
+function ToolButton({ label, shortcut, note, className, disabled, onClick, children }: ToolButtonProps) {
+  const named = shortcut === undefined || shortcut === null ? label : `${label} (${shortcut})`;
+  return (
+    <button
+      type="button"
+      className={className === undefined ? styles.iconButton : `${styles.iconButton} ${className}`}
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={note === undefined || note === null ? named : `${named}. ${note}`}
+      data-tip={note === undefined || note === null ? named : `${named}\n${note}`}
+    >
+      {children}
+    </button>
+  );
+}
+
 export function WorkflowEditorPage(props: WorkflowEditorPageProps) {
   // The canvas hooks need the provider above them.
   return (
@@ -919,6 +996,18 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   const [running, setRunning] = useState(false);
   const [browsingIcons, setBrowsingIcons] = useState(false);
   const [discarding, setDiscarding] = useState(false);
+  /*
+   * Whether the Add menu is open.
+   *
+   * Six spelled-out buttons is what the row cost most: they took more width
+   * than everything else on the right put together. One button that opens a
+   * list gives that width back and still shows the six full names when it
+   * matters - at the moment somebody is choosing between them - which six
+   * bare pictures in a row would not. `addMenu` is the block a click has to
+   * land outside of to close it, the way the account menu closes.
+   */
+  const [adding, setAdding] = useState(false);
+  const addMenu = useRef<HTMLDivElement>(null);
   /*
    * Which definition the builder panel is holding, if any.
    *
@@ -2147,6 +2236,38 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     return () => window.removeEventListener('keydown', onKey);
   }, [building]);
 
+  /*
+   * The Add menu closes on a click anywhere else, and on Escape.
+   *
+   * The same two ways out the account menu has: a menu that could only be shut
+   * by picking something from it would be a menu somebody has to add a node to
+   * escape.
+   */
+  useEffect(() => {
+    if (!adding) return;
+
+    function onPointerDown(event: MouseEvent) {
+      // Not `as Node`: React Flow's own `Node` is the one in scope in this file.
+      if (!addMenu.current?.contains(event.target as HTMLElement)) setAdding(false);
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') setAdding(false);
+    }
+
+    /*
+     * In the capture phase, unlike the account menu's: the thing most likely to
+     * be clicked next is the canvas, and React Flow stops a press on the pane
+     * or on a node from reaching the document at all - so a bubbling listener
+     * leaves the menu hanging open over the graph somebody just clicked.
+     */
+    document.addEventListener('mousedown', onPointerDown, true);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown, true);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [adding]);
+
   /**
    * The turn keystroke, R until somebody changes it in Preferences.
    *
@@ -2405,125 +2526,183 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
         </div>
 
         <div className={styles.toolbarRight}>
-          <div className={styles.addMenu}>
-            <span className={styles.addLabel}>Add:</span>
-            {(Object.keys(NODE_KIND_LABEL) as NodeKind[]).map((kind) => (
-              <button key={kind} type="button" className={styles.addButton} onClick={() => addNode(kind)}>
-                {NODE_KIND_LABEL[kind]}
-              </button>
-            ))}
+          {/*
+            Add, as one button rather than six.
+
+            The six were the whole of this issue: "Trigger", "LLM Agent",
+            "Action", "Condition", "Object" and "LLM Session" took about 410px
+            of a 1440px bar - more than everything else on the right put
+            together - and the canvas paid for it. Six pictures in a row would
+            give most of that back but would leave somebody guessing which small
+            square is a condition; one picture that opens a list gives all of it
+            back and still spells the six out at the one moment the spelling is
+            worth anything, which is while somebody is choosing between them.
+          */}
+          <div className={styles.addMenu} ref={addMenu}>
+            <button
+              type="button"
+              className={adding ? `${styles.iconButton} ${styles.iconButtonOn}` : styles.iconButton}
+              onClick={() => setAdding((open) => !open)}
+              aria-haspopup="menu"
+              aria-expanded={adding}
+              aria-label="Add node"
+              data-tip="Add node"
+            >
+              <img src={plusIcon} alt="" width={16} height={16} />
+            </button>
+            {adding && (
+              <div className={styles.addDropdown} role="menu">
+                {(Object.keys(NODE_KIND_LABEL) as NodeKind[]).map((kind) => (
+                  <button
+                    key={kind}
+                    type="button"
+                    role="menuitem"
+                    className={styles.addItem}
+                    onClick={() => {
+                      setAdding(false);
+                      addNode(kind);
+                    }}
+                  >
+                    <img src={ADD_ICON[kind]} alt="" width={14} height={14} />
+                    {NODE_KIND_LABEL[kind]}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           {/*
             Beside Add, because it is the other way a node gets onto the canvas.
             Grey while nothing is selected, which is also how somebody learns
-            that it is the selected node this copies. The keystroke is on the
-            button for the reason Save's is: nobody finds out a shortcut exists
+            that it is the selected node this copies. The keystroke is shown on
+            hover for the reason Save's is: nobody finds out a shortcut exists
             without being told, and it is read from the setting the handler
             obeys so a rebinding shows here too.
           */}
-          <button
-            type="button"
-            className={styles.ghostButton}
+          <ToolButton
+            label="Duplicate"
+            shortcut={selectedKey === null ? null : copyKey}
+            note={selectedKey === null ? 'Select a node to copy it.' : 'Change the keystroke in Preferences.'}
             onClick={() => duplicate()}
             disabled={selectedKey === null}
-            title={
-              selectedKey === null
-                ? 'Select a node to copy it'
-                : `Copy the selected node (${copyKey}). Change the keystroke in Preferences.`
-            }
           >
-            Duplicate <kbd className={styles.shortcutKey}>{copyKey}</kbd>
-          </button>
-          <button
-            type="button"
+            <img src={copyIcon} alt="" width={16} height={16} />
+          </ToolButton>
+          <ToolButton
+            label="Remove workflow from workspace"
             className={styles.deleteButton}
             onClick={() => setRemoving(true)}
-            aria-label="Remove workflow from workspace"
-            title="Remove workflow from workspace"
           >
             <TrashIcon />
-          </button>
+          </ToolButton>
           {/*
-            The keystrokes are written on the buttons for the reason the save
-            one is: nobody finds out a shortcut exists without being told. Grey
-            while there is nowhere to go, which is also how somebody learns the
-            editor has been remembering at all.
+            The keystrokes are shown on the buttons that do the same thing, for
+            the reason the save one is: nobody finds out a shortcut exists
+            without being told. Read from the settings the handlers obey rather
+            than written out beside them - which is how the titles these replace
+            came to promise Ctrl+Z to somebody who had chosen something else.
+            Grey while there is nowhere to go, which is also how somebody learns
+            the editor has been remembering at all.
           */}
-          <button
-            type="button"
-            className={styles.ghostButton}
-            onClick={() => undo()}
-            disabled={steps.back === 0}
-            title="Undo (Ctrl+Z)"
-          >
-            Undo
-          </button>
-          <button
-            type="button"
-            className={styles.ghostButton}
-            onClick={() => redo()}
-            disabled={steps.forward === 0}
-            title="Redo (Ctrl+Shift+Z)"
-          >
-            Redo
-          </button>
+          <ToolButton label="Undo" shortcut={undoKey} onClick={() => undo()} disabled={steps.back === 0}>
+            <img src={undoIcon} alt="" width={16} height={16} />
+          </ToolButton>
+          <ToolButton label="Redo" shortcut={redoKey} onClick={() => redo()} disabled={steps.forward === 0}>
+            <img src={redoIcon} alt="" width={16} height={16} />
+          </ToolButton>
+          {/*
+            The one that keeps its word.
+
+            Discard throws away everything drawn since the last save, and its
+            dialog says there is no way back from it - not a thing to find out
+            about by pressing the button to see. And the picture it would take,
+            an arrow curling backwards, is already the picture beside it: undo
+            and back-to-saved are two sizes of the same gesture, and as two small
+            squares side by side they would be a coin toss. The word costs 76px
+            and removes the doubt, which is the one place on this bar where the
+            width is worth spending.
+          */}
           <button
             type="button"
             className={styles.ghostButton}
             onClick={() => setDiscarding(true)}
             disabled={busy}
+            data-tip={'Discard changes\nPuts the graph back as it was last saved.'}
           >
             Discard
           </button>
           {/*
-            The keystroke is written on the button that does the same thing,
+            The keystroke is shown on the button that does the same thing,
             because that is the only way anybody finds out it exists without
             being told. Read from the setting the handler obeys, so somebody who
             changed it in Preferences is shown what they chose.
+
+            "Working" keeps its word where the button lost one: a picture can
+            say what a control does, but it cannot say that something is
+            happening right now, and that is news worth the width for as long as
+            it lasts.
           */}
-          <button
-            type="button"
-            className={styles.ghostButton}
-            onClick={() => void handleSave()}
-            disabled={busy}
-            title={`Save the workflow (${save}). Change the keystroke in Preferences.`}
-          >
-            {busy ? (
-              'Working…'
-            ) : (
-              <>
-                Save <kbd className={styles.shortcutKey}>{save}</kbd>
-              </>
-            )}
-          </button>
+          {busy ? (
+            <span className={styles.working}>Working…</span>
+          ) : (
+            <ToolButton
+              label="Save"
+              shortcut={save}
+              note="Change the keystroke in Preferences."
+              onClick={() => void handleSave()}
+            >
+              <img src={saveIcon} alt="" width={16} height={16} />
+            </ToolButton>
+          )}
           {/*
             Running from the editor, and then watching it: the run's own page is
             where every step, its input and its log are, and reaching it by going
             back to the list and hunting for the newest row is a detour past the
             thing somebody pressed Run to see.
           */}
-          <button
-            type="button"
-            className={styles.ghostButton}
-            onClick={() => void handleRun()}
-            disabled={busy || running}
-            title="Run the workflow as it is on screen and open the run"
-          >
-            {running ? 'Starting…' : 'Run'}
-          </button>
+          {running ? (
+            <span className={styles.working}>Starting…</span>
+          ) : (
+            <ToolButton
+              label="Run"
+              note="Runs the workflow as it is on screen and opens the run."
+              onClick={() => void handleRun()}
+              disabled={busy}
+            >
+              <img src={playIcon} alt="" width={16} height={16} />
+            </ToolButton>
+          )}
           {/*
-            Violet while there is something to publish, quiet once there is not:
-            a call to action that is always lit says nothing about whether it
-            needs pressing.
+            Filled with the accent while there is something to publish, quiet
+            once there is not: a call to action that is always lit says nothing
+            about whether it needs pressing. Still the loudest square on the bar
+            now that the word is gone, because the colour was always what made
+            it the loud one.
           */}
-          <button
-            type="button"
+          <ToolButton
+            label="Publish"
             className={unpublished ? styles.publishButton : styles.publishButtonQuiet}
             onClick={() => void handlePublish()}
             disabled={busy}
           >
-            Publish
-          </button>
+            {/*
+              Kept light while the square is filled with the accent.
+
+              The light theme darkens every icon in the app on its way to being
+              readable on white, which is right for the eight squares beside
+              this one and wrong for this one whenever it is the lit call to
+              action: the accent is the same dark fill in both themes, so a
+              darkened cloud on it is a cloud nobody can see. Quiet again once
+              there is nothing to publish, when the square is pale and the
+              darkening is what makes the picture visible at all.
+            */}
+            <img
+              src={cloudUploadIcon}
+              alt=""
+              width={16}
+              height={16}
+              data-keeps-colour={unpublished ? '' : undefined}
+            />
+          </ToolButton>
         </div>
       </div>
 

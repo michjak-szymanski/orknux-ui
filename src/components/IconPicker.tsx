@@ -22,7 +22,7 @@ export const NODE_ICONS: Record<string, string> = Object.fromEntries(
  * with. A chevron says nothing about what a node does, and offering one only
  * makes the useful ones harder to find.
  */
-const CHROME = /^(chevron|panel-|arrow-|toggle-|trash|x-circle|check-circle|log-out|door-open|sun|moon|copy|pen|pencil|plus|search|settings-14|orknux-mark)/;
+const CHROME = /^(chevron|panel-|arrow-|toggle-|trash|x-circle|check-circle|log-out|door-open|sun|moon|copy|pen|pencil|plus|search|settings-14|orknux-mark|undo|redo|save|play)/;
 
 const BROWSABLE = Object.keys(NODE_ICONS)
   .filter((name) => !CHROME.test(name))
