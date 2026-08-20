@@ -852,14 +852,23 @@
  */
 .jump {
   flex: none;
+  /*
+   * A mark rather than words now - why, at the call site. Inline-flex so the
+   * box is the icon's box: an inline anchor would reserve a line's worth of
+   * descender under it and knock the row off its own centre.
+   */
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-2);
   font-size: var(--text-sm);
   color: var(--color-accent-brand);
   text-decoration: none;
   white-space: nowrap;
 }
 
+/* Nothing to underline any more, so hovering brightens the mark instead. */
 .jump:hover {
-  text-decoration: underline;
+  color: var(--color-text-primary);
 }
 
 /*

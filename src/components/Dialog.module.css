@@ -656,13 +656,24 @@ select.input {
  * The link out of a field, to the definition the field is pointing at. Like
  * `.textButton`, but it is a link — so the underline is the hover, not the rest.
  */
+/*
+ * The way out to what a picker names, shown as a link mark rather than as the
+ * words "Open definition ↗" - the same convention the function editor uses, so
+ * the two forms say the same thing the same way. Inline-flex so the box is the
+ * icon's box and the label beside it stays on its own centre line.
+ */
 .jump {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-2);
   font-size: var(--text-sm);
   color: var(--color-accent-brand);
   text-decoration: none;
 }
+
+/* Nothing to underline any more, so hovering brightens the mark instead. */
 .jump:hover {
-  text-decoration: underline;
+  color: var(--color-text-primary);
 }
 
 /*

@@ -413,13 +413,23 @@ select.input {
   justify-content: space-between;
   gap: var(--space-8);
 }
+/*
+ * The way out to what a picker names, shown as a link mark rather than as the
+ * words "Open definition ↗" - one convention across the forms that offer it.
+ * Inline-flex so the box is the icon's box: an inline anchor would reserve a
+ * line's worth of descender under it and knock the label row off centre.
+ */
 .jump {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-2);
   font-size: var(--text-sm);
   color: var(--color-accent-brand);
   text-decoration: none;
 }
+/* Nothing to underline any more, so hovering brightens the mark instead. */
 .jump:hover {
-  text-decoration: underline;
+  color: var(--color-text-primary);
 }
 .inputMono {
   font-family: var(--font-mono);

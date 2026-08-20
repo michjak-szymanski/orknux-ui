@@ -14,6 +14,7 @@ import {
   updateTrigger,
 } from '../api/triggers';
 import type { Trigger, TriggerAction, TriggerType, WebhookAuthType } from '../api/triggers';
+import { LinkIcon } from './LinkIcon';
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
 import {
   NEW_FUNCTION,
@@ -392,8 +393,9 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                       target="_blank"
                       rel="noreferrer"
                       title="Opens the object's definition in a new tab"
+                      aria-label="Open the expected object's definition"
                     >
-                      Open definition &#8599;
+                      <LinkIcon />
                     </Link>
                   )}
                 </span>
@@ -465,8 +467,9 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                         target="_blank"
                         rel="noreferrer"
                         title="Opens the function in a new tab"
+                        aria-label="Open the function's definition"
                       >
-                        Open definition &#8599;
+                        <LinkIcon />
                       </Link>
                     )}
                   </span>
@@ -618,8 +621,9 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                   target="_blank"
                   rel="noreferrer"
                   title="Opens the condition in a new tab"
+                  aria-label="Open the condition's definition"
                 >
-                  Open definition &#8599;
+                  <LinkIcon />
                 </Link>
               )}
             </span>

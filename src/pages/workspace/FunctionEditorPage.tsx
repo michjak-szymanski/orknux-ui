@@ -32,6 +32,7 @@ import { BackLink } from '../../components/BackLink';
 import { CodeDiff } from '../../components/CodeDiff';
 import { CodeEditor } from '../../components/CodeEditor';
 import type { CodeEditorHandle } from '../../components/CodeEditor';
+import { LinkIcon } from '../../components/LinkIcon';
 import { Loader } from '../../components/Loader';
 import { compile, declareObjects } from '../../components/monaco';
 import { objectTypes } from '../../components/objectTypes';
@@ -1059,7 +1060,16 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                             title="Opens the object's definition in a new tab"
                             aria-label={`Open definition of ${objectNameOf(param.objectId) ?? 'the object'} for ${param.name || `parameter ${index + 1}`}`}
                           >
-                            Open definition &#8599;
+                            {/*
+                              The icon alone. "Open definition ↗" was two words
+                              and an arrow on a line that also has to hold a
+                              select and an object's name, and it took the room
+                              the name needed. What it does is the ordinary
+                              meaning of a link, so the link mark says it; the
+                              words live on in the title and the aria-label,
+                              which is what a pointer and a screen reader get.
+                            */}
+                            <LinkIcon />
                           </Link>
                         )}
                       </div>
@@ -1233,7 +1243,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                         title="Opens the object's definition in a new tab"
                         aria-label={`Open definition of ${objectNameOf(returnObjectId) ?? 'the returned object'}`}
                       >
-                        Open definition &#8599;
+                        <LinkIcon />
                       </Link>
                     )}
                   </div>

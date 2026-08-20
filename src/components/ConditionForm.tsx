@@ -27,6 +27,7 @@ import {
   validFunctionName,
 } from '../api/functions';
 import type { WorkspaceFunction } from '../api/functions';
+import { LinkIcon } from './LinkIcon';
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
 /*
  * The dialog that frames this form, for the one case the form frames itself: a
@@ -511,8 +512,9 @@ export function ConditionForm({
                     target="_blank"
                     rel="noreferrer"
                     title="Opens the function in a new tab"
+                    aria-label="Open the function's definition"
                   >
-                    Open definition &#8599;
+                    <LinkIcon />
                   </Link>
                 )}
               </span>
