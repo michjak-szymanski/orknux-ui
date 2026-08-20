@@ -68,6 +68,19 @@ export function FieldHint({ label, children }: FieldHintProps) {
   const control = useRef<HTMLButtonElement>(null);
   /** The note itself, which is not inside [box] once it is portalled out. */
   const note = useRef<HTMLSpanElement>(null);
+  /**
+   * What the note is portalled into: the body, or the dialog it stands in.
+   *
+   * A modal dialog is put in the browser's top layer, which paints over
+   * everything outside it whatever its z-index says - so a note sent to the
+   * body from inside one lands in exactly the right place and cannot be seen.
+   * Measured rather than assumed: `elementFromPoint` at the note's centre came
+   * back with the control underneath it.
+   *
+   * Read when it opens rather than once, because a control can be rendered
+   * before the dialog around it is opened.
+   */
+  const [host, setHost] = useState<HTMLElement | null>(null);
   const id = useId();
 
   const stopClosing = () => {
@@ -122,8 +135,10 @@ export function FieldHint({ label, children }: FieldHintProps) {
   useLayoutEffect(() => {
     if (!open) {
       setAt(null);
+      setHost(null);
       return;
     }
+    setHost(control.current?.closest('dialog') ?? document.body);
     place();
   }, [open]);
 
@@ -241,7 +256,7 @@ export function FieldHint({ label, children }: FieldHintProps) {
         Placing it on the body means no ancestor can capture it, whatever the
         page it is used on decides to animate later.
       */}
-      {open && at !== null && createPortal(
+      {open && at !== null && host !== null && createPortal(
         // A note rather than a dialog: there is nothing in here to do, and a
         // dialog would take the focus away from the panel to say so.
         <span
@@ -274,7 +289,7 @@ export function FieldHint({ label, children }: FieldHintProps) {
           )}
           {children}
         </span>,
-        document.body,
+        host,
       )}
     </span>
   );

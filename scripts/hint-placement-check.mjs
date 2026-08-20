@@ -78,6 +78,42 @@ for (const { what, at, select } of pages) {
   await page.waitForTimeout(400);
 }
 
+/*
+ * The case a rectangle cannot answer: inside a modal dialog.
+ *
+ * `showModal()` puts a dialog in the top layer, which paints over everything
+ * outside it whatever the z-index. A note portalled to the body from in there
+ * lands exactly where it should and is invisible - so this asks what is
+ * actually drawn at the note's centre, not where the note thinks it is.
+ */
+await page.goto(`${BASE}/workspace/9/triggers`, { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(1500);
+const opener = page.getByRole('button', { name: /new trigger|create trigger|add trigger/i }).first();
+if ((await opener.count()) > 0) {
+  await opener.click();
+  await page.waitForTimeout(900);
+  const inDialog = page.locator('dialog[open] [data-hint]').first();
+  if ((await inDialog.count()) > 0) {
+    await inDialog.hover();
+    await page.waitForTimeout(400);
+    const note = page.locator('[role="note"]').first();
+    const box = await note.boundingBox();
+    const onTop = await page.evaluate(
+      ([x, y]) => {
+        const at = document.elementFromPoint(x, y);
+        const note = at?.closest('[role="note"]');
+        return note !== null && note !== undefined;
+      },
+      [box.x + box.width / 2, box.y + box.height / 2],
+    );
+    record(onTop, 'in a modal dialog the note is what is actually drawn on top');
+  } else {
+    console.log('(no (?) inside the trigger dialog to check)');
+  }
+} else {
+  console.log('(could not open the trigger dialog)');
+}
+
 await browser.close();
 const failed = results.filter((ok) => !ok).length;
 console.log(failed === 0 ? 'ALL PASS' : `${failed} FAILED`);
