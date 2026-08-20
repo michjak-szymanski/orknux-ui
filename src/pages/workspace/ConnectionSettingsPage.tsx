@@ -273,10 +273,13 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
         // Only when it has actually been changed, so opening the page and
         // saving a credential does not also rewrite the kind.
         type: type !== null && type !== connection?.type ? type : undefined,
-        authType,
+        // Not for Slack, whose controls are gone: the server overwrites
+        // authType on every save, and a Slack connection has nowhere else to
+        // point. Sending them would write settings the form no longer shows.
+        authType: slack ? undefined : authType,
         secret: secret ?? undefined,
         appToken: appToken ?? undefined,
-        urlOverride: urlOverride.trim(),
+        urlOverride: slack ? undefined : urlOverride.trim(),
         // Only for a mail connection: sending these for a Slack one would write
         // settings nothing reads and clear what somebody typed elsewhere.
         smtpPort: mail ? Number(smtpPort) : undefined,
@@ -442,7 +445,12 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
           <form className={styles.card} onSubmit={handleSave}>
             <h2 className={styles.cardTitle}>Active Credentials</h2>
 
-            {!mail && (
+            {/*
+              * Not for Slack, which authenticates one way. The server sets
+              * BEARER_TOKEN on every save regardless of what arrives, so a
+              * chooser here offers four answers and keeps one.
+              */}
+            {!slack && !mail && (
             <div className={styles.field}>
               <label className={styles.label} htmlFor="connection-auth">
                 Auth Type
@@ -657,7 +665,14 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
               </div>
             )}
 
-            {!mail && (
+            {/*
+              * Nor for Slack. There is one Slack and one Web API base under it;
+              * every Slack connection sends, and an app-level token is what
+              * additionally makes it listen. Neither of those is a webhook
+              * pointed somewhere else, so there is no Slack connection for
+              * which an override here means anything.
+              */}
+            {!slack && !mail && (
             <div className={styles.field}>
               <label className={styles.label} htmlFor="connection-url-override">
                 Webhook URL Override

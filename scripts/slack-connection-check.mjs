@@ -13,6 +13,11 @@
  * custom headers, because the server writes all three itself - then add the
  * app-level token on the connection's own page and check it stayed.
  *
+ * It also holds the two screens to the same story. The dialog stopped asking
+ * for a URL, an auth type and custom headers; the connection's own page went on
+ * asking for an auth type and a webhook override, both of which Slack settles
+ * on its own. Neither screen asks now, and a webhook still gets both.
+ *
  * It makes its own connection and removes it again.
  *
  * Temporary: delete once it has been looked at.
@@ -145,6 +150,15 @@ try {
   record(secretLabel.trim() === 'Bot token', `named the same as the dialog names it (${secretLabel.trim()})`);
   record((await page.locator('[data-hint="Bot token"]').count()) === 1, 'and the (?) beside it agrees');
 
+  // The same complaint as the dialog, one screen over: this page went on asking
+  // for an auth type the server overwrites on every save, and for a webhook
+  // override that means nothing for a connection whose only endpoint is Slack.
+  record((await page.locator('#connection-auth').count()) === 0, 'the page asks for no Auth Type either');
+  record(
+    (await page.locator('#connection-url-override').count()) === 0,
+    'and no Webhook URL Override',
+  );
+
   const appToken = page.locator('#connection-app-token');
   record((await appToken.count()) === 1, 'a plain Slack connection is offered its App-Level Token');
   record((await appToken.inputValue()) === '', 'empty, because nothing was given at creation');
@@ -182,6 +196,18 @@ try {
   await chooser.selectOption('SLACK');
   await page.waitForTimeout(400);
   record((await appToken.count()) === 1, 'and choosing Slack brings it back');
+
+  // Hidden because Slack decides both of them, not because the page stopped
+  // offering them: the kind that has a use for either still gets both.
+  await chooser.selectOption('WEBHOOK');
+  await page.waitForTimeout(400);
+  record((await page.locator('#connection-auth').count()) === 1, 'a webhook is still offered an Auth Type');
+  record(
+    (await page.locator('#connection-url-override').count()) === 1,
+    'and still offered its Webhook URL Override',
+  );
+  await chooser.selectOption('SLACK');
+  await page.waitForTimeout(400);
 } finally {
   if (id !== null) {
     await ask(`mutation ($id: ID!) { disconnectWorkspaceConnection(id: $id) }`, { id });
