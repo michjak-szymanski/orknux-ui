@@ -48,7 +48,7 @@ export type Access = 'signed-in' | 'admin';
  * The first four are the links across the top, in that order. `Docs`, `Admin`
  * and `You` are reached from the corner instead, and light nothing in the bar.
  */
-export type Where = 'AI' | 'Workflow' | 'Workspace' | 'Chat' | 'Docs' | 'Admin' | 'You';
+export type Where = 'AI' | 'Flow' | 'Workspace' | 'Chat' | 'Docs' | 'Admin' | 'You';
 
 /**
  * The links across the top, in the order they are drawn.
@@ -58,7 +58,13 @@ export type Where = 'AI' | 'Workflow' | 'Workspace' | 'Chat' | 'Docs' | 'Admin' 
  * section first. Saying it twice is how a link ends up pointing at a page its
  * own menu no longer starts with.
  */
-export const TOP_SECTIONS = ['AI', 'Workflow', 'Workspace', 'Chat'] as const;
+/*
+ * "Flow" rather than "Workflow": the section held a page called Workflows, so
+ * the bar and the menu under it said almost the same word twice and the wider
+ * one was the one that meant less. The pages it holds are unchanged, and so are
+ * their addresses.
+ */
+export const TOP_SECTIONS = ['AI', 'Flow', 'Workspace', 'Chat'] as const;
 
 export type TopSection = (typeof TOP_SECTIONS)[number];
 
@@ -152,7 +158,7 @@ export const PAGES = [
   {
     path: '/workspace/:workspaceId/executions',
     access: 'signed-in',
-    goTo: { label: 'Executions', where: 'Workflow', icon: gitBranchIcon, also: 'runs history' },
+    goTo: { label: 'Executions', where: 'Flow', icon: gitBranchIcon, also: 'runs history' },
   },
   {
     // The workspace's own front page, and the first thing anybody opens: the
@@ -161,32 +167,32 @@ export const PAGES = [
     // bookmark points at it.
     path: '/workspace/:workspaceId',
     access: 'signed-in',
-    goTo: { label: 'Workflows', where: 'Workflow', icon: chartNetworkIcon, also: 'graph editor' },
+    goTo: { label: 'Workflows', where: 'Flow', icon: chartNetworkIcon, also: 'graph editor' },
   },
   {
     path: '/workspace/:workspaceId/actions',
     access: 'signed-in',
-    goTo: { label: 'Actions', where: 'Workflow', icon: activityIcon },
+    goTo: { label: 'Actions', where: 'Flow', icon: activityIcon },
   },
   {
     path: '/workspace/:workspaceId/functions',
     access: 'signed-in',
-    goTo: { label: 'Functions', where: 'Workflow', icon: codeIcon, also: 'javascript typescript' },
+    goTo: { label: 'Functions', where: 'Flow', icon: codeIcon, also: 'javascript typescript' },
   },
   {
     path: '/workspace/:workspaceId/triggers',
     access: 'signed-in',
-    goTo: { label: 'Triggers', where: 'Workflow', icon: bellIcon, also: 'events schedule webhook' },
+    goTo: { label: 'Triggers', where: 'Flow', icon: bellIcon, also: 'events schedule webhook' },
   },
   {
     path: '/workspace/:workspaceId/conditions',
     access: 'signed-in',
-    goTo: { label: 'Conditions', where: 'Workflow', icon: filterIcon },
+    goTo: { label: 'Conditions', where: 'Flow', icon: filterIcon },
   },
   {
     path: '/workspace/:workspaceId/objects',
     access: 'signed-in',
-    goTo: { label: 'Objects', where: 'Workflow', icon: boxIcon, also: 'shapes data' },
+    goTo: { label: 'Objects', where: 'Flow', icon: boxIcon, also: 'shapes data' },
   },
 
   // ---- Workspace: what the whole of it is set up with ----

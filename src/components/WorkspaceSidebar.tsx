@@ -23,7 +23,7 @@ const WORKSPACE_LIST_SIZE = 100;
  * which the router does not allow. A workspace's front page is the least
  * surprising place to be pointed at if it ever happens.
  */
-const FALLBACK: Where = 'Workflow';
+const FALLBACK: Where = 'Flow';
 
 /**
  * The menu down the side of a workspace page.
