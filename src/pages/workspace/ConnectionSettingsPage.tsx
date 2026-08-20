@@ -123,6 +123,15 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
   const [secret, setSecret] = useState<string | null>(null);
   const [appToken, setAppToken] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
+  /**
+   * What was revealed, kept so it can be put back out of sight.
+   *
+   * Hiding is only offered while the field still holds exactly this. Once it
+   * has been typed into, covering it again would either throw the typing away
+   * or leave an edit pending behind a row of dots - and a secret that is
+   * hidden but not what is stored is the worst of the three.
+   */
+  const [revealedValue, setRevealedValue] = useState<string | null>(null);
   const [urlOverride, setUrlOverride] = useState('');
   const [smtpUsername, setSmtpUsername] = useState('');
   const [smtpFrom, setSmtpFrom] = useState('');
@@ -153,6 +162,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
         setSecret(null);
         setAppToken(null);
         setRevealed(false);
+        setRevealedValue(null);
       })
       .catch((cause: unknown) => {
         setLoadError(cause instanceof Error ? cause.message : 'Could not load the connection.');
@@ -187,6 +197,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
     try {
       const stored = await revealWorkspaceConnectionSecret(connectionId);
       setSecret(stored ?? '');
+      setRevealedValue(stored ?? '');
       setRevealed(true);
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : 'Could not reveal the credentials.');
@@ -533,6 +544,30 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
                 {connection?.secretSet === true && !revealed && secret === null && (
                   <button type="button" className={styles.reveal} onClick={handleReveal}>
                     Reveal
+                  </button>
+                )}
+                {/*
+                  And a way back. Revealing put the credential on the screen with
+                  nothing to undo it, so it stayed there until the page was
+                  loaded again - which is a poor answer to somebody who looked at
+                  it in one window and then turned to another person.
+
+                  Offered only while the field still holds what was revealed;
+                  after that it is an edit like any other.
+                */}
+                {revealed && secret === revealedValue && (
+                  <button
+                    type="button"
+                    className={styles.reveal}
+                    onClick={() => {
+                      // Back to untouched, not to empty: null is what tells the
+                      // save to leave the stored credential alone.
+                      setSecret(null);
+                      setRevealed(false);
+                      setRevealedValue(null);
+                    }}
+                  >
+                    Hide
                   </button>
                 )}
               </div>

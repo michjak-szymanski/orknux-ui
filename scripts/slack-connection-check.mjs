@@ -72,6 +72,20 @@ try {
   record((await appToken.count()) === 1, 'a Socket Mode connection offers its App-Level Token');
   record((await page.locator('#connection-secret').count()) === 1, 'and the API Token beside it');
 
+  // Revealing put the credential on screen with no way back.
+  const secretBox = page.locator('#connection-secret');
+  const masked = await secretBox.inputValue();
+  await page.getByRole('button', { name: 'Reveal' }).click();
+  await page.waitForTimeout(800);
+  const bare = await secretBox.inputValue();
+  record(bare !== masked && bare.startsWith('xoxb-'), `Reveal shows the stored token (${bare.slice(0, 12)}…)`);
+  const hide = page.getByRole('button', { name: 'Hide' });
+  record((await hide.count()) === 1, 'and there is a way to put it back');
+  await hide.click();
+  await page.waitForTimeout(400);
+  record((await secretBox.inputValue()) === masked, 'Hide covers it again');
+  record((await page.getByRole('button', { name: 'Reveal' }).count()) === 1, 'and Reveal is offered once more');
+
   // The label cannot say which token; the (?) beside it has to.
   const tokenHint = page.locator('[data-hint="API Token"]');
   record((await tokenHint.count()) === 1, 'the API Token field offers a (?)');
