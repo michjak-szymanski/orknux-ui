@@ -735,11 +735,19 @@
   text-decoration: underline;
 }
 
+/*
+ * Flush with the parameter it belongs to, not indented under it.
+ *
+ * This carried a 12px left inset, meant to read as nesting. Once the line grew
+ * an "Open definition" link its right edge lined up with the parameter row
+ * above and its left edge did not, so it read as a control that had come loose
+ * rather than one belonging to anything. Sharing both edges with the row above
+ * says "this is that parameter's object" more plainly than an indent did.
+ */
 .paramObjectRow {
   position: relative;
   display: flex;
   align-items: center;
-  padding-left: var(--space-12);
 }
 
 .paramObjectRow > img {
