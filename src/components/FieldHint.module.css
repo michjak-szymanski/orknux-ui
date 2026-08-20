@@ -98,3 +98,45 @@
   font-family: var(--font-mono);
   color: var(--color-text-primary);
 }
+
+/*
+ * Pinned: it was asked to stay, so it says so and makes room for the control
+ * that puts it away. The corner is cleared rather than the whole first line,
+ * since most of these notes are a sentence and indenting all of them to miss a
+ * button in one corner would cost every note a ragged edge.
+ */
+.popoverPinned {
+  border-color: var(--color-accent-brand);
+}
+
+.popoverPinned::before {
+  content: '';
+  float: right;
+  width: 20px;
+  height: 16px;
+}
+
+.close {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-4);
+  font-size: var(--text-md);
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.close:hover,
+.close:focus-visible {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}

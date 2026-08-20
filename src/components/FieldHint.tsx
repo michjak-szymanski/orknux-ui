@@ -15,7 +15,7 @@ export interface FieldHintProps {
 }
 
 /**
- * The (?) beside a field's label, and what it has to say when pressed.
+ * The (?) beside a field's label, and what it has to say when asked.
  *
  * A panel that prints its explanations under the fields explains everything to
  * somebody who needed one of them once. The node editor had eleven paragraphs
@@ -23,23 +23,89 @@ export interface FieldHintProps {
  * prose about it - so the words go behind a control that is small when nobody
  * is asking and complete when somebody is.
  *
- * A button, not a `title`: a native tooltip cannot be reached from the
- * keyboard, cannot be read on a touch screen, waits a second before it appears
- * and takes markup out of the text. This is focusable, opens on Enter and
- * Space because a button does, closes on Escape and hands the focus back to
- * itself, and closes on a press anywhere else.
+ * It answers two different questions, so it opens two ways.
+ *
+ * **Hovering** is the glance - what is this field? The note appears under the
+ * pointer and goes when the pointer does, costing nothing and asking for
+ * nothing. Focusing does the same, because focus is the keyboard's hover.
+ *
+ * **Pressing pins it.** A note somebody is working from - a format to copy, a
+ * rule to check a value against - must not vanish the moment they move the
+ * pointer towards the field it is about, which is precisely where they are
+ * going next. A pinned note carries a close control and stays until it is used,
+ * through presses elsewhere and through scrolling, where it follows the field
+ * it belongs to rather than being left behind over another one.
+ *
+ * A button and not a `title` for both: a native tooltip cannot be reached from
+ * the keyboard, cannot be read on a touch screen at all, waits a second before
+ * it appears and takes the markup out of the text. On a touch screen, where
+ * there is no hovering to do, a tap pins straight away.
+ *
+ * Closing a hovered note waits a moment. It is drawn a few pixels clear of the
+ * control, so a pointer travelling into it to read the end of a sentence
+ * crosses ground belonging to neither - shutting the instant the button is left
+ * would make the note unreachable by the gesture that opened it.
  *
  * One component and not a class name, because the point is that every field
  * asks in the same shape: two conventions in one panel is worse than the wordy
  * convention it replaces.
  */
 export function FieldHint({ label, children }: FieldHintProps) {
-  const [open, setOpen] = useState(false);
+  /**
+   * Shut, glanced at, or pinned. Three rather than a boolean because a pinned
+   * note and a hovered one want opposite things from every event that follows:
+   * a press elsewhere, a scroll, a pointer leaving.
+   */
+  const [mode, setMode] = useState<'shut' | 'hovered' | 'pinned'>('shut');
+  const open = mode !== 'shut';
+  const pinned = mode === 'pinned';
+  /** The pending close, so travelling into the note cancels it. */
+  const closing = useRef<number | null>(null);
   /** Where the note is put, in window coordinates; null while it is shut. */
   const [at, setAt] = useState<{ top: number; left: number } | null>(null);
   const box = useRef<HTMLSpanElement>(null);
   const control = useRef<HTMLButtonElement>(null);
   const id = useId();
+
+  const stopClosing = () => {
+    if (closing.current !== null) {
+      window.clearTimeout(closing.current);
+      closing.current = null;
+    }
+  };
+
+  /** The glance. Never demotes a pinned note back to a hovered one. */
+  const glance = () => {
+    stopClosing();
+    setMode((was) => (was === 'pinned' ? was : 'hovered'));
+  };
+
+  /** Leaving only closes what hovering opened. */
+  const release = () => {
+    stopClosing();
+    closing.current = window.setTimeout(() => {
+      closing.current = null;
+      setMode((was) => (was === 'hovered' ? 'shut' : was));
+    }, LINGER);
+  };
+
+  const shut = () => {
+    stopClosing();
+    setMode('shut');
+  };
+
+  // Nothing left ticking against a control that has gone.
+  useEffect(() => () => {
+    if (closing.current !== null) window.clearTimeout(closing.current);
+  }, []);
+
+  /** Where the note belongs now, read off the control. */
+  const place = () => {
+    const rect = control.current?.getBoundingClientRect();
+    if (rect === undefined) return;
+    const room = window.innerWidth - WIDTH - GAP;
+    setAt({ top: rect.bottom + GAP, left: Math.max(GAP, Math.min(rect.left, room)) });
+  };
 
   /*
    * Placed against the window rather than against the label.
@@ -55,10 +121,7 @@ export function FieldHint({ label, children }: FieldHintProps) {
       setAt(null);
       return;
     }
-    const rect = control.current?.getBoundingClientRect();
-    if (rect === undefined) return;
-    const room = window.innerWidth - WIDTH - GAP;
-    setAt({ top: rect.bottom + GAP, left: Math.max(GAP, Math.min(rect.left, room)) });
+    place();
   }, [open]);
 
   useEffect(() => {
@@ -71,7 +134,10 @@ export function FieldHint({ label, children }: FieldHintProps) {
      * explanation hanging open over the graph somebody just clicked.
      */
     function onDown(event: MouseEvent) {
-      if (box.current !== null && !box.current.contains(event.target as globalThis.Node)) setOpen(false);
+      // A pinned note is dismissed by its own control and nothing else - that
+      // is what pinning it asked for. Only the glance goes on a press away.
+      if (pinned) return;
+      if (box.current !== null && !box.current.contains(event.target as globalThis.Node)) shut();
     }
 
     function onKey(event: KeyboardEvent) {
@@ -83,31 +149,51 @@ export function FieldHint({ label, children }: FieldHintProps) {
        * giving up on it would throw away what somebody had typed around it.
        */
       event.preventDefault();
-      setOpen(false);
+      shut();
       control.current?.focus();
     }
 
     /*
-     * And it goes away when anything scrolls. The note is placed once, where
-     * the control was: left open through a scroll of the panel it would sit
-     * over a field it is not about, which is worse than having to press again.
+     * A scroll moves the field, and the note is placed once where the control
+     * was - so left alone it would end up sitting over a field it is not about.
+     *
+     * A glance is simply dropped: it costs a hover to have it back. A pinned
+     * note was asked to stay, so it is moved to wherever its control has gone
+     * instead of being taken away.
      */
     function onScroll() {
-      setOpen(false);
+      if (pinned) place();
+      else shut();
     }
 
     document.addEventListener('mousedown', onDown, true);
     document.addEventListener('keydown', onKey);
     document.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onScroll);
     return () => {
       document.removeEventListener('mousedown', onDown, true);
       document.removeEventListener('keydown', onKey);
       document.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onScroll);
     };
-  }, [open]);
+  }, [open, pinned]);
 
   return (
-    <span className={styles.hint} ref={box}>
+    /*
+      The enter and leave sit on the wrapper rather than on the button, because
+      the note is a child of it: a pointer inside the note is still inside this,
+      so reading one does not count as leaving it.
+    */
+    <span
+      className={styles.hint}
+      ref={box}
+      onPointerEnter={(event) => {
+        if (event.pointerType === 'mouse') glance();
+      }}
+      onPointerLeave={(event) => {
+        if (event.pointerType === 'mouse') release();
+      }}
+    >
       <button
         ref={control}
         type="button"
@@ -118,14 +204,40 @@ export function FieldHint({ label, children }: FieldHintProps) {
         aria-expanded={open}
         aria-controls={id}
         aria-label={`About ${label}`}
-        onClick={() => setOpen((was) => !was)}
+        /*
+          Focus is the keyboard's hover, so tabbing to it says the same thing
+          hovering does rather than asking for a second keystroke.
+        */
+        onFocus={glance}
+        onBlur={release}
+        /*
+          A press pins it, whichever kind of press: a mouse, a tap, or Enter
+          and Space, which a button reports as a click. Pressing a pinned one
+          again puts it away, so the control that opened it can also shut it.
+        */
+        onClick={() => setMode((was) => (was === 'pinned' ? 'shut' : 'pinned'))}
       >
         ?
       </button>
       {open && at !== null && (
         // A note rather than a dialog: there is nothing in here to do, and a
         // dialog would take the focus away from the panel to say so.
-        <span className={styles.popover} id={id} role="note" style={{ top: at.top, left: at.left }}>
+        <span
+          className={pinned ? `${styles.popover} ${styles.popoverPinned}` : styles.popover}
+          id={id}
+          role="note"
+          style={{ top: at.top, left: at.left }}
+        >
+          {/*
+            Only on a pinned note. A hovered one goes when the pointer does, so
+            a way to close it would be a control nobody could reach in time and
+            a second thing to read in a note whose whole point is the first.
+          */}
+          {pinned && (
+            <button type="button" className={styles.close} aria-label={`Close the note about ${label}`} onClick={shut}>
+              ×
+            </button>
+          )}
           {children}
         </span>
       )}
@@ -138,3 +250,12 @@ const WIDTH = 240;
 
 /** Between the control and the note, and between the note and the window's edge. */
 const GAP = 6;
+
+/**
+ * How long the note waits before closing once the pointer has left.
+ *
+ * Long enough to cross the gap between the control and the note; short enough
+ * that a pointer passing over a row of them does not leave a trail of open
+ * notes behind it.
+ */
+const LINGER = 140;
