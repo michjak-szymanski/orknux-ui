@@ -32,7 +32,6 @@ const PROVIDER_TYPES: ProviderType[] = [
   'OPENAI',
   'ANTHROPIC',
   'AZURE_OPENAI',
-  'GOOGLE_AI',
   'OLLAMA',
   'CUSTOM',
 ];
@@ -54,10 +53,11 @@ function endpointHint(type: ProviderType): string {
       return 'https://api.anthropic.com/v1';
     case 'AZURE_OPENAI':
       return 'https://myinstance.openai.azure.com';
-    case 'GOOGLE_AI':
-      return 'https://generativelanguage.googleapis.com';
     case 'OLLAMA':
-      return 'http://localhost:11434';
+      // The OpenAI-compatible half of Ollama, which is the half this talks to:
+      // `/v1/models` and `/v1/chat/completions`. The bare port serves Ollama's
+      // own API at `/api/...` and 404s on both of those.
+      return 'http://localhost:11434/v1';
     case 'CUSTOM':
       return 'https://…';
   }

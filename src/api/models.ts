@@ -1,6 +1,6 @@
 import { graphql } from './client';
 
-export type ProviderType = 'OPENAI' | 'ANTHROPIC' | 'AZURE_OPENAI' | 'GOOGLE_AI' | 'OLLAMA' | 'CUSTOM';
+export type ProviderType = 'OPENAI' | 'ANTHROPIC' | 'AZURE_OPENAI' | 'OLLAMA' | 'CUSTOM';
 export type ProviderAuthMethod = 'API_KEY' | 'ENTRA_ID';
 /** CONNECTED only once a check reached the provider: a stored key is not a working one. */
 export type ProviderStatus = 'NOT_CONFIGURED' | 'NOT_CHECKED' | 'CONNECTED' | 'FAILED';
@@ -294,8 +294,6 @@ export function providerTypeLabel(type: ProviderType): string {
       return 'Anthropic';
     case 'AZURE_OPENAI':
       return 'Azure OpenAI';
-    case 'GOOGLE_AI':
-      return 'Google AI';
     case 'OLLAMA':
       return 'Ollama';
     case 'CUSTOM':
