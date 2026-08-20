@@ -1,4 +1,4 @@
-import type { ComponentBinding, ComponentKind, ExportDepth, ImportPlan } from './transfer';
+import type { ComponentBinding, ComponentExclusion, ComponentKind, ExportDepth, ImportPlan } from './transfer';
 import { PLAN_FIELDS } from './transfer';
 import { graphql } from './client';
 
@@ -89,14 +89,20 @@ export async function componentTemplatePlan(
   workspaceId: string,
   templateId: string,
   bindings: ComponentBinding[] = [],
+  exclude: ComponentExclusion[] = [],
 ): Promise<ImportPlan> {
   const data = await graphql<{ componentTemplatePlan: ImportPlan }>(
-    `query ComponentTemplatePlan($workspaceId: ID!, $templateId: ID!, $bindings: [ComponentBindingInput!]) {
-       componentTemplatePlan(workspaceId: $workspaceId, templateId: $templateId, bindings: $bindings) {
+    `query ComponentTemplatePlan(
+       $workspaceId: ID!, $templateId: ID!,
+       $bindings: [ComponentBindingInput!], $exclude: [ComponentExclusionInput!]
+     ) {
+       componentTemplatePlan(
+         workspaceId: $workspaceId, templateId: $templateId, bindings: $bindings, exclude: $exclude
+       ) {
          ${PLAN_FIELDS}
        }
      }`,
-    { workspaceId, templateId, bindings },
+    { workspaceId, templateId, bindings, exclude },
   );
   return data.componentTemplatePlan;
 }
@@ -105,14 +111,20 @@ export async function useComponentTemplate(
   workspaceId: string,
   templateId: string,
   bindings: ComponentBinding[] = [],
+  exclude: ComponentExclusion[] = [],
 ): Promise<ImportPlan> {
   const data = await graphql<{ useComponentTemplate: ImportPlan }>(
-    `mutation UseComponentTemplate($workspaceId: ID!, $templateId: ID!, $bindings: [ComponentBindingInput!]) {
-       useComponentTemplate(workspaceId: $workspaceId, templateId: $templateId, bindings: $bindings) {
+    `mutation UseComponentTemplate(
+       $workspaceId: ID!, $templateId: ID!,
+       $bindings: [ComponentBindingInput!], $exclude: [ComponentExclusionInput!]
+     ) {
+       useComponentTemplate(
+         workspaceId: $workspaceId, templateId: $templateId, bindings: $bindings, exclude: $exclude
+       ) {
          ${PLAN_FIELDS}
        }
      }`,
-    { workspaceId, templateId, bindings },
+    { workspaceId, templateId, bindings, exclude },
   );
   return data.useComponentTemplate;
 }

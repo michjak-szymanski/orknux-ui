@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   BindingChoice,
   ComponentBinding,
+  ComponentExclusion,
   ComponentKind,
   ExportDepth,
   ExternalKind,
@@ -47,6 +48,14 @@ import styles from './ComponentTransfer.module.css';
  * as questions rather than as failures, and answering one is asking for the same
  * plan again with the answer attached — which is why the dialog owns the plan
  * rather than being handed one.
+ *
+ * Leaving a component out is the same shape again: it is asking for the same
+ * plan without it. And it is offered on exactly the rows where it means
+ * something — the ones the file *carries*. The other half of a plan is
+ * references: names the envelope points at and never held, which have to be
+ * matched against this workspace or bound to one of its rows. There is nothing
+ * of those in the file, so there is nothing to remove, and a control offering to
+ * remove one would be worse than no control at all.
  */
 
 export interface ExportComponentButtonProps {
@@ -240,11 +249,13 @@ export function ImportComponentsButton({ workspaceId, onImported, label = 'Impor
    * should do and what re-rendering should not.
    */
   const planFor = useCallback(
-    (bindings: ComponentBinding[]) => componentImportPlan(workspaceId, envelope ?? '', bindings),
+    (bindings: ComponentBinding[], exclude: ComponentExclusion[]) =>
+      componentImportPlan(workspaceId, envelope ?? '', bindings, exclude),
     [workspaceId, envelope],
   );
   const commit = useCallback(
-    (bindings: ComponentBinding[]) => importComponents(workspaceId, envelope ?? '', bindings),
+    (bindings: ComponentBinding[], exclude: ComponentExclusion[]) =>
+      importComponents(workspaceId, envelope ?? '', bindings, exclude),
     [workspaceId, envelope],
   );
 
@@ -288,9 +299,9 @@ interface ImportDialogProps {
    * needs binding is asking for the plan, and answering is asking again with the
    * answers attached. Must be stable while one file is open.
    */
-  planFor: (bindings: ComponentBinding[]) => Promise<ImportPlan>;
-  /** Does it, with the answers that were given. */
-  commit: (bindings: ComponentBinding[]) => Promise<ImportPlan>;
+  planFor: (bindings: ComponentBinding[], exclude: ComponentExclusion[]) => Promise<ImportPlan>;
+  /** Does it, with the answers that were given and whatever was left out. */
+  commit: (bindings: ComponentBinding[], exclude: ComponentExclusion[]) => Promise<ImportPlan>;
   onClose: () => void;
   /** Called once something was actually created. */
   onImported: () => void;
@@ -319,6 +330,16 @@ function ImportDialog({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [plan, setPlan] = useState<ImportPlan | null>(null);
   const [bindings, setBindings] = useState<ComponentBinding[]>([]);
+  /*
+   * What was asked to be left out, which is not the same as what will be.
+   *
+   * Only the rows somebody actually ticked off are here; the server decides what
+   * else has to go with them and says so in the plan. Kept apart on purpose - it
+   * is what makes "and two more went with it" a sentence this can write, and it
+   * is what a Keep button puts back, since putting back something that only went
+   * because of a neighbour is the neighbour's business rather than its own.
+   */
+  const [exclude, setExclude] = useState<ComponentExclusion[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   /*
@@ -340,10 +361,11 @@ function ImportDialog({
     let current = true;
     setPlan(null);
     setBindings([]);
+    setExclude([]);
     setError(null);
     setImporting(false);
     setBusy(true);
-    planFor([])
+    planFor([], [])
       .then((first) => {
         if (current) setPlan(first);
       })
@@ -371,10 +393,32 @@ function ImportDialog({
       .filter((binding) => !(binding.kind === external && binding.name === entry.name))
       .concat(targetId === '' ? [] : [{ kind: external, name: entry.name, targetId }]);
     setBindings(next);
+    await replan(next, exclude);
+  }
+
+  /**
+   * One row taken out of the import, or put back, and the plan again.
+   *
+   * Asked of the server rather than worked out here, for the reason the binding
+   * step is: what leaving one component out costs the rest is a fact about the
+   * file, and a dialog that decided it for itself would be the second reader -
+   * the optimistic one, showing an import the mutation then refuses.
+   */
+  async function leaveOut(entry: ImportEntry, out: boolean) {
+    if (entry.kind === null) return;
+    const kind = entry.kind;
+    const next = exclude
+      .filter((one) => !(one.kind === kind && one.name === entry.name))
+      .concat(out ? [{ kind, name: entry.name }] : []);
+    setExclude(next);
+    await replan(bindings, next);
+  }
+
+  async function replan(withBindings: ComponentBinding[], without: ComponentExclusion[]) {
     setBusy(true);
     setError(null);
     try {
-      setPlan(await planFor(next));
+      setPlan(await planFor(withBindings, without));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not read that file.');
     }
@@ -386,7 +430,7 @@ function ImportDialog({
     setImporting(true);
     setError(null);
     try {
-      await commit(bindings);
+      await commit(bindings, exclude);
       onImported();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not import it.');
@@ -395,7 +439,37 @@ function ImportDialog({
     }
   }
 
-  const creating = plan?.entries.filter((entry) => entry.disposition !== 'REUSE').length ?? 0;
+  const creating = plan?.entries.filter((entry) => entry.disposition === 'CREATE' || entry.disposition === 'RENAME')
+    .length ?? 0;
+
+  /*
+   * What went that nobody asked to go.
+   *
+   * A component the file carries can be left out; one that is kept and cannot
+   * do without it goes too, and this is the difference between the two. Counted
+   * rather than listed, because each one already says on its own row which loss
+   * took it - what is worth a line of its own is that it happened at all, since
+   * the row somebody clicked is the only one they were looking at.
+   */
+  const alsoLeftOut = (plan?.entries ?? []).filter(
+    (entry) =>
+      entry.disposition === 'EXCLUDE' &&
+      !exclude.some((one) => one.kind === entry.kind && one.name === entry.name),
+  ).length;
+
+  /** Whether any row on this plan is a reference that this workspace has to satisfy. */
+  const references = (plan?.entries ?? []).some((entry) => !entry.carried);
+
+  /*
+   * Everything the file holds has been left out.
+   *
+   * Worth its own sentence, because the ordinary refusal — "what it points at
+   * has to exist here first" — would be describing a problem that is not there
+   * and hiding the one that is.
+   */
+  const nothingLeft =
+    (plan?.entries ?? []).some((entry) => entry.carried) &&
+    (plan?.entries ?? []).every((entry) => !entry.carried || entry.disposition === 'EXCLUDE');
 
   /*
    * Everything the file points outward at that this workspace did not match on
@@ -422,8 +496,38 @@ function ImportDialog({
             <p className={dialogStyles.dialogMessage}>
               {plan.importable
                 ? `This will create ${creating} ${creating === 1 ? 'thing' : 'things'} in this workspace. Nothing that is already here is changed.`
-                : 'This cannot be imported yet. What it points at has to exist here first.'}
+                : nothingLeft
+                  ? 'Everything this file carries has been left out, so there is nothing left to import. Keep at least one of them.'
+                  : 'This cannot be imported yet. What it points at has to exist here first.'}
             </p>
+
+            {/*
+              Said once, above the list, because the list is where the absence
+              would otherwise be a puzzle: half the rows offer Leave out and
+              half do not, and the half that does not is the half where there is
+              nothing to leave out. A row marked "Not here" is a name the file
+              points at and never carried — removing it would remove a mention
+              and leave whatever made it pointing at nowhere — so the fix for one
+              of those is on the other side: make it here, bind it, or export
+              again with everything included.
+            */}
+            {references && (
+              <p className={styles.leaveOutLead}>
+                Leave out anything the file <em>carries</em> and it will not be created — what is kept then
+                points at this workspace's own of that name, where there is one. The rest of the list is what
+                the file points at and does not carry, so there is nothing there to take away: those have to
+                be here already, or be said to mean one of this workspace's own.
+              </p>
+            )}
+
+            {alsoLeftOut > 0 && (
+              <p className={styles.leaveOutCost} role="status">
+                {alsoLeftOut === 1
+                  ? 'One more was left out with it, because it cannot do without what you left out and this workspace has nothing to take its place.'
+                  : `${alsoLeftOut} more were left out with it, because they cannot do without what you left out and this workspace has nothing to take their place.`}{' '}
+                Each says so on its own row. Keep what you left out to bring them back.
+              </p>
+            )}
 
             {questions.length > 0 && (
               <BindingQuestions
@@ -436,23 +540,46 @@ function ImportDialog({
             )}
 
             <ul className={styles.plan}>
-              {plan.entries.map((entry) => (
-                <li className={styles.entry} key={entryKey(entry)}>
-                  <span className={styles.entryHead}>
-                    <span className={styles.entryKind}>{entryKindLabel(entry)}</span>
-                    <span className={styles.entryName}>
-                      {entry.name === entry.targetName ? entry.name : `${entry.name} → ${entry.targetName}`}
+              {plan.entries.map((entry) => {
+                const out = entry.disposition === 'EXCLUDE';
+                return (
+                  <li
+                    className={out ? `${styles.entry} ${styles.entryLeftOut}` : styles.entry}
+                    key={entryKey(entry)}
+                  >
+                    <span className={styles.entryHead}>
+                      <span className={styles.entryKind}>{entryKindLabel(entry)}</span>
+                      <span className={styles.entryName}>
+                        {entry.name === entry.targetName ? entry.name : `${entry.name} → ${entry.targetName}`}
+                      </span>
+                      <span className={`${styles.badge} ${badgeOf(entry)}`}>
+                        {DISPOSITION_LABEL[entry.disposition]}
+                      </span>
+                      {/*
+                        Offered only where the file holds the thing. Everything
+                        else on this list is a name it points at, and a control
+                        that offered to remove one of those would be lying about
+                        what it does.
+                      */}
+                      {entry.carried && (
+                        <button
+                          type="button"
+                          className={styles.entryAction}
+                          disabled={busy}
+                          onClick={() => void leaveOut(entry, !out)}
+                          aria-label={`${out ? 'Keep' : 'Leave out'} ${entry.name}`}
+                        >
+                          {out ? 'Keep' : 'Leave out'}
+                        </button>
+                      )}
                     </span>
-                    <span className={`${styles.badge} ${badgeOf(entry)}`}>
-                      {DISPOSITION_LABEL[entry.disposition]}
-                    </span>
-                  </span>
-                  <p className={styles.entryDetail}>{entry.detail}</p>
-                </li>
-              ))}
+                    <p className={styles.entryDetail}>{entry.detail}</p>
+                  </li>
+                );
+              })}
             </ul>
 
-            {plan.entries.some((entry) => entry.kind === 'WORKFLOW') && (
+            {plan.entries.some((entry) => entry.kind === 'WORKFLOW' && entry.disposition !== 'EXCLUDE') && (
               <p className={styles.arrival}>
                 A workflow arrives as a draft: publishing takes a copy of the graph to run from, and that
                 first publish is yours to make once you have looked at what came. Its name belongs to the
@@ -599,9 +726,17 @@ function chosenFor(bindings: ComponentBinding[], entry: ImportEntry): string {
   );
 }
 
-/** Unique across a plan: a name can be a component's, an external's and a variable's at once. */
+/**
+ * Unique across a plan.
+ *
+ * A name can be a component's, an external's and a variable's at once — and,
+ * once something is left out, a component's and a *reference to* a component's
+ * at the same time: the file's copy of Send Slack Message is left out on one
+ * row while the next says what is kept will point at this workspace's own of
+ * that name. Two rows, both true, and they need two keys.
+ */
 function entryKey(entry: ImportEntry): string {
-  return `${entry.kind ?? entry.external ?? 'VARIABLE'}:${entry.name}`;
+  return `${entry.carried ? 'held' : 'ref'}:${entry.kind ?? entry.external ?? 'VARIABLE'}:${entry.name}`;
 }
 
 /** "Function", "MCP server", "Variable" — the three things an entry can be about. */
@@ -648,11 +783,13 @@ export function UseTemplateButton({ workspaceId, kind, onImported, label = 'Use 
 
   const templateId = chosen?.id ?? '';
   const planFor = useCallback(
-    (bindings: ComponentBinding[]) => componentTemplatePlan(workspaceId, templateId, bindings),
+    (bindings: ComponentBinding[], exclude: ComponentExclusion[]) =>
+      componentTemplatePlan(workspaceId, templateId, bindings, exclude),
     [workspaceId, templateId],
   );
   const commit = useCallback(
-    (bindings: ComponentBinding[]) => useComponentTemplate(workspaceId, templateId, bindings),
+    (bindings: ComponentBinding[], exclude: ComponentExclusion[]) =>
+      useComponentTemplate(workspaceId, templateId, bindings, exclude),
     [workspaceId, templateId],
   );
 
@@ -992,6 +1129,8 @@ function badgeOf(entry: ImportEntry): string {
       return styles.badgeReuse;
     case 'MISSING':
       return styles.badgeMissing;
+    case 'EXCLUDE':
+      return styles.badgeExclude;
   }
 }
 

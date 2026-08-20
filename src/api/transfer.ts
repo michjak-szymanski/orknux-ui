@@ -38,7 +38,7 @@ export type ExternalKind = 'MODEL' | 'CONNECTION' | 'MCP_SERVER';
 export type ExportDepth = 'SHALLOW' | 'DEEP';
 
 /** What the import will do about one thing the envelope mentions. */
-export type ImportDisposition = 'CREATE' | 'RENAME' | 'REUSE' | 'MISSING';
+export type ImportDisposition = 'CREATE' | 'RENAME' | 'REUSE' | 'MISSING' | 'EXCLUDE';
 
 export interface ComponentExport {
   fileName: string;
@@ -50,6 +50,16 @@ export interface ImportEntry {
   kind: ComponentKind | null;
   /** The kind, for something no file could carry. Set only where `kind` is not. */
   external: ExternalKind | null;
+  /**
+   * Whether the envelope holds this one, rather than pointing at it.
+   *
+   * The one fact that decides what a row may be offered. Only what the file
+   * carries can be left out; every other row is a *reference* — a name that has
+   * to be matched against this workspace or bound to one of its rows — and there
+   * is nothing in the file to take away. True exactly where `disposition` is
+   * CREATE, RENAME or EXCLUDE.
+   */
+  carried: boolean;
   /**
    * The name in the file, and the key a binding answers by.
    *
@@ -93,9 +103,22 @@ export interface ImportPlan {
  * Using a template is this import with the file already chosen, so a second copy
  * of these fields would be a second place for a new one to be forgotten.
  */
+/**
+ * One component the import is to leave out.
+ *
+ * Named as the file names it — the name the plan gave back, not whatever it
+ * would be renamed to here — and only ever a carried one. The server refuses a
+ * name it does not carry rather than ignoring it, so this cannot quietly ask for
+ * something that does not happen.
+ */
+export interface ComponentExclusion {
+  kind: ComponentKind;
+  name: string;
+}
+
 export const PLAN_FIELDS = `
   formatVersion producedBy depth importable problems
-  entries { kind external name targetName disposition detail }
+  entries { kind external carried name targetName disposition detail }
 `;
 
 export async function exportComponent(
@@ -117,14 +140,20 @@ export async function componentImportPlan(
   workspaceId: string,
   envelope: string,
   bindings: ComponentBinding[] = [],
+  exclude: ComponentExclusion[] = [],
 ): Promise<ImportPlan> {
   const data = await graphql<{ componentImportPlan: ImportPlan }>(
-    `query ComponentImportPlan($workspaceId: ID!, $envelope: String!, $bindings: [ComponentBindingInput!]) {
-       componentImportPlan(workspaceId: $workspaceId, envelope: $envelope, bindings: $bindings) {
+    `query ComponentImportPlan(
+       $workspaceId: ID!, $envelope: String!,
+       $bindings: [ComponentBindingInput!], $exclude: [ComponentExclusionInput!]
+     ) {
+       componentImportPlan(
+         workspaceId: $workspaceId, envelope: $envelope, bindings: $bindings, exclude: $exclude
+       ) {
          ${PLAN_FIELDS}
        }
      }`,
-    { workspaceId, envelope, bindings },
+    { workspaceId, envelope, bindings, exclude },
   );
   return data.componentImportPlan;
 }
@@ -133,14 +162,20 @@ export async function importComponents(
   workspaceId: string,
   envelope: string,
   bindings: ComponentBinding[] = [],
+  exclude: ComponentExclusion[] = [],
 ): Promise<ImportPlan> {
   const data = await graphql<{ importComponents: ImportPlan }>(
-    `mutation ImportComponents($workspaceId: ID!, $envelope: String!, $bindings: [ComponentBindingInput!]) {
-       importComponents(workspaceId: $workspaceId, envelope: $envelope, bindings: $bindings) {
+    `mutation ImportComponents(
+       $workspaceId: ID!, $envelope: String!,
+       $bindings: [ComponentBindingInput!], $exclude: [ComponentExclusionInput!]
+     ) {
+       importComponents(
+         workspaceId: $workspaceId, envelope: $envelope, bindings: $bindings, exclude: $exclude
+       ) {
          ${PLAN_FIELDS}
        }
      }`,
-    { workspaceId, envelope, bindings },
+    { workspaceId, envelope, bindings, exclude },
   );
   return data.importComponents;
 }
@@ -230,4 +265,5 @@ export const DISPOSITION_LABEL: Record<ImportDisposition, string> = {
   RENAME: 'Renamed',
   REUSE: 'Already here',
   MISSING: 'Not here',
+  EXCLUDE: 'Left out',
 };
