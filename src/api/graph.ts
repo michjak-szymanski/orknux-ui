@@ -68,6 +68,14 @@ export interface GraphNode {
   /** How long a failed attempt is left alone before the next, in seconds. */
   retryBackoffSeconds?: number | null;
   /**
+   * How that wait grows from one attempt to the next; null is FIXED.
+   *
+   * EXPONENTIAL doubles it each time - the first retry waits what the node
+   * says and every one after it waits twice the last. The server caps a single
+   * wait at an hour however far the doubling would have gone.
+   */
+  retryBackoff?: RetryBackoff | null;
+  /**
    * What this node passes, decided here rather than on the definition. Seeded
    * from the action when one is picked; editing it touches only this node.
    */
@@ -79,6 +87,9 @@ export interface GraphNode {
   x: number;
   y: number;
 }
+
+/** How the wait between two attempts of a node grows. */
+export type RetryBackoff = 'FIXED' | 'EXPONENTIAL';
 
 /** One parameter and what the node puts in it: an expression, or a plain value. */
 /** Whether a parameter holds something written or something read from the run. */
@@ -156,7 +167,7 @@ const GRAPH_FIELDS = `
   enabled
   nodes {
     key kind name description agentId triggerId actionId conditionId objectId outputName icon orientation
-    yesLabel noLabel fallbackEnabled retryAttempts retryBackoffSeconds x y
+    yesLabel noLabel fallbackEnabled retryAttempts retryBackoffSeconds retryBackoff x y
     mappings { name expression mode sourceNodeKey }
     inputs { name type display }
     outputs { name type display }

@@ -47,6 +47,7 @@ import type {
   NodeKind,
   NodeOrientation,
   NodeMapping,
+  RetryBackoff,
   WorkflowStatus,
 } from '../../api/graph';
 import type { SessionUser } from '../../api/session';
@@ -137,6 +138,14 @@ interface NodeData extends Record<string, unknown> {
    * the panel only takes it once there is more than one attempt to sit between.
    */
   retryBackoffSeconds?: number | null;
+  /**
+   * How that wait grows from one attempt to the next; null is the fixed one
+   * every node had before there was a choice. Doubling is for the failure that
+   * is a queue rather than a blip - a rate limit, a provider still coming back
+   * up - where three attempts on one short clock are three attempts spent
+   * inside the same bad minute.
+   */
+  retryBackoff?: RetryBackoff | null;
   name: string;
   description: string | null;
   /** The agent an agent node instances; it supplies the model and instructions. */
@@ -1687,6 +1696,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
               fallbackEnabled: node.fallbackEnabled ?? false,
               retryAttempts: node.retryAttempts ?? null,
               retryBackoffSeconds: node.retryBackoffSeconds ?? null,
+              retryBackoff: node.retryBackoff ?? null,
               agentId: node.agentId,
               triggerId: node.triggerId,
               actionId: node.actionId,
@@ -1931,6 +1941,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           fallbackEnabled: false,
           retryAttempts: null,
           retryBackoffSeconds: null,
+          retryBackoff: null,
           /*
            * Every other kind takes its icon from the definition it points at.
            * A session points at nothing - the key it holds is the whole of it -
@@ -2080,6 +2091,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           data.fallbackEnabled === draft.fallbackEnabled &&
           data.retryAttempts === draft.retryAttempts &&
           data.retryBackoffSeconds === draft.retryBackoffSeconds &&
+          data.retryBackoff === draft.retryBackoff &&
           sameMappings(data.mappings, shown.mappings);
         if (same) return node;
         setSaved(false);
@@ -2383,6 +2395,9 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
            * no orphaned number behind on the node.
            */
           retryBackoffSeconds: (data.retryAttempts ?? 1) > 1 ? (data.retryBackoffSeconds ?? null) : null,
+          // Same rule, same reason: a curve describes how a wait grows between
+          // attempts, and there is nothing for it to describe with one.
+          retryBackoff: (data.retryAttempts ?? 1) > 1 ? (data.retryBackoff ?? null) : null,
           mappings: data.mappings,
           x: node.position.x,
           y: node.position.y,
@@ -3743,9 +3758,38 @@ Change the keystroke in Preferences.`}
                         </div>
                       </label>
                     </div>
+                    {/*
+                      The curve, as one thing to switch on rather than two named
+                      alternatives. There are two of them and one is what every
+                      node already does, so a pair of radio buttons would spend
+                      three lines of a narrow panel naming the default - and it
+                      goes dead with the wait it shapes, for the same reason.
+                    */}
+                    <label
+                      className={
+                        (draft.retryAttempts ?? 1) > 1
+                          ? styles.checkRow
+                          : `${styles.checkRow} ${styles.retryFieldOff}`
+                      }
+                    >
+                      <input
+                        type="checkbox"
+                        checked={draft.retryBackoff === 'EXPONENTIAL'}
+                        disabled={(draft.retryAttempts ?? 1) <= 1}
+                        // Off is null rather than FIXED: a node that never had a
+                        // curve should come back from the panel exactly as it
+                        // went in, and not as an edit to save.
+                        onChange={(event) =>
+                          setDraft({ ...draft, retryBackoff: event.target.checked ? 'EXPONENTIAL' : null })
+                        }
+                      />
+                      <span>Double the wait after each attempt</span>
+                    </label>
                     <p className={styles.parameterHint}>
                       How many goes in all, not extra ones: one is the single attempt every step has
-                      always had. The same wait before each retry, in seconds.{' '}
+                      always had. The wait is the one before the first retry — the same before every
+                      one after it, or twice the last if it doubles, and never more than an hour
+                      however far the doubling would have gone.{' '}
                       {draft.kind === 'AGENT' ? (
                         <>
                           A model that refused the request for what it said is settled and is never asked
