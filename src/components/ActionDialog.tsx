@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 
 import {
   ACTION_SUBTYPE_LABEL,
@@ -36,6 +37,7 @@ import chevronDown12Icon from '../assets/chevron-down-12.svg';
 import { ConditionDialog } from './ConditionDialog';
 import { DefinitionPicker } from './DefinitionPicker';
 import { IconField } from './IconField';
+import { LinkIcon } from './LinkIcon';
 import styles from './Dialog.module.css';
 
 export interface ActionDialogProps {
@@ -442,9 +444,30 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
           {subtype === 'OUTGOING_CONNECTION' && (
             <>
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="action-connection">
-                  Connection
-                </label>
+                {/*
+                  A connection is a definition, and the picker only says its
+                  name: whether this is the right one is a question about the
+                  URL and the credentials behind it, which are on its own page.
+                  A tab of its own, so going to check does not throw away a form
+                  that has not been saved.
+                */}
+                <span className={styles.labelRow}>
+                  <label className={styles.label} htmlFor="action-connection">
+                    Connection
+                  </label>
+                  {connectionId !== '' && (
+                    <Link
+                      className={styles.jump}
+                      to={`/workspace/${workspaceId}/integrations/connections/${connectionId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      title="Opens the connection in a new tab"
+                      aria-label="Open the connection's definition"
+                    >
+                      <LinkIcon />
+                    </Link>
+                  )}
+                </span>
                 <DefinitionPicker
                   id="action-connection"
                   value={connectionId}
@@ -543,9 +566,29 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
           {subtype === 'SEND_EMAIL' && (
             <>
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="action-mail-connection">
-                  Mail Server
-                </label>
+                {/* The same reason as the connection above: this is a definition,
+                    and the host, the port and the from-address it sends under are
+                    on its page rather than in this list. Only while the picker is
+                    on one this subtype can use - the field shows nothing when a
+                    Slack connection is left over from another subtype, and a link
+                    to what is not selected would point somewhere nobody chose. */}
+                <span className={styles.labelRow}>
+                  <label className={styles.label} htmlFor="action-mail-connection">
+                    Mail Server
+                  </label>
+                  {connectionUsable && (
+                    <Link
+                      className={styles.jump}
+                      to={`/workspace/${workspaceId}/integrations/connections/${connectionId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      title="Opens the mail server's connection in a new tab"
+                      aria-label="Open the mail server's definition"
+                    >
+                      <LinkIcon />
+                    </Link>
+                  )}
+                </span>
                 {/* Nothing to make from here: a mail server is a host, a port and
                     credentials, none of which can be got from a name - so this
                     says where they are set up instead. */}
@@ -714,9 +757,27 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
           {subtype === 'FUNCTION' && (
             <>
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="action-function">
-                  Function
-                </label>
+                {/* The code this action runs, which the picker names and the
+                    signature beside it summarises. Nothing to open while the
+                    picker is on a name: the function is created when the action
+                    is saved, not before. */}
+                <span className={styles.labelRow}>
+                  <label className={styles.label} htmlFor="action-function">
+                    Function
+                  </label>
+                  {functionId !== '' && functionId !== NEW_FUNCTION && (
+                    <Link
+                      className={styles.jump}
+                      to={`/workspace/${workspaceId}/functions/${functionId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      title="Opens the function in a new tab"
+                      aria-label="Open the function's definition"
+                    >
+                      <LinkIcon />
+                    </Link>
+                  )}
+                </span>
                 {/* The way to make one sits above the list and outlasts the search:
                     a workspace's functions fill a hundred rows, and typing a name
                     that matches none of them is exactly when it is wanted. */}
@@ -790,9 +851,26 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
 
           {subtype === 'CONDITION' && (
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="action-saved-condition">
-                Condition
-              </label>
+              {/* What this action waits for is a definition, and what it
+                  actually checks is on its page: the picker only has room for a
+                  name and a description. */}
+              <span className={styles.labelRow}>
+                <label className={styles.label} htmlFor="action-saved-condition">
+                  Condition
+                </label>
+                {conditionId !== '' && (
+                  <Link
+                    className={styles.jump}
+                    to={`/workspace/${workspaceId}/conditions/${conditionId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    title="Opens the condition in a new tab"
+                    aria-label="Open the condition's definition"
+                  >
+                    <LinkIcon />
+                  </Link>
+                )}
+              </span>
               <DefinitionPicker
                 id="action-saved-condition"
                 value={conditionId}
