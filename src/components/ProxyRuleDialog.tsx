@@ -4,6 +4,7 @@ import type { FormEvent } from 'react';
 import { createProxyRule, deleteProxyRule, updateProxyRule } from '../api/networking';
 import type { ProxyRule } from '../api/networking';
 import styles from './Dialog.module.css';
+import { FieldHint } from './FieldHint';
 
 export interface ProxyRuleDialogProps {
   /** True to add a rule; a rule to edit the one given. */
@@ -151,9 +152,15 @@ export function ProxyRuleDialog({ open, onClose, onSaved }: ProxyRuleDialogProps
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="proxy-rule-pattern">
-              URL pattern
-            </label>
+            <span className={styles.labelWithHint}>
+              <label className={styles.label} htmlFor="proxy-rule-pattern">
+                URL pattern
+              </label>
+              <FieldHint label="URL pattern">
+                A regular expression, matched against the whole URL and found anywhere in it,
+                ignoring case. Anchor it with ^ and $ to match the whole address.
+              </FieldHint>
+            </span>
             <div className={styles.inputWrapper}>
               <input
                 id="proxy-rule-pattern"
@@ -166,16 +173,18 @@ export function ProxyRuleDialog({ open, onClose, onSaved }: ProxyRuleDialogProps
                 required
               />
             </div>
-            <p className={styles.fieldHint}>
-              A regular expression, matched against the whole URL and found anywhere in it, ignoring
-              case. Anchor it with ^ and $ to match the whole address.
-            </p>
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="proxy-rule-host">
-              Proxy host
-            </label>
+            <span className={styles.labelWithHint}>
+              <label className={styles.label} htmlFor="proxy-rule-host">
+                Proxy host
+              </label>
+              <FieldHint label="Proxy host">
+                A host name, without a scheme. A proxy is spoken to over plain HTTP whatever the
+                request going through it is.
+              </FieldHint>
+            </span>
             <div className={styles.inputWrapper}>
               <input
                 id="proxy-rule-host"
@@ -188,10 +197,6 @@ export function ProxyRuleDialog({ open, onClose, onSaved }: ProxyRuleDialogProps
                 required
               />
             </div>
-            <p className={styles.fieldHint}>
-              A host name, without a scheme. A proxy is spoken to over plain HTTP whatever the
-              request going through it is.
-            </p>
           </div>
 
           <div className={styles.field}>
@@ -251,6 +256,12 @@ export function ProxyRuleDialog({ open, onClose, onSaved }: ProxyRuleDialogProps
                 disabled={clearPassword}
               />
             </div>
+            {/*
+              Printed rather than behind the (?). The first sentence is a
+              consequence - there is no reading it back, so a password not kept
+              elsewhere is gone - and the second is what an empty box means here,
+              which is the difference between keeping a password and clearing it.
+            */}
             <p className={styles.fieldHint}>
               Stored encrypted and never shown again. Leaving this empty keeps whatever is already
               stored.

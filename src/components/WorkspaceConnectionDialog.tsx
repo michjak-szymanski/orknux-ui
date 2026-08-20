@@ -5,6 +5,7 @@ import { authTypeLabel, createWorkspaceConnection } from '../api/integrations';
 import type { AuthType, ConnectionType, HttpHeader, MailSecurity, WorkspaceConnection } from '../api/integrations';
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
 import styles from './Dialog.module.css';
+import { FieldHint } from './FieldHint';
 import { HeaderRowsEditor } from './HeaderRowsEditor';
 import { RevealToggle } from './RevealToggle';
 
@@ -278,9 +279,15 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
               </div>
 
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="workspace-connection-from">
-                  From Address
-                </label>
+                <span className={styles.labelWithHint}>
+                  <label className={styles.label} htmlFor="workspace-connection-from">
+                    From Address
+                  </label>
+                  <FieldHint label="From Address">
+                    Every mail this connection sends is from this address, and a provider that has not
+                    authorised it refuses the message however good the password is.
+                  </FieldHint>
+                </span>
                 <div className={styles.inputWrapper}>
                   <input
                     id="workspace-connection-from"
@@ -293,10 +300,6 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
                     required
                   />
                 </div>
-                <p className={styles.fieldHint}>
-                  Every mail this connection sends is from this address. A provider that has not
-                  authorised it will refuse the message however good the password is.
-                </p>
               </div>
 
               <div className={styles.field}>
@@ -337,6 +340,13 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
                       label="password"
                     />
                   </div>
+                  {/*
+                    Printed rather than behind the (?): both halves are things to
+                    know before typing, not afterwards. That it is never shown
+                    again is why somebody keeps their own copy, and an account
+                    password typed where an app password was wanted is refused by
+                    the provider without saying which of the two it wanted.
+                  */}
                   <p className={styles.fieldHint}>
                     Stored encrypted, and never shown again in the list. Many providers want an app
                     password here rather than the account&apos;s own.
@@ -349,9 +359,15 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
           {socketMode && (
             <>
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="workspace-connection-bot-token">
-                  Bot Token
-                </label>
+                <span className={styles.labelWithHint}>
+                  <label className={styles.label} htmlFor="workspace-connection-bot-token">
+                    Bot Token
+                  </label>
+                  <FieldHint label="Bot Token">
+                    From OAuth &amp; Permissions. It needs app_mentions:read to see mentions, and
+                    chat:write to answer them.
+                  </FieldHint>
+                </span>
                 <div className={styles.inputWrapper}>
                   <input
                     id="workspace-connection-bot-token"
@@ -369,16 +385,20 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
                     label="bot token"
                   />
                 </div>
-                <p className={styles.fieldHint}>
-                  From OAuth &amp; Permissions. It needs app_mentions:read to see mentions, and
-                  chat:write to answer them.
-                </p>
               </div>
 
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="workspace-connection-app-token">
-                  App-Level Token
-                </label>
+                <span className={styles.labelWithHint}>
+                  <label className={styles.label} htmlFor="workspace-connection-app-token">
+                    App-Level Token
+                  </label>
+                  {/* The same words the connection's own settings page puts
+                      behind its (?), so the dialog and the page agree. */}
+                  <FieldHint label="App-Level Token">
+                    From Basic Information, with connections:write. This is what opens the websocket
+                    orknux listens on.
+                  </FieldHint>
+                </span>
                 <div className={styles.inputWrapper}>
                   <input
                     id="workspace-connection-app-token"
@@ -396,10 +416,6 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
                     label="app-level token"
                   />
                 </div>
-                <p className={styles.fieldHint}>
-                  From Basic Information, with connections:write. This is what opens the websocket
-                  orknux listens on.
-                </p>
               </div>
             </>
           )}

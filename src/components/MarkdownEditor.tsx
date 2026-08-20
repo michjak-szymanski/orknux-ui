@@ -321,6 +321,13 @@ export function MarkdownEditor({
             {entry.label}
           </button>
         ))}
+        {/*
+          Three words in the toolbar rather than a paragraph under the box: this
+          is the legend for the marks beside it and the only thing that says the
+          @ key opens anything, which is an affordance rather than an
+          explanation. A (?) here would hide the one hint that has to be seen
+          without being asked for.
+        */}
         <span className={styles.hint}>Markdown · @ to mention</span>
       </div>
 

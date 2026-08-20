@@ -36,6 +36,7 @@ import type { WorkspaceConnection } from '../api/integrations';
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
 import { ConditionDialog } from './ConditionDialog';
 import { DefinitionPicker } from './DefinitionPicker';
+import { FieldHint } from './FieldHint';
 import { IconField } from './IconField';
 import { LinkIcon } from './LinkIcon';
 import styles from './Dialog.module.css';
@@ -452,9 +453,15 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                   that has not been saved.
                 */}
                 <span className={styles.labelRow}>
-                  <label className={styles.label} htmlFor="action-connection">
-                    Connection
-                  </label>
+                  <span className={styles.labelWithHint}>
+                    <label className={styles.label} htmlFor="action-connection">
+                      Connection
+                    </label>
+                    <FieldHint label="Connection">
+                      A connection set up under this workspace&apos;s Integrations, which is where the
+                      credentials for it live. This picks which one the message goes through.
+                    </FieldHint>
+                  </span>
                   {connectionId !== '' && (
                     <Link
                       className={styles.jump}
@@ -478,13 +485,11 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                 />
                 {/* Nothing to make from here: a connection is a URL, a token and a
                     handshake with the service, none of which can be got from a
-                    name - so this says where they are instead of offering a row
-                    that would only lead to a half-made one. */}
+                    name. What is left printed is the empty state - what the field
+                    has instead of contents - and where they come from went behind
+                    the (?), which is a question rather than a fact about now. */}
                 {connections.length === 0 && (
-                  <p className={styles.fieldHint}>
-                    None set up yet. Connections carry credentials, so they are added under the
-                    workspace&apos;s Integrations and chosen here afterwards.
-                  </p>
+                  <p className={styles.fieldHint}>None set up yet.</p>
                 )}
               </div>
 
@@ -510,9 +515,14 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
               </div>
 
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="action-content">
-                  Content
-                </label>
+                <span className={styles.labelWithHint}>
+                  <label className={styles.label} htmlFor="action-content">
+                    Content
+                  </label>
+                  <FieldHint label="Content">
+                    Sent exactly as written. Leave it empty and each node says what to send.
+                  </FieldHint>
+                </span>
                 <div className={`${styles.inputWrapper} ${styles.inputWrapperTall}`}>
                   <textarea
                     id="action-content"
@@ -522,9 +532,6 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                     onChange={(event) => setContent(event.target.value)}
                   />
                 </div>
-                <p className={styles.fieldHint}>
-                  Sent exactly as written. Leave it empty and each node says what to send.
-                </p>
               </div>
 
               <div className={styles.field}>
@@ -573,9 +580,15 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                     Slack connection is left over from another subtype, and a link
                     to what is not selected would point somewhere nobody chose. */}
                 <span className={styles.labelRow}>
-                  <label className={styles.label} htmlFor="action-mail-connection">
-                    Mail Server
-                  </label>
+                  <span className={styles.labelWithHint}>
+                    <label className={styles.label} htmlFor="action-mail-connection">
+                      Mail Server
+                    </label>
+                    <FieldHint label="Mail Server">
+                      An SMTP connection from this workspace&apos;s integrations. The from-address is
+                      the connection&apos;s, so every mail sent through it agrees about who it is from.
+                    </FieldHint>
+                  </span>
                   {connectionUsable && (
                     <Link
                       className={styles.jump}
@@ -604,16 +617,17 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                   }
                   searchPlaceholder="Search mail servers…"
                 />
-                <p className={styles.fieldHint}>
-                  An SMTP connection from this workspace&apos;s integrations. The from-address is
-                  the connection&apos;s, so every mail sent through it agrees about who it is from.
-                </p>
               </div>
 
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="action-mail-to">
-                  To
-                </label>
+                <span className={styles.labelWithHint}>
+                  <label className={styles.label} htmlFor="action-mail-to">
+                    To
+                  </label>
+                  <FieldHint label="To">
+                    Sent exactly as written. Leave it empty and each node says who the mail goes to.
+                  </FieldHint>
+                </span>
                 <div className={styles.inputWrapper}>
                   <input
                     id="action-mail-to"
@@ -624,9 +638,6 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                     onChange={(event) => setEmailTo(event.target.value)}
                   />
                 </div>
-                <p className={styles.fieldHint}>
-                  Sent exactly as written. Leave it empty and each node says who the mail goes to.
-                </p>
               </div>
 
               <div className={styles.field}>
@@ -646,9 +657,14 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
               </div>
 
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="action-mail-body">
-                  Body
-                </label>
+                <span className={styles.labelWithHint}>
+                  <label className={styles.label} htmlFor="action-mail-body">
+                    Body
+                  </label>
+                  <FieldHint label="Body">
+                    Plain text. Leave it empty and each node says what the mail says.
+                  </FieldHint>
+                </span>
                 <div className={`${styles.inputWrapper} ${styles.inputWrapperTall}`}>
                   <textarea
                     id="action-mail-body"
@@ -658,9 +674,6 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                     onChange={(event) => setContent(event.target.value)}
                   />
                 </div>
-                <p className={styles.fieldHint}>
-                  Plain text. Leave it empty and each node says what the mail says.
-                </p>
               </div>
 
               <div className={styles.field}>
@@ -806,6 +819,14 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                         onChange={(event) => setNewFunctionName(event.target.value)}
                       />
                     </div>
+                    {/*
+                      Printed rather than behind the (?), for two reasons. It is
+                      a consequence - saving this form writes a function into the
+                      workspace, which is worth knowing before pressing Create
+                      rather than after wondering where it came from. And the box
+                      it belongs to has no visible label to hang a (?) on: the
+                      only label above it says Function, which is the picker's.
+                    */}
                     <p className={styles.fieldHint}>
                       Created with this action, taking nothing and returning a map. Open it in Functions to
                       write what it does.
@@ -815,7 +836,20 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
               </div>
 
               <div className={styles.field}>
-                <p className={styles.paramHeading}>Parameters Mapping</p>
+                {/*
+                  On the heading, because the block below it is a row per
+                  argument rather than one field: there is no single label the
+                  rule about empty rows belongs to.
+                */}
+                <p className={styles.paramHeading}>
+                  <span className={styles.labelWithHint}>
+                    Parameters Mapping
+                    <FieldHint label="Parameters Mapping">
+                      Left empty, an argument is taken from the field of that name. Anything typed
+                      here is passed as it stands.
+                    </FieldHint>
+                  </span>
+                </p>
                 <div className={styles.mappingList}>
                   {mappings.map((mapping, index) => (
                     <div key={mapping.argument} className={styles.mappingRow}>
@@ -837,14 +871,12 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                       </div>
                     </div>
                   ))}
+                  {/* A reading of the function that was chosen, not a note about
+                      the block: it is what these rows have instead of contents. */}
                   {mappings.length === 0 && (
                     <p className={styles.fieldHint}>This function takes no arguments.</p>
                   )}
                 </div>
-                <p className={styles.fieldHint}>
-                  Left empty, an argument is taken from the field of that name. Anything typed here is
-                  passed as it stands.
-                </p>
               </div>
             </>
           )}
@@ -855,9 +887,15 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                   actually checks is on its page: the picker only has room for a
                   name and a description. */}
               <span className={styles.labelRow}>
-                <label className={styles.label} htmlFor="action-saved-condition">
-                  Condition
-                </label>
+                <span className={styles.labelWithHint}>
+                  <label className={styles.label} htmlFor="action-saved-condition">
+                    Condition
+                  </label>
+                  <FieldHint label="Condition">
+                    A condition defined in Conditions, or one made here. The action waits until it
+                    holds, checking again every retry interval until the timeout runs out.
+                  </FieldHint>
+                </span>
                 {conditionId !== '' && (
                   <Link
                     className={styles.jump}
@@ -885,11 +923,11 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                 searchPlaceholder="Search conditions…"
                 create={NEW_CONDITION_ROW}
               />
-              <p className={styles.fieldHint}>
-                {conditions.length === 0
-                  ? 'None defined yet. Make one here and this action waits on it.'
-                  : 'Select a condition defined in Conditions, or make one here.'}
-              </p>
+              {/* The empty state stays where the missing contents would be; what
+                  the field is for went behind the (?) above it. */}
+              {conditions.length === 0 && (
+                <p className={styles.fieldHint}>None defined yet. Make one here.</p>
+              )}
             </div>
           )}
 
@@ -897,9 +935,14 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
             <>
               {subtype === 'INLINE_CONDITION' && (
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="action-condition">
-                  Expression
-                </label>
+                <span className={styles.labelWithHint}>
+                  <label className={styles.label} htmlFor="action-condition">
+                    Expression
+                  </label>
+                  <FieldHint label="Expression">
+                    JavaScript over what the previous node produced.
+                  </FieldHint>
+                </span>
                 <div className={styles.inputWrapper}>
                   <input
                     id="action-condition"
@@ -911,7 +954,6 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                     required
                   />
                 </div>
-                <p className={styles.fieldHint}>JavaScript over what the previous node produced.</p>
               </div>
               )}
 
@@ -929,6 +971,12 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                     onChange={(event) => setTimeoutSeconds(event.target.value)}
                   />
                 </div>
+                {/*
+                  The unit stays printed, here and on the two below it. A number
+                  box says nothing about what its number counts, and these three
+                  lines are the only thing that does - behind a hover, somebody
+                  types 30 meaning minutes and finds out half a minute later.
+                */}
                 <p className={styles.fieldHint}>Timeout in seconds</p>
               </div>
 
@@ -1039,6 +1087,8 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
 
 /** What the action needs or produces, read off its settings by the server. */
 function ParamList({ params }: { params: string[] }) {
+  // An empty state: what the list has instead of rows, so it stays where the
+  // rows would have been.
   if (params.length === 0) return <p className={styles.fieldHint}>None.</p>;
   return (
     <ul className={styles.paramList}>

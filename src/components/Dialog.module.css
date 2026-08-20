@@ -217,6 +217,22 @@
   color: var(--color-text-secondary);
 }
 
+/*
+ * A label and the (?) that explains it, on one line, so the question mark reads
+ * as belonging to that label rather than floating at the edge of the dialog.
+ * The same shape the node panel and the settings cards use, because it is the
+ * same control - see FieldHint.
+ *
+ * Also used on `.paramHeading`, which is a label by another name: the block it
+ * heads has rows rather than one input, and nothing else to hang the (?) on.
+ */
+.labelWithHint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
 /* What the provider had to say about a field, under the field it is about. */
 .fieldNote {
   margin: 0;
@@ -307,7 +323,16 @@
   resize: vertical;
 }
 
-/* The line under a field explaining what it is for. */
+/*
+ * The line under a field that stays printed.
+ *
+ * What a field is *for* went behind the (?) beside its label; what is left here
+ * is what a hover would hide badly - the unit a number is in, a reading of what
+ * was chosen, an empty state, a consequence of saving. Not renamed to
+ * `.fieldNote` the way the admin and settings batches renamed theirs, because
+ * `TriggerFormStyles` and `ConditionFormStyles` name this key and those forms
+ * hand it in from two frames each.
+ */
 .fieldHint {
   margin: 0;
   font-size: var(--text-md);

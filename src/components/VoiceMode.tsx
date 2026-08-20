@@ -505,6 +505,11 @@ export function VoiceMode({ workspaceId, onSay, onClose, onPhase, ref }: VoiceMo
         {caption}
       </p>
 
+      {/*
+        A reading of what the thing is doing now and what to do about it, which
+        changes every few seconds - not a note about a field. It stays printed
+        for the same reason the caption above it does.
+      */}
       <p className={styles.hint}>
         {phase === 'listening'
           ? 'Speak — it answers when you stop.'

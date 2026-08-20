@@ -136,6 +136,12 @@ export function MoveIssueDialog({ issue, onClose, onMoved }: MoveIssueDialogProp
               </select>
               <img src={chevronDown12Icon} alt="" width={12} height={12} />
             </div>
+            {/*
+              Printed rather than behind a (?): this is what moving does, and
+              renumbering an issue breaks every address anybody has written down.
+              A consequence has to be read before the button is pressed, not
+              found by somebody who thought to hover first.
+            */}
             <p className={styles.fieldHint}>
               Its comments, labels, links, observers and files come with it. It is given a number that is free where it
               lands, so <strong>#{issue?.number}</strong> stops being this issue: the address people have been using
