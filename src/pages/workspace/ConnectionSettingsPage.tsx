@@ -13,7 +13,7 @@ import {
   testWorkspaceConnection,
   updateWorkspaceConnection,
 } from '../../api/integrations';
-import type { AuthType, ConnectionStatus, MailSecurity, WorkspaceConnection } from '../../api/integrations';
+import type { AuthType, ConnectionStatus, ConnectionType, MailSecurity, WorkspaceConnection } from '../../api/integrations';
 import type { SessionUser } from '../../api/session';
 import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import lockIcon from '../../assets/lock-keyhole.svg';
@@ -47,6 +47,13 @@ const MASK = '••••••••••••••••••••••
  * A connection as one workspace holds it. What the admin defines stays locked;
  * the credentials and the endpoint override are the workspace's own.
  */
+/**
+ * The kinds a connection may be, in the order the form that creates one offers
+ * them - so choosing here and choosing there are the same list in the same
+ * order rather than two lists that drift.
+ */
+const CONNECTION_TYPES: ConnectionType[] = ['SLACK_SOCKET_MODE', 'SLACK', 'SMTP', 'GITHUB', 'JIRA', 'WEBHOOK'];
+
 export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSettingsPageProps) {
   /** True while the export is being confirmed; the name once it has happened. */
   const [exporting, setExporting] = useState(false);
@@ -60,6 +67,14 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
   const [namedSaved, setNamedSaved] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
   const [authType, setAuthType] = useState<AuthType>('NONE');
+  /**
+   * The kind being chosen, which is not always the kind that is stored.
+   *
+   * The fields below follow this rather than the saved connection, so picking
+   * Socket Mode shows the app-level token straight away instead of after a
+   * save - and the token is what somebody came here to type.
+   */
+  const [type, setType] = useState<ConnectionType | null>(null);
   // Null while the stored secret is untouched, so saving leaves it alone.
   const [secret, setSecret] = useState<string | null>(null);
   const [appToken, setAppToken] = useState<string | null>(null);
@@ -100,7 +115,20 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
       });
   }, [connectionId]);
 
-  const mail = connection?.type === 'SMTP';
+  /** What is on the page now: the choice if one has been made, else what is stored. */
+  const kind = type ?? connection?.type ?? null;
+  const mail = kind === 'SMTP';
+  /*
+   * Both Slack kinds, not one.
+   *
+   * This asked for `SLACK` while the form that creates a connection asked for
+   * `SLACK_SOCKET_MODE` - opposite values, so the one kind that needs an
+   * app-level token was the one kind that could never be shown the field, and
+   * a token could be set when the connection was made and never corrected.
+   * `SlackListener` reads both kinds and takes whichever has both tokens, so
+   * offering it on both is what the rest of the product already believes.
+   */
+  const slack = kind === 'SLACK' || kind === 'SLACK_SOCKET_MODE';
 
   /** Changing how the session is secured moves the port with it, until it is typed over. */
   function changeSecurity(next: MailSecurity) {
@@ -153,6 +181,9 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
     setSaved(false);
     try {
       const updated = await updateWorkspaceConnection(connectionId, {
+        // Only when it has actually been changed, so opening the page and
+        // saving a credential does not also rewrite the kind.
+        type: type !== null && type !== connection?.type ? type : undefined,
         authType,
         secret: secret ?? undefined,
         appToken: appToken ?? undefined,
@@ -260,11 +291,43 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
                 </div>
               </div>
             )}
-            <ReadOnlyField
-              label="Type"
-              value={connection === null ? '' : connectionTypeLabel(connection.type)}
-              locked={locked}
-            />
+            {/*
+              Editable, where the connection is this workspace's own.
+
+              An inherited one follows the installation's default and is shown
+              rather than offered, as everything else on it is. The server has
+              always accepted a change of kind; only this page refused to make
+              one, so a connection created as the wrong kind had to be deleted
+              and built again, taking its credentials with it.
+            */}
+            {locked || connection === null ? (
+              <ReadOnlyField
+                label="Type"
+                value={connection === null ? '' : connectionTypeLabel(connection.type)}
+                locked={locked}
+              />
+            ) : (
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="connection-type">
+                  Type
+                </label>
+                <div className={styles.inputWrapper}>
+                  <select
+                    id="connection-type"
+                    name="type"
+                    className={styles.input}
+                    value={kind ?? connection.type}
+                    onChange={(event) => setType(event.target.value as ConnectionType)}
+                  >
+                    {CONNECTION_TYPES.map((candidate) => (
+                      <option key={candidate} value={candidate}>
+                        {connectionTypeLabel(candidate)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
             <ReadOnlyField
               label={mail ? 'Mail Server' : 'Default API Host URL'}
               value={connection?.url ?? ''}
@@ -421,7 +484,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
               </div>
             </div>
 
-            {connection?.type === 'SLACK' && (
+            {slack && (
               <div className={styles.field}>
                 <span className={styles.labelWithHint}>
                   <label className={styles.label} htmlFor="connection-app-token">

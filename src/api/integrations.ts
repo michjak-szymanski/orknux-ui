@@ -244,6 +244,12 @@ export async function updateWorkspaceConnection(
   input: {
     /** Ignored for inherited connections, which follow the admin default. */
     name?: string;
+    /**
+     * What kind of service this is. The server has always accepted a change
+     * here; this client simply never sent one, so a connection's kind could
+     * only be chosen when it was created and never corrected afterwards.
+     */
+    type?: ConnectionType;
     authType?: AuthType;
     secret?: string;
     appToken?: string;
