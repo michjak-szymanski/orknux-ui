@@ -137,6 +137,16 @@ export const PAGES = [
     access: 'signed-in',
     goTo: { label: 'Memory', where: 'AI', icon: memoryIcon },
   },
+  {
+    path: '/workspace/:workspaceId/sessions',
+    access: 'signed-in',
+    goTo: {
+      label: 'Sessions',
+      where: 'AI',
+      icon: messageSquareIcon,
+      also: 'llm transcript conversation history what the agent said',
+    },
+  },
 
   // ---- Workflow: the work itself, and what it is made of ----
   {
@@ -242,6 +252,7 @@ export const PAGES = [
   { path: '/workspace/:workspaceId/workflows/:workflowId/settings', access: 'signed-in', goTo: false },
   { path: '/workspace/:workspaceId/memory/new', access: 'signed-in', goTo: false },
   { path: '/workspace/:workspaceId/memory/:memoryId', access: 'signed-in', goTo: false },
+  { path: '/workspace/:workspaceId/sessions/:sessionId', access: 'signed-in', goTo: false },
 
   // ---- Chat and the manual ----
   { path: '/chat', access: 'signed-in', goTo: { label: 'Chat', where: 'Chat', icon: messageSquareIcon, also: 'ask agent' } },

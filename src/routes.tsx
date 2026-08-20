@@ -36,6 +36,7 @@ import { NoWorkspacesPage } from './pages/no-workspaces/NoWorkspacesPage';
 import { ObjectEditorPage } from './pages/workspace/ObjectEditorPage';
 import { PreferencesPage } from './pages/preferences/PreferencesPage';
 import { ProviderSettingsPage } from './pages/workspace/ProviderSettingsPage';
+import { SessionDetailPage } from './pages/workspace/SessionDetailPage';
 import { SkillEditorPage } from './pages/workspace/SkillEditorPage';
 import { ToolEditorPage } from './pages/workspace/ToolEditorPage';
 import { TriggerSettingsPage } from './pages/workspace/TriggerSettingsPage';
@@ -50,6 +51,7 @@ import { WorkspaceMemoryPage } from './pages/workspace/WorkspaceMemoryPage';
 import { WorkspaceModelsPage } from './pages/workspace/WorkspaceModelsPage';
 import { WorkspaceObjectsPage } from './pages/workspace/WorkspaceObjectsPage';
 import { WorkspaceSettingsPage } from './pages/workspace/WorkspaceSettingsPage';
+import { WorkspaceSessionsPage } from './pages/workspace/WorkspaceSessionsPage';
 import { WorkspaceSkillsPage } from './pages/workspace/WorkspaceSkillsPage';
 import { WorkspaceToolsPage } from './pages/workspace/WorkspaceToolsPage';
 import { WorkspaceTriggersPage } from './pages/workspace/WorkspaceTriggersPage';
@@ -91,6 +93,7 @@ export const PAGE_ELEMENTS: Record<PagePath, PageElement> = {
   '/workspace/:workspaceId/memory': (session, onSignOut) => <WorkspaceMemoryPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/skills': (session, onSignOut) => <WorkspaceSkillsPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/tools': (session, onSignOut) => <WorkspaceToolsPage session={session} onSignOut={onSignOut} />,
+  '/workspace/:workspaceId/sessions': (session, onSignOut) => <WorkspaceSessionsPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/models': (session, onSignOut) => <WorkspaceModelsPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/integrations': (session, onSignOut) => <WorkspaceIntegrationsPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/audit': (session, onSignOut) => <WorkspaceAuditPage session={session} onSignOut={onSignOut} />,
@@ -116,6 +119,7 @@ export const PAGE_ELEMENTS: Record<PagePath, PageElement> = {
   '/workspace/:workspaceId/workflows/:workflowId/settings': (session, onSignOut) => <WorkflowSettingsPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/memory/new': (session, onSignOut) => <MemoryEditorPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/memory/:memoryId': (session, onSignOut) => <MemoryEditorPage session={session} onSignOut={onSignOut} />,
+  '/workspace/:workspaceId/sessions/:sessionId': (session, onSignOut) => <SessionDetailPage session={session} onSignOut={onSignOut} />,
   '/chat': (session, onSignOut) => <ChatPage session={session} onSignOut={onSignOut} />,
   '/chat/:chatId': (session, onSignOut) => <ChatPage session={session} onSignOut={onSignOut} />,
   '/docs': (session, onSignOut) => <DocsPage session={session} onSignOut={onSignOut} />,

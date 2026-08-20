@@ -1,0 +1,267 @@
+.titleHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+}
+
+.title {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--text-2xl);
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+/* ---- Search and sort ---- */
+
+.filterBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  width: 100%;
+}
+
+.searchInput {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 320px;
+  padding: var(--space-8) var(--space-12);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.searchInput:focus-within {
+  border-color: var(--color-accent-brand);
+}
+
+.searchField {
+  flex: 1 0 0;
+  min-width: 0;
+  background: none;
+  border: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.searchField:focus {
+  outline: none;
+}
+
+.searchField::placeholder {
+  color: var(--color-text-muted);
+}
+
+.sortRow {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.sortLabel {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+/* The chevron the browser no longer draws, as every other select in the app draws it. */
+.selectWrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.selectWrapper > img {
+  position: absolute;
+  right: var(--space-8);
+  pointer-events: none;
+}
+
+.sortSelect {
+  padding: var(--space-6) var(--space-24) var(--space-6) var(--space-8);
+  /* The menu the browser drops takes its colour from the control, so a
+     transparent select opens a white list on a dark page. */
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.sortDirection {
+  width: 30px;
+  padding: var(--space-6) 0;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  text-align: center;
+  cursor: pointer;
+}
+
+.sortSelect:hover,
+.sortDirection:hover {
+  border-color: var(--color-text-muted);
+}
+
+/* ---- The list ---- */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  overflow: clip;
+}
+
+.tableHeader,
+.row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: var(--space-14) var(--space-16);
+}
+
+.tableHeader {
+  border-bottom: 1px solid var(--color-border);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  letter-spacing: 0.55px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.row {
+  border-top: 1px solid var(--color-border);
+  text-decoration: none;
+}
+
+.row:first-of-type {
+  border-top: 0;
+}
+
+.row:hover {
+  background: var(--color-surface-raised);
+}
+
+.colKey,
+.colPrefix,
+.colCount,
+.colOpened,
+.colSpoken {
+  padding: 0 var(--space-16);
+}
+
+/* The key takes the slack: it is the only thing on the row that identifies it. */
+.colKey {
+  flex: 1 0 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.colPrefix {
+  flex-shrink: 0;
+  width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.colCount {
+  flex-shrink: 0;
+  width: 80px;
+}
+
+.colOpened,
+.colSpoken {
+  flex-shrink: 0;
+  width: 150px;
+}
+
+/*
+ * A key is a string somebody computed and will compare with one they quoted, so
+ * it is read a character at a time and stays monospaced.
+ */
+.key {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.row:hover .key {
+  text-decoration: underline;
+}
+
+.muted {
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.nothing {
+  color: var(--color-text-muted);
+}
+
+/* ---- Loading, empty, error ---- */
+
+.notice {
+  margin: 0;
+  padding: var(--space-14) var(--space-16);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.noticeError {
+  color: var(--color-danger);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: var(--space-24) var(--space-16);
+  border-top: 1px solid var(--color-border);
+}
+
+.emptyTitle {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.emptyBody {
+  max-width: 68ch;
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.emptyBody strong {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--color-text-primary);
+}

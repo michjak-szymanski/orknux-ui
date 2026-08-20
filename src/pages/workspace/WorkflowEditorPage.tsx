@@ -171,8 +171,14 @@ const OBJECT_PAGE_SIZE = 100;
  * `systemPrompt` replaces the agent's own briefing for this node only. Either
  * can be written out or pointed at a field, so a node can ask about one part of
  * what arrived rather than handing over the whole payload.
+ *
+ * The other two say which conversation this node's turn belongs to, and the
+ * names are the server's: `sessionKey` is the identity, `sessionKeyPrefix` what
+ * it is filed under. Reference is the mode that matters here — a key read out of
+ * what the run carries is how two different workflows land in one session, which
+ * a key typed into the node can never do.
  */
-const AGENT_PARAMETERS = ['prompt', 'systemPrompt'];
+const AGENT_PARAMETERS = ['prompt', 'systemPrompt', 'sessionKeyPrefix', 'sessionKey'];
 
 /** How long a graph has to stop changing before it is worth asking about. */
 const PREVIEW_PAUSE_MS = 400;
@@ -586,7 +592,11 @@ function parameterPlaceholder(draft: NodeData, name: string): string | undefined
     ? 'Everything that reached this node'
     : name === 'systemPrompt'
       ? "The agent's own briefing"
-      : undefined;
+      : name === 'sessionKeyPrefix'
+        ? 'No prefix'
+        : name === 'sessionKey'
+          ? 'Nothing is kept'
+          : undefined;
 }
 
 /**
@@ -2849,7 +2859,10 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                             <>
                               <strong>prompt</strong> is what the agent is asked; <strong>systemPrompt</strong>{' '}
                               replaces its own briefing, for this node only. Leave either empty to keep what
-                              the agent already does.
+                              the agent already does. <strong>sessionKey</strong> keeps this turn in a
+                              conversation that outlives the run — every node arriving at the same key writes
+                              into the same one — and <strong>sessionKeyPrefix</strong> is what that key is
+                              filed under. Leave the key empty and nothing is recorded.
                             </>
                           ) : draft.kind === 'OBJECT' ? (
                             <>

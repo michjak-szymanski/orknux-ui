@@ -1,0 +1,362 @@
+.contentHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  margin: 0 0 var(--space-8);
+  font-size: var(--text-md);
+}
+
+.crumbLink {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.crumbLink:hover {
+  color: var(--color-text-primary);
+}
+
+.crumbSeparator {
+  color: var(--color-text-muted);
+}
+
+.crumbCurrent {
+  overflow: hidden;
+  color: var(--color-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The key identifies the session and is compared character by character. */
+.title {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xl);
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.gone {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-muted);
+}
+
+/* ---- Search, kinds, sort ---- */
+
+.filterBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-12);
+  width: 100%;
+}
+
+.searchInput {
+  display: flex;
+  flex: 1 0 240px;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-12);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.searchInput:focus-within {
+  border-color: var(--color-accent-brand);
+}
+
+.searchField {
+  flex: 1 0 0;
+  min-width: 0;
+  background: none;
+  border: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.searchField:focus {
+  outline: none;
+}
+
+.searchField::placeholder {
+  color: var(--color-text-muted);
+}
+
+.kindFilter {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+/*
+ * Off is the whole transcript, so an untouched chip is drawn quietly and only
+ * takes its kind's colour once it has been asked for.
+ */
+.kindChip {
+  padding: var(--space-6) var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  font: inherit;
+  font-weight: 500;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.kindChip:hover {
+  border-color: var(--color-text-muted);
+  color: var(--color-text-primary);
+}
+
+.kindChipOn {
+  background: var(--kind-soft);
+  border-color: var(--kind-colour);
+  color: var(--kind-colour);
+}
+
+.sortRow {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.sortLabel {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.selectWrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.selectWrapper > img {
+  position: absolute;
+  right: var(--space-8);
+  pointer-events: none;
+}
+
+.sortSelect {
+  padding: var(--space-6) var(--space-24) var(--space-6) var(--space-8);
+  /* The popup takes its colour from the control, not from what is behind it. */
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.sortDirection {
+  width: 30px;
+  padding: var(--space-6) 0;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  text-align: center;
+  cursor: pointer;
+}
+
+.sortSelect:hover,
+.sortDirection:hover {
+  border-color: var(--color-text-muted);
+}
+
+/* ---- The transcript ---- */
+
+.transcript {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+/* Which day these lines fall on: a session can span weeks. */
+.day {
+  margin: var(--space-16) 0 var(--space-8);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  letter-spacing: 0.55px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/*
+ * The kind is said three ways at once - a coloured edge, a coloured chip and
+ * the word itself - because the one thing a transcript is scanned for should
+ * not depend on remembering what cyan meant.
+ */
+.event {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: var(--space-12) var(--space-16);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--kind-colour);
+  border-radius: var(--radius-8);
+}
+
+.kindAgent {
+  --kind-colour: var(--color-accent-brand);
+  --kind-soft: var(--color-accent-brand-soft);
+}
+
+.kindTool {
+  --kind-colour: var(--color-cyan);
+  --kind-soft: var(--color-cyan-soft);
+}
+
+.kindUser {
+  --kind-colour: var(--color-violet);
+  --kind-soft: var(--color-violet-soft);
+}
+
+/*
+ * A note from the machinery about the conversation rather than in it, and drawn
+ * as one: no hue of its own, because giving it one would put it on the same
+ * footing as the three that are the conversation.
+ */
+.kindSystem {
+  --kind-colour: var(--color-text-muted);
+  --kind-soft: var(--color-surface-raised);
+}
+
+.eventHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.kindBadge {
+  padding: var(--space-2) var(--space-8);
+  background: var(--kind-soft);
+  border-radius: var(--radius-4);
+  font-weight: 600;
+  font-size: var(--text-2xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--kind-colour);
+}
+
+.actor {
+  flex: 1 0 0;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.at {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/*
+ * `pre` so that what an agent wrote keeps its own line breaks, in the page's own
+ * face: what was said is prose, and monospacing it makes a conversation read as
+ * a log file.
+ */
+.content {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  line-height: 1.6;
+  color: var(--color-text-body);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* A tool's arguments are code, and are read as code. */
+.code {
+  padding: var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  overflow-x: auto;
+}
+
+/*
+ * Folded rather than scrolled: a box with its own scrollbar inside a page that
+ * scrolls swallows the wheel, and what is wanted here is the shape of the
+ * conversation, with the long line opened only when it is the one being read.
+ */
+.folded {
+  max-height: 180px;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+}
+
+.fold {
+  align-self: flex-start;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-accent-brand);
+  cursor: pointer;
+}
+
+.fold:hover {
+  text-decoration: underline;
+}
+
+.nothing {
+  margin: 0;
+  font-size: var(--text-md);
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
+/* ---- Loading, empty, error ---- */
+
+.notice {
+  margin: 0;
+  padding: var(--space-16);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.noticeError {
+  color: var(--color-danger);
+}
