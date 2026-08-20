@@ -108,6 +108,20 @@ export async function fetchLlmSession(id: string): Promise<LlmSession | null> {
 }
 
 /**
+ * Throws a session away, with everything said in it.
+ *
+ * False where there was nothing to remove — a second press of the button is
+ * somebody making sure rather than an error.
+ */
+export async function removeLlmSession(id: string): Promise<boolean> {
+  const data = await graphql<{ removeLlmSession: boolean }>(
+    `mutation ($id: ID!) { removeLlmSession(id: $id) }`,
+    { id },
+  );
+  return data.removeLlmSession;
+}
+
+/**
  * One session's transcript.
  *
  * `kinds` left out asks for every kind — as does an empty list, which is the

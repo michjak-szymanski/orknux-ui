@@ -34,6 +34,45 @@
 }
 
 /* The key identifies the session and is compared character by character. */
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+}
+
+/*
+ * Quiet until it is armed. A session cannot be made again, so the control says
+ * what it will take with it once somebody has reached for it, rather than
+ * shouting before they have.
+ */
+.remove,
+.removeArmed {
+  flex: none;
+  padding: var(--space-6) var(--space-12);
+  border-radius: var(--radius-6);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.remove {
+  background: none;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.remove:hover {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.removeArmed {
+  background: var(--color-danger);
+  border: 1px solid var(--color-danger);
+  color: var(--color-text-primary);
+}
+
 .title {
   margin: 0;
   font-family: var(--font-mono);

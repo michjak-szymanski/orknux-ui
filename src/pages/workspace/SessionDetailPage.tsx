@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 
-import { EVENT_KINDS, EVENT_KIND_LABEL, fetchLlmSession, fetchLlmSessionEvents } from '../../api/llmSessions';
+import {
+  EVENT_KINDS,
+  EVENT_KIND_LABEL,
+  fetchLlmSession,
+  fetchLlmSessionEvents,
+  removeLlmSession,
+} from '../../api/llmSessions';
 import type {
   LlmSession,
   LlmSessionEvent,
@@ -127,6 +133,9 @@ function EventLine({ event }: { event: LlmSessionEvent }) {
 export function SessionDetailPage({ session, onSignOut }: SessionDetailPageProps) {
   const { workspaceId = '', sessionId = '' } = useParams();
 
+  const navigate = useNavigate();
+  const [confirming, setConfirming] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
   const [held, setHeld] = useState<LlmSession | null>(null);
   const [missing, setMissing] = useState(false);
   const [events, setEvents] = useState<LlmSessionEventPage | null>(null);
@@ -216,7 +225,40 @@ export function SessionDetailPage({ session, onSignOut }: SessionDetailPageProps
           </p>
         ) : (
           <>
-            <h1 className={styles.title}>{held?.key ?? '…'}</h1>
+            <div className={styles.titleRow}>
+              <h1 className={styles.title}>{held?.key ?? '…'}</h1>
+              {/*
+                Two presses rather than a dialog, the way the other destructive
+                controls here work. Nothing makes a session again - it exists
+                because a run computed its key - so this is the one act on this
+                page that cannot be undone by repeating what caused it.
+              */}
+              {held !== null && (
+                <button
+                  type="button"
+                  className={confirming ? styles.removeArmed : styles.remove}
+                  onClick={() => {
+                    if (!confirming) {
+                      setConfirming(true);
+                      return;
+                    }
+                    void removeLlmSession(held.id)
+                      .then(() => navigate(`/workspace/${workspaceId}/sessions`))
+                      .catch((cause: unknown) =>
+                        setRemoveError(cause instanceof Error ? cause.message : 'That could not be removed.'),
+                      );
+                  }}
+                  onBlur={() => setConfirming(false)}
+                >
+                  {confirming ? 'Remove it, and everything said in it' : 'Remove session'}
+                </button>
+              )}
+            </div>
+            {removeError !== null && (
+              <p className={styles.gone} role="alert">
+                {removeError}
+              </p>
+            )}
             <p className={styles.meta}>
               {held === null ? (
                 'Loading…'
