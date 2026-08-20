@@ -389,6 +389,14 @@ a.refresh {
   background: #a855f7;
 }
 
+/*
+ * Here for the sake of the kind list being complete rather than because a run
+ * has one: a session node is a declaration the agent reads, and never a step.
+ */
+.session {
+  background: #8b5cf6;
+}
+
 .handle {
   width: 6px;
   height: 6px;

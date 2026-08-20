@@ -1,7 +1,7 @@
 import { graphql } from './client';
 
 export type WorkflowStatus = 'DRAFT' | 'PUBLISHED';
-export type NodeKind = 'TRIGGER' | 'AGENT' | 'ACTION' | 'CONDITION' | 'OBJECT';
+export type NodeKind = 'TRIGGER' | 'AGENT' | 'ACTION' | 'CONDITION' | 'OBJECT' | 'SESSION';
 
 
 /**
@@ -231,5 +231,6 @@ export const NODE_KIND_LABEL: Record<NodeKind, string> = {
   ACTION: 'Action',
   CONDITION: 'Condition',
   OBJECT: 'Object',
+  SESSION: 'LLM Session',
 };
 

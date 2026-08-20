@@ -273,6 +273,15 @@
   background: #a855f7;
 }
 
+/*
+ * A session node: what an agent remembers. Next to the object node's purple
+ * because the two are the same sort of thing - a declaration rather than a
+ * step - and far enough from it to tell them apart at minimap size.
+ */
+.session {
+  background: #8b5cf6;
+}
+
 /* An action node: what a workflow does, as opposed to what thinks. */
 .action {
   background: #06b6d4;
@@ -745,6 +754,28 @@
   font-size: var(--text-xs);
   line-height: 16px;
   color: var(--color-text-muted);
+}
+
+/*
+ * Something the panel reports rather than something it takes. Set in the same
+ * face the parameters are typed in, so it reads as a value and not as prose,
+ * and left without a box around it, so it does not read as one to type into.
+ */
+.readOnlyValue {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  line-height: 18px;
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+/* A hint about a shape the save will refuse; the same words, in the colour. */
+.problemWarning {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: 16px;
+  color: var(--color-danger);
 }
 
 /* The chevron is decoration; the select reaches under it and takes the click. */

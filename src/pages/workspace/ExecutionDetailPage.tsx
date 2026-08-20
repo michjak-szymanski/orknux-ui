@@ -48,6 +48,9 @@ const KIND_CLASS: Record<NodeKind, string> = {
   ACTION: 'action',
   CONDITION: 'condition',
   OBJECT: 'objectNode',
+  // Listed for completeness rather than because it happens: a session node is
+  // a declaration the agent reads, so no run ever records a step of this kind.
+  SESSION: 'session',
 };
 
 const STEP_STATUS_LABEL: Record<StepStatus, string> = {

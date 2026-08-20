@@ -172,13 +172,23 @@ const OBJECT_PAGE_SIZE = 100;
  * can be written out or pointed at a field, so a node can ask about one part of
  * what arrived rather than handing over the whole payload.
  *
- * The other two say which conversation this node's turn belongs to, and the
- * names are the server's: `sessionKey` is the identity, `sessionKeyPrefix` what
- * it is filed under. Reference is the mode that matters here — a key read out of
- * what the run carries is how two different workflows land in one session, which
- * a key typed into the node can never do.
+ * Which conversation the node's turn belongs to is deliberately not here. That
+ * is a Session node's, and an agent joins one by having an edge drawn from it —
+ * so two agents can share a conversation by pointing at the same node, instead
+ * of by somebody typing one key into both and hoping.
  */
-const AGENT_PARAMETERS = ['prompt', 'systemPrompt', 'sessionKeyPrefix', 'sessionKey'];
+const AGENT_PARAMETERS = ['prompt', 'systemPrompt'];
+
+/**
+ * What a session node holds, and the names are the server's: `sessionKey` is
+ * the identity, `sessionKeyPrefix` what it is filed under.
+ *
+ * Reference is the mode that matters here — a key read out of what the run
+ * carries is how two different workflows land in one session, which a key typed
+ * into the node can never do. It is read where it is used, in the agent this
+ * node leads to, so it reads what that node was handed.
+ */
+const SESSION_PARAMETERS = ['sessionKeyPrefix', 'sessionKey'];
 
 /** How long a graph has to stop changing before it is worth asking about. */
 const PREVIEW_PAUSE_MS = 400;
@@ -586,17 +596,39 @@ function briefingFor(draft: NodeData, agents: Agent[]): string {
 
 /** What an empty box would fall back to, shown in grey. */
 function parameterPlaceholder(draft: NodeData, name: string): string | undefined {
+  if (draft.kind === 'SESSION') {
+    return name === 'sessionKeyPrefix' ? 'No prefix' : name === 'sessionKey' ? 'Nothing is kept' : undefined;
+  }
   if (draft.kind !== 'AGENT') return undefined;
 
   return name === 'prompt'
     ? 'Everything that reached this node'
     : name === 'systemPrompt'
       ? "The agent's own briefing"
-      : name === 'sessionKeyPrefix'
-        ? 'No prefix'
-        : name === 'sessionKey'
-          ? 'Nothing is kept'
-          : undefined;
+      : undefined;
+}
+
+/**
+ * What a session node's key comes to, as far as the canvas can say.
+ *
+ * A written half is shown as it stands; a referenced half is shown in round
+ * brackets, because the canvas cannot know what it will read — that happens
+ * when the agent asks, against whatever the run is carrying by then. Empty
+ * where the key itself has not been given, since a session with no key names
+ * nothing at all.
+ */
+function sessionKeyOf(session: NodeData): string {
+  function half(name: string): string | null {
+    const mapping = session.mappings.find((held) => held.name === name);
+    const written = mapping?.expression.trim() ?? '';
+    if (written === '') return null;
+    return mapping?.mode === 'REFERENCE' ? `(${written})` : written;
+  }
+
+  const key = half('sessionKey');
+  if (key === null) return '';
+  const prefix = half('sessionKeyPrefix');
+  return prefix === null ? key : `${prefix}:${key}`;
 }
 
 /**
@@ -613,6 +645,7 @@ const KIND_COLOUR: Record<NodeKind, string> = {
   ACTION: '#06b6d4',
   CONDITION: '#f59e0b',
   OBJECT: '#a855f7',
+  SESSION: '#8b5cf6',
 };
 
 const KIND_CLASS: Record<NodeKind, string> = {
@@ -621,11 +654,17 @@ const KIND_CLASS: Record<NodeKind, string> = {
   ACTION: 'action',
   CONDITION: 'condition',
   OBJECT: 'objectNode',
+  SESSION: 'session',
 };
 
 function GraphNodeView({ data, selected }: NodeProps) {
   const node = data as NodeData;
-  const hasInput = node.kind !== 'TRIGGER';
+  /*
+   * A trigger is where a run starts, and a session is never reached by one at
+   * all - it is read by the agents it leads to. Neither has anything to take
+   * in, and drawing a handle there only invites an edge the save refuses.
+   */
+  const hasInput = node.kind !== 'TRIGGER' && node.kind !== 'SESSION';
   const facing = FACING[node.orientation ?? 'LEFT_TO_RIGHT'];
 
   return (
@@ -925,6 +964,27 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
         }));
       });
   }, [nodes, ports, selectedKey]);
+
+  /**
+   * The session nodes leading into whichever node is selected.
+   *
+   * Read off the edges, because the edge is what says it: the agent's panel
+   * shows which conversation this node keeps, and shows it as something already
+   * decided elsewhere. There is no control here to set it - drawing the line is
+   * how it is set, and offering a second way would mean two answers to the same
+   * question, one of them invisible on the canvas.
+   *
+   * A list rather than one, because two is a shape somebody can draw. The
+   * validator refuses it; this is what says so before the save does.
+   */
+  const wiredSessions = useMemo<NodeData[]>(() => {
+    if (selectedKey === null) return [];
+    const leadingIn = new Set(edges.filter((edge) => edge.target === selectedKey).map((edge) => edge.source));
+    return nodes
+      .filter((node) => leadingIn.has(node.id))
+      .map((node) => node.data as NodeData)
+      .filter((data) => data.kind === 'SESSION');
+  }, [edges, nodes, selectedKey]);
 
   /**
    * What each pair of nodes actually carries between them: one entry per
@@ -1399,7 +1459,13 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
            */
           outputName: kind === 'AGENT' ? 'reply' : null,
           orientation: null,
-          icon: null,
+          /*
+           * Every other kind takes its icon from the definition it points at.
+           * A session points at nothing - the key it holds is the whole of it -
+           * so this is the one kind that has to be given one outright, and a
+           * plain grey box beside four illustrated ones reads as unfinished.
+           */
+          icon: kind === 'SESSION' ? 'message-square' : null,
           mappings: [],
         },
       },
@@ -1619,9 +1685,42 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
         }
         return existing ?? { name, expression: '', mode: 'VALUE' as MappingMode };
       });
-      return sameMappings(held.mappings, seeded) ? held : { ...held, mappings: seeded };
+      /*
+       * Anything else the node still holds is kept, after them.
+       *
+       * Which in practice means `sessionKey` and `sessionKeyPrefix` on a node
+       * drawn before session nodes existed. Dropping them here would rewrite a
+       * working graph into a quietly different one the first time somebody
+       * opened the node, so they stay - and stay editable - until a session is
+       * wired to this node, which overrides them.
+       */
+      const kept = held.mappings.filter((mapping) => !AGENT_PARAMETERS.includes(mapping.name));
+      const all = [...seeded, ...kept];
+      return sameMappings(held.mappings, all) ? held : { ...held, mappings: all };
     });
   }, [draft?.kind, draft?.agentId, agents]);
+
+  /**
+   * A session node takes exactly two, and always both.
+   *
+   * They are not a catalogue's and not the node's own invention: a session is a
+   * key and the prefix it is filed under, and that is the whole of this kind.
+   * The server fixes the same list on save, so what the panel shows and what is
+   * written down cannot come apart.
+   */
+  useEffect(() => {
+    if (draft === null || draft.kind !== 'SESSION') return;
+
+    setDraft((held) => {
+      if (held === null || held.kind !== 'SESSION') return held;
+      const seeded = SESSION_PARAMETERS.map(
+        (name) =>
+          held.mappings.find((mapping) => mapping.name === name) ??
+          { name, expression: '', mode: 'VALUE' as MappingMode },
+      );
+      return sameMappings(held.mappings, seeded) ? held : { ...held, mappings: seeded };
+    });
+  }, [draft?.kind, selectedKey]);
 
   /**
    * A node takes the icon of whatever it points at, once.
@@ -2531,6 +2630,44 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                   </div>
                 )}
 
+                {/*
+                  Which conversation this node keeps, shown and not set.
+
+                  The edge on the canvas is the truth, and this is a reading of
+                  it - so that "which session is this?" can be answered without
+                  tracing a line across the graph, without becoming a second
+                  place the answer could come from.
+                */}
+                {draft.kind === 'AGENT' && (
+                  <div className={styles.field}>
+                    <span className={styles.label}>Session</span>
+                    {wiredSessions.length === 0 ? (
+                      <p className={styles.parameterHint}>
+                        None, so nothing this node says is kept. Add a <strong>LLM Session</strong> node and draw
+                        an edge from it to this one; two agents wired to the same session share one conversation.
+                      </p>
+                    ) : wiredSessions.length > 1 ? (
+                      <p className={styles.problemWarning}>
+                        {wiredSessions.length} sessions reach this node. A turn belongs to one conversation, so
+                        the graph will not save until all but one of those edges is gone.
+                      </p>
+                    ) : (
+                      <>
+                        <p className={styles.readOnlyValue}>
+                          {wiredSessions[0].name}
+                          {sessionKeyOf(wiredSessions[0]) === ''
+                            ? ' — no key yet'
+                            : ` — ${sessionKeyOf(wiredSessions[0])}`}
+                        </p>
+                        <p className={styles.parameterHint}>
+                          Read from the edge. The key lives on the session node, and is changed there — a half in
+                          round brackets is read from what the run is carrying when this node asks.
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
+
                 {draft.kind === 'TRIGGER' && (
                   <div className={styles.field}>
                     <span className={styles.labelRow}>
@@ -2659,6 +2796,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
 
                 {((draft.kind === 'ACTION' && draft.actionId !== null) ||
                   draft.kind === 'AGENT' ||
+                  draft.kind === 'SESSION' ||
                   draft.kind === 'OBJECT') && (
                   <div className={styles.field}>
                     <span className={styles.labelRow}>
@@ -2859,10 +2997,23 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                             <>
                               <strong>prompt</strong> is what the agent is asked; <strong>systemPrompt</strong>{' '}
                               replaces its own briefing, for this node only. Leave either empty to keep what
-                              the agent already does. <strong>sessionKey</strong> keeps this turn in a
-                              conversation that outlives the run — every node arriving at the same key writes
-                              into the same one — and <strong>sessionKeyPrefix</strong> is what that key is
-                              filed under. Leave the key empty and nothing is recorded.
+                              the agent already does.
+                              {draft.mappings.some((mapping) => mapping.name === 'sessionKey') && (
+                                <>
+                                  {' '}
+                                  This node still names its own session, which is how it was done before there
+                                  were session nodes. It keeps working; wire a <strong>LLM Session</strong> node
+                                  to this one and that takes over.
+                                </>
+                              )}
+                            </>
+                          ) : draft.kind === 'SESSION' ? (
+                            <>
+                              <strong>sessionKey</strong> is what this conversation is called — every agent that
+                              arrives at the same key writes into the same one, in this run or any other.{' '}
+                              <strong>sessionKeyPrefix</strong> is what it is filed under, and is optional. Leave
+                              the key empty and nothing is recorded. Both are read when an agent wired to this
+                              node asks, against what that node was handed.
                             </>
                           ) : draft.kind === 'OBJECT' ? (
                             <>
