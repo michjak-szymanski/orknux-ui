@@ -501,6 +501,47 @@
   visibility: visible;
 }
 
+/* Holds the bubble and, on a carried turn, the name above it. */
+.userBody {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-4);
+  max-width: 70%;
+}
+
+/* Who put a carried turn: a person, or the node whose prompt it was. */
+.saidBy {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+/*
+ * The line between what was carried in and what has been said here. Ruled on
+ * both sides because it is a boundary in the conversation rather than a heading
+ * over the next part of it.
+ */
+.carriedEdge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.carriedEdge::before,
+.carriedEdge::after {
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+  content: '';
+}
+
+.userBody .userBubble {
+  max-width: 100%;
+}
+
 .userBubble {
   max-width: 70%;
   padding: var(--space-12) var(--space-16);

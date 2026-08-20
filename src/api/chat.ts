@@ -28,6 +28,15 @@ export interface ChatSession {
 export interface ChatMessage {
   role: string;
   content: string;
+  /**
+   * Who said it, for a turn carried into this chat from the session it
+   * continues - the agent, the tool or the person, as the session recorded it.
+   *
+   * Null for everything the chat said itself. So it is also the boundary: turns
+   * with a name were already there when the chat opened, turns without were
+   * said in it.
+   */
+  actor: string | null;
 }
 
 export interface ChatAnswer {
@@ -63,7 +72,7 @@ export async function fetchChatsMentioning(workspaceId: string, text: string): P
 
 export async function fetchChatMessages(id: string): Promise<ChatMessage[]> {
   const data = await graphql<{ chatMessages: ChatMessage[] }>(
-    'query ChatMessages($id: ID!) { chatMessages(id: $id) { role content } }',
+    'query ChatMessages($id: ID!) { chatMessages(id: $id) { role content actor } }',
     { id },
   );
   return data.chatMessages;
@@ -142,7 +151,7 @@ export async function sendChatMessage(id: string, text: string): Promise<ChatAns
     `mutation SendChatMessage($id: ID!, $text: String!) {
        sendChatMessage(id: $id, text: $text) {
          session { ${SESSION_FIELDS} }
-         answer { role content }
+         answer { role content actor }
          millis
        }
      }`,

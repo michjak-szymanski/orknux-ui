@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { FormEvent, KeyboardEvent } from 'react';
 
@@ -109,6 +109,19 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
     [chatId, navigate],
   );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  /**
+   * How many turns at the top were carried in from the session, rather than
+   * said here.
+   *
+   * The count is where they stop: a turn with a name on it came out of the
+   * session, and the chat's own turns have none. A chat opened to work out what
+   * an agent did is read for the difference between the two, so the boundary is
+   * drawn rather than left to be inferred from the names.
+   */
+  const carried = useMemo(() => {
+    const own = messages.findIndex((message) => message.actor === null);
+    return own === -1 ? messages.length : own;
+  }, [messages]);
   const [models, setModels] = useState<Model[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
 
@@ -625,7 +638,11 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
   async function handleVoiceTurn(text: string, onProgress: (soFar: string) => void): Promise<string> {
     if (currentId === null) return '';
 
-    setMessages((present) => [...present, { role: 'user', content: text }, { role: 'assistant', content: '' }]);
+    setMessages((present) => [
+      ...present,
+      { role: 'user', content: text, actor: null },
+      { role: 'assistant', content: '', actor: null },
+    ]);
     setError(null);
 
     let answer = '';
@@ -687,11 +704,11 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
     setAttached([]);
     // Shown straight away: the server has it, and waiting for the model to
     // finish before drawing what was typed reads as a dropped message.
-    setMessages((present) => [...present, { role: 'user', content: said }]);
+    setMessages((present) => [...present, { role: 'user', content: said, actor: null }]);
     setError(null);
     // The answer grows in place as it arrives, so the empty assistant turn is
     // appended first and each piece lands on the end of it.
-    setMessages((present) => [...present, { role: 'assistant', content: '' }]);
+    setMessages((present) => [...present, { role: 'assistant', content: '', actor: null }]);
     try {
       let failure: string | null = null;
       await streamChatMessage(
@@ -1123,9 +1140,10 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
               <p className={styles.logEmpty}>Nothing said yet. What is typed below starts the conversation.</p>
             )}
 
-            {messages.map((message, index) =>
-              message.role === 'user' ? (
-                <div key={index} className={styles.userRow}>
+            {messages.map((message, index) => (
+              <Fragment key={index}>
+              {message.role === 'user' ? (
+                <div className={styles.userRow}>
                   <button
                     type="button"
                     className={styles.rowAction}
@@ -1135,16 +1153,31 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                   >
                     <img src={copyIcon} alt="" width={14} height={14} />
                   </button>
-                  <div className={styles.userBubble}>{message.content}</div>
+                  <div className={styles.userBody}>
+                    {/*
+                      A carried turn says who put it. It may not have been a
+                      person at all - a node's prompt is recorded the same way -
+                      and unnamed it reads as something the reader typed.
+                    */}
+                    {message.actor !== null && <span className={styles.saidBy}>{message.actor}</span>}
+                    <div className={styles.userBubble}>{message.content}</div>
+                  </div>
                 </div>
               ) : (
-                <div key={index} className={styles.assistantRow}>
+                <div className={styles.assistantRow}>
                   <span className={styles.assistantAvatar} aria-hidden="true">
                     <img src={cpuIcon} alt="" width={16} height={16} />
                   </span>
                   <div className={styles.assistantBody}>
+                    {/*
+                      Whoever actually said it. A turn carried in from the
+                      session was said by an agent, and signing it with the
+                      model this chat happens to be talking to is the most
+                      misleading line on a page somebody opened to work out what
+                      that agent did.
+                    */}
                     <span className={styles.assistantName}>
-                      {current.agentName ?? current.modelName ?? 'assistant'}
+                      {message.actor ?? current.agentName ?? current.modelName ?? 'assistant'}
                     </span>
                     {/* Only the answer just given has a time behind it. */}
                     {lastMillis !== null && index === messages.length - 1 && (
@@ -1211,8 +1244,20 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                     </div>
                   </div>
                 </div>
-              ),
-            )}
+              )}
+              {/*
+                Where the session's record stops and this conversation starts.
+
+                The names above it already say the turns came from somewhere
+                else, but a reader working out what went wrong is asking a
+                different question - which of this was already there, and which
+                of it is theirs - and one line answers it at a glance.
+              */}
+              {index === carried - 1 && (
+                <p className={styles.carriedEdge}>Everything above was carried over from the session</p>
+              )}
+              </Fragment>
+            ))}
 
             {/*
               Only until the model actually starts. The answer streams into an
