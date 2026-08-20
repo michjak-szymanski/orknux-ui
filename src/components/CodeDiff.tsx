@@ -48,8 +48,19 @@ export function CodeDiff({ original, modified, language = 'typescript', ariaLabe
       // The arrows that revert a change belong to an editable diff; this one
       // is answered with the buttons above it.
       renderMarginRevertIcon: false,
-      ariaLabel,
     });
+
+    /*
+     * A diff is two editors, and only they can be named.
+     *
+     * `ariaLabel` in the options above reaches neither - nor do the diff's own
+     * `originalAriaLabel` and `modifiedAriaLabel`, which land empty - so the
+     * proposal read to a screen reader as two unnamed code boxes. Set on the
+     * editors themselves it takes, and says which side is which, which is the
+     * whole question being asked here.
+     */
+    shown.getOriginalEditor().updateOptions({ ariaLabel: `${ariaLabel}: the code as it is` });
+    shown.getModifiedEditor().updateOptions({ ariaLabel: `${ariaLabel}: what is proposed` });
 
     const before = monaco.editor.createModel(original, language);
     const after = monaco.editor.createModel(modified, language);
