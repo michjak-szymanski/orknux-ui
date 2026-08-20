@@ -949,7 +949,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                       <span className={styles.typeSelect}>
                         <select
                           id={`param-type-${index}`}
-                          className={styles.typeBadge}
+                          className={`${styles.typeBadge} ${styles.typeField}`}
                           value={param.type}
                           aria-label={`Parameter ${index + 1} type`}
                           onChange={(event) => {

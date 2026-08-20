@@ -484,7 +484,13 @@
   gap: var(--space-8);
   width: 100%;
   padding: var(--space-6) var(--space-10);
-  background: var(--color-background);
+  /*
+   * The panel behind it. Written as the panel's own token rather than
+   * `--color-background`, which is not a token at all and resolves to nothing -
+   * so this box has always simply shown the panel through it. Saying so is what
+   * lets a label notched into an outline be painted to match; see `.paramLabel`.
+   */
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-6);
 }
@@ -507,7 +513,8 @@
    * them somewhere to sit that is not on top of its own border.
    */
   padding: var(--space-16) var(--space-10) var(--space-10);
-  background: var(--color-background);
+  /* The same paint as `.paramRow`, and for the same reason. */
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-6);
 }
@@ -546,8 +553,18 @@
   /* Half above the line and half below, so the outline runs through it. */
   transform: translateY(-50%);
   padding: 0 var(--space-4);
-  /* The row behind, so the outline breaks for the word rather than crossing it. */
-  background: var(--color-background);
+  /*
+   * The box behind, so the outline breaks for the word rather than crossing it.
+   *
+   * It asked for `--color-background`, which is not a token: the notch was
+   * painted with nothing, so no outline was ever broken and the word simply sat
+   * on the border. Over the name field that was survivable - the field is
+   * unpainted too, so the word landed on the same colour it would have been
+   * given. Over the type select it was not: that control is filled, so the
+   * label lay across a block of another colour and in the dark theme could
+   * barely be read. Both halves of that are fixed here and in `.typeField`.
+   */
+  background: var(--color-surface);
   font-size: 10px;
   line-height: 1;
   letter-spacing: 0.06em;
@@ -583,6 +600,33 @@
   font-size: var(--text-xs);
   color: var(--color-text-secondary);
   cursor: pointer;
+}
+
+/*
+ * The type select when it stands under a notched label.
+ *
+ * `.typeBadge` is raised, and a label notched into an outline has to be painted
+ * the colour of whatever is behind that outline. Behind a raised control it is
+ * not the panel, so the word sat on a block of the wrong colour laid across the
+ * select's own top edge - "the select hides the label". Painting the control
+ * the panel's colour, which is what `.paramLabel` paints its notch, makes the
+ * two agree in either theme, closed or open.
+ *
+ * `background-color` and not `none`: a transparent select opens the browser's
+ * own popup in the browser's own colour, which is a white menu on a dark page.
+ * The same reason `.selectWrapper select` gives.
+ *
+ * A border that answers focus, because the outline is now the only thing
+ * drawing this control and a focus ring across the notch is what the label was
+ * being lost behind in the first place.
+ */
+.typeField {
+  background-color: var(--color-surface);
+}
+
+.typeField:focus {
+  border-color: var(--color-accent-brand);
+  outline: none;
 }
 
 .removeParam {
