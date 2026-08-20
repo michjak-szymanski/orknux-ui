@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import type { PageOf } from '../../api/client';
@@ -71,6 +71,38 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
   const [disabling, setDisabling] = useState<WorkspaceWorkflow | null>(null);
   const [running, setRunning] = useState<string | null>(null);
 
+  /*
+   * Which workspace the page number belongs to.
+   *
+   * The switcher in the corner changes the workspace without leaving this
+   * screen: the route is the same one, so this component is never built again
+   * and everything it remembers survives the move - including which page
+   * somebody was on. Page two of a workspace with six workflows is past the end
+   * of one with three, and a page past the end comes back with no rows at all
+   * and the real total beside them. That is the screen that contradicted
+   * itself: an empty table under a footer counting three, and nothing put it
+   * right, because every auto-refresh asked for the same page that is not
+   * there. Reset while rendering rather than in an effect, so the fetch below is
+   * made with the page it is going to end up on instead of asking twice.
+   */
+  const [pagedFor, setPagedFor] = useState(workspaceId);
+  if (pagedFor !== workspaceId) {
+    setPagedFor(workspaceId);
+    setPage(1);
+  }
+
+  /*
+   * Which fetch is the newest, so an older answer cannot land on top of it.
+   *
+   * Two are often in the air at once here: auto-refresh ticks every few seconds
+   * whatever else is happening, and an import asks for the list again the
+   * moment it lands. Whichever the network returns first, the list has to end
+   * up showing the newest answer - otherwise a slow reply from before the
+   * import wins and puts the imported workflow back out of sight. A ref rather
+   * than state because nothing draws it.
+   */
+  const newest = useRef(0);
+
   useEffect(() => {
     fetchWorkspaces(0, WORKSPACE_LIST_SIZE)
       .then((result) => setWorkspaces(result.content))
@@ -79,14 +111,28 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
 
   const load = useCallback(() => {
     if (workspaceId === '') return;
+    const mine = ++newest.current;
     setLoading(true);
     setError(null);
     fetchWorkspaceWorkflows(workspaceId, page - 1, PAGE_SIZE)
       .then((result) => {
+        if (mine !== newest.current) return;
+        /*
+         * The page asked for is past the end - somebody else removed enough
+         * rows, or this workspace simply has fewer. Answered with no rows and a
+         * total that says otherwise, which is a table and a footer disagreeing
+         * if it is drawn. Ask again for the last page there is instead; loading
+         * stays on until that answer arrives, so nothing empty is ever shown.
+         */
+        if (result.content.length === 0 && result.totalPages > 0 && page > result.totalPages) {
+          setPage(result.totalPages);
+          return;
+        }
         setWorkflows(result);
         setLoading(false);
       })
       .catch((cause: unknown) => {
+        if (mine !== newest.current) return;
         setWorkflows(null);
         setError(cause instanceof Error ? cause.message : 'Could not load workflows.');
         setLoading(false);
