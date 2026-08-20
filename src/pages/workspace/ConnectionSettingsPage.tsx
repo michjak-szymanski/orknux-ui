@@ -54,6 +54,50 @@ const MASK = '••••••••••••••••••••••
  */
 const CONNECTION_TYPES: ConnectionType[] = ['SLACK_SOCKET_MODE', 'SLACK', 'SMTP', 'GITHUB', 'JIRA', 'WEBHOOK'];
 
+/**
+ * Which credential this field wants, named for the service it belongs to.
+ *
+ * Written per kind rather than as one sentence about tokens in general: the
+ * whole difficulty is that Slack hands you three different strings and only one
+ * of them belongs here.
+ */
+function secretHint(kind: ConnectionType | null) {
+  switch (kind) {
+    case 'SLACK':
+    case 'SLACK_SOCKET_MODE':
+      return (
+        <>
+          The <strong>bot</strong> token, beginning <code>xoxb-</code>. In your Slack app under{' '}
+          <strong>OAuth &amp; Permissions</strong>, as the Bot User OAuth Token. Not the app-level
+          <code> xapp-</code> token, which has its own field below, and not the signing secret.
+        </>
+      );
+    case 'SMTP':
+      return (
+        <>
+          The password for the mailbox above. Where the provider offers one, use an app password
+          rather than the account&apos;s own - it can be withdrawn on its own.
+        </>
+      );
+    case 'GITHUB':
+      return (
+        <>
+          A personal access token, or a fine-grained token with access to the repositories this
+          workspace should reach.
+        </>
+      );
+    case 'JIRA':
+      return (
+        <>
+          An API token from your Atlassian account, paired with the account&apos;s email address as
+          the username.
+        </>
+      );
+    default:
+      return <>Whatever the endpoint expects, sent the way the authentication method above says.</>;
+  }
+}
+
 export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSettingsPageProps) {
   /** True while the export is being confirmed; the name once it has happened. */
   const [exporting, setExporting] = useState(false);
@@ -462,10 +506,20 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
             )}
 
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="connection-secret">
-                {/* The same column, and for a mail server it holds the password. */}
-                {mail ? 'Password' : 'API Token'}
-              </label>
+              <span className={styles.labelWithHint}>
+                <label className={styles.label} htmlFor="connection-secret">
+                  {/* The same column, and for a mail server it holds the password. */}
+                  {mail ? 'Password' : 'API Token'}
+                </label>
+                {/*
+                  The label cannot say which token, because the column is shared
+                  - it holds a bot token for Slack and a password for a mail
+                  server. That is a good reason for the column and a poor one
+                  for the person filling it in, who has several tokens in front
+                  of them and no way to tell which one this wants.
+                */}
+                <FieldHint label={mail ? 'Password' : 'API Token'}>{secretHint(kind)}</FieldHint>
+              </span>
               <div className={styles.inputWrapper}>
                 <input
                   id="connection-secret"

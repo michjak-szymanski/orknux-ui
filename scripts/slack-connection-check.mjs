@@ -72,6 +72,16 @@ try {
   record((await appToken.count()) === 1, 'a Socket Mode connection offers its App-Level Token');
   record((await page.locator('#connection-secret').count()) === 1, 'and the API Token beside it');
 
+  // The label cannot say which token; the (?) beside it has to.
+  const tokenHint = page.locator('[data-hint="API Token"]');
+  record((await tokenHint.count()) === 1, 'the API Token field offers a (?)');
+  await tokenHint.hover();
+  await page.waitForTimeout(300);
+  const said = await page.locator('[role="note"]').first().innerText();
+  record(said.includes('xoxb-'), `and it names the bot token (${said.replace(/\s+/g, ' ').slice(0, 60)}…)`);
+  await page.mouse.move(20, 880);
+  await page.waitForTimeout(300);
+
   const chooser = page.locator('#connection-type');
   record((await chooser.count()) === 1, 'the kind can be chosen rather than only read');
 
