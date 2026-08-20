@@ -119,7 +119,14 @@ export function VoiceMode({ workspaceId, onSay, onClose, onPhase, ref }: VoiceMo
   }, [onSay]);
   const stream = useRef<MediaStream | null>(null);
   const recorder = useRef<MediaRecorder | null>(null);
-  const audio = useRef<{ element: HTMLAudioElement; url: string } | null>(null);
+  /**
+   * The clip being heard, and the promise the drain is waiting on for it.
+   *
+   * The resolver is held here because the drain has no other way to be let go
+   * of: pausing an element fires no `ended`, so an interruption that only
+   * paused would leave the drain awaiting a clip that has stopped playing.
+   */
+  const audio = useRef<{ element: HTMLAudioElement; url: string; done: () => void } | null>(null);
   /**
    * The next turn, held in a ref.
    *
@@ -159,10 +166,25 @@ export function VoiceMode({ workspaceId, onSay, onClose, onPhase, ref }: VoiceMo
   }, []);
 
   const hush = useCallback(() => {
-    if (audio.current === null) return;
-    audio.current.element.pause();
-    URL.revokeObjectURL(audio.current.url);
+    const held = audio.current;
+    if (held === null) return;
+    // Cleared first, so a hush that arrives twice - the cross pressed as the
+    // clip ends, a mount coming apart mid-sentence - does the work once.
     audio.current = null;
+    held.element.pause();
+    URL.revokeObjectURL(held.url);
+    /*
+     * And the drain, let go of.
+     *
+     * `ended` is what resolves a clip that finishes, and a paused element never
+     * fires it - so without this the drain stays awaiting a clip that has
+     * stopped, `draining` stays true, and the guard at the top of it turns
+     * every later call into a no-op. One interruption and the panel never
+     * speaks again for the rest of the session, silently, with the microphone
+     * still working and the answers still arriving. Resolving twice is
+     * harmless; a promise settles once.
+     */
+    held.done();
   }, []);
 
   /*
@@ -191,7 +213,7 @@ export function VoiceMode({ workspaceId, onSay, onClose, onPhase, ref }: VoiceMo
         }
         const url = URL.createObjectURL(clip);
         const element = new Audio(url);
-        audio.current = { element, url };
+        audio.current = { element, url, done };
         element.addEventListener('ended', () => done(), { once: true });
         // A clip that will not play must not stop the ones behind it.
         element.addEventListener('error', () => done(), { once: true });
