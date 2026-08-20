@@ -18,8 +18,8 @@ import { chromium } from 'playwright';
 const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
 const WORKSPACE = process.env.ORKNUX_WORKSPACE ?? '9';
 
-/** Long enough to clear the 250ms quiet period by a wide margin. */
-const HELD_MS = 1500;
+/** Long enough to clear the loader's three-second quiet period. */
+const HELD_MS = 4000;
 
 const results = [];
 const record = (ok, message) => {

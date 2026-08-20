@@ -12,11 +12,16 @@ import styles from './Loader.module.css';
  * This was five seconds, which is not a quiet period but a mute button: a load
  * that takes five seconds has already failed the reader, and every load that
  * did not reach five seconds drew nothing at all. The screens each had their
- * loader and none of them ever showed it. A quarter of a second is past the
- * band where a swap reads as instant, so a genuinely fast load still passes in
- * silence, while any wait long enough to notice now says so.
+ * loader and none of them ever showed it.
+ *
+ * Three seconds is the house rule, asked for directly: nothing is drawn before
+ * it, wherever a loader is used. It is a deliberate trade - the ordinary loads
+ * here finish in 60-200ms and will keep passing in silence, which is the point,
+ * and only a load slow enough to look broken says anything. Anywhere that wants
+ * to speak sooner passes its own `delay`; the default is not to be edged down
+ * screen by screen.
  */
-const QUIET_MS = 250;
+const QUIET_MS = 3000;
 
 export interface LoaderProps {
   /** Shown beside the mark, and what a screen reader announces. */
