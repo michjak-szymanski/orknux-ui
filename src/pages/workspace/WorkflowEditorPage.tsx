@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent,
@@ -15,6 +15,7 @@ import {
   Handle,
   MiniMap,
   NodeResizer,
+  NodeToolbar,
   Position,
   ReactFlow,
   ReactFlowProvider,
@@ -74,6 +75,7 @@ import pencilIcon from '../../assets/pencil.svg';
 import playIcon from '../../assets/play.svg';
 import plusIcon from '../../assets/plus.svg';
 import redoIcon from '../../assets/redo.svg';
+import refreshIcon from '../../assets/refresh-cw.svg';
 import saveIcon from '../../assets/save.svg';
 import undoIcon from '../../assets/undo.svg';
 import { ActionDialog } from '../../components/ActionDialog';
@@ -405,6 +407,22 @@ const FACING: Record<NodeOrientation, { input: Position; output: Position }> = {
 /** In the order pressing the button walks through them. */
 const FACINGS: NodeOrientation[] = ['LEFT_TO_RIGHT', 'TOP_TO_BOTTOM', 'RIGHT_TO_LEFT', 'BOTTOM_TO_TOP'];
 
+/** The next way round, so pressing until it looks right is one gesture. */
+function turned(from: NodeOrientation | null): NodeOrientation {
+  const at = FACINGS.indexOf(from ?? 'LEFT_TO_RIGHT');
+  return FACINGS[(at + 1) % FACINGS.length];
+}
+
+/**
+ * Turning the selected node, offered to the node itself.
+ *
+ * A context rather than something hung on the node's data: what a node carries
+ * is compared against the draft to decide whether there is an edit to save, and
+ * a function is never equal to the last one, so putting it there would make
+ * every node look permanently unsaved.
+ */
+const TurnNode = createContext<(() => void) | null>(null);
+
 /**
  * Two handles on one edge, spaced along it.
  *
@@ -412,12 +430,6 @@ const FACINGS: NodeOrientation[] = ['LEFT_TO_RIGHT', 'TOP_TO_BOTTOM', 'RIGHT_TO_
  * which edge they are on: down a side, across a top. Given as a percentage so
  * a node resized by hand keeps them evenly placed.
  */
-/** The next way round, so pressing until it looks right is one gesture. */
-function turned(from: NodeOrientation | null): NodeOrientation {
-  const at = FACINGS.indexOf(from ?? 'LEFT_TO_RIGHT');
-  return FACINGS[(at + 1) % FACINGS.length];
-}
-
 function alongEdge(side: Position, at: string): { top?: string; left?: string } {
   return side === Position.Left || side === Position.Right ? { top: at } : { left: at };
 }
@@ -884,6 +896,8 @@ function GraphNodeView({ data, selected }: NodeProps) {
    */
   const hasInput = node.kind !== 'TRIGGER' && node.kind !== 'SESSION';
   const facing = FACING[node.orientation ?? 'LEFT_TO_RIGHT'];
+  const facingName = FACING_LABEL[node.orientation ?? 'LEFT_TO_RIGHT'];
+  const turn = useContext(TurnNode);
 
   return (
     <div className={selected ? `${styles.node} ${styles.nodeSelected}` : styles.node}>
@@ -893,6 +907,23 @@ function GraphNodeView({ data, selected }: NodeProps) {
         reads better with one node wider than the rest.
       */}
       <NodeResizer isVisible={selected} minWidth={220} minHeight={96} />
+      {/*
+        Turning, offered where the turning is looked at.
+
+        It has always been on the node - R does it, and there is a button in the
+        details panel - but both are somewhere else: one has to be known about,
+        the other is three reaches away behind the panel. The thing being judged
+        is the node on the canvas, so the control sits above it, on the selected
+        one only, the way the resize handles do.
+      */}
+      {turn !== null && (
+        <NodeToolbar isVisible={selected} position={Position.Top} offset={8}>
+          <button type="button" className={styles.turnNode} onClick={turn} title={`Turn the node (R) — ${facingName}`}>
+            <img src={refreshIcon} alt="" aria-hidden="true" />
+            Turn
+          </button>
+        </NodeToolbar>
+      )}
       {/*
         A condition's two ways out have to be spaced along whichever edge they
         leave by, or turning the node stacks them on top of each other.
@@ -2595,6 +2626,17 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   }, [adding]);
 
   /**
+   * The one turn, however it was asked for.
+   *
+   * The keystroke, the button on the node and the button in the panel all come
+   * through here, so there is one place where turning means something and three
+   * ways to reach it.
+   */
+  const turnSelected = useCallback(() => {
+    setDraft((was) => (was === null ? was : { ...was, orientation: turned(was.orientation ?? null) }));
+  }, []);
+
+  /**
    * The turn keystroke, R until somebody changes it in Preferences.
    *
    * Turning is something somebody does four times in a row, and reaching for
@@ -2608,7 +2650,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       if (typingText(event.target)) return;
       if (draft === null) return;
       event.preventDefault();
-      setDraft({ ...draft, orientation: turned(draft.orientation ?? null) });
+      turnSelected();
     }
 
     window.addEventListener('keydown', onKey, true);
@@ -3085,6 +3127,7 @@ Change the keystroke in Preferences.`}
               {loadError}
             </p>
           ) : (
+            <TurnNode.Provider value={turnSelected}>
             <ReactFlow
               nodes={nodes}
               edges={drawnEdges}
@@ -3120,6 +3163,7 @@ Change the keystroke in Preferences.`}
               />
               <Controls className={styles.controls} showInteractive={false} />
             </ReactFlow>
+            </TurnNode.Provider>
           )}
         </div>
 
@@ -3873,7 +3917,7 @@ Change the keystroke in Preferences.`}
                     <button
                       type="button"
                       className={styles.parameterSync}
-                      onClick={() => setDraft({ ...draft, orientation: turned(draft.orientation ?? null) })}
+                      onClick={turnSelected}
                       title="Turn the node (R)"
                     >
                       Turn

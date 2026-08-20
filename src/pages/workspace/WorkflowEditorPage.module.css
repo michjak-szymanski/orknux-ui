@@ -1275,3 +1275,36 @@ select.input {
 .checkRow:hover {
   border-color: var(--color-accent-brand);
 }
+
+/*
+ * Turning, on the node being turned.
+ *
+ * Sits above the selected node beside the resize handles, so the gesture is
+ * where the judgement is - the panel button and R still do the same thing, but
+ * neither is in view when somebody is looking at the shape of a graph.
+ */
+.turnNode {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-4) var(--space-10);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.turnNode img {
+  width: 12px;
+  height: 12px;
+  opacity: 0.8;
+}
+
+.turnNode:hover,
+.turnNode:focus-visible {
+  border-color: var(--color-accent-brand);
+  color: var(--color-text);
+}
