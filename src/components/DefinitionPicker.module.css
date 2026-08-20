@@ -69,6 +69,15 @@
   right: 0;
   left: 0;
   z-index: 20;
+  /*
+   * A floor on the width, because the trigger is not always wide enough to read
+   * by. This picker was built for a form field that fills its column; in the
+   * object editor it sits in a narrow Type cell, and matching that exactly wrapped
+   * every option mid-word - "boolean" over two lines, and a search box showing
+   * "Sea". Anchored left, so the extra width grows into the page rather than off
+   * the near edge.
+   */
+  min-width: 220px;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);

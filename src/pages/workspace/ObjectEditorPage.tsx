@@ -297,13 +297,6 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
                 <span className={styles.editorBadge}>Typed Schema</span>
               </header>
 
-              <div className={styles.propertyHeader}>
-                <span className={styles.propertyNameCol}>Property name</span>
-                <span className={styles.propertyTypeCol}>Type</span>
-                <span className={styles.propertyHoldsCol}>Holds</span>
-                <span className={styles.propertyActionCol} />
-              </div>
-
               {rows.length === 0 && (
                 <p className={styles.propertyEmpty}>
                   No properties yet. Each one is a name, a type and a sentence saying what it means — the
@@ -317,15 +310,23 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
                 return (
                   <div className={styles.propertyRow} key={index}>
                     <div className={styles.propertyMain}>
-                      <input
-                        className={`${styles.propertyNameCol} ${styles.propertyName}`}
+                      <span className={`${styles.propertyField} ${styles.propertyNameCol}`}>
+                        <label className={styles.propertyLabel} htmlFor={`property-name-${index}`}>
+                          Name
+                        </label>
+                        <input
+                          id={`property-name-${index}`}
+                          className={styles.propertyName}
                         value={row.name}
                         spellCheck={false}
-                        placeholder="channel"
-                        aria-label={`Name of property ${index + 1}`}
-                        onChange={(event) => edit(index, { name: event.target.value })}
-                      />
-                      <span className={styles.propertyTypeCol}>
+                          placeholder="channel"
+                          onChange={(event) => edit(index, { name: event.target.value })}
+                        />
+                      </span>
+                      <span className={`${styles.propertyField} ${styles.propertyTypeCol}`}>
+                        <label className={styles.propertyLabel} htmlFor={`property-type-${index}`}>
+                          Type
+                        </label>
                         <DefinitionPicker
                           id={`property-type-${index}`}
                           value={row.type}
@@ -339,18 +340,21 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
                       {/*
                         Scalar or vector, asked once for whichever type is chosen.
                         Two buttons rather than a checkbox because both answers are
-                        worth reading: a field that holds one of something is a
-                        decision somebody made, not the absence of one.
+                        worth reading: a field carrying a single value is a decision
+                        somebody made, not the absence of one.
                       */}
-                      <span className={styles.propertyHoldsCol}>
-                        <span className={styles.holds} role="group" aria-label={`How many ${called} holds`}>
+                      <span className={`${styles.propertyField} ${styles.propertyHoldsCol}`}>
+                        <span className={styles.propertyLabel} id={`property-values-${index}`}>
+                          Values
+                        </span>
+                        <span className={styles.holds} role="group" aria-label={`Whether ${called} is a single value or a list`}>
                           <button
                             type="button"
                             aria-pressed={!row.many}
                             className={row.many ? styles.holdsOption : styles.holdsOptionActive}
                             onClick={() => edit(index, { many: false })}
                           >
-                            One
+                            Single
                           </button>
                           <button
                             type="button"
@@ -358,7 +362,7 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
                             className={row.many ? styles.holdsOptionActive : styles.holdsOption}
                             onClick={() => edit(index, { many: true })}
                           >
-                            Many
+                            List
                           </button>
                         </span>
                       </span>
@@ -379,19 +383,27 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
                       </span>
                     </div>
                     {/*
-                      The sentence, on a line of its own and always visible.
+                      The sentence, on a line of its own, labelled and always visible.
+                      Labelled because a placeholder disappears the moment somebody
+                      types, and a field whose only explanation vanishes on first use
+                      explains nothing to the person who comes back to it.
                       Behind a disclosure it would be written for the fields
                       somebody remembered to open, which is the half that needed
                       explaining least.
                     */}
-                    <input
-                      className={styles.propertyDescription}
-                      value={row.description}
-                      maxLength={FIELD_DESCRIPTION_LIMIT}
-                      placeholder="What this field means — for whoever opens this, and for any model handed it"
-                      aria-label={`What ${called} means`}
-                      onChange={(event) => edit(index, { description: event.target.value })}
-                    />
+                    <div className={`${styles.propertyField} ${styles.propertyDescriptionRow}`}>
+                      <label className={styles.propertyLabel} htmlFor={`property-description-${index}`}>
+                        Description
+                      </label>
+                      <input
+                        id={`property-description-${index}`}
+                        className={styles.propertyDescription}
+                        value={row.description}
+                        maxLength={FIELD_DESCRIPTION_LIMIT}
+                        placeholder="What this field means, for a reader and for a model"
+                        onChange={(event) => edit(index, { description: event.target.value })}
+                      />
+                    </div>
                   </div>
                 );
               })}

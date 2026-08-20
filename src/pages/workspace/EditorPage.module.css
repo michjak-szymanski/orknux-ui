@@ -407,9 +407,9 @@
 
 /* A property name is read after a dot, so it is shown the way it is written. */
 .propertyName {
-  padding: var(--space-6) var(--space-8);
+  padding: var(--space-8) var(--space-8) var(--space-6);
   background: none;
-  border: 1px solid transparent;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-4);
   font-family: var(--font-mono);
   font-size: var(--text-md);
@@ -501,11 +501,53 @@
 }
 
 /* The sentence under the row, drawn as quietly as it reads. */
+/*
+ * A field is its control with its name set into the control's own outline, at
+ * the top left. Sitting on the line rather than above it ties the word to the
+ * box it names - four across a row read as four fields rather than as eight
+ * loose things - and it costs no vertical space, which matters in a table that
+ * grows a line per property.
+ */
+.propertyField {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.propertyDescriptionRow {
+  width: 100%;
+}
+
+.propertyLabel {
+  /*
+   * One width for every label, so the fields line up down the card rather than
+   * each starting wherever its own word happened to end. "Description" is the
+   * longest of them and sets the measure.
+   */
+  position: absolute;
+  top: 0;
+  left: var(--space-8);
+  z-index: 1;
+  /* Half above the line and half below, so the outline runs through it. */
+  transform: translateY(-50%);
+  padding: 0 var(--space-4);
+  /* The card behind, so the outline breaks for the word rather than crossing it. */
+  background: var(--color-surface);
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
 .propertyDescription {
   width: 100%;
-  padding: var(--space-4) var(--space-8);
+  padding: var(--space-8) var(--space-8) var(--space-6);
   background: none;
-  border: 1px solid transparent;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-4);
   font: inherit;
   font-size: var(--text-sm);
