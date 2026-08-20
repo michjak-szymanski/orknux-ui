@@ -86,6 +86,7 @@ import { TrashIcon } from '../../components/TrashIcon';
 import { WorkflowConfirmDialog } from '../../components/WorkflowConfirmDialog';
 import {
   matches,
+  useAddShortcut,
   useDuplicateShortcut,
   useRedoShortcut,
   useSaveShortcut,
@@ -1008,6 +1009,16 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
    */
   const [adding, setAdding] = useState(false);
   const addMenu = useRef<HTMLDivElement>(null);
+  /*
+   * Whether the menu was opened by the keystroke rather than by a click.
+   *
+   * A shortcut that opens a list the keyboard cannot then reach is half a
+   * shortcut, so a keystroke puts the first kind under the fingers and Escape
+   * hands the focus back to the button. A click leaves the focus alone: the
+   * pointer is already where it needs to be, and stealing it would scroll a
+   * caret out of somebody's text box.
+   */
+  const addByKey = useRef(false);
   /*
    * Which definition the builder panel is holding, if any.
    *
@@ -2134,6 +2145,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   const undoKey = useUndoShortcut();
   const redoKey = useRedoShortcut();
   const copyKey = useDuplicateShortcut();
+  const addKey = useAddShortcut();
 
   /** Read by the keyboard handler, which must not start a second save. */
   const busyRef = useRef(busy);
@@ -2251,7 +2263,10 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       if (!addMenu.current?.contains(event.target as HTMLElement)) setAdding(false);
     }
     function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') setAdding(false);
+      if (event.key !== 'Escape') return;
+      setAdding(false);
+      // Back to the button, so Escape does not drop somebody at the top of the page.
+      addMenu.current?.querySelector<HTMLButtonElement>('button[aria-haspopup="menu"]')?.focus();
     }
 
     /*
@@ -2288,6 +2303,46 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
   });
+
+  /**
+   * Opening the Add menu from the keyboard, A until somebody changes it in
+   * Preferences.
+   *
+   * A bare letter for the reason turning is one: adding a node is the thing
+   * somebody does most in this editor, and a modifier on every one of them is a
+   * modifier too many. Only heard on the canvas - a caret in a box means
+   * somebody typing the letter, which is what lets the default be bare at all.
+   *
+   * Toggles, so the same key that opened it shuts it again, and rebound every
+   * render so a change in Preferences is honoured without leaving the page.
+   */
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (!matches(event, addKey)) return;
+      if (typingText(event.target)) return;
+      event.preventDefault();
+      addByKey.current = true;
+      setAdding((open) => !open);
+    }
+
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  });
+
+  /*
+   * The first kind of node, once a keystroke has opened the list.
+   *
+   * After the render that draws it, because there is nothing to focus until
+   * then. The flag is cleared either way, so the next click-opened menu does
+   * not inherit a keyboard's focus.
+   */
+  useEffect(() => {
+    if (!adding) return;
+    if (addByKey.current) {
+      addMenu.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
+    }
+    addByKey.current = false;
+  }, [adding]);
 
   /**
    * Copying the selected node from the keyboard, Ctrl+D until somebody changes
@@ -2545,8 +2600,9 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
               onClick={() => setAdding((open) => !open)}
               aria-haspopup="menu"
               aria-expanded={adding}
-              aria-label="Add node"
-              data-tip="Add node"
+              aria-label={`Add node (${addKey})`}
+              data-tip={`Add node (${addKey})
+Change the keystroke in Preferences.`}
             >
               <img src={plusIcon} alt="" width={16} height={16} />
             </button>

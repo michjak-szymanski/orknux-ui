@@ -7,6 +7,7 @@ const TURN_KEY = 'orknux.turnShortcut';
 const UNDO_KEY = 'orknux.undoShortcut';
 const REDO_KEY = 'orknux.redoShortcut';
 const DUPLICATE_KEY = 'orknux.duplicateShortcut';
+const ADD_KEY = 'orknux.addShortcut';
 
 /** What opens the palette when nothing has been chosen. */
 export const DEFAULT_SHORTCUT = 'Ctrl+Q';
@@ -58,6 +59,20 @@ export const DEFAULT_REDO_SHORTCUT = 'Ctrl+Shift+Z';
  * somebody copied a node would be the worse of the two surprises.
  */
 export const DEFAULT_DUPLICATE_SHORTCUT = 'Ctrl+D';
+
+/**
+ * What opens the workflow editor's Add menu when nothing has been chosen.
+ *
+ * Bare A, for the reason turning is a bare R: the canvas is not a text field, so
+ * a letter on its own is free there, and adding is the thing somebody does most
+ * in this editor - a modifier on every node would be a modifier too many. It is
+ * ignored while a caret is in a box, where A is somebody typing the letter.
+ *
+ * Nothing else claims it. The editor's other keystrokes are Ctrl+S, Ctrl+Z,
+ * Ctrl+Shift+Z, Ctrl+Y, Ctrl+D, R and Escape; the palette is Ctrl+Q; and React
+ * Flow's own keys are Backspace, Shift, Space and the platform modifier.
+ */
+export const DEFAULT_ADD_SHORTCUT = 'A';
 
 /**
  * Which keystroke opens the command palette, written the way it is shown:
@@ -123,6 +138,7 @@ const turning = remembered(TURN_KEY, DEFAULT_TURN_SHORTCUT);
 const undoing = remembered(UNDO_KEY, DEFAULT_UNDO_SHORTCUT);
 const redoing = remembered(REDO_KEY, DEFAULT_REDO_SHORTCUT);
 const duplicating = remembered(DUPLICATE_KEY, DEFAULT_DUPLICATE_SHORTCUT);
+const addingNode = remembered(ADD_KEY, DEFAULT_ADD_SHORTCUT);
 
 export function paletteShortcut(): Shortcut {
   return palette.get();
@@ -206,6 +222,18 @@ export function setDuplicateShortcut(next: Shortcut): void {
 
 export function useDuplicateShortcut(): Shortcut {
   return duplicating.use();
+}
+
+export function addShortcut(): Shortcut {
+  return addingNode.get();
+}
+
+export function setAddShortcut(next: Shortcut): void {
+  addingNode.set(next);
+}
+
+export function useAddShortcut(): Shortcut {
+  return addingNode.use();
 }
 
 /** One key, named as somebody would read it rather than as the browser sends it. */

@@ -13,12 +13,14 @@ import {
   describe,
   DEFAULT_FORMAT_SHORTCUT,
   DEFAULT_TURN_SHORTCUT,
+  DEFAULT_ADD_SHORTCUT,
   DEFAULT_UNDO_SHORTCUT,
   DEFAULT_REDO_SHORTCUT,
   DEFAULT_DUPLICATE_SHORTCUT,
   DEFAULT_SAVE_SHORTCUT,
   setFormatShortcut,
   setTurnShortcut,
+  setAddShortcut,
   setUndoShortcut,
   setRedoShortcut,
   setDuplicateShortcut,
@@ -27,6 +29,7 @@ import {
   usable,
   useFormatShortcut,
   useTurnShortcut,
+  useAddShortcut,
   useUndoShortcut,
   useRedoShortcut,
   useDuplicateShortcut,
@@ -54,6 +57,7 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
   const save = useSaveShortcut();
   const format = useFormatShortcut();
   const turn = useTurnShortcut();
+  const add = useAddShortcut();
   const undo = useUndoShortcut();
   const redo = useRedoShortcut();
   const duplicate = useDuplicateShortcut();
@@ -62,7 +66,9 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
    * recorded. Not a boolean: there are three of these now, and they share the one
    * listener — one per shortcut would fight over the same keypress.
    */
-  const [recording, setRecording] = useState<'palette' | 'save' | 'format' | 'turn' | 'undo' | 'redo' | 'duplicate' | null>(null);
+  const [recording, setRecording] = useState<
+    'palette' | 'save' | 'format' | 'turn' | 'add' | 'undo' | 'redo' | 'duplicate' | null
+  >(null);
   const [refused, setRefused] = useState<string | null>(null);
 
   /*
@@ -87,14 +93,14 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
         return;
       }
       /*
-       * A bare letter is refused everywhere except turning a node.
+       * A bare letter is refused everywhere except the two canvas ones.
        *
        * The others fire wherever somebody is typing, so a letter alone would
-       * trigger them mid-word. Turning is only honoured on the canvas, where a
-       * letter is free - which is why R can be the default there and cannot be
-       * anywhere else.
+       * trigger them mid-word. Turning a node and opening the Add menu are only
+       * honoured on the canvas, where a letter is free - which is why R and A
+       * can be the defaults there and cannot be anywhere else.
        */
-      if (recording !== 'turn' && !usable(said)) {
+      if (recording !== 'turn' && recording !== 'add' && !usable(said)) {
         setRefused(said);
         return;
       }
@@ -102,6 +108,7 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
       if (recording === 'palette') setPaletteShortcut(said);
       else if (recording === 'save') setSaveShortcut(said);
       else if (recording === 'turn') setTurnShortcut(said);
+      else if (recording === 'add') setAddShortcut(said);
       else if (recording === 'undo') setUndoShortcut(said);
       else if (recording === 'redo') setRedoShortcut(said);
       else if (recording === 'duplicate') setDuplicateShortcut(said);
@@ -486,6 +493,40 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                     Turns the selected node on the workflow canvas, so a graph can run down the screen
                     instead of off the side of it. A bare letter is allowed here, unlike the others:
                     this one is only heard on the canvas, never while typing.
+                  </>
+                )}
+              </p>
+            </div>
+
+            <div className={styles.setting}>
+              <span className={styles.settingLabel} id="add-shortcut">
+                Add Node Shortcut
+              </span>
+              <div className={styles.options}>
+                <button
+                  type="button"
+                  className={recording === 'add' ? styles.optionCurrent : styles.option}
+                  onClick={() => {
+                    setRefused(null);
+                    setRecording((held) => (held === 'add' ? null : 'add'));
+                  }}
+                >
+                  {recording === 'add' ? 'Press any keys…' : add}
+                </button>
+                {add !== DEFAULT_ADD_SHORTCUT && recording !== 'add' && (
+                  <button type="button" className={styles.option} onClick={() => setAddShortcut(DEFAULT_ADD_SHORTCUT)}>
+                    Reset
+                  </button>
+                )}
+              </div>
+              <p className={styles.settingNote}>
+                {recording === 'add' ? (
+                  <>Press the combination you want. Escape leaves it as it is.</>
+                ) : (
+                  <>
+                    Opens the workflow editor's Add menu and puts the first kind of node under the
+                    keyboard, so a graph can be built without reaching for the toolbar. A bare letter
+                    is allowed here for the same reason it is above: only the canvas hears it.
                   </>
                 )}
               </p>
