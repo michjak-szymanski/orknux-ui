@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
+import { startChat } from '../../api/chat';
 import {
   EVENT_KINDS,
   EVENT_KIND_LABEL,
@@ -135,6 +136,8 @@ export function SessionDetailPage({ session, onSignOut }: SessionDetailPageProps
 
   const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
+  /** True while a chat is being opened, so a second press does not open a second one. */
+  const [continuing, setContinuing] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [held, setHeld] = useState<LlmSession | null>(null);
   const [missing, setMissing] = useState(false);
@@ -234,24 +237,55 @@ export function SessionDetailPage({ session, onSignOut }: SessionDetailPageProps
                 page that cannot be undone by repeating what caused it.
               */}
               {held !== null && (
-                <button
-                  type="button"
-                  className={confirming ? styles.removeArmed : styles.remove}
-                  onClick={() => {
-                    if (!confirming) {
-                      setConfirming(true);
-                      return;
-                    }
-                    void removeLlmSession(held.id)
-                      .then(() => navigate(`/workspace/${workspaceId}/sessions`))
-                      .catch((cause: unknown) =>
-                        setRemoveError(cause instanceof Error ? cause.message : 'That could not be removed.'),
-                      );
-                  }}
-                  onBlur={() => setConfirming(false)}
-                >
-                  {confirming ? 'Remove it, and everything said in it' : 'Remove session'}
-                </button>
+                <div className={styles.actions}>
+                  {/*
+                    Picking the conversation up by hand.
+
+                    A session is written by agents going to work, and this is
+                    the one way a person joins one: the chat it opens is bound
+                    to this session, starts holding what was already said, and
+                    writes what is said next back here — so the transcript below
+                    keeps growing and the next run to read it finds what a
+                    person told it.
+                  */}
+                  <button
+                    type="button"
+                    className={styles.continue}
+                    disabled={continuing}
+                    onClick={() => {
+                      setContinuing(true);
+                      setRemoveError(null);
+                      void startChat(workspaceId, held.key, undefined, held.id)
+                        .then((chat) => navigate(`/chat/${chat.id}`))
+                        .catch((cause: unknown) => {
+                          setContinuing(false);
+                          setRemoveError(
+                            cause instanceof Error ? cause.message : 'That conversation could not be continued.',
+                          );
+                        });
+                    }}
+                  >
+                    {continuing ? 'Opening…' : 'Continue in chat'}
+                  </button>
+                  <button
+                    type="button"
+                    className={confirming ? styles.removeArmed : styles.remove}
+                    onClick={() => {
+                      if (!confirming) {
+                        setConfirming(true);
+                        return;
+                      }
+                      void removeLlmSession(held.id)
+                        .then(() => navigate(`/workspace/${workspaceId}/sessions`))
+                        .catch((cause: unknown) =>
+                          setRemoveError(cause instanceof Error ? cause.message : 'That could not be removed.'),
+                        );
+                    }}
+                    onBlur={() => setConfirming(false)}
+                  >
+                    {confirming ? 'Remove it, and everything said in it' : 'Remove session'}
+                  </button>
+                </div>
               )}
             </div>
             {removeError !== null && (

@@ -20,6 +20,8 @@ export interface ChatSession {
   agentId: string | null;
   /** What that agent is called, or null once it has been deleted. */
   agentName: string | null;
+  /** The LLM session this chat is continuing, or null for one continuing none. */
+  llmSessionId: string | null;
 }
 
 /** Role is user, assistant, system or tool, as the store recorded it. */
@@ -35,7 +37,8 @@ export interface ChatAnswer {
   millis: number;
 }
 
-const SESSION_FIELDS = 'id workspaceId title pinned modelId modelName createdAt lastMessageAt agentId agentName';
+const SESSION_FIELDS =
+  'id workspaceId title pinned modelId modelName createdAt lastMessageAt agentId agentName llmSessionId';
 
 export async function fetchChatSessions(workspaceId: string): Promise<ChatSession[]> {
   const data = await graphql<{ chatSessions: ChatSession[] }>(
@@ -66,14 +69,23 @@ export async function fetchChatMessages(id: string): Promise<ChatMessage[]> {
   return data.chatMessages;
 }
 
+/**
+ * Opens a chat.
+ *
+ * `llmSessionId` is the session it continues, when it was opened from one: what
+ * was already said there comes back as the chat's first messages, and what is
+ * said from here on is written into it. Left out - every chat started from the
+ * sidebar - it continues nothing.
+ */
 export async function startChat(
   workspaceId: string,
   title?: string,
   modelId?: string,
+  llmSessionId?: string,
 ): Promise<ChatSession> {
   const data = await graphql<{ startChat: ChatSession }>(
     `mutation StartChat($input: StartChatInput!) { startChat(input: $input) { ${SESSION_FIELDS} } }`,
-    { input: { workspaceId, title, modelId } },
+    { input: { workspaceId, title, modelId, llmSessionId } },
   );
   return data.startChat;
 }

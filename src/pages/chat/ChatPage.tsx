@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { FormEvent, KeyboardEvent } from 'react';
 
 import {
@@ -1017,6 +1017,28 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
               </button>
             </div>
           </header>
+
+          {/*
+            A chat opened from a session says so.
+
+            The messages above it are that session's, copied in when this chat
+            opened, so without a line saying where they came from they read as a
+            conversation this person does not remember having. It also says what
+            the binding does — everything from here is written back — because
+            that is the part somebody would otherwise only discover by going and
+            looking.
+          */}
+          {current.llmSessionId !== null && (
+            <p className={styles.continuing}>
+              Continuing an LLM session — what is said here is written into it.{' '}
+              <Link
+                className={styles.continuingLink}
+                to={`/workspace/${current.workspaceId}/sessions/${current.llmSessionId}`}
+              >
+                Open the transcript
+              </Link>
+            </p>
+          )}
 
           <div className={styles.modelBar} ref={pickerRef}>
             <button

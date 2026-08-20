@@ -73,6 +73,43 @@
   color: var(--color-text-primary);
 }
 
+/*
+ * The two controls on the title row, so the one that carries on the
+ * conversation sits beside the one that ends it rather than under it.
+ */
+.actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+/*
+ * Shaped like the quiet half of Remove, and never armed: continuing a
+ * conversation takes nothing away, so there is nothing to confirm.
+ */
+.continue {
+  flex: none;
+  padding: var(--space-6) var(--space-12);
+  border-radius: var(--radius-6);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  background: none;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.continue:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.continue:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
 .title {
   margin: 0;
   font-family: var(--font-mono);
