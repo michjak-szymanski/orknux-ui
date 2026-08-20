@@ -977,14 +977,32 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
    * A list rather than one, because two is a shape somebody can draw. The
    * validator refuses it; this is what says so before the save does.
    */
-  const wiredSessions = useMemo<NodeData[]>(() => {
+  /** Every session node on the canvas, as things this agent could be given. */
+  const sessionChoices = useMemo(
+    () =>
+      nodes
+        .filter((node) => (node.data as NodeData).kind === 'SESSION')
+        .map((node) => {
+          const data = node.data as NodeData;
+          const key = sessionKeyOf(data);
+          return { value: node.id, label: data.name, hint: key === '' ? 'No key yet' : key };
+        }),
+    [nodes],
+  );
+
+  const wiredSessionNodes = useMemo(() => {
     if (selectedKey === null) return [];
     const leadingIn = new Set(edges.filter((edge) => edge.target === selectedKey).map((edge) => edge.source));
-    return nodes
-      .filter((node) => leadingIn.has(node.id))
-      .map((node) => node.data as NodeData)
-      .filter((data) => data.kind === 'SESSION');
+    return nodes.filter((node) => leadingIn.has(node.id) && (node.data as NodeData).kind === 'SESSION');
   }, [edges, nodes, selectedKey]);
+
+  const wiredSessions = useMemo<NodeData[]>(
+    () => wiredSessionNodes.map((node) => node.data as NodeData),
+    [wiredSessionNodes],
+  );
+
+  /** The node key the picker shows as chosen, which is the edge's source. */
+  const sessionNodeKey = wiredSessionNodes.length === 1 ? wiredSessionNodes[0].id : null;
 
   /**
    * What each pair of nodes actually carries between them: one entry per
@@ -1351,6 +1369,30 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     // Only re-seed the form when the selection changes, not on every drag.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedKey]);
+
+  /**
+   * Give this agent a session, or take its session away.
+   *
+   * The edge is what the graph is saved from, so choosing here draws one rather
+   * than recording the choice somewhere else - the canvas and the panel cannot
+   * disagree because there is only one thing to disagree about. Any session
+   * already leading here is removed first: an agent has one conversation.
+   */
+  const chooseSession = useCallback(
+    (agentKey: string, sessionKey: string) => {
+      setEdges((current) => {
+        const sessions = new Set(
+          nodes.filter((node) => (node.data as NodeData).kind === 'SESSION').map((node) => node.id),
+        );
+        const kept = current.filter((edge) => !(edge.target === agentKey && sessions.has(edge.source)));
+        if (sessionKey === '') return kept;
+        const drawn = { source: sessionKey, target: agentKey };
+        return [...kept, { ...drawn, id: edgeName(drawn) }];
+      });
+      setSaved(false);
+    },
+    [nodes, setEdges],
+  );
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -2641,30 +2683,26 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
                 {draft.kind === 'AGENT' && (
                   <div className={styles.field}>
                     <span className={styles.label}>Session</span>
-                    {wiredSessions.length === 0 ? (
-                      <p className={styles.parameterHint}>
-                        None, so nothing this node says is kept. Add a <strong>LLM Session</strong> node and draw
-                        an edge from it to this one; two agents wired to the same session share one conversation.
-                      </p>
-                    ) : wiredSessions.length > 1 ? (
+                    {wiredSessions.length > 1 ? (
                       <p className={styles.problemWarning}>
-                        {wiredSessions.length} sessions reach this node. A turn belongs to one conversation, so
-                        the graph will not save until all but one of those edges is gone.
+                        {wiredSessions.length} sessions reach this node. An agent keeps one conversation, so the
+                        graph will not save until one of them is removed.
                       </p>
                     ) : (
-                      <>
-                        <p className={styles.readOnlyValue}>
-                          {wiredSessions[0].name}
-                          {sessionKeyOf(wiredSessions[0]) === ''
-                            ? ' — no key yet'
-                            : ` — ${sessionKeyOf(wiredSessions[0])}`}
-                        </p>
-                        <p className={styles.parameterHint}>
-                          Read from the edge. The key lives on the session node, and is changed there — a half in
-                          round brackets is read from what the run is carrying when this node asks.
-                        </p>
-                      </>
+                      <DefinitionPicker
+                        id="node-session"
+                        value={wiredSessions.length === 1 ? sessionNodeKey ?? '' : ''}
+                        options={sessionChoices}
+                        onChoose={(chosen) => selectedKey !== null && chooseSession(selectedKey, chosen)}
+                        placeholder={sessionChoices.length === 0 ? 'No sessions on this graph' : 'No session'}
+                        searchPlaceholder="Search sessions…"
+                      />
                     )}
+                    <p className={styles.parameterHint}>
+                      {sessionChoices.length === 0
+                        ? 'Add an LLM Session node to keep what this agent is told and what it answers.'
+                        : 'What this agent is told and answers is kept here, and read back on the next run. Its key is set on the session itself.'}
+                    </p>
                   </div>
                 )}
 
