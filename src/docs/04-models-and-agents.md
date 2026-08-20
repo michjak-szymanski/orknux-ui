@@ -167,7 +167,13 @@ conversation to carry on, without a fortnight of it arriving in one prompt.
 **Continue in chat** is how a person joins a conversation the agents have been
 having. The chat it opens is bound to this session and holds what was already
 said, so what you tell it is written back here and the next run to read the key
-finds it. **Remove session** takes the conversation and every line in it, and
+finds it. It shows the tool calls too, drawn between the turns they were made
+between and marked as calls rather than as anything anybody said — a chat is
+opened to work out what an agent did, and an answer with no sign of the lookup
+that produced it reads as the agent having simply known. The model is still not
+given them, for the reason above: the calls are on the page, not in the prompt.
+Calls made in the chat itself stay on this page, which is where the whole
+conversation is. **Remove session** takes the conversation and every line in it, and
 says so before it does; nothing makes a session again by hand, because a session
 exists only because a run computed its key.
 

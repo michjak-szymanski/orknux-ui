@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { FormEvent, KeyboardEvent } from 'react';
 
 import {
+  CALL_ROLE,
   chooseChatAgent,
   chooseChatModel,
   deleteChat,
@@ -82,6 +83,66 @@ type PickerTab = 'models' | 'agents';
  */
 /** How long typing has to stop before what was said is worth asking about. */
 const SEARCH_PAUSE_MS = 300;
+
+/**
+ * How much of a call is shown before it is folded.
+ *
+ * The same number the session's page uses, for the same reason: what a model
+ * passes a tool can be a whole file, and one call left to run would bury the
+ * exchange it was made in the middle of.
+ */
+const FOLD_CALL_OVER_CHARS = 600;
+
+/**
+ * A call the agent made, on its way to an answer.
+ *
+ * Drawn as what it is rather than as a turn. Nobody said this: it is the agent
+ * going and looking something up, and the reason it is on a page of
+ * conversation at all is that an answer with the lookup taken out of it reads
+ * as the model having simply known.
+ *
+ * So it borrows the session's page rather than inventing a second visual
+ * language - the word, the tool's name, a coloured edge and the arguments as
+ * code - because somebody who has read one transcript already knows what this
+ * line means.
+ */
+function CallLine({ actor, content }: { actor: string | null; content: string }) {
+  const [open, setOpen] = useState(false);
+  /*
+   * Indented where it parses and left exactly as it arrived where it does not.
+   * What was recorded is what the model sent, and prettying something that is
+   * not JSON would be this deciding what it meant.
+   */
+  const text = useMemo(() => {
+    try {
+      return JSON.stringify(JSON.parse(content), null, 2);
+    } catch {
+      return content;
+    }
+  }, [content]);
+  const long = text.length > FOLD_CALL_OVER_CHARS;
+
+  return (
+    <article className={styles.call}>
+      <p className={styles.callHead}>
+        <span className={styles.callBadge}>Tool</span>
+        <span className={styles.callName}>{actor ?? 'a tool'}</span>
+      </p>
+      {text.trim() === '' ? (
+        <p className={styles.callNote}>Called with nothing.</p>
+      ) : (
+        <>
+          <pre className={`${styles.callArgs} ${long && !open ? styles.callFolded : ''}`}>{text}</pre>
+          {long && (
+            <button type="button" className={styles.callFold} onClick={() => setOpen((held) => !held)}>
+              {open ? 'Show less' : `Show all ${text.length.toLocaleString()} characters`}
+            </button>
+          )}
+        </>
+      )}
+    </article>
+  );
+}
 
 export function ChatPage({ session, onSignOut }: ChatPageProps) {
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
@@ -1142,7 +1203,14 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
 
             {messages.map((message, index) => (
               <Fragment key={index}>
-              {message.role === 'user' ? (
+              {/*
+                A call is not a turn and is not drawn as one: it was made
+                between two of them, by the agent, and the page it was carried
+                out of already says so this way.
+              */}
+              {message.role === CALL_ROLE ? (
+                <CallLine actor={message.actor} content={message.content} />
+              ) : message.role === 'user' ? (
                 <div className={styles.userRow}>
                   <button
                     type="button"

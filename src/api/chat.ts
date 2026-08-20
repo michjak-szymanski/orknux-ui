@@ -24,20 +24,33 @@ export interface ChatSession {
   llmSessionId: string | null;
 }
 
-/** Role is user, assistant, system or tool, as the store recorded it. */
+/**
+ * One line of a chat, as it is read.
+ *
+ * Role is user, assistant, system or tool. A `tool` line is not a turn: it is a
+ * call the agent made in the session this chat continues, drawn between the
+ * turns it was made between so that an answer is not read as something the
+ * agent simply knew. `content` is the arguments as the model sent them.
+ *
+ * The model is never shown one. What is sent is what was said, which is why
+ * these arrive from the query rather than being anything the chat can produce.
+ */
 export interface ChatMessage {
   role: string;
   content: string;
   /**
-   * Who said it, for a turn carried into this chat from the session it
+   * Who said it, for a line carried into this chat from the session it
    * continues - the agent, the tool or the person, as the session recorded it.
    *
-   * Null for everything the chat said itself. So it is also the boundary: turns
+   * Null for everything the chat said itself. So it is also the boundary: lines
    * with a name were already there when the chat opened, turns without were
    * said in it.
    */
   actor: string | null;
 }
+
+/** The role a call reads under, which is not a turn anybody took. */
+export const CALL_ROLE = 'tool';
 
 export interface ChatAnswer {
   session: ChatSession;
