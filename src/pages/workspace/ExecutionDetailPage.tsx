@@ -350,12 +350,22 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
     return (run?.edges ?? []).map((edge) => {
       // A path the run never took is drawn as one it never took.
       const notTaken = outcomes.get(edge.target) === 'skipped';
+      /*
+       * The line a run can only take on a failure, in the colour it is drawn in
+       * the editor. Two lines leave a node that handles its own failure and
+       * arrive somewhere different; drawn in the same grey, the picture says the
+       * run branched and nothing about why.
+       */
+      const failure = edge.branch === 'FAILURE';
       return {
-        id: `${edge.source}->${edge.target}`,
+        // The branch is in the id: an action's two ways out can reach the same
+        // node, and without it those are one line drawn twice.
+        id: `${edge.source}-${edge.branch ?? 'plain'}->${edge.target}`,
         source: edge.source,
         target: edge.target,
         animated: outcomes.get(edge.target) === 'running',
         className: notTaken ? styles.edgeSkipped : undefined,
+        style: failure ? { stroke: 'var(--color-danger)', strokeWidth: 2 } : undefined,
       };
     });
   }, [run, runEnded]);

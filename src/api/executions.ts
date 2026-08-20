@@ -86,7 +86,11 @@ export interface ExecutionDetail extends Execution {
    */
   startedFrom: string | null;
   steps: ExecutionStep[];
-  edges: Array<{ source: string; target: string }>;
+  /**
+   * The graph the run went through. The branch is on it because a line the run
+   * could only take on a failure is worth drawing as one.
+   */
+  edges: Array<{ source: string; target: string; branch: EdgeBranch | null }>;
   logs: ExecutionLogLine[];
   /**
    * Temporal's own screen for this run: every attempt behind what is shown
@@ -193,7 +197,7 @@ const EXECUTION_DETAIL_FIELDS = `
   id workspaceId workflowId workflowName status trigger startedAt finishedAt durationSeconds error
   stoppedAtNodeKey stoppedReason startedFrom
   steps { key kind name description status startedAt finishedAt durationSeconds input output error actionId conditionId branch attempts carriedOver x y }
-  edges { source target }
+  edges { source target branch }
   logs { id nodeKey at level message }
   temporalUrl
 `;
