@@ -468,21 +468,42 @@
   width: 100%;
 }
 
+/*
+ * One line of controls in a box: an external parameter, and nothing else.
+ *
+ * Emphatically a row. This was briefly turned into a column so a parameter's
+ * object selector could sit inside its box - but External Parameters wears the
+ * same class, and it has no second line to make room for, so its select, its
+ * type and its remove button stacked and the × ended up centred on a line of
+ * its own. A parameter's box is `.paramGroup` below; the two wants are
+ * different and now have a class each.
+ */
 .paramRow {
-  /*
-   * The whole parameter, in one box.
-   *
-   * The name, the type and - when the type names one - the object are one
-   * thing, so they share one outline. The object selector used to sit outside
-   * it, which left it belonging to nothing in particular.
-   */
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+  padding: var(--space-6) var(--space-10);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+/*
+ * The whole parameter, in one box.
+ *
+ * The name, the type and - when the type names one - the object are one thing,
+ * so they share one outline. The object selector used to sit outside it, which
+ * left it belonging to nothing in particular.
+ */
+.paramGroup {
   display: flex;
   flex-direction: column;
   gap: var(--space-12);
   width: 100%;
   /*
-   * Roomier on top than it was. The fields now carry labels notched into their
-   * own outlines, and those sit half above the field - so the row has to give
+   * Roomier on top than a plain row. The fields carry labels notched into their
+   * own outlines, and those sit half above the field - so the box has to give
    * them somewhere to sit that is not on top of its own border.
    */
   padding: var(--space-16) var(--space-10) var(--space-10);

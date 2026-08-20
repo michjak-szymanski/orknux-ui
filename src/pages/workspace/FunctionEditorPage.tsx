@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import type { ValueType } from '../../api/actions';
@@ -920,8 +920,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                 <h2 className={styles.panelHeading}>Parameters</h2>
                 <div className={styles.paramList}>
                   {params.map((param, index) => (
-                    <Fragment key={index}>
-                    <div className={styles.paramRow}>
+                    <div key={index} className={styles.paramGroup}>
                       <div className={styles.paramTopLine}>
                       <span className={`${styles.paramField} ${styles.paramFieldName}`}>
                         <label className={styles.paramLabel} htmlFor={`param-name-${index}`}>
@@ -1066,7 +1065,6 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                       </div>
                     )}
                     </div>
-                    </Fragment>
                   ))}
                   <button
                     type="button"
