@@ -87,6 +87,23 @@
   color: var(--color-text-secondary);
 }
 
+.settingNote code {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-primary);
+}
+
+/*
+ * The one line on this page that reports a door standing open rather than a
+ * preference. Amber, not red: it is a state somebody chose, not a fault.
+ */
+.warning {
+  margin: 0;
+  max-width: 70ch;
+  font-size: var(--text-sm);
+  color: var(--color-amber);
+}
+
 .toggle {
   display: flex;
   flex-shrink: 0;

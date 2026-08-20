@@ -19,11 +19,21 @@ export interface InstallationSettings {
   /** Whether this installation has a chat at all. */
   chatEnabled: boolean;
   chatConfigurable: boolean;
+  /** Whether `/actuator/prometheus` answers a caller who has not signed in. */
+  metricsAnonymous: boolean;
+  /**
+   * What a fresh installation would have answered: ORKNUX_METRICS_ANONYMOUS.
+   *
+   * Not a `configurable` flag like the two above it — nothing here is forbidden
+   * by the file. It is the environment's answer, kept beside the stored one so
+   * the page can say which of the two is actually in force when they differ.
+   */
+  metricsAnonymousConfigured: boolean;
 }
 
 const FIELDS =
   'attachmentsEnabled attachmentsConfigurable attachmentStorage attachmentLocation attachmentMaxFileSizeMb ' +
-  'chatEnabled chatConfigurable';
+  'chatEnabled chatConfigurable metricsAnonymous metricsAnonymousConfigured';
 
 export async function fetchInstallationSettings(): Promise<InstallationSettings> {
   const data = await graphql<{ installationSettings: InstallationSettings }>(
@@ -50,4 +60,19 @@ export async function setAttachmentsEnabled(enabled: boolean): Promise<Installat
     { enabled },
   );
   return data.setAttachmentsEnabled;
+}
+
+/**
+ * Opens the metrics endpoint to callers who have not signed in, or closes it
+ * again. Administrators only, and recorded in the audit log; it takes effect on
+ * the next scrape rather than the next restart.
+ */
+export async function setMetricsAnonymous(enabled: boolean): Promise<InstallationSettings> {
+  const data = await graphql<{ setMetricsAnonymous: InstallationSettings }>(
+    `mutation SetMetricsAnonymous($enabled: Boolean!) {
+       setMetricsAnonymous(enabled: $enabled) { ${FIELDS} }
+     }`,
+    { enabled },
+  );
+  return data.setMetricsAnonymous;
 }

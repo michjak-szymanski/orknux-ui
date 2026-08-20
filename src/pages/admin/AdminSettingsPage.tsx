@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 
-import { fetchInstallationSettings, setAttachmentsEnabled, setChatEnabled } from '../../api/installation';
+import {
+  fetchInstallationSettings,
+  setAttachmentsEnabled,
+  setChatEnabled,
+  setMetricsAnonymous,
+} from '../../api/installation';
 import type { InstallationSettings } from '../../api/installation';
 import type { SessionUser } from '../../api/session';
 import toggleOffIcon from '../../assets/toggle-off.svg';
@@ -173,6 +178,73 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
             <p className={styles.hint}>
               Set in the configuration file, under <code>orknux.attachments</code>. Each workspace keeps its
               files in its own directory beneath that location.
+            </p>
+
+            <h2 className={styles.sectionHeading}>Metrics</h2>
+
+            <div className={styles.setting}>
+              <div className={styles.settingText}>
+                <p className={styles.settingLabel}>Scraping without signing in</p>
+                <p className={styles.settingNote}>
+                  On publishes <code>/actuator/prometheus</code> to anybody who can reach this
+                  server’s port: how many workspaces exist, how often workflows run and how often
+                  they fail. Turn it on only where the scrape crosses a network the scraper alone is
+                  on. A Prometheus that can send an Authorization header should carry an API token
+                  instead and leave this off.
+                </p>
+              </div>
+              <button
+                type="button"
+                className={styles.toggle}
+                onClick={() => void save(() => setMetricsAnonymous(!settings.metricsAnonymous))}
+                disabled={busy}
+                role="switch"
+                aria-checked={settings.metricsAnonymous}
+                aria-label={
+                  settings.metricsAnonymous
+                    ? 'Stop answering metrics to callers who have not signed in'
+                    : 'Answer metrics to callers who have not signed in'
+                }
+              >
+                <img
+                  src={settings.metricsAnonymous ? toggleOnIcon : toggleOffIcon}
+                  alt=""
+                  width={36}
+                  height={20}
+                  data-keeps-colour
+                />
+              </button>
+            </div>
+
+            {settings.metricsAnonymous && (
+              <p className={styles.warning}>
+                Open now: anyone who can reach this port is reading those numbers without an account.
+              </p>
+            )}
+
+            {/*
+              This is the one switch with a rival: the environment sets what a
+              fresh installation answers, and an administrator’s stored answer
+              takes over from there. An operator who edited their config file and
+              finds the screen ignoring it is owed the reason, so the two are
+              only ever silent about each other when they agree.
+            */}
+            <p className={styles.hint}>
+              {settings.metricsAnonymous === settings.metricsAnonymousConfigured ? (
+                <>
+                  <code>ORKNUX_METRICS_ANONYMOUS</code> in the environment says{' '}
+                  {settings.metricsAnonymousConfigured ? 'on' : 'off'}, and this switch agrees with
+                  it. What is stored here takes effect on the next scrape rather than the next
+                  restart.
+                </>
+              ) : (
+                <>
+                  <code>ORKNUX_METRICS_ANONYMOUS</code> in the environment says{' '}
+                  {settings.metricsAnonymousConfigured ? 'on' : 'off'}, but an administrator stored{' '}
+                  {settings.metricsAnonymous ? 'on' : 'off'} here, and the stored answer is the one
+                  in force. Editing the environment will not move it back — this switch will.
+                </>
+              )}
             </p>
 
             {saved && <p className={styles.saved}>Saved.</p>}
