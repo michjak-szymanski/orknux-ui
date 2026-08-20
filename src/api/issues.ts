@@ -406,7 +406,14 @@ export interface IssueInput {
   description?: string;
   status?: IssueStatus;
   labels?: string[];
-  /** Both together, or neither. */
+  /**
+   * Both together, or neither.
+   *
+   * Absent leaves the assignee alone, which is what a caller sending part of
+   * the form means; an empty assigneeId is how "No one" is said, and is the
+   * only way to clear one. An id without a kind is refused rather than
+   * guessed at.
+   */
   assigneeKind?: AssigneeKind | null;
   assigneeId?: string | null;
 }
