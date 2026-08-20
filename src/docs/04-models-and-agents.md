@@ -93,6 +93,84 @@ Nothing is written before that, and whichever you press is said back into the
 conversation, so a change that will not compile can be answered rather than
 silently dropped. The function editor's wand works the same way.
 
+## Memory
+
+![What the workspace has written down, in the catalogs it keeps them in](/screens/memory.png)
+
+A **memory** is a fact about this workspace that nobody should have to work out
+twice — that the export runs at 02:00, that one customer asked never to be
+phoned. It is the other half of a skill: a skill says how to work, a memory says
+what is true here.
+
+Memories live in **catalogs**, and agents are granted whole catalogs, exactly as
+they are for skills. Adding a memory to a catalog gives it to every agent
+already holding that catalog, and nothing has to be granted again.
+
+An agent that holds at least one catalog is offered a tool called
+`memory_search`, and only the catalogs it was granted are searched. So memory is
+not pushed into every prompt: the agent asks when it thinks there is something
+to know, the same way it reaches for any other tool.
+
+Each catalog has its own search, a filter by who wrote a memory and a sort, since
+a catalog somebody has been adding to for a year is longer than a page.
+
+## Sessions
+
+![Every conversation this workspace's agents have kept, and how much was said in
+each](/screens/sessions.png)
+
+A **session** is one running conversation, kept apart from any single run. An
+agent node answers and, ordinarily, forgets: the next run starts from nothing.
+A session is what makes the second run remember the first.
+
+Nothing on this page creates one, and there is no button that suggests
+otherwise. A session appears the first time an agent node carrying a
+**sessionKey** runs, and every later node that computes the same key writes into
+the same conversation. Where that key is set is the **session node** in the
+workflow editor, described under Workflows. The key is what a conversation is
+called; the optional prefix is what it is filed under, and the two are shown
+together as `prefix:key`. Keys belong to a workspace, so two workspaces both
+keying on `standup` are keeping two separate conversations.
+
+Because the key is usually computed rather than typed, one workflow keeps as
+many conversations as it has things to talk about. The workflow these pictures
+are taken from keys on the ticket a Slack mention names, so each ticket has a
+thread of its own and a second question about the same ticket continues the
+first.
+
+![One session, narrowed to what was said: a question, the answer, and the same
+ticket asked about again a run later](/screens/session.png)
+
+Opening one shows the transcript, oldest first, a day at a time. Every line
+names somebody and says what kind of line it is:
+
+- **User** — what was put to the agent. On a workflow node that is the node's
+  own name, since the node is who asked.
+- **Agent** — what it answered.
+- **Tool** — a call the model made, with the arguments it sent. Not what came
+  back, which is why that line is often JSON and often long.
+- **System** — a note from orknux itself, such as an agent that could not
+  answer and why.
+
+A long line is folded to a few lines with the full length on the button that
+opens it, so a transcript with a thousand-line tool call in it is still
+readable. The search, the four kind filters and the sort apply to the
+transcript rather than to the list of sessions — and with none of the four
+picked you are looking at every kind, not at nothing. The picture above has
+User and Agent ticked, which is why the tool calls the agent made between the
+two answers are not in it.
+
+What the agent is handed on its next turn is the recent **User** and **Agent**
+lines, not the whole transcript and not the tool calls: enough of the
+conversation to carry on, without a fortnight of it arriving in one prompt.
+
+**Continue in chat** is how a person joins a conversation the agents have been
+having. The chat it opens is bound to this session and holds what was already
+said, so what you tell it is written back here and the next run to read the key
+finds it. **Remove session** takes the conversation and every line in it, and
+says so before it does; nothing makes a session again by hand, because a session
+exists only because a run computed its key.
+
 ## Letting an agent drive orknux
 
 An agent's settings carry one switch that is not an MCP server: **Orknux**. It

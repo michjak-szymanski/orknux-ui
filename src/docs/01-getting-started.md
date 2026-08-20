@@ -111,8 +111,8 @@ The top bar carries the whole of it. On the left, beside the mark, are the four
 parts of the product you work inside. Each one opens a menu of its own down the
 left-hand side:
 
-- **AI** — what a model is given to work with: agents, models, tools, skills
-  and memory.
+- **AI** — what a model is given to work with: agents, models, tools, skills,
+  memory and the sessions its agents have kept.
 - **Workflow** — the work itself and what it is made of: executions, workflows,
   actions, functions, triggers, conditions and objects.
 - **Workspace** — what the whole of it is set up with: variables, plugins,

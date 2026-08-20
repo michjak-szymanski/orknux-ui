@@ -152,6 +152,8 @@ const found = await gql(`{
   tools: workspaceTools(workspaceId: "${ws}") { content { id name } }
   skills: workspaceSkills(workspaceId: "${ws}") { content { id name } }
   conditions: workspaceConditions(workspaceId: "${ws}", page: 0, size: 100) { content { id name } }
+  sessions: llmSessions(workspaceId: "${ws}", size: 100) { content { id key eventCount } }
+  catalogs: memoryCatalogs(workspaceId: "${ws}") { id name memoryCount }
   providers: modelProviders(workspaceId: "${ws}") { id name endpoint }
   issues: workspaceIssues(workspaceId: "${ws}", size: 100) {
     content { number title attachments { id } comments { id } }
@@ -168,6 +170,57 @@ const skill = byName(found.skills.content, 'When to escalate');
 const condition = byName(found.conditions.content, 'Mentions an outage');
 const run = found.executions.content[0];
 const provider = found.providers[0];
+/*
+ * The conversation the transcript is photographed from, chosen by how many
+ * times somebody put something to it rather than by name.
+ *
+ * A session is not made by anybody - it exists because a run computed its key -
+ * so there is no name to hard-code that would still be right after the seed is
+ * changed. What the picture has to show is a conversation somebody came back
+ * to: two questions about one ticket with the answers between them, which is
+ * the whole reason the feature is not just the run's own log.
+ *
+ * By User lines rather than by lines, which is not the same thing and was the
+ * first version of this. An agent that answers one question by calling five
+ * tools leaves a longer transcript than one that answered two questions with
+ * one call each - so "the busiest session" picked a single question with a
+ * tool loop under it, which is a picture of a model working rather than of a
+ * conversation being kept.
+ *
+ * And by *different* User lines, which is not that either. A step that failed
+ * and was retried puts the same question in the transcript again, so a session
+ * with one question asked three times counts three - and the picture became the
+ * same sentence three times over, which reads as a product stuck in a loop. So
+ * what is counted is how many different things were put to it.
+ *
+ * Asked per session because a list of sessions carries neither number; there
+ * are a handful of them, and this runs once.
+ */
+const returnedTo = await Promise.all(
+  found.sessions.content.map(async (session) => {
+    const { llmSessionEvents } = await gql(
+      `{ llmSessionEvents(sessionId: "${session.id}", kinds: [USER], size: 100) { content { content } } }`,
+    );
+    const asked = new Set(llmSessionEvents.content.map((line) => line.content));
+    return { ...session, asked: asked.size };
+  }),
+);
+/*
+ * Ties broken by the shorter transcript rather than the longer one: between two
+ * conversations somebody came back to, the one with less tool traffic between
+ * the questions is the one a reader can follow.
+ */
+const transcript = returnedTo.sort((a, b) => b.asked - a.asked || a.eventCount - b.eventCount)[0];
+/*
+ * And the memory catalog worth opening, by the same rule.
+ *
+ * The Memory page opens on whichever catalog sorts first by name, which is a
+ * sensible thing for it to do and a poor thing to photograph: the seed's
+ * fullest catalog is not its alphabetically first, so the picture was two
+ * memories in a page with room for six. Chosen by what is in it rather than by
+ * name, so renaming a catalog in the seed cannot quietly empty the picture.
+ */
+const fullest = [...found.catalogs].sort((a, b) => b.memoryCount - a.memoryCount)[0];
 /*
  * An issue is chosen by what it can show rather than by its number: the page
  * the manual points at is the one about comments and attachments, so it has to
@@ -381,6 +434,92 @@ const SHOTS = [
     name: 'skill-editor',
     path: `/workspace/${ws}/skills/${skill.id}`,
     waitFor: 'button[title$="this skill"]',
+  },
+  /*
+   * What a workspace has written down, and what its agents have said. Both are
+   * in the AI menu after the skills above, and both are photographed in that
+   * order for the same reason the rest of this list is: a reader following the
+   * menu down the side should meet the pictures in the order the menu names
+   * them.
+   *
+   * Nothing on either page is this installation's. A memory is what the seed
+   * wrote; a session key is what the seeded graph computed from the event it
+   * was handed. That is worth saying because every other page here that lists
+   * something had to be argued with first - these two are the workspace's own
+   * content and nothing else's.
+   */
+  {
+    name: 'memory',
+    path: `/workspace/${ws}/memory`,
+    /*
+     * A memory's own edit control, which exists only once the catalog's page of
+     * memories has arrived. The page draws its catalog list, its heading, its
+     * search box and its sort before any of that - so the default wait, and any
+     * wait on the frame, photographs a chosen catalog with a spinner in it.
+     * `Rename` and `Delete` belong to the catalog and are drawn with the
+     * heading, which is why the wait is on `Edit`.
+     *
+     * A link rather than a button: editing a memory is going to its own page,
+     * so the control is an anchor and `button[aria-label^="Edit "]` matches
+     * nothing at all - fifteen seconds, then a page with no picture.
+     */
+    waitFor: 'a[aria-label^="Edit "]',
+    prepare: async (page) => {
+      if (fullest === undefined) return;
+      await page.click(`button:has-text("${fullest.name}")`);
+      // The heading is the catalog's name, so it says which one is open; the
+      // memories under it are fetched when it is chosen, not before.
+      await page.waitForSelector(`h1:has-text("${fullest.name}")`, { timeout: 10_000 });
+      await page.waitForSelector('a[aria-label^="Edit "]', { timeout: 10_000 });
+      await page.waitForTimeout(300);
+    },
+  },
+  {
+    name: 'sessions',
+    path: `/workspace/${ws}/sessions`,
+    // A row, because this page says something quite different with none: an
+    // empty list explains what a session is and how one appears, which is a
+    // reasonable page and a useless picture of the feature.
+    waitFor: 'a[href*="/sessions/"]',
+  },
+  transcript && {
+    name: 'session',
+    path: `/workspace/${ws}/sessions/${transcript.id}`,
+    /*
+     * One line of the transcript. The heading, the two buttons and the filters
+     * are all drawn from the session itself, which arrives before its lines do,
+     * so waiting for any of them photographs an empty scroller under a full
+     * header - the same trap the three editors above document.
+     */
+    waitFor: 'article',
+    /*
+     * Narrowed to what was said, and that is a decision worth defending.
+     *
+     * Unfiltered, the top of this page is a question and then four tool calls -
+     * `memory_search`, `skill_list`, `lookupCustomer` - because that is what an
+     * agent with memory, skills and tools does before it answers. Every one of
+     * those lines is real and the prose beside this picture explains them, but
+     * the picture that resulted showed a question nobody answered, which is the
+     * opposite of what the page is for.
+     *
+     * So the two kinds that make up the conversation are ticked, the same way
+     * the issues shot above opens on All rather than on Open: the state chosen
+     * is the one that teaches, and the filter doing it is on screen and clearly
+     * pressed, so the picture says of itself what it is showing.
+     */
+    prepare: async (page) => {
+      const chips = 'div[role="group"][aria-label="Which kinds to show"] button';
+      await page.locator(chips, { hasText: /^User$/ }).click();
+      await page.locator(chips, { hasText: /^Agent$/ }).click();
+      // The transcript is re-fetched on each press, so the last one has to land
+      // before the shutter.
+      await page.waitForFunction(
+        () => document.querySelectorAll('article').length > 0,
+        undefined,
+        { timeout: 10_000 },
+      );
+      await page.waitForTimeout(600);
+    },
   },
   { name: 'actions', path: `/workspace/${ws}/actions` },
   { name: 'conditions', path: `/workspace/${ws}/conditions` },

@@ -594,6 +594,89 @@ for (const skill of SKILLS) {
 }
 log(`${SKILLS.length} skills in ${playbooks.name}`);
 
+/* ------------------------------------------------------------------ memory */
+
+/*
+ * What the desk knows, as opposed to what it does.
+ *
+ * The distinction against the skills above is the one the Memory page is hard
+ * to photograph without: a skill is a way of working and is written to be
+ * followed, while a memory is a fact about this particular company that nobody
+ * can be expected to work out. So these read as things somebody wrote down
+ * after being asked twice, which is what a workspace's memory really fills up
+ * with.
+ */
+const { createMemoryCatalog: knowledge } = await gql(
+  'mutation($workspaceId: ID!, $name: String!) { createMemoryCatalog(workspaceId: $workspaceId, name: $name) { id name } }',
+  { workspaceId: ws, name: 'What the desk knows' },
+);
+const { createMemoryCatalog: customers } = await gql(
+  'mutation($workspaceId: ID!, $name: String!) { createMemoryCatalog(workspaceId: $workspaceId, name: $name) { id name } }',
+  { workspaceId: ws, name: 'Customers' },
+);
+
+const MEMORIES = [
+  {
+    catalog: knowledge,
+    title: 'The billing export runs at 02:00 UTC',
+    content: [
+      'The nightly export to the billing system starts at 02:00 UTC and usually finishes',
+      'inside twenty minutes. A ticket raised before 03:00 about missing invoices is almost',
+      'always this job rather than anything the customer did.',
+    ].join(' '),
+  },
+  {
+    catalog: knowledge,
+    title: 'SUP is the support queue; INF is not',
+    content: [
+      'Tickets the desk owns carry the SUP prefix. An INF reference belongs to the',
+      'infrastructure rota and is not ours to answer - say who it went to rather than',
+      'guessing at a timeline for it.',
+    ].join(' '),
+  },
+  {
+    catalog: knowledge,
+    title: 'The status page is written by hand',
+    content: [
+      'Nothing publishes to the status page automatically. If an outage is worth telling a',
+      'customer about, somebody still has to write it there, and until they have the page',
+      'says everything is fine.',
+    ].join(' '),
+  },
+  {
+    catalog: knowledge,
+    title: 'After 18:00 the on-call rota answers, not the desk',
+    content: [
+      'The desk closes at 18:00 Europe/Warsaw. Anything raised after that waits until the',
+      'morning unless it is an outage, which goes to the on-call rota - so a promise of an',
+      'answer "this evening" is a promise the desk cannot keep.',
+    ].join(' '),
+  },
+  {
+    catalog: customers,
+    title: 'Halden Foods is on the enterprise plan',
+    content: [
+      'Halden Foods have a four-hour response target and a named contact, Ines Halden. They',
+      'read every update, so an update that says nothing costs more with them than with',
+      'anybody else.',
+    ].join(' '),
+  },
+  {
+    catalog: customers,
+    title: 'Brightside Retail asked not to be phoned',
+    content: [
+      'Everything to Brightside Retail goes in writing, on the ticket. They have asked twice,',
+      'so it is worth saying here rather than in a thread somebody has to find.',
+    ].join(' '),
+  },
+];
+for (const memory of MEMORIES) {
+  await gql('mutation($input: CreateMemoryInput!) { createMemory(input: $input) { id } }', {
+    input: { catalogId: memory.catalog.id, title: memory.title, content: memory.content },
+  });
+}
+log(`${MEMORIES.length} memories in ${knowledge.name} and ${customers.name}`);
+
 /* -------------------------------------------------------------- conditions */
 
 await gql('mutation($input: CreateConditionInput!) { createCondition(input: $input) { id } }', {
@@ -724,6 +807,9 @@ await gql('mutation($id: ID!, $input: UpdateAgentInput!) { updateAgent(id: $id, 
     type: 'LLM',
     modelId: chatModel.id,
     skillCatalogs: ['Support playbooks'],
+    // Both catalogs, so the agent's own page shows what memory being granted
+    // looks like rather than an empty row beside a full one.
+    memoryCatalogs: [knowledge.name, customers.name],
     tools: ['lookupCustomer', 'recentIncidents'],
     orknuxAccess: false,
     icon: 'bot',
@@ -847,6 +933,10 @@ const TRIGGER_KEY = 'trigger-slack';
 const TICKET_KEY = 'action-ticket';
 const AGENT_KEY = 'agent-responder';
 const REPLY_KEY = 'action-reply';
+// `_NODE` rather than `_KEY` like its four siblings: what a session node
+// carries is called a session key, and two things named `SESSION_KEY` ten
+// lines apart is a paragraph nobody can read twice the same way.
+const SESSION_NODE = 'session-ticket';
 
 await gql(
   `mutation($ws: ID!, $id: ID!, $input: WorkflowGraphInput!) {
@@ -878,6 +968,37 @@ await gql(
           ],
           x: 320,
           y: 340,
+        },
+        /*
+         * What the agent beside it says is remembered under.
+         *
+         * A session node is the whole of the Sessions page: without one an
+         * agent answers and forgets, and the list of conversations a workspace
+         * has kept is empty - which is a page the manual cannot photograph. So
+         * the demonstration has one, wired into the responder.
+         *
+         * The key is a reference rather than a fixed word, because that is the
+         * thing worth showing: `trigger.ticket` is read off whatever event
+         * arrived, so every ticket gets a conversation of its own and a second
+         * question about the same ticket continues the first. A literal here
+         * would put every run of every ticket into one transcript and teach the
+         * opposite.
+         *
+         * Nothing feeds a session node and it leads only to its agent - the
+         * server refuses any other shape - so it carries no `sourceNodeKey`:
+         * `trigger.` is read from the event itself.
+         */
+        {
+          key: SESSION_NODE,
+          kind: 'SESSION',
+          name: 'The ticket this belongs to',
+          icon: 'message-square',
+          mappings: [
+            { name: 'sessionKeyPrefix', expression: 'ticket', mode: 'VALUE' },
+            { name: 'sessionKey', expression: 'trigger.ticket', mode: 'REFERENCE' },
+          ],
+          x: 640,
+          y: 700,
         },
         {
           key: AGENT_KEY,
@@ -911,6 +1032,7 @@ await gql(
       edges: [
         { source: TRIGGER_KEY, target: TICKET_KEY },
         { source: TICKET_KEY, target: AGENT_KEY },
+        { source: SESSION_NODE, target: AGENT_KEY },
         { source: AGENT_KEY, target: REPLY_KEY },
       ],
     },
@@ -1008,9 +1130,9 @@ for (const input of ['SUP-4471', 'SUP-4468', 'SUP-4470', 'SUP-4455', 'SUP-4462']
   }
 }
 /*
- * And one run of the workflow with the agent in it, which is the run the manual
- * actually wants a picture of: a trigger, an action, a model that answers, and
- * a step that had nothing to do.
+ * And the runs of the workflow with the agent in it, which are the runs the
+ * manual actually wants a picture of: a trigger, an action, a model that
+ * answers, and a step that had nothing to do.
  *
  * The input is a JSON object rather than a sentence, and that is the whole
  * difference between this row being green and being red. The graph's nodes read
@@ -1026,29 +1148,77 @@ for (const input of ['SUP-4471', 'SUP-4468', 'SUP-4470', 'SUP-4455', 'SUP-4462']
  * action reports that it sent nothing and the run completes. A skipped step
  * with a reason on it is a better picture than a failure, because it is what an
  * installation with one integration still to configure actually looks like.
+ *
+ * Three of them rather than one, and each naming a different ticket, because
+ * the session node in the graph keys on `trigger.ticket`: one event is one
+ * conversation, so three events are the three rows the Sessions page is a
+ * picture of. A fourth arrives further down, once these have finished.
  */
-let flagshipRun = null;
-try {
-  const { startExecution } = await gql(
-    'mutation($ws: ID!, $id: ID!, $input: String) { startExecution(workspaceId: $ws, workflowId: $id, input: $input) { id status } }',
-    {
-      ws,
-      id: flagship.id,
-      input: JSON.stringify({
-        text:
-          'Any update on SUP-4471? We know the cause is a schema change on our side and the fix ' +
-          'ships at 15:30 - draft the reply for the thread.',
-        channel: '#support',
-        threadTs: '1755600000.000100',
-      }),
-    },
-  );
-  flagshipRun = startExecution.id;
-  runs += 1;
-} catch (failure) {
-  console.warn(`  flagship run: ${failure.message.slice(0, 120)}`);
+/** The mentions the demonstration's Slack workspace delivered. */
+const MENTIONS = [
+  {
+    ticket: 'SUP-4471',
+    text:
+      'Any update on SUP-4471? We know the cause is a schema change on our side and the fix ' +
+      'ships at 15:30 - draft the reply for the thread.',
+    threadTs: '1755600000.000100',
+  },
+  {
+    ticket: 'SUP-4468',
+    text:
+      'SUP-4468 has been quiet for two days and the customer has asked twice. What do we tell ' +
+      'them about the timeline?',
+    threadTs: '1755600000.000200',
+  },
+  {
+    ticket: 'SUP-4470',
+    text: 'Who owns SUP-4470 now, and is there anything the customer is still waiting on from us?',
+    threadTs: '1755600000.000300',
+  },
+];
+
+const flagshipRuns = [];
+for (const mention of MENTIONS) {
+  try {
+    const { startExecution } = await gql(
+      'mutation($ws: ID!, $id: ID!, $input: String) { startExecution(workspaceId: $ws, workflowId: $id, input: $input) { id status } }',
+      { ws, id: flagship.id, input: JSON.stringify({ ...mention, channel: '#support' }) },
+    );
+    flagshipRuns.push(startExecution.id);
+    runs += 1;
+  } catch (failure) {
+    console.warn(`  flagship run for ${mention.ticket}: ${failure.message.slice(0, 120)}`);
+  }
 }
 log(`${runs} runs started`);
+
+/**
+ * Waits for one run to stop being a run.
+ *
+ * Returns whatever it ended as, or `RUNNING` where it outlasted the wait - the
+ * caller says so out loud rather than pretending it finished.
+ *
+ * A failed poll is ignored rather than thrown, which is the difference between
+ * this and the loop it replaces. Everything above has already been written by
+ * the time this runs; a single empty reply from a server being restarted under
+ * it took the whole seed down at the last step, leaving a workspace with no
+ * second mention in it and no message saying so. What can go wrong here is a
+ * question not being answered, and the answer to that is to ask again.
+ */
+async function ranToTheEnd(id, patience = 180_000) {
+  const until = Date.now() + patience;
+  let status = 'RUNNING';
+  while (status === 'RUNNING' && Date.now() < until) {
+    await new Promise((wake) => setTimeout(wake, 3000));
+    try {
+      const { execution } = await gql(`{ execution(id: "${id}") { status } }`);
+      status = execution.status;
+    } catch {
+      // Asked again on the next turn of the loop.
+    }
+  }
+  return status;
+}
 
 /* --------------------------------------------------------------- the chats */
 
@@ -1418,22 +1588,71 @@ if (colleague) {
 }
 
 /*
- * The run with the model in it, finished before this script says it is done.
+ * The runs with the model in them, finished before this script says it is done.
  *
- * It was started well above and has been running while the tracker was filled,
- * which is the point of starting it there - but a capture that opens the
- * executions list while it is still going photographs a spinner, and the
+ * They were started well above and have been running while the tracker was
+ * filled, which is the point of starting them there - but a capture that opens
+ * the executions list while one is still going photographs a spinner, and the
  * workflows list beside it photographs a workflow with no outcome yet.
  */
-if (flagshipRun !== null) {
-  const until = Date.now() + 180_000;
-  let status = 'RUNNING';
-  while (status === 'RUNNING' && Date.now() < until) {
-    await new Promise((wake) => setTimeout(wake, 3000));
-    const { execution } = await gql(`{ execution(id: "${flagshipRun}") { status } }`);
-    status = execution.status;
+for (const id of flagshipRuns) {
+  log(`  run ${id} with the model in it: ${await ranToTheEnd(id)}`);
+}
+
+/*
+ * And then somebody asks about the same ticket again.
+ *
+ * This is the whole of what a session is, and it cannot be shown by three
+ * conversations of one line each: the transcript the manual points at has to
+ * have somebody coming back. The key the graph computes is `ticket:SUP-4471`
+ * either way, so this second mention lands in the conversation the first one
+ * opened, and the agent is handed what was already said before it answers.
+ *
+ * Started here rather than beside the others, and after the wait above, because
+ * order is the point. Two mentions of one ticket sent together race, and a
+ * transcript whose answer precedes its question is a picture of something
+ * broken.
+ */
+if (flagshipRuns.length > 0) {
+  try {
+    const { startExecution } = await gql(
+      'mutation($ws: ID!, $id: ID!, $input: String) { startExecution(workspaceId: $ws, workflowId: $id, input: $input) { id status } }',
+      {
+        ws,
+        id: flagship.id,
+        input: JSON.stringify({
+          ticket: 'SUP-4471',
+          text:
+            'The fix for SUP-4471 went out at 15:30 and the export ran clean overnight. Can you ' +
+            'close the thread off for Halden Foods?',
+          channel: '#support',
+          threadTs: '1755600000.000100',
+        }),
+      },
+    );
+    log(`  the second mention of SUP-4471: ${await ranToTheEnd(startExecution.id)}`);
+  } catch (failure) {
+    console.warn(`  second mention: ${failure.message.slice(0, 120)}`);
   }
-  log(`the run with the model in it: ${status}`);
+}
+
+/*
+ * What all that was for, said out loud.
+ *
+ * A seed that quietly produced no sessions leaves the capture to photograph an
+ * empty page and say nothing about it, which is how the manual gets a picture
+ * of a feature that appears not to work.
+ */
+const { llmSessions } = await gql(
+  `{ llmSessions(workspaceId: "${ws}", size: 100) { content { key eventCount } } }`,
+);
+if (llmSessions.content.length === 0) {
+  console.warn('  no sessions were kept — the Sessions page will photograph empty');
+} else {
+  log(
+    `${llmSessions.content.length} sessions: ` +
+      llmSessions.content.map((one) => `${one.key} (${one.eventCount})`).join(', '),
+  );
 }
 
 

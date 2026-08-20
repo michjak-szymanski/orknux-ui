@@ -84,10 +84,21 @@ Every one of those keystrokes is yours to change, in Preferences.
 | Agent | Asks a model, with the workspace's skills and tools available to it. |
 | Function | Runs JavaScript on the values handed to it. |
 | Object | Assembles a named shape, field by field, for later nodes to read. |
+| Session | Names the conversation the agent it leads to keeps, so what is said outlives the run. |
 
 Each kind can be **inline** — defined in this workflow only — or made from a
 **definition** in the workspace catalogue, which several workflows can share.
 Editing the definition changes every workflow using it.
+
+A session node is the one kind nothing may lead *into*, and it leads only to an
+agent. It carries two parameters: **sessionKey**, which is what the conversation
+is called, and **sessionKeyPrefix**, which is optional and is what it is filed
+under. Both are values or references like any other parameter, so a key read
+from the event — the ticket a mention names, the customer an order belongs to —
+gives each of them a conversation of its own, and a run a week later that
+computes the same key carries on where the last one left off. An agent with no
+session node beside it answers and forgets. What is kept is on the workspace's
+Sessions page, described under AI.
 
 ## The catalogue
 
