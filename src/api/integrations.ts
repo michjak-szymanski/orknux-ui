@@ -135,6 +135,13 @@ const REVEAL_CONNECTION_MUTATION = `
   }
 `;
 
+/** The other credential a Slack connection holds, revealed the same way. */
+const REVEAL_CONNECTION_APP_TOKEN_MUTATION = `
+  mutation RevealWorkspaceConnectionAppToken($id: ID!) {
+    revealWorkspaceConnectionAppToken(id: $id)
+  }
+`;
+
 const MCP_SERVERS_QUERY = `
   query McpServers($workspaceId: ID!) {
     mcpServers(workspaceId: $workspaceId) { ${MCP_SERVER_FIELDS} }
@@ -298,6 +305,14 @@ export async function exportWorkspaceConnectionAsDefault(
 export async function revealWorkspaceConnectionSecret(id: string): Promise<string | null> {
   const data = await graphql<{ revealWorkspaceConnectionSecret: string | null }>(REVEAL_CONNECTION_MUTATION, { id });
   return data.revealWorkspaceConnectionSecret;
+}
+
+export async function revealWorkspaceConnectionAppToken(id: string): Promise<string | null> {
+  const data = await graphql<{ revealWorkspaceConnectionAppToken: string | null }>(
+    REVEAL_CONNECTION_APP_TOKEN_MUTATION,
+    { id },
+  );
+  return data.revealWorkspaceConnectionAppToken;
 }
 
 export async function fetchMcpServers(workspaceId: string): Promise<McpServer[]> {

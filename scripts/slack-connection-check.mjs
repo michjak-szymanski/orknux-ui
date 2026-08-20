@@ -75,16 +75,27 @@ try {
   // Revealing put the credential on screen with no way back.
   const secretBox = page.locator('#connection-secret');
   const masked = await secretBox.inputValue();
-  await page.getByRole('button', { name: 'Reveal' }).click();
+  // Scoped to its own field: there are two Reveals on this page now, one per
+  // credential, and an unscoped one would pick whichever came first.
+  const secretButton = secretBox.locator('xpath=../button');
+  await secretButton.click();
   await page.waitForTimeout(800);
   const bare = await secretBox.inputValue();
   record(bare !== masked && bare.startsWith('xoxb-'), `Reveal shows the stored token (${bare.slice(0, 12)}…)`);
-  const hide = page.getByRole('button', { name: 'Hide' });
-  record((await hide.count()) === 1, 'and there is a way to put it back');
+  const hide = secretBox.locator('xpath=../button');
+  record((await hide.innerText()) === 'Hide', 'and there is a way to put it back');
   await hide.click();
   await page.waitForTimeout(400);
   record((await secretBox.inputValue()) === masked, 'Hide covers it again');
-  record((await page.getByRole('button', { name: 'Reveal' }).count()) === 1, 'and Reveal is offered once more');
+  record((await secretButton.innerText()) === 'Reveal', 'and Reveal is offered once more');
+
+  // The app-level token had neither control: it could be written and never read
+  // back. Presence only for now - the running server predates the mutation, so
+  // pressing it would fail for a reason that is not this page's fault.
+  record(
+    (await page.locator('#connection-app-token').locator('xpath=../button').count()) > 0,
+    'the App-Level Token offers a control of its own',
+  );
 
   // The label cannot say which token; the (?) beside it has to.
   const tokenHint = page.locator('[data-hint="API Token"]');

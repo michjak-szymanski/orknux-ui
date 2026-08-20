@@ -8,6 +8,7 @@ import {
   connectionTypeLabel,
   disconnectWorkspaceConnection,
   fetchWorkspaceConnection,
+  revealWorkspaceConnectionAppToken,
   revealWorkspaceConnectionSecret,
   statusLabel,
   testWorkspaceConnection,
@@ -132,6 +133,9 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
    * hidden but not what is stored is the worst of the three.
    */
   const [revealedValue, setRevealedValue] = useState<string | null>(null);
+  /** The same pair for the other credential a Slack connection holds. */
+  const [appRevealed, setAppRevealed] = useState(false);
+  const [appRevealedValue, setAppRevealedValue] = useState<string | null>(null);
   const [urlOverride, setUrlOverride] = useState('');
   const [smtpUsername, setSmtpUsername] = useState('');
   const [smtpFrom, setSmtpFrom] = useState('');
@@ -163,6 +167,8 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
         setAppToken(null);
         setRevealed(false);
         setRevealedValue(null);
+        setAppRevealed(false);
+        setAppRevealedValue(null);
       })
       .catch((cause: unknown) => {
         setLoadError(cause instanceof Error ? cause.message : 'Could not load the connection.');
@@ -190,6 +196,17 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
     setSmtpSecurity(next);
     if (smtpPort === '' || smtpPort === String(previous?.port)) {
       setSmtpPort(String(SECURITY.find((candidate) => candidate.value === next)?.port ?? ''));
+    }
+  }
+
+  async function handleRevealAppToken() {
+    try {
+      const stored = await revealWorkspaceConnectionAppToken(connectionId);
+      setAppToken(stored ?? '');
+      setAppRevealedValue(stored ?? '');
+      setAppRevealed(true);
+    } catch (cause) {
+      setSaveError(cause instanceof Error ? cause.message : 'Could not reveal the app-level token.');
     }
   }
 
@@ -594,6 +611,30 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
                     value={appToken ?? (connection.appTokenSet ? MASK : '')}
                     onChange={(event) => setAppToken(event.target.value)}
                   />
+                  {/*
+                    The same pair the bot token beside it has always had. This
+                    one had neither: it could be written and never read back, so
+                    there was no way to check which token was in there, compare
+                    it against Slack, or see whether it had been rotated.
+                  */}
+                  {connection.appTokenSet && !appRevealed && appToken === null && (
+                    <button type="button" className={styles.reveal} onClick={handleRevealAppToken}>
+                      Reveal
+                    </button>
+                  )}
+                  {appRevealed && appToken === appRevealedValue && (
+                    <button
+                      type="button"
+                      className={styles.reveal}
+                      onClick={() => {
+                        setAppToken(null);
+                        setAppRevealed(false);
+                        setAppRevealedValue(null);
+                      }}
+                    >
+                      Hide
+                    </button>
+                  )}
                 </div>
               </div>
             )}
