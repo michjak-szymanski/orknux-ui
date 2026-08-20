@@ -8,7 +8,6 @@ import styles from './ConnectionIcon.module.css';
 
 const ICONS: Record<ConnectionType, string> = {
   SLACK: slackIcon,
-  SLACK_SOCKET_MODE: slackIcon,
   GITHUB: githubIcon,
   JIRA: trelloIcon,
   SMTP: mailIcon,

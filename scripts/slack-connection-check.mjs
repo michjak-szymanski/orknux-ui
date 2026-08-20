@@ -1,12 +1,17 @@
 /**
- * The two faults on a connection's own page, driven as a person would hit them.
+ * One Slack connection type, driven the way a person makes one.
  *
- * One: the App-Level Token field was gated on `SLACK` here and on
- * `SLACK_SOCKET_MODE` in the form that creates a connection - opposite values,
- * so the one kind that needs the token was the one kind that could never be
- * shown the field. A token could be set at creation and never corrected.
+ * There used to be two - `SLACK` and `SLACK_SOCKET_MODE` - and the form that
+ * created a connection and the page that edited one disagreed about which of
+ * them was allowed an app-level token, so the kind that needed the token was
+ * the kind that could never be shown the field. They are one kind now: a bot
+ * token is required, an app-level token is optional, and supplying one is what
+ * turns a connection that only sends into one that also listens.
  *
- * Two: the kind was read-only, though the server has always accepted a change.
+ * So this walks the whole of that. Make a Slack connection through the dialog
+ * with nothing but a name and a bot token - no URL asked for, no auth type, no
+ * custom headers, because the server writes all three itself - then add the
+ * app-level token on the connection's own page and check it stayed.
  *
  * It makes its own connection and removes it again.
  *
@@ -24,7 +29,7 @@ const record = (ok, message) => {
 };
 
 const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
 const page = await context.newPage();
 
 const signedIn = await context.request.post(`${BASE}/api/session`, {
@@ -44,95 +49,142 @@ const ask = async (query, variables) => {
 
 // Its own connection, so nothing anybody made is touched.
 const named = `zz scratch slack ${Date.now()}`;
-const made = await ask(
-  `mutation ($input: CreateWorkspaceConnectionInput!) {
-     createWorkspaceConnection(input: $input) { id type appTokenSet }
-   }`,
-  {
-    input: {
-      workspaceId: WORKSPACE,
-      name: named,
-      type: 'SLACK_SOCKET_MODE',
-      url: 'https://slack.com/api',
-      authType: 'BEARER_TOKEN',
-      secret: 'xoxb-scratch-not-a-real-token',
-      appToken: 'xapp-scratch-not-a-real-token',
-    },
-  },
-);
-const id = made.createWorkspaceConnection.id;
-console.log(`made ${named} (${id}) as ${made.createWorkspaceConnection.type}, app token set: ${made.createWorkspaceConnection.appTokenSet}`);
+let id = null;
 
 try {
-  await page.goto(`${BASE}/workspace/${WORKSPACE}/integrations/connections/${id}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(1500);
+  /* ------------------------------------------------- making one, in the dialog */
 
-  // The regression itself: a Socket Mode connection could not show its own token.
-  const appToken = page.locator('#connection-app-token');
-  record((await appToken.count()) === 1, 'a Socket Mode connection offers its App-Level Token');
-  record((await page.locator('#connection-secret').count()) === 1, 'and the API Token beside it');
+  await page.goto(`${BASE}/workspace/${WORKSPACE}/integrations`, { waitUntil: 'domcontentloaded' });
+  await page.locator('button', { hasText: /^\+ Add Connection$/ }).click();
+  await page.waitForSelector('#workspace-connection-name', { timeout: 20_000 });
+  await page.waitForTimeout(600);
 
-  // Revealing put the credential on screen with no way back.
-  const secretBox = page.locator('#connection-secret');
-  const masked = await secretBox.inputValue();
-  // Scoped to its own field: there are two Reveals on this page now, one per
-  // credential, and an unscoped one would pick whichever came first.
-  const secretButton = secretBox.locator('xpath=../button');
-  await secretButton.click();
-  await page.waitForTimeout(800);
-  const bare = await secretBox.inputValue();
-  record(bare !== masked && bare.startsWith('xoxb-'), `Reveal shows the stored token (${bare.slice(0, 12)}…)`);
-  const hide = secretBox.locator('xpath=../button');
-  record((await hide.innerText()) === 'Hide', 'and there is a way to put it back');
-  await hide.click();
-  await page.waitForTimeout(400);
-  record((await secretBox.inputValue()) === masked, 'Hide covers it again');
-  record((await secretButton.innerText()) === 'Reveal', 'and Reveal is offered once more');
+  // One Slack, and it is called Slack: no choosing between two spellings of the
+  // same service before you have looked at which token you hold.
+  const offered = await page.locator('#workspace-connection-type option').allTextContents();
+  const slacks = offered.filter((label) => label.includes('Slack'));
+  record(slacks.length === 1 && slacks[0] === 'Slack', `one Slack in the type list (${slacks.join(', ')})`);
 
-  // The app-level token had neither control: it could be written and never read
-  // back. Presence only for now - the running server predates the mutation, so
-  // pressing it would fail for a reason that is not this page's fault.
+  await page.fill('#workspace-connection-name', named);
+  await page.selectOption('#workspace-connection-type', 'SLACK');
+  await page.waitForTimeout(500);
+
+  // The complaint that started this: a form demanding a URL that nothing reads.
+  record((await page.locator('#workspace-connection-url').count()) === 0, 'no URL is asked for');
+  record((await page.locator('#workspace-connection-auth').count()) === 0, 'no Auth Type is asked for');
   record(
-    (await page.locator('#connection-app-token').locator('xpath=../button').count()) > 0,
-    'the App-Level Token offers a control of its own',
+    !(await page.evaluate(() => document.querySelector('dialog').innerText)).includes('Custom Headers'),
+    'and no Custom Headers',
   );
 
-  // The label cannot say which token; the (?) beside it has to.
-  const tokenHint = page.locator('[data-hint="API Token"]');
-  record((await tokenHint.count()) === 1, 'the API Token field offers a (?)');
-  await tokenHint.hover();
-  await page.waitForTimeout(300);
-  const said = await page.locator('[role="note"]').first().innerText();
-  record(said.includes('xoxb-'), `and it names the bot token (${said.replace(/\s+/g, ' ').slice(0, 60)}…)`);
-  await page.mouse.move(20, 880);
+  const labels = await page.locator('dialog[open] label').allTextContents();
+  record(labels.includes('Bot token'), `the credential is called Bot token (${labels.join(', ')})`);
+  record(labels.includes('App-Level Token'), 'and the app-level token is offered beside it');
+
+  // Both (?) say which of Slack's tokens they mean.
+  const botHint = page.locator('[data-hint="Bot token"]');
+  record((await botHint.count()) === 1, 'the bot token offers a (?)');
+  await botHint.hover();
+  await page.waitForTimeout(400);
+  const botSaid = (await page.locator('[role="note"]').first().innerText()).replace(/\s+/g, ' ');
+  record(
+    botSaid.includes('xoxb-') && botSaid.includes('OAuth & Permissions') && botSaid.includes('xapp-'),
+    `and it names xoxb-, where it comes from, and what it is not (${botSaid.slice(0, 70)}…)`,
+  );
+  await page.mouse.move(20, 980);
   await page.waitForTimeout(300);
 
+  const appHint = page.locator('[data-hint="App-Level Token"]');
+  await appHint.hover();
+  await page.waitForTimeout(400);
+  const appSaid = (await page.locator('[role="note"]').first().innerText()).replace(/\s+/g, ' ');
+  record(
+    appSaid.includes('Optional') && appSaid.includes('mentions'),
+    `the app token says it is optional and what it buys (${appSaid.slice(0, 70)}…)`,
+  );
+  await page.mouse.move(20, 980);
+  await page.waitForTimeout(300);
+
+  // The bot token alone is enough now; it used to want both.
+  const submit = page.locator('dialog[open] button[type="submit"]');
+  await page.fill('#workspace-connection-bot-token', 'xoxb-scratch-not-a-real-token');
+  await page.waitForTimeout(400);
+  record(await submit.isEnabled(), 'a bot token on its own is enough to add the connection');
+
+  await submit.click();
+  await page.waitForTimeout(2000);
+
+  const listed = await ask(
+    `query ($ws: ID!) { workspaceConnections(workspaceId: $ws) { id name type url authType appTokenSet secretSet } }`,
+    { ws: WORKSPACE },
+  );
+  const made = listed.workspaceConnections.find((candidate) => candidate.name === named);
+  record(made !== undefined, 'the dialog saved it');
+  if (made === undefined) throw new Error('nothing was created; the rest cannot run');
+  id = made.id;
+
+  record(made.type === 'SLACK', `and it is a SLACK connection (${made.type})`);
+  record(made.secretSet === true, 'the bot token was stored');
+  record(made.appTokenSet === false, 'and no app token, which is send-only');
+  // Sent as neither, filled in by the server.
+  record(made.url === 'https://slack.com/api', `the server addressed it itself (${made.url})`);
+  record(made.authType === 'BEARER_TOKEN', `and chose the auth type itself (${made.authType})`);
+
+  /* ------------------------------------------ adding the app token, on its page */
+
+  await page.goto(`${BASE}/workspace/${WORKSPACE}/integrations/connections/${id}`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await page.waitForTimeout(1500);
+
+  const secretBox = page.locator('#connection-secret');
+  record((await secretBox.count()) === 1, 'the connection page offers the bot token');
+  const secretLabel = await page.locator('label[for="connection-secret"]').innerText();
+  record(secretLabel.trim() === 'Bot token', `named the same as the dialog names it (${secretLabel.trim()})`);
+  record((await page.locator('[data-hint="Bot token"]').count()) === 1, 'and the (?) beside it agrees');
+
+  const appToken = page.locator('#connection-app-token');
+  record((await appToken.count()) === 1, 'a plain Slack connection is offered its App-Level Token');
+  record((await appToken.inputValue()) === '', 'empty, because nothing was given at creation');
+
+  await appToken.fill('xapp-scratch-not-a-real-token');
+  await page.locator('button[type="submit"]').first().click();
+  await page.waitForTimeout(2000);
+
+  const after = await ask(`query ($id: ID!) { workspaceConnection(id: $id) { type appTokenSet secretSet url } }`, {
+    id,
+  });
+  record(after.workspaceConnection.appTokenSet === true, 'the app token was saved');
+  record(after.workspaceConnection.secretSet === true, 'and the bot token beside it was left alone');
+  record(after.workspaceConnection.type === 'SLACK', `still a SLACK connection (${after.workspaceConnection.type})`);
+
+  // Read it back the way somebody checking a rotation would.
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(1500);
+  const reveal = page.locator('#connection-app-token').locator('xpath=../button');
+  record((await reveal.count()) > 0, 'and it can be revealed again');
+  await reveal.first().click();
+  await page.waitForTimeout(900);
+  const bare = await page.locator('#connection-app-token').inputValue();
+  record(bare === 'xapp-scratch-not-a-real-token', `Reveal shows what was stored (${bare.slice(0, 12)}…)`);
+
+  // The kind can still be changed, and Socket Mode is not among the choices.
   const chooser = page.locator('#connection-type');
-  record((await chooser.count()) === 1, 'the kind can be chosen rather than only read');
+  record((await chooser.count()) === 1, 'the kind can still be chosen');
+  const kinds = await chooser.locator('option').allTextContents();
+  record(!kinds.some((label) => label.includes('Socket')), `and Socket Mode is gone (${kinds.join(', ')})`);
 
-  // Change the kind, and check the fields follow the choice before any save.
   await chooser.selectOption('SMTP');
   await page.waitForTimeout(400);
   record((await appToken.count()) === 0, 'choosing a kind with no app token takes the field away at once');
-
   await chooser.selectOption('SLACK');
   await page.waitForTimeout(400);
-  record((await appToken.count()) === 1, 'plain Slack is offered the field too, as the listener already reads both');
-
-  // And that it survives being saved.
-  await page.locator('button[type="submit"]').first().click();
-  await page.waitForTimeout(1500);
-  const after = await ask(`query ($id: ID!) { workspaceConnection(id: $id) { type appTokenSet } }`, { id });
-  record(after.workspaceConnection.type === 'SLACK', `the change was saved (server says ${after.workspaceConnection.type})`);
-  record(after.workspaceConnection.appTokenSet === true, 'and the stored app token was left alone');
-
-  await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(1500);
-  const shown = await page.locator('#connection-type').inputValue();
-  record(shown === 'SLACK', `the page comes back on the saved kind (${shown})`);
+  record((await appToken.count()) === 1, 'and choosing Slack brings it back');
 } finally {
-  await ask(`mutation ($id: ID!) { disconnectWorkspaceConnection(id: $id) }`, { id });
-  console.log('scratch connection removed');
+  if (id !== null) {
+    await ask(`mutation ($id: ID!) { disconnectWorkspaceConnection(id: $id) }`, { id });
+    console.log('scratch connection removed');
+  }
 }
 
 await browser.close();

@@ -1,7 +1,7 @@
 import { graphql } from './client';
 import type { PageOf } from './client';
 
-export type ConnectionType = 'SLACK_SOCKET_MODE' | 'SLACK' | 'GITHUB' | 'JIRA' | 'SMTP' | 'WEBHOOK';
+export type ConnectionType = 'SLACK' | 'GITHUB' | 'JIRA' | 'SMTP' | 'WEBHOOK';
 /** How the session with a mail server is secured; the port follows from it. */
 export type MailSecurity = 'NONE' | 'STARTTLS' | 'TLS';
 export type AuthType = 'NONE' | 'API_KEY' | 'BEARER_TOKEN' | 'BASIC';
@@ -34,7 +34,7 @@ export interface WorkspaceConnection {
   headers: HttpHeader[];
   inherited: boolean;
   secretSet: boolean;
-  /** Whether a Socket Mode app-level token is stored, which is what lets orknux listen. */
+  /** Whether an app-level token is stored, which is what lets a Slack connection listen. */
   appTokenSet: boolean;
   /** The port a mail connection will use, which is the default one when none was chosen. */
   smtpPort: number | null;
@@ -228,10 +228,15 @@ export async function createWorkspaceConnection(input: {
   workspaceId: string;
   name: string;
   type: ConnectionType;
-  url: string;
+  /**
+   * Where the service is. Omitted for the kinds that address themselves: a Slack
+   * connection always talks to the Web API, and the server writes that in
+   * whatever the client sends, so there is nothing here worth asking for.
+   */
+  url?: string;
   authType?: AuthType;
   secret?: string;
-  /** Slack's Socket Mode app-level token, for the type that opens a websocket. */
+  /** Slack's app-level token. Given one, the connection listens as well as sends. */
   appToken?: string;
   /** Where the mail server listens; omitted takes the port the security implies. */
   smtpPort?: number;
@@ -375,8 +380,6 @@ export function connectionTypeLabel(type: ConnectionType): string {
   switch (type) {
     case 'SLACK':
       return 'Slack';
-    case 'SLACK_SOCKET_MODE':
-      return 'Slack (Socket Mode)';
     case 'GITHUB':
       return 'GitHub';
     case 'JIRA':

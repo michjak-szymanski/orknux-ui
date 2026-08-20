@@ -16,12 +16,11 @@ export interface WorkspaceConnectionDialogProps {
   onCreated: (connection: WorkspaceConnection) => void;
 }
 
-const TYPES: ConnectionType[] = ['SLACK_SOCKET_MODE', 'SLACK', 'SMTP', 'GITHUB', 'JIRA', 'WEBHOOK'];
+const TYPES: ConnectionType[] = ['SLACK', 'SMTP', 'GITHUB', 'JIRA', 'WEBHOOK'];
 const AUTH_TYPES: AuthType[] = ['NONE', 'API_KEY', 'BEARER_TOKEN', 'BASIC'];
 
 const TYPE_LABELS: Record<ConnectionType, string> = {
-  SLACK_SOCKET_MODE: 'Slack (Socket Mode)',
-  SLACK: 'Slack (outgoing only)',
+  SLACK: 'Slack',
   SMTP: 'Email (SMTP)',
   GITHUB: 'GitHub',
   JIRA: 'Jira',
@@ -41,16 +40,21 @@ const SECURITY: { value: MailSecurity; label: string; port: number }[] = [
   { value: 'NONE', label: 'None', port: 25 },
 ];
 
-/** Socket Mode always talks to the same place, so the URL is not asked for. */
-const SLACK_API = 'https://slack.com/api';
-
 /**
  * Add Connection, from the connection modals frame: the workspace's own connection.
  *
- * Slack over Socket Mode asks for what the listener actually needs — a bot
- * token to call the API with and an app-level token to open the websocket —
- * rather than the generic auth type and single secret, which cannot hold two
- * credentials.
+ * Slack asks for what Slack actually needs — a bot token to call the API with,
+ * and optionally an app-level token to open a websocket on — rather than the
+ * generic auth type and single secret, which cannot hold two credentials.
+ *
+ * There used to be two Slack entries here, one that could only send and one that
+ * could also listen, and choosing between them meant knowing which of Slack's
+ * tokens you had before you had looked. There is one now: the app-level token is
+ * what separates them, so leaving it out is how you say you only want to send.
+ *
+ * The URL, the auth type and the custom headers are not asked for either. The
+ * server writes all three itself for a Slack connection and ignores whatever
+ * arrives in them, so a form that demanded a URL was demanding it for nothing.
  */
 export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreated }: WorkspaceConnectionDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -108,13 +112,16 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
     }
   }, [open]);
 
-  const socketMode = type === 'SLACK_SOCKET_MODE';
+  const slack = type === 'SLACK';
   const mail = type === 'SMTP';
   const complete =
     name.trim() !== '' &&
     type !== '' &&
-    (socketMode
-      ? secret.trim() !== '' && appToken.trim() !== ''
+    (slack
+      ? // The bot token alone. An app-level token is what makes the connection
+        // listen as well as send, and a connection that only sends is a whole
+        // half of what people use this for.
+        secret.trim() !== ''
       : // A mail server has to be told who it sends as. The login is not
         // required: a relay inside a network often authenticates nobody.
         mail
@@ -141,17 +148,19 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
         workspaceId,
         name: name.trim(),
         type,
-        url: socketMode ? SLACK_API : url.trim(),
-        // Socket Mode calls the Web API with the bot token, which is a bearer. A
+        // Neither is sent for Slack: the server fills the URL and the auth type
+        // in itself, last, so anything sent here would only be overwritten. A
         // mail server has a login of its own and no auth type to choose.
-        authType: socketMode ? 'BEARER_TOKEN' : mail ? 'NONE' : authType,
+        url: slack ? undefined : url.trim(),
+        authType: slack ? undefined : mail ? 'NONE' : authType,
         secret: secret.trim() || undefined,
-        appToken: socketMode ? appToken.trim() : undefined,
+        // Empty is a real answer here, and it means send-only.
+        appToken: slack ? appToken.trim() || undefined : undefined,
         smtpPort: mail ? Number(smtpPort) : undefined,
         smtpUsername: mail ? smtpUsername.trim() || undefined : undefined,
         smtpFrom: mail ? smtpFrom.trim() : undefined,
         smtpSecurity: mail ? smtpSecurity : undefined,
-        headers: socketMode || mail ? [] : headers.filter((header) => header.name.trim() !== ''),
+        headers: slack || mail ? [] : headers.filter((header) => header.name.trim() !== ''),
       });
       onCreated(created);
     } catch (cause) {
@@ -215,7 +224,7 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
             </div>
           </div>
 
-          {!socketMode && (
+          {!slack && (
           <div className={styles.field}>
             <label className={styles.label} htmlFor="workspace-connection-url">
               {/* A mail server is named, not addressed: there is no URL to type. */}
@@ -230,7 +239,7 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
                 placeholder={mail ? 'smtp.example.com' : 'https://'}
                 value={url}
                 onChange={(event) => setUrl(event.target.value)}
-                required={!socketMode}
+                required
               />
             </div>
           </div>
@@ -356,16 +365,21 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
             </>
           )}
 
-          {socketMode && (
+          {slack && (
             <>
               <div className={styles.field}>
                 <span className={styles.labelWithHint}>
                   <label className={styles.label} htmlFor="workspace-connection-bot-token">
-                    Bot Token
+                    Bot token
                   </label>
-                  <FieldHint label="Bot Token">
-                    From OAuth &amp; Permissions. It needs app_mentions:read to see mentions, and
-                    chat:write to answer them.
+                  {/* Named the way the connection's own settings page names it,
+                      and saying which of Slack's several tokens this is: the
+                      whole difficulty is that they all look like tokens. */}
+                  <FieldHint label="Bot token">
+                    The <strong>bot</strong> token, beginning <code>xoxb-</code>. In your Slack app
+                    under <strong>OAuth &amp; Permissions</strong>, as the Bot User OAuth Token. Not
+                    the app-level <code>xapp-</code> token, which has its own field below. It needs
+                    app_mentions:read to see mentions, and chat:write to answer them.
                   </FieldHint>
                 </span>
                 <div className={styles.inputWrapper}>
@@ -395,8 +409,9 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
                   {/* The same words the connection's own settings page puts
                       behind its (?), so the dialog and the page agree. */}
                   <FieldHint label="App-Level Token">
-                    From Basic Information, with connections:write. This is what opens the websocket
-                    orknux listens on.
+                    Optional, and beginning <code>xapp-</code>. From Basic Information, with
+                    connections:write. Giving one is what lets Slack mentions start workflows:
+                    without it this connection sends and does not listen.
                   </FieldHint>
                 </span>
                 <div className={styles.inputWrapper}>
@@ -405,10 +420,9 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
                     name="appToken"
                     className={`${styles.input} ${styles.inputMono}`}
                     type={showAppToken ? 'text' : 'password'}
-                    placeholder="xapp-..."
+                    placeholder="xapp-... (optional)"
                     value={appToken}
                     onChange={(event) => setAppToken(event.target.value)}
-                    required
                   />
                   <RevealToggle
                     shown={showAppToken}
@@ -420,7 +434,7 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
             </>
           )}
 
-          {!socketMode && !mail && (
+          {!slack && !mail && (
           <div className={styles.field}>
             <label className={styles.label} htmlFor="workspace-connection-auth">
               Auth Type
@@ -444,7 +458,7 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
           </div>
           )}
 
-          {!socketMode && !mail && authType !== 'NONE' && (
+          {!slack && !mail && authType !== 'NONE' && (
             <div className={styles.field}>
               <label className={styles.label} htmlFor="workspace-connection-secret">
                 Token / Key
@@ -469,7 +483,7 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
           )}
 
 
-          {!socketMode && !mail && <HeaderRowsEditor headers={headers} onChange={setHeaders} compact />}
+          {!slack && !mail && <HeaderRowsEditor headers={headers} onChange={setHeaders} compact />}
         </div>
 
         {error !== null && (

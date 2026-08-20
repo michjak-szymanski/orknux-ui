@@ -174,16 +174,16 @@ await stayed(
   'Stored encrypted, and never shown again in the list. Many providers want an app password here rather than the account',
 );
 
-console.log('--- Add Connection, Slack socket mode');
-await page.selectOption('#workspace-connection-type', 'SLACK_SOCKET_MODE');
+console.log('--- Add Connection, Slack');
+await page.selectOption('#workspace-connection-type', 'SLACK');
 await page.waitForTimeout(400);
 await moved(
-  'Bot Token',
-  'From OAuth & Permissions. It needs app_mentions:read to see mentions, and chat:write to answer them.',
+  'Bot token',
+  'In your Slack app under OAuth & Permissions, as the Bot User OAuth Token.',
 );
 await moved(
   'App-Level Token',
-  'From Basic Information, with connections:write. This is what opens the websocket orknux listens on.',
+  'From Basic Information, with connections:write. Giving one is what lets Slack mentions start workflows',
 );
 
 // ---- A proxy rule ----

@@ -307,8 +307,8 @@ const { createWorkspaceConnection: slack } = await gql(
     input: {
       workspaceId: ws,
       name: 'Slack',
-      type: 'SLACK_SOCKET_MODE',
-      url: 'https://slack.com/api',
+      // The server addresses a Slack connection itself; there is no URL to give.
+      type: 'SLACK',
     },
   },
 );

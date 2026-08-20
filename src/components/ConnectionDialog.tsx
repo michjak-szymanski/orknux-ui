@@ -31,7 +31,6 @@ const TYPES: ConnectionType[] = ['SLACK', 'SMTP'];
 
 const TYPE_LABELS: Record<ConnectionType, string> = {
   SLACK: 'Slack',
-  SLACK_SOCKET_MODE: 'Slack (Socket Mode)',
   GITHUB: 'GitHub',
   JIRA: 'Jira',
   SMTP: 'Email (SMTP)',

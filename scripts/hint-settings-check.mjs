@@ -109,7 +109,10 @@ const pages = [
     name: 'connection settings',
     path: connection,
     hints: 0,
-    gone: ['Every mail this connection sends is from this address', "Socket Mode token"],
+    gone: [
+      'Every mail this connection sends is from this address',
+      'orknux listens for mentions and runs the triggers waiting on them',
+    ],
     kept: [],
   },
   {

@@ -53,7 +53,25 @@ const MASK = '••••••••••••••••••••••
  * them - so choosing here and choosing there are the same list in the same
  * order rather than two lists that drift.
  */
-const CONNECTION_TYPES: ConnectionType[] = ['SLACK_SOCKET_MODE', 'SLACK', 'SMTP', 'GITHUB', 'JIRA', 'WEBHOOK'];
+const CONNECTION_TYPES: ConnectionType[] = ['SLACK', 'SMTP', 'GITHUB', 'JIRA', 'WEBHOOK'];
+
+/**
+ * What this field is called, which is what the service filling it calls it.
+ *
+ * Not one name for the shared column: Slack calls its own the bot token, and a
+ * mail server has a password. "API Token" is left for the kinds where that is
+ * genuinely the word - a GitHub or Jira token, or whatever a webhook wants.
+ */
+function secretLabel(kind: ConnectionType | null): string {
+  switch (kind) {
+    case 'SMTP':
+      return 'Password';
+    case 'SLACK':
+      return 'Bot token';
+    default:
+      return 'API Token';
+  }
+}
 
 /**
  * Which credential this field wants, named for the service it belongs to.
@@ -65,7 +83,6 @@ const CONNECTION_TYPES: ConnectionType[] = ['SLACK_SOCKET_MODE', 'SLACK', 'SMTP'
 function secretHint(kind: ConnectionType | null) {
   switch (kind) {
     case 'SLACK':
-    case 'SLACK_SOCKET_MODE':
       return (
         <>
           The <strong>bot</strong> token, beginning <code>xoxb-</code>. In your Slack app under{' '}
@@ -116,8 +133,8 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
    * The kind being chosen, which is not always the kind that is stored.
    *
    * The fields below follow this rather than the saved connection, so picking
-   * Socket Mode shows the app-level token straight away instead of after a
-   * save - and the token is what somebody came here to type.
+   * Slack shows the app-level token straight away instead of after a save - and
+   * the token is what somebody came here to type.
    */
   const [type, setType] = useState<ConnectionType | null>(null);
   // Null while the stored secret is untouched, so saving leaves it alone.
@@ -179,16 +196,16 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
   const kind = type ?? connection?.type ?? null;
   const mail = kind === 'SMTP';
   /*
-   * Both Slack kinds, not one.
+   * One Slack kind, where there were two.
    *
-   * This asked for `SLACK` while the form that creates a connection asked for
-   * `SLACK_SOCKET_MODE` - opposite values, so the one kind that needs an
-   * app-level token was the one kind that could never be shown the field, and
-   * a token could be set when the connection was made and never corrected.
-   * `SlackListener` reads both kinds and takes whichever has both tokens, so
-   * offering it on both is what the rest of the product already believes.
+   * This page asked for `SLACK` while the form that creates a connection asked
+   * for `SLACK_SOCKET_MODE` - opposite values, so the one kind that needed an
+   * app-level token was the one kind that could never be shown the field. The
+   * two kinds have since been collapsed into this one, which holds the
+   * app-level token when it is meant to listen and leaves it empty when it is
+   * only meant to send.
    */
-  const slack = kind === 'SLACK' || kind === 'SLACK_SOCKET_MODE';
+  const slack = kind === 'SLACK';
 
   /** Changing how the session is secured moves the port with it, until it is typed over. */
   function changeSecurity(next: MailSecurity) {
@@ -536,17 +553,17 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
             <div className={styles.field}>
               <span className={styles.labelWithHint}>
                 <label className={styles.label} htmlFor="connection-secret">
-                  {/* The same column, and for a mail server it holds the password. */}
-                  {mail ? 'Password' : 'API Token'}
+                  {/*
+                    One column underneath, three names on top of it - because the
+                    column being shared is a fact about the schema and not about
+                    the person filling the field in, who has several tokens in
+                    front of them and needs to be told which one this wants.
+                    Slack hands out three, so Slack gets told; "API Token" stays
+                    for the kinds where the service really does call it that.
+                  */}
+                  {secretLabel(kind)}
                 </label>
-                {/*
-                  The label cannot say which token, because the column is shared
-                  - it holds a bot token for Slack and a password for a mail
-                  server. That is a good reason for the column and a poor one
-                  for the person filling it in, who has several tokens in front
-                  of them and no way to tell which one this wants.
-                */}
-                <FieldHint label={mail ? 'Password' : 'API Token'}>{secretHint(kind)}</FieldHint>
+                <FieldHint label={secretLabel(kind)}>{secretHint(kind)}</FieldHint>
               </span>
               <div className={styles.inputWrapper}>
                 <input
@@ -597,8 +614,9 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
                     App-Level Token
                   </label>
                   <FieldHint label="App-Level Token">
-                    Slack&apos;s Socket Mode token, with connections:write. Given one, orknux listens for
-                    mentions and runs the triggers waiting on them.
+                    Optional, and beginning <code>xapp-</code>. From Basic Information, with
+                    connections:write. Given one, orknux listens for mentions and runs the triggers
+                    waiting on them; left empty, this connection only sends.
                   </FieldHint>
                 </span>
                 <div className={styles.inputWrapper}>
