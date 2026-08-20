@@ -369,12 +369,18 @@
  * into a fourth column is a sentence nobody writes - which would leave the
  * description there and unused, which is the one outcome worth avoiding.
  */
+/*
+ * Roomier above than below, because the labels sit *on* the top edge of their
+ * controls: even padding puts the first word of a row on the divider of the one
+ * before it. The gap is what holds the two lines of one property together and
+ * apart from the next.
+ */
 .propertyRow {
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--space-16);
   width: 100%;
-  padding: var(--space-12) var(--space-16);
+  padding: var(--space-20) var(--space-16) var(--space-16);
   border-bottom: 1px solid var(--color-border);
 }
 
