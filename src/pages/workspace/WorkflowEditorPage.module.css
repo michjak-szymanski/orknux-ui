@@ -205,6 +205,18 @@
   background: var(--color-bg);
 }
 
+/* Over the canvas, centred, and not in the way of it: the graph is mounted
+   underneath and keeps its viewport. */
+.canvasWaiting {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+}
+
 .loadError {
   margin: 0;
   padding: var(--space-24);

@@ -68,6 +68,7 @@ import { CreateTriggerDialog } from '../../components/CreateTriggerDialog';
 import { FieldPicker } from '../../components/FieldPicker';
 import type { FieldOption } from '../../components/FieldPicker';
 import { Icon, IconPickerDialog } from '../../components/IconPicker';
+import { Loader } from '../../components/Loader';
 import { TrashIcon } from '../../components/TrashIcon';
 import { WorkflowConfirmDialog } from '../../components/WorkflowConfirmDialog';
 import {
@@ -854,6 +855,13 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   /** The field whose name is mid-edit, if any, and the name it had. */
   const [fieldEdit, setFieldEdit] = useState<{ index: number; was: string } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  /*
+   * Whether the saved graph has arrived. An empty canvas and a workflow with
+   * nothing on it are drawn identically, so without this the editor spends the
+   * fetch claiming the workflow is empty and then contradicts itself. Also
+   * false while Discard re-reads, which is the same fetch and the same lie.
+   */
+  const [graphArrived, setGraphArrived] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -1150,6 +1158,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
    */
   const loadGraph = useCallback(() => {
     if (workspaceId === '' || workflowId === '') return;
+    setGraphArrived(false);
     fetchWorkflowGraph(workspaceId, workflowId)
       .then((graph) => {
         /*
@@ -1215,7 +1224,10 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       })
       .catch((cause: unknown) => {
         setLoadError(cause instanceof Error ? cause.message : 'Could not load the workflow.');
-      });
+      })
+      // Either way there is nothing more to wait for: the graph is on the
+      // canvas, or the message above says why it is not.
+      .finally(() => setGraphArrived(true));
   }, [workspaceId, workflowId, setNodes, setEdges]);
 
   useEffect(() => {
@@ -2366,6 +2378,11 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
 
       <div className={styles.editor}>
         <div className={styles.canvas}>
+          {!graphArrived && loadError === null && (
+            <div className={styles.canvasWaiting}>
+              <Loader />
+            </div>
+          )}
           {loadError !== null ? (
             <p className={styles.loadError} role="alert">
               {loadError}
