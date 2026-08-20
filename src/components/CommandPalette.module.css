@@ -43,11 +43,21 @@
   }
 }
 
+/*
+ * A height of its own, the same one everything else in the top bar stands at.
+ *
+ * Left to its padding and whatever line box the text inside makes, this came to
+ * 32.4px beside siblings that are exactly 32 - near enough to look right, and
+ * near enough that nothing said which of them the bar should be measured by.
+ * Swapping the font stack moved it to 30.8px, so it was never a height so much
+ * as a coincidence.
+ */
 .box {
   display: flex;
   align-items: center;
   gap: var(--space-8);
   width: 100%;
+  height: var(--top-nav-item-height);
   padding: var(--space-6) var(--space-10, 10px);
   background: var(--color-bg);
   border: 1px solid var(--color-border);
