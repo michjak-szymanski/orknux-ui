@@ -755,6 +755,18 @@
 }
 
 /*
+ * A label and the (?) that explains it, kept together on the left of the row so
+ * the question mark reads as belonging to that label rather than floating at
+ * the far edge of the panel beside whatever else the row carries.
+ */
+.labelWithHint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+/*
  * The links a picker carries: one to make a definition, one to open the one
  * chosen. Held together so the label keeps the left however many there are.
  */
@@ -869,7 +881,13 @@
   font-family: var(--font-mono);
 }
 
-.parameterHint {
+/*
+ * What a field has instead of contents, where it has none: no parameters to
+ * fill in, no fields on a shape yet. Not an explanation of the field - those
+ * are behind the (?) beside its label - so it stays where the missing contents
+ * would have been.
+ */
+.fieldNote {
   margin: 0;
   font-size: var(--text-xs);
   line-height: 16px;

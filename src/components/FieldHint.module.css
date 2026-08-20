@@ -1,0 +1,100 @@
+/*
+ * The (?) beside a label, and the note it opens.
+ *
+ * Its own stylesheet rather than classes handed in by whatever draws the field:
+ * this stands in the node panel today and in the forms beside it tomorrow, and
+ * a look described twice in two places is a look that eventually differs.
+ */
+.hint {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  /* Beside the label's text rather than under it, whatever the row is doing. */
+  align-items: center;
+}
+
+/*
+ * Small, and quiet until it is asked for. It sits next to a label somebody is
+ * reading past nine times out of ten, so it is drawn as an outline rather than
+ * as another thing competing with the field underneath it.
+ */
+.circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  background: none;
+  border: 1px solid var(--color-text-muted);
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.circle:hover {
+  border-color: var(--color-text-secondary);
+  color: var(--color-text-secondary);
+}
+
+/* The same ring every other control in these panels gets when it is focused. */
+.circle:focus-visible {
+  outline: none;
+  border-color: var(--color-accent-brand);
+  color: var(--color-accent-brand);
+}
+
+/* Open, it is filled in - so the note on screen has a control it belongs to. */
+.circleOpen {
+  background: var(--color-accent-brand-soft);
+  border-color: var(--color-accent-brand);
+  color: var(--color-accent-brand);
+}
+
+/*
+ * The note itself. Where it goes is worked out in the component and set on the
+ * element - see the reading there; a panel that scrolls clips anything hung off
+ * a control inside it, so this is placed against the window instead.
+ *
+ * The width is here and repeated there, because the placement has to know how
+ * wide the thing it is placing is.
+ */
+.popover {
+  position: fixed;
+  z-index: 20;
+  width: 240px;
+  max-width: 240px;
+  padding: var(--space-8) var(--space-10);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  box-shadow: var(--shadow-menu);
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: var(--text-xs);
+  line-height: 16px;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--color-text-secondary);
+  /* Prose, in a span that stands beside a label set in uppercase mono. */
+  text-align: left;
+  white-space: normal;
+}
+
+/* A second thought inside one note; the first paragraph carries no margin. */
+.popover p {
+  margin: 0;
+}
+
+.popover p + p {
+  margin-top: var(--space-8);
+}
+
+.popover code {
+  font-family: var(--font-mono);
+  color: var(--color-text-primary);
+}

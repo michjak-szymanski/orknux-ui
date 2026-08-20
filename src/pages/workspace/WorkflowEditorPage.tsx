@@ -83,6 +83,7 @@ import { ActionDialog } from '../../components/ActionDialog';
 import { AppShell } from '../../components/AppShell';
 import { ConditionDialog } from '../../components/ConditionDialog';
 import { DefinitionPicker } from '../../components/DefinitionPicker';
+import { FieldHint } from '../../components/FieldHint';
 import { CreateAgentDialog } from '../../components/CreateAgentDialog';
 import { NameDialog } from '../../components/NameDialog';
 import { CreateTriggerDialog } from '../../components/CreateTriggerDialog';
@@ -3254,9 +3255,16 @@ Change the keystroke in Preferences.`}
                 {draft.kind === 'AGENT' && (
                   <div className={styles.field}>
                     <span className={styles.labelRow}>
-                      <label className={styles.label} htmlFor="node-agent">
-                        Agent
-                      </label>
+                      <span className={styles.labelWithHint}>
+                        <label className={styles.label} htmlFor="node-agent">
+                          Agent
+                        </label>
+                        {/* The agent brings its own, so the node chooses no model. */}
+                        <FieldHint label="Agent">
+                          The agent supplies the model it answers on, its instructions, and the catalogs it
+                          was granted.
+                        </FieldHint>
+                      </span>
                       <span className={styles.labelLinks}>
                         <button
                           type="button"
@@ -3284,10 +3292,6 @@ Change the keystroke in Preferences.`}
                       placeholder="Choose an agent…"
                       searchPlaceholder="Search agents…"
                     />
-                    {/* The agent brings its own, so the node chooses no model. */}
-                    <p className={styles.parameterHint}>
-                      The agent supplies the model it answers on, its instructions, and the catalogs it was granted.
-                    </p>
                   </div>
                 )}
 
@@ -3301,7 +3305,14 @@ Change the keystroke in Preferences.`}
                 */}
                 {draft.kind === 'AGENT' && (
                   <div className={styles.field}>
-                    <span className={styles.label}>Session</span>
+                    <span className={styles.labelWithHint}>
+                      <span className={styles.label}>Session</span>
+                      <FieldHint label="Session">
+                        {sessionChoices.length === 0
+                          ? 'Add an LLM Session node to keep what this agent is told and what it answers.'
+                          : 'What this agent is told and answers is kept here, and read back on the next run. Its key is set on the session itself.'}
+                      </FieldHint>
+                    </span>
                     {wiredSessions.length > 1 ? (
                       <p className={styles.problemWarning}>
                         {wiredSessions.length} sessions reach this node. An agent keeps one conversation, so the
@@ -3317,11 +3328,6 @@ Change the keystroke in Preferences.`}
                         searchPlaceholder="Search sessions…"
                       />
                     )}
-                    <p className={styles.parameterHint}>
-                      {sessionChoices.length === 0
-                        ? 'Add an LLM Session node to keep what this agent is told and what it answers.'
-                        : 'What this agent is told and answers is kept here, and read back on the next run. Its key is set on the session itself.'}
-                    </p>
                   </div>
                 )}
 
@@ -3414,9 +3420,15 @@ Change the keystroke in Preferences.`}
                 {draft.kind === 'OBJECT' && (
                   <div className={styles.field}>
                     <span className={styles.labelRow}>
-                      <label className={styles.label} htmlFor="node-object">
-                        Shape
-                      </label>
+                      <span className={styles.labelWithHint}>
+                        <label className={styles.label} htmlFor="node-object">
+                          Shape
+                        </label>
+                        <FieldHint label="Shape">
+                          A saved shape fixes which fields there are; this node decides what goes in them.
+                          Custom means the fields are this node&apos;s own.
+                        </FieldHint>
+                      </span>
                       <span className={styles.labelLinks}>
                         <button
                           type="button"
@@ -3444,10 +3456,6 @@ Change the keystroke in Preferences.`}
                       placeholder="Choose a shape…"
                       searchPlaceholder="Search objects…"
                     />
-                    <p className={styles.parameterHint}>
-                      A saved shape fixes which fields there are; this node decides what goes in them.
-                      Custom means the fields are this node&apos;s own.
-                    </p>
                   </div>
                 )}
 
@@ -3457,7 +3465,48 @@ Change the keystroke in Preferences.`}
                   draft.kind === 'OBJECT') && (
                   <div className={styles.field}>
                     <span className={styles.labelRow}>
-                      <span className={styles.label}>{draft.kind === 'OBJECT' ? 'Fields' : 'Parameters'}</span>
+                      <span className={styles.labelWithHint}>
+                        <span className={styles.label}>{draft.kind === 'OBJECT' ? 'Fields' : 'Parameters'}</span>
+                        <FieldHint label={draft.kind === 'OBJECT' ? 'Fields' : 'Parameters'}>
+                          <p>
+                            {draft.kind === 'AGENT' ? (
+                              <>
+                                <strong>prompt</strong> is what the agent is asked; <strong>systemPrompt</strong>{' '}
+                                replaces its own briefing, for this node only. Leave either empty to keep what
+                                the agent already does.
+                                {draft.mappings.some((mapping) => mapping.name === 'sessionKey') && (
+                                  <>
+                                    {' '}
+                                    This node still names its own session, which is how it was done before there
+                                    were session nodes. It keeps working; wire a <strong>LLM Session</strong> node
+                                    to this one and that takes over.
+                                  </>
+                                )}
+                              </>
+                            ) : draft.kind === 'SESSION' ? (
+                              <>
+                                <strong>sessionKey</strong> is what this conversation is called — every agent that
+                                arrives at the same key writes into the same one, in this run or any other.{' '}
+                                <strong>sessionKeyPrefix</strong> is what it is filed under, and is optional. Leave
+                                the key empty and nothing is recorded. Both are read when an agent wired to this
+                                node asks, against what that node was handed.
+                              </>
+                            ) : draft.kind === 'OBJECT' ? (
+                              <>
+                                Each field is written here or read from another node; together they are what this
+                                node hands on. Give the node an output name to pass them as one object.
+                              </>
+                            ) : (
+                              <>What is here is what this node sends — the action definition is not changed.</>
+                            )}
+                          </p>
+                          <p>
+                            <strong>Value</strong> is used exactly as written. <strong>Reference</strong> reads a
+                            field another node produces — a trigger&apos;s event, an agent&apos;s named answer —
+                            and keeps reading it however far down the graph this node sits.
+                          </p>
+                        </FieldHint>
+                      </span>
                       {/* A shape of the node's own is added to here, one field at a time. */}
                       {draft.kind === 'OBJECT' && draft.objectId === null && (
                         <button
@@ -3478,7 +3527,7 @@ Change the keystroke in Preferences.`}
                       )}
                     </span>
                     {draft.mappings.length === 0 ? (
-                      <p className={styles.parameterHint}>
+                      <p className={styles.fieldNote}>
                         {draft.kind === 'OBJECT'
                           ? 'No fields yet, so this node would make nothing.'
                           : 'This action takes no parameters.'}
@@ -3649,43 +3698,6 @@ Change the keystroke in Preferences.`}
                             </div>
                           ))}
                         </div>
-                        <p className={styles.parameterHint}>
-                          {draft.kind === 'AGENT' ? (
-                            <>
-                              <strong>prompt</strong> is what the agent is asked; <strong>systemPrompt</strong>{' '}
-                              replaces its own briefing, for this node only. Leave either empty to keep what
-                              the agent already does.
-                              {draft.mappings.some((mapping) => mapping.name === 'sessionKey') && (
-                                <>
-                                  {' '}
-                                  This node still names its own session, which is how it was done before there
-                                  were session nodes. It keeps working; wire a <strong>LLM Session</strong> node
-                                  to this one and that takes over.
-                                </>
-                              )}
-                            </>
-                          ) : draft.kind === 'SESSION' ? (
-                            <>
-                              <strong>sessionKey</strong> is what this conversation is called — every agent that
-                              arrives at the same key writes into the same one, in this run or any other.{' '}
-                              <strong>sessionKeyPrefix</strong> is what it is filed under, and is optional. Leave
-                              the key empty and nothing is recorded. Both are read when an agent wired to this
-                              node asks, against what that node was handed.
-                            </>
-                          ) : draft.kind === 'OBJECT' ? (
-                            <>
-                              Each field is written here or read from another node; together they are what this
-                              node hands on. Give the node an output name to pass them as one object.
-                            </>
-                          ) : (
-                            <>What is here is what this node sends — the action definition is not changed.</>
-                          )}
-                        </p>
-                        <p className={styles.parameterHint}>
-                          <strong>Value</strong> is used exactly as written. <strong>Reference</strong> reads a
-                          field another node produces — a trigger&apos;s event, an agent&apos;s named answer —
-                          and keeps reading it however far down the graph this node sits.
-                        </p>
                       </>
                     )}
                   </div>
@@ -3701,7 +3713,31 @@ Change the keystroke in Preferences.`}
                 */}
                 {handlesFailure(draft.kind) && (
                   <div className={styles.field}>
-                    <span className={styles.label}>Retries</span>
+                    <span className={styles.labelWithHint}>
+                      <span className={styles.label}>Retries</span>
+                      <FieldHint label="Retries">
+                        <p>
+                          How many goes in all, not extra ones: one is the single attempt every step has
+                          always had. The wait is the one before the first retry — the same before every
+                          one after it, or twice the last if it doubles, and never more than an hour
+                          however far the doubling would have gone.
+                        </p>
+                        <p>
+                          {draft.kind === 'AGENT' ? (
+                            <>
+                              A model that refused the request for what it said is settled and is never asked
+                              again, however many attempts are allowed; one that timed out, was rate limited or
+                              could not be reached is. Every attempt is another call you are billed for.
+                            </>
+                          ) : (
+                            <>
+                              A failure the server has already settled — a channel that does not exist, a request
+                              refused for what it said — is never tried again however many are asked for.
+                            </>
+                          )}
+                        </p>
+                      </FieldHint>
+                    </span>
                     <div className={styles.retryFields}>
                       <label className={styles.retryField}>
                         <span className={styles.retryCaption}>Attempts</span>
@@ -3785,30 +3821,28 @@ Change the keystroke in Preferences.`}
                       />
                       <span>Double the wait after each attempt</span>
                     </label>
-                    <p className={styles.parameterHint}>
-                      How many goes in all, not extra ones: one is the single attempt every step has
-                      always had. The wait is the one before the first retry — the same before every
-                      one after it, or twice the last if it doubles, and never more than an hour
-                      however far the doubling would have gone.{' '}
-                      {draft.kind === 'AGENT' ? (
-                        <>
-                          A model that refused the request for what it said is settled and is never asked
-                          again, however many attempts are allowed; one that timed out, was rate limited or
-                          could not be reached is. Every attempt is another call you are billed for.
-                        </>
-                      ) : (
-                        <>
-                          A failure the server has already settled — a channel that does not exist, a request
-                          refused for what it said — is never tried again however many are asked for.
-                        </>
-                      )}
-                    </p>
                   </div>
                 )}
 
                 {handlesFailure(draft.kind) && (
                   <div className={styles.field}>
-                    <span className={styles.label}>When it fails</span>
+                    <span className={styles.labelWithHint}>
+                      <span className={styles.label}>When it fails</span>
+                      <FieldHint label="When it fails">
+                        <p>
+                          Off, a failure stops the run where it happened. On, the node grows a second handle
+                          and the run carries on down whatever is wired to it — so the graph says what to
+                          do about a failure instead of the run simply ending.
+                        </p>
+                        {draft.fallbackEnabled === true && (
+                          <p>
+                            The upper handle is the run going on as it always did, and the line already
+                            drawn from this node stays exactly as it is. The lower one is the failure, and
+                            its line is the red one.
+                          </p>
+                        )}
+                      </FieldHint>
+                    </span>
                     <label className={styles.checkRow}>
                       <input
                         type="checkbox"
@@ -3835,11 +3869,6 @@ Change the keystroke in Preferences.`}
                       />
                       <span>Handle it here</span>
                     </label>
-                    <p className={styles.parameterHint}>
-                      Off, a failure stops the run where it happened. On, the node grows a second handle
-                      and the run carries on down whatever is wired to it — so the graph says what to
-                      do about a failure instead of the run simply ending.
-                    </p>
                     {/*
                       The same two names a condition has, for the same reason:
                       the words beside the handles are most of what makes a graph
@@ -3865,11 +3894,6 @@ Change the keystroke in Preferences.`}
                             onChange={(event) => setDraft({ ...draft, noLabel: event.target.value || null })}
                           />
                         </div>
-                        <p className={styles.parameterHint}>
-                          The upper handle is the run going on as it always did, and the line already
-                          drawn from this node stays exactly as it is. The lower one is the failure, and
-                          its line is the red one.
-                        </p>
                       </>
                     )}
                   </div>
@@ -3877,7 +3901,13 @@ Change the keystroke in Preferences.`}
 
                 {draft.kind === 'CONDITION' && (
                   <div className={styles.field}>
-                    <span className={styles.label}>Ways out</span>
+                    <span className={styles.labelWithHint}>
+                      <span className={styles.label}>Ways out</span>
+                      <FieldHint label="Ways out">
+                        Two lines leave a condition: the upper handle for the answer that holds, the lower
+                        for the one that does not. Either may be left unconnected.
+                      </FieldHint>
+                    </span>
                     {/*
                       What the two branches are called on this node. "Is it
                       urgent" reads better as Escalate and File it, and those
@@ -3900,10 +3930,6 @@ Change the keystroke in Preferences.`}
                         onChange={(event) => setDraft({ ...draft, noLabel: event.target.value || null })}
                       />
                     </div>
-                    <p className={styles.parameterHint}>
-                      Two lines leave a condition: the upper handle for the answer that holds, the lower
-                      for the one that does not. Either may be left unconnected.
-                    </p>
                   </div>
                 )}
 
@@ -3972,7 +3998,13 @@ Change the keystroke in Preferences.`}
                 </div>
 
                 <div className={styles.field}>
-                  <span className={styles.label}>Facing</span>
+                  <span className={styles.labelWithHint}>
+                    <span className={styles.label}>Facing</span>
+                    <FieldHint label="Facing">
+                      Where the lines join it. Nothing about what runs; a long chain reads better down a
+                      screen than off the side of one.
+                    </FieldHint>
+                  </span>
                   {/*
                     One button that walks round rather than four options: a
                     node has four ways to face and pressing until it looks
@@ -3991,17 +4023,30 @@ Change the keystroke in Preferences.`}
                       Turn
                     </button>
                   </div>
-                  <p className={styles.parameterHint}>
-                    Where the lines join it. Nothing about what runs; a long chain reads better down a screen than
-                    off the side of one.
-                  </p>
                 </div>
 
                 {(draft.kind === 'AGENT' || draft.kind === 'ACTION' || draft.kind === 'OBJECT') && (
                   <div className={styles.field}>
-                    <label className={styles.label} htmlFor="node-output-name">
-                      Output name
-                    </label>
+                    <span className={styles.labelWithHint}>
+                      <label className={styles.label} htmlFor="node-output-name">
+                        Output name
+                      </label>
+                      <FieldHint label="Output name">
+                        {draft.kind === 'AGENT' ? (
+                          <>
+                            An agent answers in prose, which has no fields to point at. Naming the answer is
+                            what puts it in the list a later node picks from — call it <code>reply</code> and a
+                            send step can reference it.
+                          </>
+                        ) : (
+                          <>
+                            What this node hands on is wrapped under this name, so a later node references{' '}
+                            <code>result</code> rather than depending on what the function happened to return.
+                          </>
+                        )}{' '}
+                        Left empty, the output is passed on as it is and nothing downstream can name it.
+                      </FieldHint>
+                    </span>
                     <div className={styles.inputWrapper}>
                       <input
                         id="node-output-name"
@@ -4024,21 +4069,6 @@ Change the keystroke in Preferences.`}
                         }}
                       />
                     </div>
-                    <p className={styles.parameterHint}>
-                      {draft.kind === 'AGENT' ? (
-                        <>
-                          An agent answers in prose, which has no fields to point at. Naming the answer is what
-                          puts it in the list a later node picks from — call it <code>reply</code> and a send
-                          step can reference it.
-                        </>
-                      ) : (
-                        <>
-                          What this node hands on is wrapped under this name, so a later node references{' '}
-                          <code>result</code> rather than depending on what the function happened to return.
-                        </>
-                      )}{' '}
-                      Left empty, the output is passed on as it is and nothing downstream can name it.
-                    </p>
                   </div>
                 )}
 
