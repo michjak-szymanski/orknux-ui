@@ -12,8 +12,17 @@ export interface Shell {
   name: string;
   host: string;
   port: number;
-  /** The account on the far side. Which account it is is the whole of the privilege question. */
-  username: string;
+  /**
+   * The account on the far side, or null when none was given. Optional in the
+   * way it is optional at `ssh build.internal`.
+   */
+  username: string | null;
+  /**
+   * The account commands actually run as: `username` when there is one, and the
+   * account the server itself runs as when there is not. From the server
+   * because nothing here can know what account that process runs as.
+   */
+  account: string;
   privateKeySet: boolean;
   passphraseSet: boolean;
   /**
@@ -36,7 +45,8 @@ export interface ShellInput {
   name: string;
   host: string;
   port: number;
-  username: string;
+  /** Empty or absent means the account the server itself runs as. */
+  username?: string | null;
   /** Left out entirely to keep the stored key; empty to clear it. */
   privateKey?: string | null;
   keyPassphrase?: string | null;
@@ -60,7 +70,7 @@ export function shellStatusLabel(status: ShellStatus): string {
 }
 
 const SHELL_FIELDS =
-  'id name host port username privateKeySet passphraseSet hostKey enabled status ' +
+  'id name host port username account privateKeySet passphraseSet hostKey enabled status ' +
   'lastCheckMessage lastCheckedAt createdAt lastModifiedAt';
 
 const SHELLS_QUERY = `

@@ -78,7 +78,7 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
         setName(found.name);
         setHost(found.host);
         setPort(String(found.port));
-        setUsername(found.username);
+        setUsername(found.username ?? '');
       })
       .catch((cause: unknown) => {
         if (current) setLoadError(cause instanceof Error ? cause.message : 'Could not load the shell.');
@@ -89,10 +89,14 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
   }, [shellId]);
 
   const portNumber = Number(port);
+  /*
+   * No username in here. An account is optional the way it is optional at
+   * `ssh build.internal`: leaving it out means the account the server itself
+   * runs as, which is a thing somebody chose rather than a field they forgot.
+   */
   const complete =
     name.trim() !== '' &&
     host.trim() !== '' &&
-    username.trim() !== '' &&
     Number.isInteger(portNumber) &&
     portNumber > 0 &&
     portNumber < 65536;
@@ -116,6 +120,12 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
         name: name.trim(),
         host: host.trim(),
         port: portNumber,
+        /*
+         * Sent blank rather than left out when the box is empty, because absent
+         * has to keep meaning "unchanged" for the key beside it and a single
+         * field cannot mean two things. Blank is what the server reads as no
+         * account, so clearing one is sayable.
+         */
         username: username.trim(),
         ...(key === undefined ? {} : { privateKey: key }),
         ...(secret === undefined ? {} : { keyPassphrase: secret }),
@@ -283,21 +293,23 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
 
             <div className={styles.field}>
               <label className={styles.label} htmlFor="shell-username">
-                Username <span className={styles.required}>*</span>
+                Username
               </label>
               <input
                 id="shell-username"
                 name="shellUsername"
                 className={styles.input}
                 type="text"
-                placeholder="orknux"
+                placeholder={shell === null ? 'orknux' : shell.account}
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
-                required
               />
               <p className={styles.hint}>
                 The account commands run as. Whatever this account can do, an agent given the shells
-                can do - so give it the least that is useful.
+                can do - so give it the least that is useful. Leaving it empty means the account
+                this server itself runs as, the same as running ssh with no user in front of the
+                host
+                {shell !== null && shell.username === null ? ` - here, that is ${shell.account}` : ''}.
               </p>
             </div>
 

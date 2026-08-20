@@ -162,8 +162,23 @@ export function AdminShellPage({ session, onSignOut }: AdminShellPageProps) {
               )}
             </div>
             <div className={styles.colAddress}>
-              <span className={styles.address}>
-                {shell.username}@{shell.host}:{shell.port}
+              {/*
+                The account it will actually connect as, which is not always one
+                somebody typed: a shell with no username runs as the account this
+                server runs as, the same as `ssh build.internal` does. Shown
+                rather than left off, because the whole of the privilege question
+                is which account it is, and a row that answered it only for some
+                shells would be a row nobody could read.
+              */}
+              <span
+                className={styles.address}
+                title={
+                  shell.username === null
+                    ? `No account was named, so commands run as ${shell.account} - the account this server itself runs as`
+                    : undefined
+                }
+              >
+                {shell.account}@{shell.host}:{shell.port}
               </span>
             </div>
             <div className={styles.colKey}>
