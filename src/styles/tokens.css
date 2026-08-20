@@ -129,17 +129,6 @@
   /* Controls */
   --control-height: 40px;
   --top-nav-height: 64px;
-  /*
-   * Everything standing in the top bar: the mark, the workspace selector, the
-   * go-anywhere box, the round buttons, the avatar, the account block.
-   *
-   * Named because the bar only reads as one row when they agree, and they used
-   * to agree by several rules happening to say 32px. Two did not say it at all
-   * - the account block and the go-anywhere box had no height of their own and
-   * came to whatever their line boxes measured, which is the one thing on this
-   * bar the stylesheet does not decide.
-   */
-  --top-nav-item-height: 32px;
   --sidebar-width: 240px;
   /*
    * The attribution strip along the bottom of the shell: its own padding, the
