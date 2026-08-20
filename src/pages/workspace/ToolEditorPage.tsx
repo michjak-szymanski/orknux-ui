@@ -1,10 +1,26 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
+import type { ValueType } from '../../api/actions';
+import { VALUE_TYPES, namesObject, tsType, valueTypeLabel } from '../../api/functions';
+import { fetchWorkspaceObjects } from '../../api/objects';
+import type { WorkflowObject } from '../../api/objects';
 import type { SessionUser } from '../../api/session';
-import { deleteTool, fetchTool, setToolEnabled, timeAgo, updateTool, validateToolSource } from '../../api/tools';
-import type { Tool } from '../../api/tools';
+import {
+  deleteTool,
+  fetchTool,
+  sameToolParameters,
+  setToolEnabled,
+  timeAgo,
+  toolParametersOf,
+  updateTool,
+  validateToolSource,
+  withToolParameters,
+} from '../../api/tools';
+import type { Tool, ToolParam } from '../../api/tools';
+import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import codeIcon from '../../assets/code.svg';
+import plusIcon from '../../assets/plus.svg';
 import wandIcon from '../../assets/wand.svg';
 import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
@@ -12,10 +28,14 @@ import { CodeDiff } from '../../components/CodeDiff';
 import { CodeEditor } from '../../components/CodeEditor';
 import type { CodeEditorHandle } from '../../components/CodeEditor';
 import { Loader } from '../../components/Loader';
-import { compile } from '../../components/monaco';
+import { compile, declareObjects } from '../../components/monaco';
+import { objectTypes } from '../../components/objectTypes';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './EditorPage.module.css';
+
+/** The whole of a workspace's shapes fits the picker. */
+const OBJECT_PAGE_SIZE = 100;
 
 export interface ToolEditorPageProps {
   session: SessionUser;
@@ -39,6 +59,24 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [source, setSource] = useState('');
+  /**
+   * What this tool takes, in the order the sandbox passes it.
+   *
+   * The same list the function editor keeps, and kept the same way: the panel
+   * and the declaration in the code are one signature written twice, so a
+   * change here is written into the code below before it can be saved.
+   */
+  const [params, setParams] = useState<ToolParam[]>([]);
+  /** What a parameter can name, and what the editor declares to Monaco. */
+  const [objects, setObjects] = useState<WorkflowObject[]>([]);
+  /**
+   * Whether the code has been left alone once since it was opened.
+   *
+   * A tool stored before it had a parameter list may already disagree with its
+   * own declaration, and rewriting it the moment somebody opens the page would
+   * mark the editor dirty without them touching anything.
+   */
+  const synced = useRef(false);
   const [caret, setCaret] = useState({ line: 1, column: 1 });
 /*
    * Null until something has actually been checked.
@@ -88,7 +126,59 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
     setName(found.name);
     setDescription(found.description ?? '');
     setSource(found.typescript ?? found.source);
+    setParams(found.params);
   }
+
+  /*
+   * The objects this workspace defines, fetched for two jobs at once: filling
+   * the pickers, and being declared to the editor so an annotation naming one
+   * resolves. Without the declaration every tool taking an object would be
+   * underlined for a type the language service had never heard of.
+   */
+  useEffect(() => {
+    if (workspaceId === '') return;
+    fetchWorkspaceObjects(workspaceId, 0, OBJECT_PAGE_SIZE)
+      .then((page) => setObjects(page.content))
+      .catch(() => setObjects([]));
+  }, [workspaceId]);
+
+  useEffect(() => {
+    declareObjects(objectTypes(objects));
+  }, [objects]);
+
+  /** What an object is called, for the annotation that has to name it. */
+  const objectNameOf = (objectId: string | null | undefined): string | null =>
+    objects.find((held) => held.id === objectId)?.name ?? null;
+
+  /** The tool's parameter list, as TypeScript would write it. */
+  const declarations = useMemo(
+    () =>
+      params
+        .filter((param) => param.name.trim() !== '')
+        .map((param) => `${param.name.trim()}: ${tsType(param.type, objectNameOf(param.objectId))}`),
+    [params, objects],
+  );
+
+  /*
+   * The code follows the panel.
+   *
+   * Adding a parameter here rewrites the declaration to take it, because a
+   * parameter the code does not bind is one the agent fills and the tool never
+   * reads - and finding that out from a tool that quietly ignored an argument
+   * is the worst way to find it out.
+   */
+  useEffect(() => {
+    if (tool === null) return;
+    if (!synced.current) {
+      synced.current = true;
+      return;
+    }
+    setSource((current) => {
+      const next = withToolParameters(current, tool.name, declarations);
+      if (next !== current) setSaved(false);
+      return next;
+    });
+  }, [tool, declarations]);
 
   useEffect(() => {
     function onSuggested(event: Event) {
@@ -164,9 +254,42 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
         return;
       }
 
-      apply(await updateTool(tool.id, { source: emitted.javascript, typescript: offered.code }));
+      /*
+       * The parameter list, read back off the code that was offered.
+       *
+       * The assistant is asked for a whole tool, and its parameters are in the
+       * declaration it wrote - so the panel is derived from the same text that
+       * is about to be compiled rather than left saying what the tool took
+       * before. That is what makes the two impossible to disagree.
+       */
+      const read = toolParametersOf(offered.code, tool.name, objects, params);
+      if ('problem' in read) {
+        failOffer(
+          `The parameters could not be read - ${read.problem}.`,
+          `I tried to accept it and could not read its parameters - ${read.problem}. It was not saved.`,
+        );
+        return;
+      }
+
+      const moved = !sameToolParameters(read.params, params);
+      const stored = await updateTool(tool.id, {
+        source: emitted.javascript,
+        typescript: offered.code,
+        params: moved ? read.params : undefined,
+      });
+      /*
+       * Applied before the panel is told anything, and the effect that keeps
+       * the code in step with the panel is left one pass to do nothing in: it
+       * would otherwise put the old parameter list straight back into the code
+       * that was just accepted.
+       */
+      synced.current = false;
+      apply(stored);
       setSaved(true);
-      setStatus({ ok: true, message: 'The suggested change is saved.' });
+      setStatus({
+        ok: true,
+        message: moved ? 'The suggested change is saved, parameters and all.' : 'The suggested change is saved.',
+      });
       settleOffer('I accepted the change and it is saved.');
     } catch (cause) {
       const reason = cause instanceof Error ? cause.message : 'It could not be saved.';
@@ -229,6 +352,9 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
           description: description.trim(),
           source: emitted.javascript,
           typescript: source,
+          // A half-written row is not a parameter yet, and sending it would be
+          // refused for a name no script can be called by.
+          params: params.filter((param) => param.name.trim() !== ''),
         }),
       );
       setSaved(true);
@@ -452,6 +578,163 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                     placeholder="What an agent reads to decide whether to call this."
                   />
                 </div>
+              </div>
+
+              {/*
+                What the tool takes, and the reason this page exists in this
+                shape: a tool's arguments used to be one hard-coded `input` an
+                agent had to guess the contents of from the description above.
+                They are declared here now, exactly as a function's are, and the
+                declaration in the code follows what is typed here.
+              */}
+              <div className={styles.panelSection}>
+                <h2 className={styles.panelHeading}>Parameters</h2>
+                <div className={styles.paramList}>
+                  {params.map((param, index) => (
+                    <Fragment key={index}>
+                      <div className={styles.paramRow}>
+                        <div className={styles.paramTopLine}>
+                          <span className={`${styles.paramField} ${styles.paramFieldName}`}>
+                            <label className={styles.paramLabel} htmlFor={`param-name-${index}`}>
+                              Name
+                            </label>
+                            <input
+                              id={`param-name-${index}`}
+                              className={`${styles.paramName} ${styles.inputMono}`}
+                              type="text"
+                              value={param.name}
+                              aria-label={`Parameter ${index + 1} name`}
+                              onChange={(event) => {
+                                setParams((current) =>
+                                  current.map((row, at) => (at === index ? { ...row, name: event.target.value } : row)),
+                                );
+                                setSaved(false);
+                              }}
+                            />
+                          </span>
+                          <span className={styles.paramField}>
+                            <label className={styles.paramLabel} htmlFor={`param-type-${index}`}>
+                              Type
+                            </label>
+                            <span className={styles.paramTypeSelect}>
+                              <select
+                                id={`param-type-${index}`}
+                                className={styles.typeBadge}
+                                value={param.type}
+                                aria-label={`Parameter ${index + 1} type`}
+                                onChange={(event) => {
+                                  const type = event.target.value as ValueType;
+                                  setParams((current) =>
+                                    current.map((row, at) =>
+                                      at === index
+                                        ? {
+                                            ...row,
+                                            type,
+                                            /*
+                                             * An object parameter has to name one, so the
+                                             * first is chosen rather than leaving a row that
+                                             * looks finished and is refused on save. Anything
+                                             * else drops the reference: a stale id under a
+                                             * string is one that comes back later.
+                                             */
+                                            objectId: namesObject(type) ? (row.objectId ?? objects[0]?.id ?? null) : null,
+                                          }
+                                        : row,
+                                    ),
+                                  );
+                                  setSaved(false);
+                                }}
+                              >
+                                {VALUE_TYPES.map((type) => (
+                                  <option
+                                    key={type}
+                                    value={type}
+                                    // Nothing to name yet: the workspace has no objects.
+                                    disabled={namesObject(type) && objects.length === 0}
+                                  >
+                                    {valueTypeLabel(type)}
+                                  </option>
+                                ))}
+                              </select>
+                              <img src={chevronDown12Icon} alt="" width={12} height={12} />
+                            </span>
+                          </span>
+                          <button
+                            type="button"
+                            className={styles.removeParam}
+                            aria-label={`Remove ${param.name || `parameter ${index + 1}`}`}
+                            onClick={() => {
+                              setParams((current) => current.filter((_, at) => at !== index));
+                              setSaved(false);
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+
+                        {/*
+                          Which object, on a second line inside the same box: the
+                          line above is already three controls wide, and an
+                          object's name is longer than a type's. Inside, because
+                          the name, the type and the object it names are one
+                          parameter.
+                        */}
+                        {namesObject(param.type) && (
+                          <div className={styles.paramObjectLine}>
+                            <div className={styles.paramObjectRow}>
+                              <select
+                                className={`${styles.paramObject} ${styles.inputMono}`}
+                                value={param.objectId ?? ''}
+                                aria-label={`Object for ${param.name || `parameter ${index + 1}`}`}
+                                onChange={(event) => {
+                                  setParams((current) =>
+                                    current.map((row, at) =>
+                                      at === index ? { ...row, objectId: event.target.value } : row,
+                                    ),
+                                  );
+                                  setSaved(false);
+                                }}
+                              >
+                                {objects.map((held) => (
+                                  <option key={held.id} value={held.id}>
+                                    {held.name} · {held.propertyCount} fields
+                                  </option>
+                                ))}
+                              </select>
+                              <img src={chevronDown12Icon} alt="" width={12} height={12} />
+                            </div>
+                            {param.objectId !== null && param.objectId !== undefined && param.objectId !== '' && (
+                              <Link
+                                className={styles.jump}
+                                to={`/workspace/${workspaceId}/objects/${param.objectId}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                title="Opens the object's definition in a new tab"
+                                aria-label={`Open definition of ${objectNameOf(param.objectId) ?? 'the object'} for ${param.name || `parameter ${index + 1}`}`}
+                              >
+                                Open definition &#8599;
+                              </Link>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </Fragment>
+                  ))}
+                  <button
+                    type="button"
+                    className={styles.addParam}
+                    onClick={() => {
+                      setParams((current) => [...current, { name: '', type: 'STRING' }]);
+                      setSaved(false);
+                    }}
+                  >
+                    <img src={plusIcon} alt="" width={12} height={12} />
+                    Add Parameter
+                  </button>
+                </div>
+                <p className={styles.paramHint}>
+                  An agent calling this tool fills these in by name. The declaration below takes them in this order.
+                </p>
               </div>
 
               {tool !== null && (

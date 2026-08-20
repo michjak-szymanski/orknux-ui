@@ -908,3 +908,225 @@
   background: color-mix(in srgb, var(--color-danger) 12%, transparent);
   border-bottom: 1px solid var(--color-border);
 }
+
+/*
+ * A tool's parameters, in the boxes the function editor puts them in.
+ *
+ * Copied rather than shared, and knowingly: these rules and the function
+ * editor's are one design, and the moment either page is restyled the other has
+ * to follow. Extracting them - a shared stylesheet, or the whole row as a
+ * component - is the right end state and is a separate change, because the
+ * function editor is being worked on in the same breath as this.
+ */
+.paramList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+/*
+ * The whole parameter, in one box: the name, the type and - when the type names
+ * one - the object are one thing, so they share one outline. Roomier on top than
+ * a plain row, because the fields carry labels notched into their own outlines
+ * and those sit half above the field.
+ */
+.paramRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  width: 100%;
+  padding: var(--space-16) var(--space-10) var(--space-10);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.paramTopLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  width: 100%;
+}
+
+/* A labelled field. The label is notched into the field's own outline, and it
+   needs an anchor, which is this. */
+.paramField {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.paramFieldName {
+  flex: 1 0 0;
+}
+
+.paramLabel {
+  position: absolute;
+  top: 0;
+  left: var(--space-8);
+  z-index: 1;
+  /* Half above the line and half below, so the outline runs through it. */
+  transform: translateY(-50%);
+  padding: 0 var(--space-4);
+  /* The row behind, so the outline breaks for the word rather than crossing it. */
+  background: var(--color-background);
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.paramName {
+  width: 100%;
+  min-width: 0;
+  /* An outline of its own, because that is what the label is notched into. */
+  padding: var(--space-8) var(--space-8) var(--space-6);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  outline: none;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.paramName:focus {
+  border-color: var(--color-accent-brand);
+}
+
+/*
+ * The type's own select wrapper, which is not `.typeSelect` above: that one
+ * belongs to an object's property row and is as wide as the cell it stands in.
+ * This one is a badge at the end of a line and must not shrink.
+ */
+.paramTypeSelect {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.paramTypeSelect > img {
+  position: absolute;
+  right: var(--space-4);
+  pointer-events: none;
+}
+
+.paramTypeSelect > select {
+  padding-right: var(--space-20);
+}
+
+.typeBadge {
+  flex-shrink: 0;
+  padding: var(--space-8) var(--space-6) var(--space-6);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.removeParam {
+  flex-shrink: 0;
+  padding: 0 var(--space-4);
+  background: none;
+  border: 0;
+  font-size: var(--text-lg);
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.removeParam:hover {
+  color: var(--color-danger);
+}
+
+.addParam {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+  width: 100%;
+  padding: var(--space-8);
+  background: none;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.addParam:hover {
+  border-color: var(--color-accent-brand);
+  color: var(--color-text-primary);
+}
+
+/* Which object, on its own line inside the parameter's box. */
+.paramObjectLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+.paramObjectLine > .paramObjectRow {
+  flex: 1 0 0;
+  min-width: 0;
+}
+
+.paramObjectRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.paramObjectRow > img {
+  position: absolute;
+  right: var(--space-8);
+  pointer-events: none;
+}
+
+.paramObject {
+  flex: 1 0 0;
+  min-width: 0;
+  padding: var(--space-6) var(--space-24) var(--space-6) var(--space-8);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+/*
+ * The link out of a field to the definition it points at. Kept off the line's
+ * shrinking half so a long object name truncates the select, not the way to go
+ * and read it.
+ */
+.jump {
+  flex: none;
+  font-size: var(--text-sm);
+  color: var(--color-accent-brand);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.jump:hover {
+  text-decoration: underline;
+}
+
+/* What a choice above means, said under it - and said more quietly than it. */
+.paramHint {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
