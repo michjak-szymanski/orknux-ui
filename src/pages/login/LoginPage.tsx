@@ -163,7 +163,18 @@ export function LoginPage({ onSubmit, onResetPassword, version = `v${__APP_VERSI
             <button type="submit" className={styles.submit} disabled={!canSubmit}>
               {submitting ? 'Signing in…' : 'Sign In'}
             </button>
-            <p className={styles.authNote}>Authenticating via LDAP</p>
+            {/*
+              What this card is allowed to claim. "Authenticating via LDAP" was
+              printed under the button whatever the server answered, so the
+              all-in-one image - which ships no directory at all - told everybody
+              who opened it that it was about to reach one. The server names what
+              it has; this says that and nothing more.
+            */}
+            <p className={styles.authNote}>
+              {signIn?.method === 'INTERNAL'
+                ? `Signing in with ${signIn.displayName}`
+                : 'Authenticating via LDAP'}
+            </p>
           </div>
         </form>
         )}

@@ -54,8 +54,15 @@ export async function logout(): Promise<void> {
   await request('/api/session', { method: 'DELETE' });
 }
 
-/** How this installation signs people in. */
-export type AuthMethod = 'LDAP' | 'OIDC';
+/**
+ * How this installation signs people in.
+ *
+ * INTERNAL is a password box like LDAP, against accounts the installation holds
+ * itself rather than a directory. It is what the all-in-one image runs on, and
+ * that image has no directory to reach - so the card must not say it is reaching
+ * one.
+ */
+export type AuthMethod = 'LDAP' | 'INTERNAL' | 'OIDC';
 
 export interface AuthMethodInfo {
   method: AuthMethod;
