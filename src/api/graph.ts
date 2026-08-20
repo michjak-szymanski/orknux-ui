@@ -50,6 +50,21 @@ export interface GraphNode {
   yesLabel?: string | null;
   noLabel?: string | null;
   /**
+   * Whether this action has a second way out for the case where it fails.
+   *
+   * On, the node grows a FAILURE handle and a run that could not do the work
+   * follows that edge instead of stopping. Only an action has one; every other
+   * kind ignores it.
+   */
+  fallbackEnabled?: boolean;
+  /**
+   * How many times in all a run may attempt this action; null or 1 is once.
+   * Held between 1 and 10 by the server.
+   */
+  retryAttempts?: number | null;
+  /** How long a failed attempt is left alone before the next, in seconds. */
+  retryBackoffSeconds?: number | null;
+  /**
    * What this node passes, decided here rather than on the definition. Seeded
    * from the action when one is picked; editing it touches only this node.
    */
@@ -93,8 +108,15 @@ export interface GraphPort {
   display: string;
 }
 
-/** Which way out of a condition an edge leaves by. */
-export type EdgeBranch = 'YES' | 'NO';
+/**
+ * Which way out of its source an edge leaves by.
+ *
+ * YES or NO out of a condition, FAILURE out of an action that handles its own
+ * failure. An action's happy path is deliberately not marked: it stays the
+ * unmarked edge it has always been, so switching a fallback on adds a line
+ * rather than rewriting the one already drawn.
+ */
+export type EdgeBranch = 'YES' | 'NO' | 'FAILURE';
 
 export interface GraphEdge {
   source: string;
@@ -131,7 +153,7 @@ const GRAPH_FIELDS = `
   enabled
   nodes {
     key kind name description agentId triggerId actionId conditionId objectId outputName icon orientation
-    yesLabel noLabel x y
+    yesLabel noLabel fallbackEnabled retryAttempts retryBackoffSeconds x y
     mappings { name expression mode sourceNodeKey }
     inputs { name type display }
     outputs { name type display }

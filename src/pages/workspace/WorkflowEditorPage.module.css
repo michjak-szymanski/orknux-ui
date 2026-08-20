@@ -1127,6 +1127,24 @@ select.input {
   background: var(--color-text-muted);
 }
 
+/*
+ * The lower door of an action that handles its own failure.
+ *
+ * A condition's two answers are both ordinary outcomes, so its handles are the
+ * accent and the muted grey. A failure is not an ordinary outcome, and the one
+ * thing worth reading off the canvas is which of the two lines is the one taken
+ * when the work did not happen - so it is red, and so is the line drawn from it.
+ */
+.handleFail {
+  background: var(--color-danger);
+}
+
+.branchFail {
+  top: calc(70% - 8px);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
 /* The two names, side by side, because they are one decision. */
 .branchNames {
   display: flex;
@@ -1136,4 +1154,64 @@ select.input {
 .branchInput {
   flex: 1 1 0;
   min-width: 0;
+}
+
+/* How many goes, and how long between them: one policy, so one row. */
+.retryFields {
+  display: flex;
+  gap: var(--space-8);
+}
+
+.retryField {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+/*
+ * Two boxes side by side need saying which is which, and the panel's own label
+ * is already spent on the pair of them.
+ */
+.retryCaption {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* Nothing to wait between one attempt, so the box is not one to type into. */
+.retryFieldOff {
+  opacity: 0.5;
+}
+
+.retryFieldOff .inputWrapper {
+  background: var(--color-surface-raised);
+}
+
+.retryUnit {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/*
+ * A switch in the panel: one thing to turn on, with the words beside it rather
+ * than above, since the sentence is what says what turning it on does.
+ */
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.checkRow:hover {
+  border-color: var(--color-accent-brand);
 }

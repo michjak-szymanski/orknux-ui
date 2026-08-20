@@ -104,9 +104,32 @@ export interface WorkflowEditorPageProps {
 /** What each canvas node carries; React Flow keeps it under `data`. */
 interface NodeData extends Record<string, unknown> {
   kind: NodeKind;
-  /** What a condition's two ways out are called; null means Yes and No. */
+  /**
+   * What a node's two ways out are called; null means whatever the kind's
+   * default is - Yes and No on a condition, If works and If fails on an action
+   * that handles its own failure.
+   */
   yesLabel?: string | null;
   noLabel?: string | null;
+  /**
+   * Whether this action has a second way out for the case where it fails.
+   *
+   * On, the node grows a failure handle and a line drawn from it is where a run
+   * goes when the action could not do its work. Only an action has one: every
+   * other kind stops the run when it fails, as it always did.
+   */
+  fallbackEnabled?: boolean;
+  /**
+   * How many times in all a run may attempt this action; null or 1 is once.
+   * The server holds it between 1 and 10.
+   */
+  retryAttempts?: number | null;
+  /**
+   * How long a failed attempt is left alone before the next, in seconds. The
+   * same wait before every attempt, and meaningless without a second one - so
+   * the panel only takes it once there is more than one attempt to sit between.
+   */
+  retryBackoffSeconds?: number | null;
   name: string;
   description: string | null;
   /** The agent an agent node instances; it supplies the model and instructions. */
@@ -671,6 +694,97 @@ const KIND_CLASS: Record<NodeKind, string> = {
   SESSION: 'session',
 };
 
+/**
+ * What a node's two ways out are called when nobody has named them.
+ *
+ * A condition answers a question, so Yes and No. An action either did its work
+ * or did not, so If works and If fails. The server keeps one pair of words for
+ * both kinds and leaves the wording to here, so the defaults are written once
+ * rather than in each place that draws them.
+ */
+const BRANCH_DEFAULTS: Record<'CONDITION' | 'ACTION', { yes: string; no: string }> = {
+  CONDITION: { yes: 'Yes', no: 'No' },
+  ACTION: { yes: 'If works', no: 'If fails' },
+};
+
+/** Whether this node leaves by two doors rather than one. */
+function branches(node: NodeData): boolean {
+  return node.kind === 'CONDITION' || (node.kind === 'ACTION' && node.fallbackEnabled === true);
+}
+
+/** The words on a node's two ways out, its own or the kind's. */
+function waysOut(node: NodeData): { yes: string; no: string } {
+  const fallback = BRANCH_DEFAULTS[node.kind === 'CONDITION' ? 'CONDITION' : 'ACTION'];
+  return { yes: node.yesLabel ?? fallback.yes, no: node.noLabel ?? fallback.no };
+}
+
+/**
+ * A whole number typed into a box, held inside what the server will take.
+ *
+ * Empty comes back null rather than zero, because a box nobody has filled in is
+ * the absence of a policy and not a policy of none. Held to the range here as
+ * well as on the server, so the panel never shows a number that would come back
+ * from a save as a different one.
+ */
+function whole(typed: string, least: number, most: number): number | null {
+  if (typed.trim() === '') return null;
+  const held = Number.parseInt(typed, 10);
+  if (Number.isNaN(held)) return null;
+  return Math.min(most, Math.max(least, held));
+}
+
+/**
+ * Two ways out of one node, spaced along whichever edge they leave by.
+ *
+ * A condition leaves by the answer it gave; an action that handles its own
+ * failure leaves by whether it worked. That is one shape drawn twice - two dots
+ * a third and two thirds along the output edge, each with its words beside it -
+ * so it is written once and told apart by two things only: whether the lower
+ * door is a failure, which decides its colour, and the id of each door, which
+ * is the branch the saved edge carries.
+ *
+ * An action's upper door has no id on purpose. Its happy path is stored as the
+ * unmarked edge it has always been, so switching a fallback on adds a line
+ * instead of rewriting the one already drawn - and an edge with no handle named
+ * on it can only find a handle that has none.
+ */
+function WaysOut({
+  facing,
+  upperId,
+  lowerId,
+  labels,
+  failure,
+}: {
+  facing: Position;
+  upperId?: string;
+  lowerId: string;
+  labels: { yes: string; no: string };
+  failure: boolean;
+}) {
+  return (
+    <>
+      <Handle
+        id={upperId}
+        className={`${styles.handle} ${styles.handleYes}`}
+        type="source"
+        position={facing}
+        style={alongEdge(facing, '35%')}
+      />
+      <span className={`${styles.branchLabel} ${styles.branchYes}`}>{labels.yes}</span>
+      <Handle
+        id={lowerId}
+        className={`${styles.handle} ${failure ? styles.handleFail : styles.handleNo}`}
+        type="source"
+        position={facing}
+        style={alongEdge(facing, '70%')}
+      />
+      <span className={`${styles.branchLabel} ${failure ? styles.branchFail : styles.branchNo}`}>
+        {labels.no}
+      </span>
+    </>
+  );
+}
+
 function GraphNodeView({ data, selected }: NodeProps) {
   const node = data as NodeData;
   /*
@@ -699,28 +813,14 @@ function GraphNodeView({ data, selected }: NodeProps) {
       )}
       {/*
         A condition leaves by one of two doors, and each says which answer it
-        is. Everything else has the one way out it always had - a node that
-        asks nothing has nothing to answer.
+        is; so does an action that has been given a fallback, where the two
+        doors are worked and did not. Everything else has the one way out it
+        always had - a node with nothing to decide has nothing to leave by.
       */}
       {node.kind === 'CONDITION' ? (
-        <>
-          <Handle
-            id="yes"
-            className={`${styles.handle} ${styles.handleYes}`}
-            type="source"
-            position={facing.output}
-            style={alongEdge(facing.output, '35%')}
-          />
-          <span className={`${styles.branchLabel} ${styles.branchYes}`}>{node.yesLabel ?? 'Yes'}</span>
-          <Handle
-            id="no"
-            className={`${styles.handle} ${styles.handleNo}`}
-            type="source"
-            position={facing.output}
-            style={alongEdge(facing.output, '70%')}
-          />
-          <span className={`${styles.branchLabel} ${styles.branchNo}`}>{node.noLabel ?? 'No'}</span>
-        </>
+        <WaysOut facing={facing.output} upperId="yes" lowerId="no" labels={waysOut(node)} failure={false} />
+      ) : node.kind === 'ACTION' && node.fallbackEnabled === true ? (
+        <WaysOut facing={facing.output} lowerId="fail" labels={waysOut(node)} failure />
       ) : (
         <Handle className={`${styles.handle} ${styles.handleOut}`} type="source" position={facing.output} />
       )}
@@ -1165,10 +1265,21 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
    */
   const drawnEdges = useMemo<Edge[]>(() => {
     const carrying = edges.map((edge) => {
+      /*
+       * A failure line is drawn as one. Two lines leave an action that handles
+       * its own failure, and which of them is the exception is the whole of
+       * what somebody needs to read off the canvas - a graph where both are the
+       * same grey says the node has two ways out and nothing about which is
+       * which. Red and thicker, so it is the line you notice.
+       */
+      const shown =
+        edge.sourceHandle === 'fail'
+          ? { ...edge, style: { ...edge.style, stroke: 'var(--color-danger)', strokeWidth: 2 } }
+          : edge;
       const held = carried.get(`${edge.source}->${edge.target}`);
-      if (held === undefined) return edge;
+      if (held === undefined) return shown;
       return {
-        ...edge,
+        ...shown,
         type: 'carried',
         data: { says: held.says, offset: labelOffsets[edge.id], onMoveLabel: moveLabel },
       };
@@ -1374,6 +1485,9 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
               description: node.description,
               yesLabel: node.yesLabel ?? null,
               noLabel: node.noLabel ?? null,
+              fallbackEnabled: node.fallbackEnabled ?? false,
+              retryAttempts: node.retryAttempts ?? null,
+              retryBackoffSeconds: node.retryBackoffSeconds ?? null,
               agentId: node.agentId,
               triggerId: node.triggerId,
               actionId: node.actionId,
@@ -1390,7 +1504,14 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
         setPorts(Object.fromEntries(graph.nodes.map((node) => [node.key, { inputs: node.inputs, outputs: node.outputs }])));
         setEdges(
           graph.edges.map((edge) => {
-            const sourceHandle = edge.branch === 'YES' ? 'yes' : edge.branch === 'NO' ? 'no' : null;
+            const sourceHandle =
+              edge.branch === 'YES'
+                ? 'yes'
+                : edge.branch === 'NO'
+                  ? 'no'
+                  : edge.branch === 'FAILURE'
+                    ? 'fail'
+                    : null;
             return {
               /*
                * Named from the handle, not from the branch as it is stored. The
@@ -1602,6 +1723,15 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           outputName: kind === 'AGENT' ? 'reply' : null,
           orientation: null,
           /*
+           * A new action stops the run when it fails, which is what every node
+           * did before there was anything else to do. Handling it is a thing
+           * somebody switches on for the one action worth handling, not a
+           * second door on every node in the graph.
+           */
+          fallbackEnabled: false,
+          retryAttempts: null,
+          retryBackoffSeconds: null,
+          /*
            * Every other kind takes its icon from the definition it points at.
            * A session points at nothing - the key it holds is the whole of it -
            * so this is the one kind that has to be given one outright, and a
@@ -1747,6 +1877,9 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           data.orientation === draft.orientation &&
           data.yesLabel === draft.yesLabel &&
           data.noLabel === draft.noLabel &&
+          data.fallbackEnabled === draft.fallbackEnabled &&
+          data.retryAttempts === draft.retryAttempts &&
+          data.retryBackoffSeconds === draft.retryBackoffSeconds &&
           sameMappings(data.mappings, shown.mappings);
         if (same) return node;
         setSaved(false);
@@ -1794,7 +1927,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     const moved: string[] = [];
     for (const node of nodes) {
       const data = node.data as NodeData;
-      const shape = `${data.kind}:${data.orientation ?? 'LEFT_TO_RIGHT'}`;
+      const shape = `${data.kind}:${data.orientation ?? 'LEFT_TO_RIGHT'}:${branches(data)}`;
       now.set(node.id, shape);
       if (shapes.current.get(node.id) !== shape) moved.push(node.id);
     }
@@ -2041,6 +2174,15 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           orientation: data.orientation ?? null,
           yesLabel: data.yesLabel ?? null,
           noLabel: data.noLabel ?? null,
+          fallbackEnabled: data.fallbackEnabled ?? false,
+          retryAttempts: data.retryAttempts ?? null,
+          /*
+           * Nothing to wait between one attempt. The panel already refuses to
+           * take a wait without a second attempt to put it before; this is the
+           * same rule where it is written down, so a policy taken away leaves
+           * no orphaned number behind on the node.
+           */
+          retryBackoffSeconds: (data.retryAttempts ?? 1) > 1 ? (data.retryBackoffSeconds ?? null) : null,
           mappings: data.mappings,
           x: node.position.x,
           y: node.position.y,
@@ -2050,7 +2192,14 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
         source: edge.source,
         target: edge.target,
         // The handle it leaves from is the answer it carries.
-        branch: edge.sourceHandle === 'yes' ? 'YES' : edge.sourceHandle === 'no' ? 'NO' : null,
+        branch:
+          edge.sourceHandle === 'yes'
+            ? 'YES'
+            : edge.sourceHandle === 'no'
+              ? 'NO'
+              : edge.sourceHandle === 'fail'
+                ? 'FAILURE'
+                : null,
       })),
     };
   }
@@ -2087,6 +2236,13 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
             data.conditionId,
             data.objectId,
             data.outputName,
+            /*
+             * In because the validator has something to say about it: a node
+             * that handles failure with nothing leading out of its failure door
+             * is warned about, and the warning has to arrive when the switch is
+             * flicked rather than at the next save.
+             */
+            data.fallbackEnabled,
             data.mappings,
           ];
         }),
@@ -3308,6 +3464,150 @@ Change the keystroke in Preferences.`}
                 )}
 
 
+                {/*
+                  What the node does about failing, which is two decisions and
+                  not one: how many goes it gets, and where the run goes once it
+                  has used them up. Only an action has either - every other kind
+                  either asks a question or hands something on, and neither can
+                  fail in a way a second go would fix.
+                */}
+                {draft.kind === 'ACTION' && (
+                  <div className={styles.field}>
+                    <span className={styles.label}>Retries</span>
+                    <div className={styles.retryFields}>
+                      <label className={styles.retryField}>
+                        <span className={styles.retryCaption}>Attempts</span>
+                        <div className={styles.inputWrapper}>
+                          <input
+                            className={styles.input}
+                            type="number"
+                            min={1}
+                            max={10}
+                            step={1}
+                            placeholder="1"
+                            value={draft.retryAttempts ?? ''}
+                            onChange={(event) =>
+                              setDraft({ ...draft, retryAttempts: whole(event.target.value, 1, 10) })
+                            }
+                          />
+                        </div>
+                      </label>
+                      {/*
+                        Dead while there is one attempt, because a wait between
+                        attempts describes nothing when there is nothing to wait
+                        between. Left live it reads as a delay before the action,
+                        which is not what it is and not what the server would do
+                        with it - so it goes grey and empties itself, and a
+                        number is taken again once a second attempt gives it
+                        something to sit between.
+                      */}
+                      <label
+                        className={
+                          (draft.retryAttempts ?? 1) > 1
+                            ? styles.retryField
+                            : `${styles.retryField} ${styles.retryFieldOff}`
+                        }
+                      >
+                        <span className={styles.retryCaption}>Wait between</span>
+                        <div className={styles.inputWrapper}>
+                          <input
+                            className={styles.input}
+                            type="number"
+                            min={0}
+                            max={3600}
+                            step={1}
+                            placeholder={(draft.retryAttempts ?? 1) > 1 ? '0' : '—'}
+                            disabled={(draft.retryAttempts ?? 1) <= 1}
+                            value={(draft.retryAttempts ?? 1) > 1 ? (draft.retryBackoffSeconds ?? '') : ''}
+                            onChange={(event) =>
+                              setDraft({
+                                ...draft,
+                                retryBackoffSeconds: whole(event.target.value, 0, 3600),
+                              })
+                            }
+                          />
+                          <span className={styles.retryUnit}>s</span>
+                        </div>
+                      </label>
+                    </div>
+                    <p className={styles.parameterHint}>
+                      How many goes in all, not extra ones: one is the single attempt every action has
+                      always had. The same wait before each retry, in seconds. A failure the server has
+                      already settled — a channel that does not exist, a request refused for what it
+                      said — is never tried again however many are asked for.
+                    </p>
+                  </div>
+                )}
+
+                {draft.kind === 'ACTION' && (
+                  <div className={styles.field}>
+                    <span className={styles.label}>When it fails</span>
+                    <label className={styles.checkRow}>
+                      <input
+                        type="checkbox"
+                        checked={draft.fallbackEnabled === true}
+                        onChange={(event) => {
+                          const handling = event.target.checked;
+                          setDraft({ ...draft, fallbackEnabled: handling });
+                          /*
+                           * Switched off, the failure line goes with it. The
+                           * door it left by is no longer on the node, and an
+                           * edge leaving by a door that is not there is refused
+                           * by the save - so the graph would be unsaveable until
+                           * somebody worked out for themselves which line to
+                           * delete. The happy path is never touched either way.
+                           */
+                          if (!handling && selectedKey !== null) {
+                            setEdges((current) =>
+                              current.filter(
+                                (edge) => !(edge.source === selectedKey && edge.sourceHandle === 'fail'),
+                              ),
+                            );
+                          }
+                        }}
+                      />
+                      <span>Handle it here</span>
+                    </label>
+                    <p className={styles.parameterHint}>
+                      Off, a failure stops the run where it happened. On, the node grows a second handle
+                      and the run carries on down whatever is wired to it — so the graph says what to
+                      do about a failure instead of the run simply ending.
+                    </p>
+                    {/*
+                      The same two names a condition has, for the same reason:
+                      the words beside the handles are most of what makes a graph
+                      legible, and they belong to the node rather than to the
+                      lines leaving it. Only shown while there are two ways out
+                      to name.
+                    */}
+                    {draft.fallbackEnabled === true && (
+                      <>
+                        <div className={styles.branchNames}>
+                          <input
+                            className={`${styles.input} ${styles.branchInput}`}
+                            value={draft.yesLabel ?? ''}
+                            placeholder={BRANCH_DEFAULTS.ACTION.yes}
+                            aria-label="What the working path is called"
+                            onChange={(event) => setDraft({ ...draft, yesLabel: event.target.value || null })}
+                          />
+                          <input
+                            className={`${styles.input} ${styles.branchInput}`}
+                            value={draft.noLabel ?? ''}
+                            placeholder={BRANCH_DEFAULTS.ACTION.no}
+                            aria-label="What the failure path is called"
+                            onChange={(event) => setDraft({ ...draft, noLabel: event.target.value || null })}
+                          />
+                        </div>
+                        <p className={styles.parameterHint}>
+                          The upper handle is the run going on as it always did, and the line already
+                          drawn from this node stays exactly as it is. The lower one is the failure, and
+                          its line is the red one.
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
+
                 {draft.kind === 'CONDITION' && (
                   <div className={styles.field}>
                     <span className={styles.label}>Ways out</span>
@@ -3321,14 +3621,14 @@ Change the keystroke in Preferences.`}
                       <input
                         className={`${styles.input} ${styles.branchInput}`}
                         value={draft.yesLabel ?? ''}
-                        placeholder="Yes"
+                        placeholder={BRANCH_DEFAULTS.CONDITION.yes}
                         aria-label="What the yes branch is called"
                         onChange={(event) => setDraft({ ...draft, yesLabel: event.target.value || null })}
                       />
                       <input
                         className={`${styles.input} ${styles.branchInput}`}
                         value={draft.noLabel ?? ''}
-                        placeholder="No"
+                        placeholder={BRANCH_DEFAULTS.CONDITION.no}
                         aria-label="What the no branch is called"
                         onChange={(event) => setDraft({ ...draft, noLabel: event.target.value || null })}
                       />

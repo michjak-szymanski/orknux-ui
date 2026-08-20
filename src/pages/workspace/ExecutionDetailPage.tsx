@@ -776,10 +776,34 @@ function NodeDetailsPanel({
           <span className={styles.carriedNote}>Carried over from the earlier run</span>
         )}
       </PanelField>
-      {/* Which way the run left a condition by; every other kind has no answer. */}
+      {/*
+        Which way the run left this step by. A condition answers Yes or No; an
+        action that handles its own failure answers Failure, which is the one
+        worth a sentence - a step that failed and a run that carried on look
+        like a contradiction until the page says the failure was the answer.
+      */}
       {step.branch !== null && (
-        <PanelField label="Branch">{step.branch === 'YES' ? 'Yes' : 'No'}</PanelField>
+        <PanelField label="Branch">
+          {step.branch === 'FAILURE' ? (
+            <>
+              Failure
+              <span className={styles.carriedNote}>
+                The run carried on down this node&apos;s failure line rather than stopping here.
+              </span>
+            </>
+          ) : step.branch === 'YES' ? (
+            'Yes'
+          ) : (
+            'No'
+          )}
+        </PanelField>
       )}
+      {/*
+        Said only where it says something. Every step has attempts, and one is
+        what every step without a retry policy spends - a field reading 1 on
+        every node in every run is a row nobody reads twice.
+      */}
+      {step.attempts > 1 && <PanelField label="Attempts">{step.attempts}</PanelField>}
       <PanelField label="Duration">{formatDuration(step.durationSeconds)}</PanelField>
       <PanelField label="Started">{timeOf(step.startedAt)}</PanelField>
       <PanelField label="Finished">{timeOf(step.finishedAt)}</PanelField>

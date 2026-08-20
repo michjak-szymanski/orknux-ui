@@ -44,8 +44,17 @@ export interface ExecutionStep {
   /** The catalogue entry the step ran, which the run links back to. */
   actionId: string | null;
   conditionId: string | null;
-  /** Which way out of a condition this step sent the run; null for every other kind. */
+  /**
+   * Which way out of itself this step sent the run; null where it answered
+   * nothing. FAILURE means the step failed and the run went on down the node's
+   * failure edge rather than stopping there.
+   */
   branch: EdgeBranch | null;
+  /**
+   * How many attempts the step spent. More than one only where its node was
+   * given a retry policy and needed it.
+   */
+  attempts: number;
   /**
    * Copied from an earlier run rather than performed here, which is what every
    * step ahead of a re-run's starting point is. Its status and its times are
@@ -183,7 +192,7 @@ export function formatRelative(iso: string): string {
 const EXECUTION_DETAIL_FIELDS = `
   id workspaceId workflowId workflowName status trigger startedAt finishedAt durationSeconds error
   stoppedAtNodeKey stoppedReason startedFrom
-  steps { key kind name description status startedAt finishedAt durationSeconds input output error actionId conditionId branch carriedOver x y }
+  steps { key kind name description status startedAt finishedAt durationSeconds input output error actionId conditionId branch attempts carriedOver x y }
   edges { source target }
   logs { id nodeKey at level message }
   temporalUrl
