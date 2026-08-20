@@ -413,7 +413,7 @@
 
 /* A property name is read after a dot, so it is shown the way it is written. */
 .propertyName {
-  padding: var(--space-8) var(--space-8) var(--space-6);
+  padding: var(--space-12) var(--space-12) var(--space-10);
   background: none;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-4);
@@ -473,7 +473,7 @@
   display: flex;
   gap: var(--space-2);
   width: 100%;
-  padding: var(--space-2);
+  padding: var(--space-4);
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-6);
@@ -482,7 +482,7 @@
 .holdsOption,
 .holdsOptionActive {
   flex: 1 0 0;
-  padding: var(--space-4) var(--space-8);
+  padding: var(--space-8) var(--space-12);
   border: 0;
   border-radius: var(--radius-4);
   font-family: inherit;
@@ -534,7 +534,7 @@
    */
   position: absolute;
   top: 0;
-  left: var(--space-8);
+  left: var(--space-10);
   z-index: 1;
   /* Half above the line and half below, so the outline runs through it. */
   transform: translateY(-50%);
@@ -551,7 +551,7 @@
 
 .propertyDescription {
   width: 100%;
-  padding: var(--space-8) var(--space-8) var(--space-6);
+  padding: var(--space-12) var(--space-12) var(--space-10);
   background: none;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-4);
