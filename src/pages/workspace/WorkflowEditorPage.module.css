@@ -1087,6 +1087,66 @@ select.input {
 }
 
 /*
+ * The one point a line can be taken hold of by.
+ *
+ * Sits on the line, at its middle until it is dragged and at the bend after
+ * that, so the thing that moves the line is where the line is. Only lines with
+ * nothing written on them get one: a labelled line is dragged by its label,
+ * which is the same point and a far bigger target.
+ *
+ * Quiet by default. One of these per line on a graph of twenty is twenty dots,
+ * and a canvas dotted all over reads as clutter rather than as an offer - so
+ * it is small and the colour of the line until the pointer finds it. Always
+ * drawn, though, rather than appearing on hover: a handle you have to already
+ * know about is one nobody finds.
+ */
+.edgePoint {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: 1px solid var(--color-surface-raised);
+  border-radius: 50%;
+  background: var(--color-text-muted);
+  opacity: 0.45;
+  /* Reachable, like the label: `nodrag nopan` keeps the press off the canvas. */
+  pointer-events: all;
+  cursor: grab;
+  /*
+   * Above the nodes, for the same reason the label is: a line runs over a node
+   * as often as not, and React Flow gives every node a z-index of its own.
+   * Below the label, so a point never covers words.
+   */
+  z-index: 4;
+  touch-action: none;
+  /* Opacity only. The position is an inline transform, and animating that
+     would drag the handle along behind the pointer. */
+  transition: opacity 120ms ease, box-shadow 120ms ease;
+}
+
+.edgePoint:hover,
+.edgePoint:focus-visible {
+  opacity: 1;
+  background: var(--color-accent-brand);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent-brand) 30%, transparent);
+  outline: none;
+}
+
+/* Holding a bend. Lit, so the thing to double-click is the thing you can see. */
+.edgePointMoved {
+  opacity: 1;
+  background: var(--color-accent-brand);
+}
+
+.edgePointDragging {
+  cursor: grabbing;
+  opacity: 1;
+  background: var(--color-accent-brand);
+  /* Above the other handles while it is being moved between them. */
+  z-index: 6;
+}
+
+/*
  * The two ways out of a condition.
  *
  * Named beside the handle they belong to rather than on the line leaving it:

@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
+import type {
+  KeyboardEvent as ReactKeyboardEvent,
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent,
+  ReactNode,
+} from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Background,
@@ -341,19 +346,30 @@ function withHeldName(data: NodeData, held: { index: number; was: string } | nul
 /** Enough to see what a line is for; the panel has the rest. */
 const FIELDS_ON_A_LINE = 4;
 
+/** How far one press of an arrow key moves a line's point. About a nudge. */
+const NUDGE = 8;
+
 /** One thing a line carries: the field read, and the parameter it answers. */
 interface Carried {
   from: string;
   to: string;
 }
 
-/** How far a label has been dragged from where its line would have put it. */
-export interface LabelOffset {
+/**
+ * The one point a line is pulled through, as a distance from its own middle.
+ *
+ * Held as a distance rather than a place on the canvas so that it survives the
+ * nodes moving: drag a node and the line's middle goes with it, and the bend
+ * keeps the same relation to the line it belongs to. A point kept as a canvas
+ * position would stay behind while its line walked off, which is the stale
+ * waypoint that drags a line into nonsense.
+ */
+export interface EdgeOffset {
   x: number;
   y: number;
 }
 
-const NO_OFFSET: LabelOffset = { x: 0, y: 0 };
+const NO_OFFSET: EdgeOffset = { x: 0, y: 0 };
 
 /**
  * What an edge is called, which is where it leaves from and where it arrives.
@@ -445,26 +461,27 @@ function CarriedEdge({
   const rest = says.length - shown.length;
 
   /*
-   * Where this label has been dragged to.
+   * Where this line has been pulled to.
    *
-   * A busy graph stacks labels on each other and over nodes, and the line they
-   * belong to is what decides where they land. Dragging moves the label alone:
-   * the edge, and what it says, are untouched by it.
+   * One point per edge, and it is the same point whichever way it is taken
+   * hold of: a labelled line is dragged by its label, a bare one by the handle
+   * below. Two separately draggable things on one line would each want to bend
+   * it, and a line cannot be bent twice through one point.
    */
-  const offset = (data?.offset as LabelOffset | undefined) ?? NO_OFFSET;
-  const moveLabel = data?.onMoveLabel as ((edgeId: string, to: LabelOffset) => void) | undefined;
+  const offset = (data?.offset as EdgeOffset | undefined) ?? NO_OFFSET;
+  const movePoint = data?.onMovePoint as ((edgeId: string, to: EdgeOffset) => void) | undefined;
 
   /*
-   * A moved label takes its line with it.
+   * A moved point takes its line with it.
    *
    * The label used to slide away on its own, leaving the line where it was -
    * so on a graph with more than a couple of them, nothing said which label
    * belonged to which line, which is the one thing a label has to say. The
-   * line is now drawn through wherever the label has been put: in by the left
+   * line is now drawn through wherever the point has been put: in by the left
    * of it, out by the right, each half the same curve React Flow would have
    * drawn on its own.
    *
-   * Only when it has been moved. An untouched label sits on its line already,
+   * Only when it has been moved. An untouched point sits on its line already,
    * and routing through it would bend a straight run for nothing.
    */
   const at = { x: labelX + offset.x, y: labelY + offset.y };
@@ -489,10 +506,10 @@ function CarriedEdge({
   // The label sits in flow coordinates; a pointer moves in screen ones, and the
   // difference between them is exactly the zoom.
   const zoom = useStore((state) => state.transform[2]);
-  const [drag, setDrag] = useState<{ x: number; y: number; from: LabelOffset } | null>(null);
+  const [drag, setDrag] = useState<{ x: number; y: number; from: EdgeOffset } | null>(null);
 
-  const onPointerDown = (event: ReactPointerEvent<HTMLUListElement>) => {
-    if (moveLabel === undefined || event.button !== 0) return;
+  const onPointerDown = (event: ReactPointerEvent<HTMLElement>) => {
+    if (movePoint === undefined || event.button !== 0) return;
     // Kept from the canvas underneath, which would otherwise pan instead.
     event.stopPropagation();
     event.preventDefault();
@@ -500,24 +517,94 @@ function CarriedEdge({
     setDrag({ x: event.clientX, y: event.clientY, from: offset });
   };
 
-  const onPointerMove = (event: ReactPointerEvent<HTMLUListElement>) => {
-    if (drag === null || moveLabel === undefined) return;
+  const onPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
+    if (drag === null || movePoint === undefined) return;
     event.stopPropagation();
-    moveLabel(id, {
+    movePoint(id, {
       x: drag.from.x + (event.clientX - drag.x) / zoom,
       y: drag.from.y + (event.clientY - drag.y) / zoom,
     });
   };
 
-  const endDrag = (event: ReactPointerEvent<HTMLUListElement>) => {
+  const endDrag = (event: ReactPointerEvent<HTMLElement>) => {
     if (drag === null) return;
     event.currentTarget.releasePointerCapture(event.pointerId);
     setDrag(null);
   };
 
+  /**
+   * The same drag from the keyboard, for somebody who cannot hold a pointer
+   * down. The delete keys straighten it rather than removing anything.
+   */
+  const onKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (movePoint === undefined) return;
+    const step: Record<string, EdgeOffset> = {
+      ArrowLeft: { x: -NUDGE, y: 0 },
+      ArrowRight: { x: NUDGE, y: 0 },
+      ArrowUp: { x: 0, y: -NUDGE },
+      ArrowDown: { x: 0, y: NUDGE },
+    };
+    const by = step[event.key];
+    if (by !== undefined) {
+      event.preventDefault();
+      event.stopPropagation();
+      movePoint(id, { x: offset.x + by.x, y: offset.y + by.y });
+      return;
+    }
+    if (event.key === 'Delete' || event.key === 'Backspace' || event.key === 'Escape') {
+      /*
+       * Straightened, not deleted. The canvas takes Delete as "remove what is
+       * selected", and the point is on a line somebody wants to keep.
+       */
+      event.preventDefault();
+      event.stopPropagation();
+      movePoint(id, NO_OFFSET);
+    }
+  };
+
   return (
     <>
       <BaseEdge id={id} path={path} markerEnd={markerEnd} style={style} />
+      {says.length === 0 && movePoint !== undefined && (
+        <EdgeLabelRenderer>
+          {/*
+           * The one point a bare line can be taken hold of.
+           *
+           * Lines are routed for you, and where two nodes sit awkwardly the
+           * line between them runs through whatever is in the way. A labelled
+           * line has always had a handle - its label - and a line carrying
+           * nothing had none, which is most of the lines on most graphs. This
+           * is that handle: small and quiet on a line still running where it
+           * was put, lit once it is holding a bend, so the thing to
+           * double-click is the thing you can see.
+           */}
+          <button
+            type="button"
+            className={[
+              styles.edgePoint,
+              moved ? styles.edgePointMoved : '',
+              drag !== null ? styles.edgePointDragging : '',
+              'nodrag',
+              'nopan',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            style={{ transform: `translate(-50%, -50%) translate(${at.x}px, ${at.y}px)` }}
+            data-edge={id}
+            aria-label={moved ? 'Bend on this line' : 'Bend this line'}
+            title="Drag to bend the line; double-click to straighten it"
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+            onKeyDown={onKeyDown}
+            onDoubleClick={(event) => {
+              event.stopPropagation();
+              movePoint(id, NO_OFFSET);
+            }}
+          />
+        </EdgeLabelRenderer>
+      )}
       {says.length > 0 && (
         <EdgeLabelRenderer>
           <ul
@@ -538,9 +625,11 @@ function CarriedEdge({
               // Back to where the line would have put it — for a label dragged
               // somewhere unhelpful and now hard to aim at.
               event.stopPropagation();
-              moveLabel?.(id, NO_OFFSET);
+              movePoint?.(id, NO_OFFSET);
             }}
-            title={moveLabel === undefined ? undefined : 'Drag to move; double-click to put it back'}
+            title={
+              movePoint === undefined ? undefined : 'Drag to move it and the line; double-click to put it back'
+            }
           >
             {shown.map((one) => (
               <li className={styles.edgeLabelRow} key={`${one.from}->${one.to}`}>
@@ -988,70 +1077,107 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   const { workspaceId = '', workflowId = '' } = useParams();
 
   /*
-   * Where each edge's label has been dragged to, per workflow.
+   * Where each line has been pulled to, per workflow.
    *
    * Kept in the browser rather than on the server, because the graph has
    * nowhere to put it: an edge is a source and a target and nothing else. So
    * this is one person's arrangement of their own view, and it behaves like
-   * one — it does not travel to anybody else looking at the same workflow.
+   * one — it does not travel to anybody else looking at the same workflow. A
+   * colleague opening this workflow sees the lines as they are routed for
+   * them, and moving one here does not move one there. Giving a bend to the
+   * workflow itself means a column on the edge and a change to the graph
+   * format the server reads and writes, which is a different job from this.
+   *
+   * Stored under the name it has always had. The offset used only to move a
+   * label, and now shapes the line as well, but it is the same number in the
+   * same place - and a new name would leave everybody's arrangement behind in
+   * the old one for nothing.
    */
-  const labelKey = `orknux.edge-labels.${workflowId}`;
-  const [labelOffsets, setLabelOffsets] = useState<Record<string, LabelOffset>>({});
+  const pointKey = `orknux.edge-labels.${workflowId}`;
+  const [edgeOffsets, setEdgeOffsets] = useState<Record<string, EdgeOffset>>({});
 
   useEffect(() => {
     try {
-      const held = window.localStorage.getItem(labelKey);
-      setLabelOffsets(held === null ? {} : (JSON.parse(held) as Record<string, LabelOffset>));
+      const held = window.localStorage.getItem(pointKey);
+      setEdgeOffsets(held === null ? {} : (JSON.parse(held) as Record<string, EdgeOffset>));
     } catch {
-      // Unreadable or turned off: the labels simply start where the lines put them.
-      setLabelOffsets({});
+      // Unreadable or turned off: the lines simply start where they are routed.
+      setEdgeOffsets({});
     }
-  }, [labelKey]);
+  }, [pointKey]);
 
-  const moveLabel = useCallback(
-    (edgeId: string, to: LabelOffset) => {
-      setLabelOffsets((held) => {
+  /** Writes the arrangement down and hands it back, for a state updater to return. */
+  const remember = useCallback(
+    (next: Record<string, EdgeOffset>) => {
+      try {
+        window.localStorage.setItem(pointKey, JSON.stringify(next));
+      } catch {
+        // A browser that will not remember is no reason to refuse the drag.
+      }
+      return next;
+    },
+    [pointKey],
+  );
+
+  const movePoint = useCallback(
+    (edgeId: string, to: EdgeOffset) => {
+      setEdgeOffsets((held) => {
         const next = { ...held };
         // Back at the line's own position is the absence of an offset, not an
         // offset of nothing, so a reset leaves nothing behind to remember.
         if (to.x === 0 && to.y === 0) delete next[edgeId];
         else next[edgeId] = to;
-        try {
-          window.localStorage.setItem(labelKey, JSON.stringify(next));
-        } catch {
-          // A browser that will not remember is no reason to refuse the drag.
-        }
-        return next;
+        return remember(next);
       });
     },
-    [labelKey],
+    [remember],
   );
 
   /**
-   * Takes a label's position from one edge id to another.
+   * Drops the bends kept for lines that are no longer on the canvas.
+   *
+   * A line deleted and drawn again is a new line to whoever draws it, and
+   * having it come back bent the way the old one was - out of a store nobody
+   * can see - is worse than never having been able to bend it. So an id the
+   * canvas no longer has is forgotten rather than kept in case it returns.
+   *
+   * Held back until the graph is on the canvas, because until then there are
+   * no edges to compare against and every bend would look like a stale one.
+   */
+  const forgetMissing = useCallback(
+    (drawn: string[]) => {
+      setEdgeOffsets((held) => {
+        const on = new Set(drawn);
+        const stale = Object.keys(held).filter((edgeId) => !on.has(edgeId));
+        if (stale.length === 0) return held;
+        const next = { ...held };
+        stale.forEach((edgeId) => delete next[edgeId]);
+        return remember(next);
+      });
+    },
+    [remember],
+  );
+
+  /**
+   * Takes a line's bend from one edge id to another.
    *
    * An edge is named after the two nodes it joins, so rewiring one renames it,
    * and a position kept against the old name would be left behind on a line
-   * that no longer exists. Nothing is stored for a label still sitting where
-   * its line put it, so there is usually nothing to carry.
+   * that no longer exists. Nothing is stored for a line still running where it
+   * was routed, so there is usually nothing to carry.
    */
-  const carryLabel = useCallback(
+  const carryPoint = useCallback(
     (from: string, to: string) => {
       if (from === to) return;
-      setLabelOffsets((held) => {
+      setEdgeOffsets((held) => {
         const moved = held[from];
         if (moved === undefined) return held;
         const next = { ...held, [to]: moved };
         delete next[from];
-        try {
-          window.localStorage.setItem(labelKey, JSON.stringify(next));
-        } catch {
-          // As above: a browser that will not remember is not an error here.
-        }
-        return next;
+        return remember(next);
       });
     },
-    [labelKey],
+    [remember],
   );
   const navigate = useNavigate();
   const { updateNode } = useReactFlow();
@@ -1089,6 +1215,16 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
    * false while Discard re-reads, which is the same fetch and the same lie.
    */
   const [graphArrived, setGraphArrived] = useState(false);
+  /**
+   * Which workflow the lines on the canvas belong to.
+   *
+   * Opening another workflow from here keeps this component and swaps the id
+   * under it, so for one render the bends read for the new workflow sit beside
+   * the old one's edges. Anything comparing the two has to know they do not go
+   * together yet, and `graphArrived` cannot say so: it is only lowered later,
+   * when the effect that fetches runs.
+   */
+  const drawnFor = useRef<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -1276,12 +1412,17 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
         edge.sourceHandle === 'fail'
           ? { ...edge, style: { ...edge.style, stroke: 'var(--color-danger)', strokeWidth: 2 } }
           : edge;
+      /*
+       * Every line drawn by us, whether it carries anything or not. The type
+       * used to be put on only the lines with something to say, because the
+       * label was all it added; it now adds the handle that shapes the line,
+       * and a line carrying nothing is exactly the one nobody could move.
+       */
       const held = carried.get(`${edge.source}->${edge.target}`);
-      if (held === undefined) return shown;
       return {
         ...shown,
         type: 'carried',
-        data: { says: held.says, offset: labelOffsets[edge.id], onMoveLabel: moveLabel },
+        data: { says: held?.says ?? [], offset: edgeOffsets[edge.id], onMovePoint: movePoint },
       };
     });
 
@@ -1294,8 +1435,8 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
         type: 'carried',
         data: {
           says: held.says,
-          offset: labelOffsets[`reads:${held.source}->${held.target}`],
-          onMoveLabel: moveLabel,
+          offset: edgeOffsets[`reads:${held.source}->${held.target}`],
+          onMovePoint: movePoint,
         },
         style: { stroke: 'var(--color-accent-brand)', strokeDasharray: '6 4' },
         // Not the graph's, so not something a drag can move or a key can delete.
@@ -1313,7 +1454,19 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       }));
 
     return [...carrying, ...loose];
-  }, [edges, carried, labelOffsets, moveLabel]);
+  }, [edges, carried, edgeOffsets, movePoint]);
+
+  /*
+   * Nothing tells us an edge has gone - it simply stops being in the list - so
+   * the bends are swept against what is drawn rather than hooked to a delete.
+   * Only once the graph has arrived and arrived intact: a failed load leaves
+   * an empty canvas, and sweeping against that would throw away an arrangement
+   * because the network was down.
+   */
+  useEffect(() => {
+    if (!graphArrived || loadError !== null || drawnFor.current !== workflowId) return;
+    forgetMissing(drawnEdges.map((edge) => edge.id));
+  }, [graphArrived, loadError, workflowId, drawnEdges, forgetMissing]);
 
   /**
    * Puts what the server said onto the nodes themselves, so the canvas can draw
@@ -1530,6 +1683,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
         // means to the buttons. Leaving it false lights Publish on a graph
         // nobody has touched.
         setSaved(true);
+        drawnFor.current = workflowId;
       })
       .catch((cause: unknown) => {
         setLoadError(cause instanceof Error ? cause.message : 'Could not load the workflow.');
@@ -1672,10 +1826,10 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
        * without this a label somebody had placed would jump back onto a line
        * that had merely moved, which is the one thing dragging it was for.
        */
-      carryLabel(edge.id, name);
+      carryPoint(edge.id, name);
       setSaved(false);
     },
-    [carryLabel, edges, setEdges],
+    [carryPoint, edges, setEdges],
   );
 
   /**

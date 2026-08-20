@@ -16,6 +16,19 @@ it on another node's input to send it somewhere else, or take hold of the other
 end to change where it leaves from. A line dropped on nothing goes back where it
 was, and one dropped on wiring the graph already has is left alone.
 
+Lines are routed for you, and where two nodes sit awkwardly a line can run
+through whatever is between them. Each line has one point it can be pulled
+through: a small handle at its middle, or its label where it has one. Drag the
+point and the line bends to follow it; double-click the point to put the line
+back the way it was drawn. The point can also be nudged with the arrow keys once
+it has focus, and Escape straightens the line.
+
+Where a line has been pulled to is remembered by your browser and nowhere else.
+It is an arrangement of your own view: a colleague opening the same workflow
+sees the lines routed as they were drawn for them, and it does not travel with
+an export. A line deleted from the graph forgets its bend, so drawing it again
+starts it straight.
+
 - **Things to fix** lists what is not yet valid, and refreshes as you edit.
   A workflow with entries here can be saved but should not be trusted to run.
 - **Parameter connections** are drawn as labelled edges: where a node reads a
