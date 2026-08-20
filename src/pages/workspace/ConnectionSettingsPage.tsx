@@ -19,6 +19,7 @@ import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import lockIcon from '../../assets/lock-keyhole.svg';
 import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
+import { FieldHint } from '../../components/FieldHint';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import dialogStyles from '../../components/Dialog.module.css';
 import { Loader } from '../../components/Loader';
@@ -316,9 +317,15 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
             {mail && (
               <>
                 <div className={styles.field}>
-                  <label className={styles.label} htmlFor="connection-smtp-from">
-                    From Address
-                  </label>
+                  <span className={styles.labelWithHint}>
+                    <label className={styles.label} htmlFor="connection-smtp-from">
+                      From Address
+                    </label>
+                    <FieldHint label="From Address">
+                      Every mail this connection sends is from this address, and a provider that has not
+                      authorised it refuses the message however good the password is.
+                    </FieldHint>
+                  </span>
                   <div className={styles.inputWrapper}>
                     <input
                       id="connection-smtp-from"
@@ -330,10 +337,6 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
                       onChange={(event) => setSmtpFrom(event.target.value)}
                     />
                   </div>
-                  <p className={styles.fieldHint}>
-                    Every mail this connection sends is from this address, and a provider that has
-                    not authorised it refuses the message however good the password is.
-                  </p>
                 </div>
 
                 <div className={styles.field}>
@@ -420,9 +423,15 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
 
             {connection?.type === 'SLACK' && (
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="connection-app-token">
-                  App-Level Token
-                </label>
+                <span className={styles.labelWithHint}>
+                  <label className={styles.label} htmlFor="connection-app-token">
+                    App-Level Token
+                  </label>
+                  <FieldHint label="App-Level Token">
+                    Slack&apos;s Socket Mode token, with connections:write. Given one, orknux listens for
+                    mentions and runs the triggers waiting on them.
+                  </FieldHint>
+                </span>
                 <div className={styles.inputWrapper}>
                   <input
                     id="connection-app-token"
@@ -434,10 +443,6 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
                     onChange={(event) => setAppToken(event.target.value)}
                   />
                 </div>
-                <p className={styles.fieldHint}>
-                  Slack&apos;s Socket Mode token, with connections:write. Given one, orknux listens for
-                  mentions and runs the triggers waiting on them.
-                </p>
               </div>
             )}
 

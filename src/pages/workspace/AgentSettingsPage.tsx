@@ -19,6 +19,7 @@ import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
 import { DeleteAgentDialog } from '../../components/DeleteAgentDialog';
+import { FieldHint } from '../../components/FieldHint';
 import { IconField } from '../../components/IconField';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
@@ -393,6 +394,11 @@ export function AgentSettingsPage({ session, onSignOut }: AgentSettingsPageProps
                 />
                 <span>Let this agent ask orknux about orknux</span>
               </label>
+              {/*
+                Printed rather than behind the (?): the second sentence is a
+                consequence of ticking the box, and a loop nothing here breaks
+                is not something to find out about after granting it.
+              */}
               <p className={styles.hint}>
                 Its workspace’s workflows, runs and agents — and it can start a workflow, which really runs
                 it. An agent that starts a workflow which asks an agent is a loop nothing here breaks.
@@ -415,6 +421,11 @@ export function AgentSettingsPage({ session, onSignOut }: AgentSettingsPageProps
                 />
                 <span>Let this agent open a shell and run commands on it</span>
               </label>
+              {/*
+                Printed for the same reason. "Can do whatever that account can"
+                is the whole of what this switch hands over, and hiding it
+                behind a hover is hiding the reason to think before ticking.
+              */}
               <p className={styles.hint}>
                 It opens a session on one of the machines an administrator set up under Admin →
                 Shell, gets a working directory of its own on it, and runs commands there. What
@@ -425,8 +436,10 @@ export function AgentSettingsPage({ session, onSignOut }: AgentSettingsPageProps
             </div>
 
             <div className={styles.field}>
-              <span className={styles.label}>MCP Servers</span>
-              <p className={styles.hint}>External tool servers this agent can connect to</p>
+              <span className={styles.labelWithHint}>
+                <span className={styles.label}>MCP Servers</span>
+                <FieldHint label="MCP Servers">External tool servers this agent can connect to.</FieldHint>
+              </span>
               <div className={styles.servers}>
                 {mcpServers.map((server) => (
                   <span key={server} className={styles.chip}>

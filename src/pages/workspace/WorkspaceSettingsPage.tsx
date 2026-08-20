@@ -17,6 +17,7 @@ import {
 import type { Workspace } from '../../api/workspaces';
 import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import { AppShell } from '../../components/AppShell';
+import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
@@ -206,7 +207,18 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       {workspace?.administered === true && (
         <form className={styles.card} onSubmit={rename}>
           <div className={styles.sectionTitle}>
-            <h2 className={styles.sectionHeading}>General</h2>
+            <span className={styles.labelWithHint}>
+              <h2 className={styles.sectionHeading}>General</h2>
+              {/*
+                Against the card rather than against a field: it is about what
+                this card does not decide, which is not a footnote to the name
+                or to the description on their own.
+              */}
+              <FieldHint label="General">
+                Who can see this workspace is set on the Roles screen by an installation administrator,
+                not here.
+              </FieldHint>
+            </span>
             <div className={styles.rule} />
           </div>
 
@@ -240,11 +252,6 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             </div>
           </div>
 
-          <p className={styles.hint}>
-            Who can see this workspace is set on the Roles screen by an installation administrator, not
-            here.
-          </p>
-
           {namingError !== null && (
             <p className={styles.error} role="alert">
               {namingError}
@@ -267,9 +274,15 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         </div>
 
         <div className={styles.field}>
-          <label className={styles.label} htmlFor="companion-model">
-            Companion Model
-          </label>
+          <span className={styles.labelWithHint}>
+            <label className={styles.label} htmlFor="companion-model">
+              Companion Model
+            </label>
+            <FieldHint label="Companion Model">
+              Used for the workspace&rsquo;s own small jobs rather than for the conversation — naming a
+              chat from what was said. A cheap model is the right choice here.
+            </FieldHint>
+          </span>
           <div className={styles.inputWrapper}>
             <select
               id="companion-model"
@@ -290,10 +303,6 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             </select>
             <img src={chevronDown12Icon} alt="" width={12} height={12} />
           </div>
-          <p className={styles.hint}>
-            Used for the workspace&rsquo;s own small jobs rather than for the conversation — naming a chat from
-            what was said. A cheap model is the right choice here.
-          </p>
           {saved && <p className={styles.saved}>Saved.</p>}
           {error !== null && (
             <p className={styles.error} role="alert">
@@ -308,9 +317,15 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
           answers is not a transcript.
         */}
         <div className={styles.field}>
-          <label className={styles.label} htmlFor="transcription-model">
-            Speech-to-text Model
-          </label>
+          <span className={styles.labelWithHint}>
+            <label className={styles.label} htmlFor="transcription-model">
+              Speech-to-text Model
+            </label>
+            <FieldHint label="Speech-to-text Model">
+              Chosen once for the workspace: it is about what this installation runs, not about any one
+              conversation.
+            </FieldHint>
+          </span>
           <div className={styles.inputWrapper}>
             <select
               id="transcription-model"
@@ -330,11 +345,17 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             </select>
             <img src={chevronDown12Icon} alt="" width={12} height={12} />
           </div>
-          <p className={styles.hint}>
-            {models.some((model) => model.kind === 'TRANSCRIPTION')
-              ? 'Chosen once for the workspace: it is about what this installation runs, not about any one conversation.'
-              : 'No transcription model has been added yet. Add one under Models, pointing at your Whisper instance.'}
-          </p>
+          {/*
+            The list being empty is not a footnote about the field, it is what
+            the field has instead of contents - so it stays where the missing
+            options would have been rather than going behind the (?).
+          */}
+          {!models.some((model) => model.kind === 'TRANSCRIPTION') && (
+            <p className={styles.fieldNote}>
+              No transcription model has been added yet. Add one under Models, pointing at your Whisper
+              instance.
+            </p>
+          )}
         </div>
 
         {/*
@@ -343,9 +364,14 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
           answer would talk about it rather than read it.
         */}
         <div className={styles.field}>
-          <label className={styles.label} htmlFor="speech-model">
-            Text-to-speech Model
-          </label>
+          <span className={styles.labelWithHint}>
+            <label className={styles.label} htmlFor="speech-model">
+              Text-to-speech Model
+            </label>
+            <FieldHint label="Text-to-speech Model">
+              A speaker appears under every answer in a chat, which reads it in this model&rsquo;s voice.
+            </FieldHint>
+          </span>
           <div className={styles.inputWrapper}>
             <select
               id="speech-model"
@@ -365,11 +391,12 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             </select>
             <img src={chevronDown12Icon} alt="" width={12} height={12} />
           </div>
-          <p className={styles.hint}>
-            {models.some((model) => model.kind === 'SPEECH')
-              ? 'A speaker appears under every answer in a chat, which reads it in this model’s voice.'
-              : 'No speech model has been added yet. Add one under Models, pointing at whatever reads text aloud.'}
-          </p>
+          {!models.some((model) => model.kind === 'SPEECH') && (
+            <p className={styles.fieldNote}>
+              No speech model has been added yet. Add one under Models, pointing at whatever reads text
+              aloud.
+            </p>
+          )}
         </div>
 
         {/*
@@ -377,9 +404,15 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
           asked questions and calls orknux's own tools to answer them.
         */}
         <div className={styles.field}>
-          <label className={styles.label} htmlFor="quick-chat-model">
-            Quick Chat Model
-          </label>
+          <span className={styles.labelWithHint}>
+            <label className={styles.label} htmlFor="quick-chat-model">
+              Quick Chat Model
+            </label>
+            <FieldHint label="Quick Chat Model">
+              Answers questions about the page somebody is on, and can look up this workspace&rsquo;s
+              workflows and runs to do it.
+            </FieldHint>
+          </span>
           <div className={styles.inputWrapper}>
             <select
               id="quick-chat-model"
@@ -399,10 +432,6 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             </select>
             <img src={chevronDown12Icon} alt="" width={12} height={12} />
           </div>
-          <p className={styles.hint}>
-            Answers questions about the page somebody is on, and can look up this workspace’s workflows and
-            runs to do it.
-          </p>
 
           {/*
             Only where there is a panel to govern. The switch on its own, above
@@ -419,7 +448,13 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                 />
                 <span>Let it make changes</span>
               </label>
-              <p className={styles.hint}>
+              {/*
+                Not behind the (?). This is what ticking the box does, and the
+                run it starts is a real one - a consequence somebody has to have
+                read before they act, not an explanation they may go looking for
+                afterwards.
+              */}
+              <p className={styles.fieldNote}>
                 Off, it can only look things up. On, it can act on this workspace when asked: start a run,
                 repeat one, and turn a workflow or an agent on or off. Those are real — a run that messaged
                 somebody messages them again — and the panel opens over whatever somebody happens to be

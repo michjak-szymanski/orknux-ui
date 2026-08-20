@@ -125,6 +125,12 @@ export function WorkflowSettingsPage({ session, onSignOut }: WorkflowSettingsPag
                   required
                 />
               </div>
+              {/*
+                Not behind the (?). Somebody typing in this box believes they
+                are renaming their own copy; that they are renaming everyone's
+                is a consequence of the edit, and a consequence read afterwards
+                is one that has already happened.
+              */}
               <p className={styles.hint}>
                 The definition is shared, so renaming it affects every workspace using this workflow.
               </p>

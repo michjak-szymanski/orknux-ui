@@ -72,6 +72,18 @@
   color: var(--color-text-secondary);
 }
 
+/*
+ * A label and the (?) that explains it, on one line, so the question mark reads
+ * as belonging to that label rather than floating at the edge of the card. The
+ * same shape the node panel uses, because it is the same control.
+ */
+.labelWithHint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
 .inputWrapper {
   display: flex;
   align-items: center;

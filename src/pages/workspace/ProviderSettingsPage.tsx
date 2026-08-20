@@ -15,9 +15,9 @@ import {
 import type { ModelProvider, ProviderAuthMethod, ProviderType } from '../../api/models';
 import type { SessionUser } from '../../api/session';
 import chevronDown12Icon from '../../assets/chevron-down-12.svg';
-import infoIcon from '../../assets/info.svg';
 import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
+import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
@@ -420,7 +420,19 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
             {/* Only Azure OpenAI has a second way in, so only it offers a choice. */}
             {azure && (
               <div className={styles.field}>
-                <span className={styles.label}>Authentication Method</span>
+                <span className={styles.labelWithHint}>
+                  <span className={styles.label}>Authentication Method</span>
+                  {/*
+                    What the method chosen actually does, said about whichever
+                    is chosen - the field is a pair of tabs, so the answer to
+                    "what is this" changes with the tab and the (?) follows it.
+                  */}
+                  <FieldHint label="Authentication Method">
+                    {entra
+                      ? 'Signs in as an Entra ID service principal: the app registration and its secret are exchanged for a token on each call. No key is stored against the resource.'
+                      : 'Sends one of the keys from the Azure OpenAI resource on every request.'}
+                  </FieldHint>
+                </span>
                 <div className={styles.segmented} role="tablist" aria-label="Authentication method">
                   <button
                     type="button"
@@ -441,11 +453,6 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
                     Service Principal
                   </button>
                 </div>
-                <p className={styles.hint}>
-                  {entra
-                    ? 'Signs in as an Entra ID service principal: the app registration and its secret are exchanged for a token on each call. No key is stored against the resource.'
-                    : 'Sends one of the keys from the Azure OpenAI resource on every request.'}
-                </p>
               </div>
             )}
 
@@ -479,9 +486,19 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
             )}
 
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="provider-secret">
-                {secretLabel} <span className={styles.required}>*</span>
-              </label>
+              <span className={styles.labelWithHint}>
+                <label className={styles.label} htmlFor="provider-secret">
+                  {secretLabel} <span className={styles.required}>*</span>
+                </label>
+                {/* Where to go and get the thing this box wants. */}
+                <FieldHint label={secretLabel}>
+                  {entra
+                    ? 'Register an app in Azure AD → App registrations → Certificates & secrets'
+                    : azure
+                      ? 'Found in Azure Portal → Resource → Keys and Endpoint'
+                      : 'The key the provider issued for this workspace.'}
+                </FieldHint>
+              </span>
               <div className={styles.secretRow}>
                 <input
                   id="provider-secret"
@@ -501,14 +518,6 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
                   </button>
                 )}
               </div>
-              <p className={styles.hintRow}>
-                <img src={infoIcon} alt="" width={14} height={14} />
-                {entra
-                  ? 'Register an app in Azure AD → App registrations → Certificates & secrets'
-                  : azure
-                    ? 'Found in Azure Portal → Resource → Keys and Endpoint'
-                    : 'The key the provider issued for this workspace.'}
-              </p>
             </div>
 
             {entra && (

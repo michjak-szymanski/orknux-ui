@@ -11,6 +11,7 @@ import type { Workspace } from '../../api/workspaces';
 import { AppShell } from '../../components/AppShell';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { DeleteWorkspaceDialog } from '../../components/DeleteWorkspaceDialog';
+import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { shellUser } from '../../session/user';
 import { forgetWorkspaces } from '../../session/workspaces';
@@ -184,7 +185,15 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                 and the picker in it can be changed without taking the row off first.
               */}
               <div className={styles.field}>
-                <span className={styles.label}>Roles</span>
+                <span className={styles.labelWithHint}>
+                  <span className={styles.label}>Roles</span>
+                  <FieldHint label="Roles">
+                    Whoever holds one of these can see the workspace. None assigned keeps it
+                    administrators-only. Administers adds this workspace&rsquo;s settings, its issue
+                    observers and moving an issue in or out &mdash; here only, and nothing
+                    installation-wide.
+                  </FieldHint>
+                </span>
                 <div className={styles.roleList}>
                   {roleIds.map((roleId, index) => (
                     <div key={`${roleId}-${index}`} className={styles.roleRow}>
@@ -273,21 +282,17 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                     + Add Role
                   </button>
 
-                  <p className={styles.hint}>
-                    {roles.length === 0 ? (
-                      <>
-                        No roles are defined yet. Add one on the{' '}
-                        <Link to="/admin/roles">Roles</Link> screen, then assign it here.
-                      </>
-                    ) : (
-                      <>
-                        Whoever holds one of these can see the workspace. None assigned keeps it
-                        administrators-only. Administers adds this workspace&rsquo;s settings, its
-                        issue observers and moving an issue in or out &mdash; here only, and
-                        nothing installation-wide.
-                      </>
-                    )}
-                  </p>
+                  {/*
+                    What the list has instead of rows, so it stays printed: the
+                    add button is dead until somebody goes and makes a role, and
+                    a dead end is not an explanation to go looking for.
+                  */}
+                  {roles.length === 0 && (
+                    <p className={styles.fieldNote}>
+                      No roles are defined yet. Add one on the <Link to="/admin/roles">Roles</Link> screen,
+                      then assign it here.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

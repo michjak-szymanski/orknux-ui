@@ -141,7 +141,22 @@
 }
 
 /* Not in the frame: says what the field actually controls. */
-.hint {
+/*
+ * A label and the (?) that explains it, on one line, so the question mark reads
+ * as belonging to that label. The same shape the node panel uses.
+ */
+.labelWithHint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+/*
+ * What the roles list has instead of rows. Not an explanation of the field -
+ * that is behind the (?) now - so it stays where the missing rows would be.
+ */
+.fieldNote {
   margin: 0;
   font-size: var(--text-sm);
   color: var(--color-text-muted);

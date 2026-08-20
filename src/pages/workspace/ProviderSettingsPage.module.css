@@ -162,19 +162,17 @@
   pointer-events: none;
 }
 
-.hint {
-  margin: 0;
-  font-size: var(--text-md);
-  color: var(--color-text-muted);
-}
-
-.hintRow {
+/*
+ * A label and the (?) that explains it, on one line. What used to stand under
+ * these fields - what an authentication method does, where in the Azure portal
+ * the key is - is behind that control now, so there is no rule for prose under
+ * a field here any more.
+ */
+.labelWithHint {
   display: flex;
   align-items: center;
   gap: var(--space-6);
-  margin: 0;
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
+  min-width: 0;
 }
 
 /* ---- Authentication method ---- */

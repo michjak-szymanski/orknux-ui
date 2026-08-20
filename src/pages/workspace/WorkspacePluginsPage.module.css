@@ -281,9 +281,21 @@
   display: flex;
 }
 
+/*
+ * The switch and the (?) that explains the two words on it, side by side. The
+ * switch keeps its width; the question mark sits after it rather than under it.
+ */
+.modeRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
 /* Written, or read from somewhere else. Two states, so a switch rather than a list. */
 .modeSwitch {
   display: flex;
+  /* Kept the width it had before the (?) stood beside it. */
+  flex: 1 1 auto;
   gap: 2px;
   padding: 2px;
   background: var(--color-bg);
@@ -356,7 +368,12 @@
   font-family: var(--font-mono);
 }
 
-.parameterHint {
+/*
+ * What is left under a parameter once its explanations are behind the (?): a
+ * dead end where the only way to answer it is empty, and a reading of what it
+ * is set to now. Neither is a footnote about the field, so neither is hidden.
+ */
+.parameterNote {
   margin: 0;
   font-size: var(--text-xs);
   line-height: 16px;

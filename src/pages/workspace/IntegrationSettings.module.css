@@ -94,6 +94,18 @@
   color: var(--color-text-secondary);
 }
 
+/*
+ * A label and the (?) that explains it, on one line, so the question mark reads
+ * as belonging to that label. The same shape the node panel uses, because it is
+ * the same control asking the same way.
+ */
+.labelWithHint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
 /* What a field is for, under it, where the design leaves room. */
 .fieldHint {
   margin: 0;

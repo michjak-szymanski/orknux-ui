@@ -100,7 +100,24 @@
   cursor: pointer;
 }
 
-.hint {
+/*
+ * A label and the (?) that explains it, on one line, so the question mark reads
+ * as belonging to that label. The same shape the node panel uses, because it is
+ * the same control asking the same way.
+ */
+.labelWithHint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+/*
+ * What is left under a field once the explanations have gone behind the (?):
+ * what the field has instead of options, and what ticking the box will really
+ * do. Neither is a footnote, so neither is hidden.
+ */
+.fieldNote {
   margin: 0;
   max-width: 70ch;
   font-size: var(--text-sm);

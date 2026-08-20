@@ -11,6 +11,7 @@ import type { SessionUser } from '../../api/session';
 import type { Variable } from '../../api/variables';
 import puzzleIcon from '../../assets/puzzle.svg';
 import { AppShell } from '../../components/AppShell';
+import { FieldHint } from '../../components/FieldHint';
 import { FieldPicker } from '../../components/FieldPicker';
 import type { FieldOption, FieldPickerLabels } from '../../components/FieldPicker';
 import { Loader } from '../../components/Loader';
@@ -376,6 +377,14 @@ function ParameterRow({ pluginId, parameter, variables, busy, onSet, onClear }: 
           <label className={styles.parameterName} htmlFor={fieldId}>
             {parameter.name}
           </label>
+          {/*
+            What the plugin says this parameter is for, asked for rather than
+            printed: a plugin with six parameters printed six paragraphs, and
+            the boxes to fill in were outnumbered by prose about them.
+          */}
+          {parameter.description !== null && (
+            <FieldHint label={parameter.name}>{parameter.description}</FieldHint>
+          )}
           <span className={styles.parameterType}>{parameter.type.toLowerCase()}</span>
           {parameter.required && <span className={styles.required}>required</span>}
           {parameter.secret && <span className={styles.secret}>secret</span>}
@@ -395,26 +404,35 @@ function ParameterRow({ pluginId, parameter, variables, busy, onSet, onClear }: 
         </span>
       </span>
 
-      {parameter.description !== null && <p className={styles.parameterHint}>{parameter.description}</p>}
-
-      <div className={styles.modeSwitch} role="group" aria-label={`${parameter.name} source`}>
-        {(['VALUE', 'REFERENCE'] as Answer[]).map((option) => (
-          <button
-            key={option}
-            type="button"
-            className={mode === option ? `${styles.modeOption} ${styles.modeOptionOn}` : styles.modeOption}
-            aria-pressed={mode === option}
-            disabled={parameter.secret && option === 'VALUE'}
-            title={
-              parameter.secret && option === 'VALUE'
-                ? 'A secret is only ever answered by pointing at a variable'
-                : undefined
-            }
-            onClick={() => setMode(option)}
-          >
-            {option === 'VALUE' ? 'Value' : 'Reference'}
-          </button>
-        ))}
+      <div className={styles.modeRow}>
+        <div className={styles.modeSwitch} role="group" aria-label={`${parameter.name} source`}>
+          {(['VALUE', 'REFERENCE'] as Answer[]).map((option) => (
+            <button
+              key={option}
+              type="button"
+              className={mode === option ? `${styles.modeOption} ${styles.modeOptionOn}` : styles.modeOption}
+              aria-pressed={mode === option}
+              disabled={parameter.secret && option === 'VALUE'}
+              title={
+                parameter.secret && option === 'VALUE'
+                  ? 'A secret is only ever answered by pointing at a variable'
+                  : undefined
+              }
+              onClick={() => setMode(option)}
+            >
+              {option === 'VALUE' ? 'Value' : 'Reference'}
+            </button>
+          ))}
+        </div>
+        {/*
+          The two words the switch offers, explained once beside it. The same
+          sentence stood under every parameter of every plugin, which is a lot
+          of screen for something somebody reads once.
+        */}
+        <FieldHint label="Source">
+          <strong>Value</strong> is used exactly as written. <strong>Reference</strong> reads one of this
+          workspace&apos;s variables, and what that variable holds is never shown here.
+        </FieldHint>
       </div>
 
       {mode === 'REFERENCE' ? (
@@ -464,20 +482,20 @@ function ParameterRow({ pluginId, parameter, variables, busy, onSet, onClear }: 
         </div>
       )}
 
-      <p className={styles.parameterHint}>
-        <strong>Value</strong> is used exactly as written. <strong>Reference</strong> reads one of this
-        workspace&apos;s variables, and what that variable holds is never shown here.
-      </p>
-
+      {/*
+        Both of these stay printed. The first is a dead end - the only way to
+        answer this parameter is a list that is empty - and the second is what
+        the parameter currently is, which is a reading and not an explanation.
+      */}
       {parameter.secret && variables.length === 0 && (
-        <p className={styles.parameterHint}>
+        <p className={styles.parameterNote}>
           A secret is only ever answered by pointing at a variable, and this workspace has none yet. Add
           one on the Variables page and it will be offered here.
         </p>
       )}
 
       {parameter.variableName !== null && (
-        <p className={styles.parameterHint}>
+        <p className={styles.parameterNote}>
           Reads {parameter.variableName} when the plugin runs, so changing that variable changes what the
           plugin is handed.
         </p>
