@@ -40,7 +40,9 @@ import chevronDown12Icon from '../assets/chevron-down-12.svg';
  * modules have finished loading.
  */
 import { ConditionDialog } from './ConditionDialog';
+import own from './ConditionForm.module.css';
 import { DefinitionPicker } from './DefinitionPicker';
+import { FieldHint } from './FieldHint';
 import { IconField } from './IconField';
 
 /**
@@ -66,6 +68,14 @@ export interface ConditionFormStyles {
   select: string;
   inputWrapper: string;
   inputMono: string;
+  /**
+   * What a field has to say for itself where that is not an explanation of it.
+   *
+   * What a field means is behind the (?) beside its label, which the form draws
+   * for itself. What is left under a field is what the (?) must not swallow: a
+   * list with nothing in it yet, a consequence of what saving is about to do,
+   * and the sentence saying what this condition now asks.
+   */
   fieldHint: string;
   toggleRow: string;
   toggleLabel: string;
@@ -502,9 +512,15 @@ export function ConditionForm({
                 created when the condition is saved, not before.
               */}
               <span className={styles.labelRow}>
-                <label className={styles.label} htmlFor="condition-function">
-                  Function
-                </label>
+                <span className={own.labelWithHint}>
+                  <label className={styles.label} htmlFor="condition-function">
+                    Function
+                  </label>
+                  <FieldHint label="Function">
+                    Only functions that return a boolean can answer a condition. It is handed what the
+                    run is carrying.
+                  </FieldHint>
+                </span>
                 {functionId !== '' && functionId !== NEW_FUNCTION && (
                   <Link
                     className={styles.jump}
@@ -530,7 +546,7 @@ export function ConditionForm({
                 searchPlaceholder="Search functions…"
                 create={NEW_FUNCTION_ROW}
               />
-              {functionId === NEW_FUNCTION ? (
+              {functionId === NEW_FUNCTION && (
                 <>
                   <div className={styles.inputWrapper}>
                     <input
@@ -546,16 +562,17 @@ export function ConditionForm({
                       onChange={(event) => setNewFunctionName(event.target.value)}
                     />
                   </div>
+                  {/*
+                    Printed rather than behind the (?): this is what saving is
+                    about to do - bring a function into existence that says no to
+                    everything - and a consequence found after the fact is one
+                    that has already happened.
+                  */}
                   <p className={styles.fieldHint}>
                     Created with this condition, saying no to everything. Open it in Functions to write
                     the question it should be asking.
                   </p>
                 </>
-              ) : (
-                <p className={styles.fieldHint}>
-                  Only functions that return a boolean can answer a condition. It is handed what the run is
-                  carrying.
-                </p>
               )}
             </div>
           )}
@@ -596,6 +613,8 @@ export function ConditionForm({
                     </button>
                   </span>
                 ))}
+                {/* An empty state, not an explanation: it is what the list has
+                    instead of contents, so it stays where the contents would be. */}
                 {values.length === 0 && <span className={styles.fieldHint}>Nothing yet.</span>}
               </div>
               <div className={styles.inputWrapper}>
@@ -636,6 +655,7 @@ export function ConditionForm({
                     </button>
                   </span>
                 ))}
+                {/* The same empty state, for the same reason. */}
                 {members.length === 0 && <span className={styles.fieldHint}>Nothing yet.</span>}
               </div>
               {/*
@@ -659,6 +679,11 @@ export function ConditionForm({
             </div>
           )}
 
+          {/*
+            What this condition asks, in the words the list uses. A reading of
+            the thing being edited rather than a note about a field - it belongs
+            to no field, and there is no label for a (?) to stand beside.
+          */}
           {editing && <p className={styles.fieldHint}>{condition.description}</p>}
         </div>
 

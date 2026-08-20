@@ -24,6 +24,18 @@
   color: var(--color-text-secondary);
 }
 
+/*
+ * The label and the (?) explaining it, held together on the left of the row so
+ * the question mark reads as belonging to the label rather than drifting into
+ * the middle of a row whose right-hand end is Clear.
+ */
+.labelWithHint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
 .box {
   display: flex;
   align-items: center;
@@ -75,10 +87,4 @@
 
 .textButton:hover {
   text-decoration: underline;
-}
-
-.hint {
-  margin: 0;
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
 }

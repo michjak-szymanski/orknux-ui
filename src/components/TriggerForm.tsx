@@ -29,8 +29,10 @@ import { NEW_OBJECT, createObject, fetchWorkspaceObjects } from '../api/objects'
 import type { WorkflowObject } from '../api/objects';
 import { ConditionDialog } from './ConditionDialog';
 import { DefinitionPicker } from './DefinitionPicker';
+import { FieldHint } from './FieldHint';
 import { IconField } from './IconField';
 import { NameDialog } from './NameDialog';
+import own from './TriggerForm.module.css';
 
 /**
  * The class names the form paints itself with.
@@ -57,6 +59,14 @@ export interface TriggerFormStyles {
   inputMono: string;
   inputCron: string;
   prefix: string;
+  /**
+   * What a field has to say for itself where that is not an explanation of it.
+   *
+   * What a field means is behind the (?) beside its label, which the form draws
+   * for itself. What is left under a field is what the (?) must not swallow: an
+   * empty state, a consequence of what saving is about to do, and a reading of
+   * what has just been chosen.
+   */
   fieldHint: string;
   message: string;
   error: string;
@@ -353,9 +363,14 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
           {webhook && (
             <>
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="trigger-webhook-path">
-                  URL
-                </label>
+                <span className={own.labelWithHint}>
+                  <label className={styles.label} htmlFor="trigger-webhook-path">
+                    URL
+                  </label>
+                  <FieldHint label="URL">
+                    Where this installation answers. One trigger per path, across every workspace.
+                  </FieldHint>
+                </span>
                 <div className={styles.inputWrapper}>
                   <span className={styles.prefix}>/api/webhooks/</span>
                   <input
@@ -369,9 +384,6 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                     required
                   />
                 </div>
-                <p className={styles.fieldHint}>
-                  Where this installation answers. One trigger per path, across every workspace.
-                </p>
               </div>
 
               <div className={styles.field}>
@@ -383,9 +395,15 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                   that has not been saved yet.
                 */}
                 <span className={styles.labelRow}>
-                  <label className={styles.label} htmlFor="trigger-object">
-                    Expected object
-                  </label>
+                  <span className={own.labelWithHint}>
+                    <label className={styles.label} htmlFor="trigger-object">
+                      Expected object
+                    </label>
+                    <FieldHint label="Expected object">
+                      What a request has to contain. Anything else is answered 404 &mdash; and what does
+                      match is what the workflow can rely on being handed.
+                    </FieldHint>
+                  </span>
                   {objectId !== '' && (
                     <Link
                       className={styles.jump}
@@ -413,13 +431,11 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                   searchPlaceholder="Search objects…"
                   create={NEW_OBJECT_ROW}
                 />
-                <p className={styles.fieldHint}>
-                  What a request has to contain. Anything else is answered 404 &mdash; and what does
-                  match is what the workflow can rely on being handed.
-                </p>
-                {/* Said out loud, because an object made from here starts empty and
-                    an empty shape demands nothing - which is the opposite of what
-                    somebody choosing an expected object is usually after. */}
+                {/* Said out loud rather than behind the (?), because an object made
+                    from here starts empty and an empty shape demands nothing - which
+                    is the opposite of what somebody choosing an expected object is
+                    usually after. It is a reading of what has just been chosen, and
+                    it is only there while that is what is chosen. */}
                 {objects.find((shape) => shape.id === objectId)?.propertyCount === 0 && (
                   <p className={styles.fieldHint}>
                     This one has no fields yet, so any JSON matches it. Open it in Objects to say what a
@@ -429,9 +445,20 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
               </div>
 
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="trigger-auth">
-                  Authentication
-                </label>
+                <span className={own.labelWithHint}>
+                  <label className={styles.label} htmlFor="trigger-auth">
+                    Authentication
+                  </label>
+                  {/*
+                    Behind the (?), and the two options are not: what each one is
+                    stays written into the rows themselves, where it is the only
+                    thing telling them apart.
+                  */}
+                  <FieldHint label="Authentication">
+                    A caller the function turns down is answered 401, and the refusal is written into
+                    this trigger&apos;s history.
+                  </FieldHint>
+                </span>
                 <div className={styles.inputWrapper}>
                   <select
                     id="trigger-auth"
@@ -445,19 +472,22 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                   </select>
                   <img src={chevronDown12Icon} alt="" width={12} height={12} />
                 </div>
-                <p className={styles.fieldHint}>
-                  A caller the function turns down is answered 401, and the refusal is written into
-                  this trigger&apos;s history.
-                </p>
               </div>
 
               {authType === 'FUNCTION' && (
                 <div className={styles.field}>
                   {/* The same reason as the object above: this is a definition, and it opens. */}
                   <span className={styles.labelRow}>
-                    <label className={styles.label} htmlFor="trigger-auth-function">
-                      Function
-                    </label>
+                    <span className={own.labelWithHint}>
+                      <label className={styles.label} htmlFor="trigger-auth-function">
+                        Function
+                      </label>
+                      <FieldHint label="Function">
+                        Handed the request by name &mdash; <code>body</code>, <code>rawBody</code>,{' '}
+                        <code>headers</code>, <code>path</code> &mdash; then its own external parameters,
+                        which is where a stored secret comes from.
+                      </FieldHint>
+                    </span>
                     {/* Nothing to open while the picker is on a name: the function
                         is created when the trigger is saved, not before. */}
                     {authFunctionId !== '' && authFunctionId !== NEW_FUNCTION && (
@@ -502,13 +532,24 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                       />
                     </div>
                   )}
-                  <p className={styles.fieldHint}>
-                    {authFunctionId === NEW_FUNCTION
-                      ? 'Created with this trigger, turning every caller away. Open it in Functions to say who may call.'
-                      : functions.length === 0
-                        ? 'No function here returns true or false yet; one that does can be chosen here, or made above.'
-                        : 'Handed the request by name — body, rawBody, headers, path — then its own external parameters, which is where a stored secret comes from.'}
-                  </p>
+                  {/*
+                    What the field is handed went behind the (?); these two did
+                    not. The first is what saving is about to do — make a function
+                    that turns every caller away — and a consequence read after the
+                    fact is one that has already happened. The second is an empty
+                    state: it is what this field has instead of anything to choose.
+                  */}
+                  {authFunctionId === NEW_FUNCTION ? (
+                    <p className={styles.fieldHint}>
+                      Created with this trigger, turning every caller away. Open it in Functions to say
+                      who may call.
+                    </p>
+                  ) : functions.length === 0 ? (
+                    <p className={styles.fieldHint}>
+                      No function here returns true or false yet; one that does can be chosen here, or
+                      made above.
+                    </p>
+                  ) : null}
                 </div>
               )}
             </>
@@ -517,9 +558,12 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
           {webhook ? null : incoming ? (
             <>
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="trigger-connection">
-                  Connection
-                </label>
+                <span className={own.labelWithHint}>
+                  <label className={styles.label} htmlFor="trigger-connection">
+                    Connection
+                  </label>
+                  <FieldHint label="Connection">Select the connection that will trigger this event.</FieldHint>
+                </span>
                 {/* Nothing to make from here: a connection is a URL, a token and a
                     handshake with the service, none of which can be got from a name
                     - so this says where they are instead of offering a row that
@@ -532,17 +576,27 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                   placeholder="Select connection…"
                   searchPlaceholder="Search connections…"
                 />
-                <p className={styles.fieldHint}>
-                  {connections.length === 0
-                    ? "None set up yet. Connections carry credentials, so they are added under the workspace's Integrations and chosen here afterwards."
-                    : 'Select the connection that will trigger this event.'}
-                </p>
+                {/*
+                  The empty state stays where the missing contents would be. A
+                  workspace with no connections has nothing to pick, and where to
+                  go about that is not an explanation of the field - it is the
+                  only thing this field can say for itself.
+                */}
+                {connections.length === 0 && (
+                  <p className={styles.fieldHint}>
+                    None set up yet. Connections carry credentials, so they are added under the
+                    workspace&apos;s Integrations and chosen here afterwards.
+                  </p>
+                )}
               </div>
 
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="trigger-action">
-                  Action
-                </label>
+                <span className={own.labelWithHint}>
+                  <label className={styles.label} htmlFor="trigger-action">
+                    Action
+                  </label>
+                  <FieldHint label="Action">The specific event that activates this trigger.</FieldHint>
+                </span>
                 <div className={styles.inputWrapper}>
                   <select
                     id="trigger-action"
@@ -559,15 +613,17 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                   </select>
                   <img src={chevronDown12Icon} alt="" width={12} height={12} />
                 </div>
-                <p className={styles.fieldHint}>The specific event that activates this trigger.</p>
               </div>
             </>
           ) : (
             <>
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="trigger-cron">
-                  Schedule
-                </label>
+                <span className={own.labelWithHint}>
+                  <label className={styles.label} htmlFor="trigger-cron">
+                    Schedule
+                  </label>
+                  <FieldHint label="Schedule">A cron expression defining when the trigger fires.</FieldHint>
+                </span>
                 <div className={styles.inputWrapper}>
                   <input
                     id="trigger-cron"
@@ -580,13 +636,15 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                     required
                   />
                 </div>
-                <p className={styles.fieldHint}>A cron expression defining when the trigger fires.</p>
               </div>
 
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="trigger-timezone">
-                  Timezone
-                </label>
+                <span className={own.labelWithHint}>
+                  <label className={styles.label} htmlFor="trigger-timezone">
+                    Timezone
+                  </label>
+                  <FieldHint label="Timezone">The timezone used to resolve the cron schedule.</FieldHint>
+                </span>
                 <div className={styles.inputWrapper}>
                   <select
                     id="trigger-timezone"
@@ -603,7 +661,6 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                   </select>
                   <img src={chevronDown12Icon} alt="" width={12} height={12} />
                 </div>
-                <p className={styles.fieldHint}>The timezone used to resolve the cron schedule.</p>
               </div>
             </>
           )}
@@ -611,9 +668,14 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
           <div className={styles.field}>
             {/* A condition is a definition too, and reading it is how somebody decides. */}
             <span className={styles.labelRow}>
-              <label className={styles.label} htmlFor="trigger-condition">
-                Condition
-              </label>
+              <span className={own.labelWithHint}>
+                <label className={styles.label} htmlFor="trigger-condition">
+                  Condition
+                </label>
+                <FieldHint label="Condition">
+                  Asked before anything starts, so an event it turns down leaves no run behind.
+                </FieldHint>
+              </span>
               {conditionId !== '' && (
                 <Link
                   className={styles.jump}
@@ -641,9 +703,6 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
               searchPlaceholder="Search conditions…"
               create={NEW_CONDITION_ROW}
             />
-            <p className={styles.fieldHint}>
-              Asked before anything starts, so an event it turns down leaves no run behind.
-            </p>
           </div>
 
           <IconField
@@ -653,9 +712,18 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
           />
 
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="trigger-payload">
-              Payload
-            </label>
+            <span className={own.labelWithHint}>
+              <label className={styles.label} htmlFor="trigger-payload">
+                Payload
+              </label>
+              <FieldHint label="Payload">
+                {incoming
+                  ? 'JSON added underneath the event, for values the event does not carry.'
+                  : webhook
+                    ? 'JSON added underneath the request, for values the caller does not send.'
+                    : 'JSON handed to the run. The clock carries no data, so this is what the workflow works on.'}
+              </FieldHint>
+            </span>
             <div className={`${styles.inputWrapper} ${styles.inputWrapperTall}`}>
               <textarea
                 id="trigger-payload"
@@ -666,13 +734,6 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                 onChange={(event) => setPayload(event.target.value)}
               />
             </div>
-            <p className={styles.fieldHint}>
-              {incoming
-                ? 'JSON added underneath the event, for values the event does not carry.'
-                : webhook
-                  ? 'JSON added underneath the request, for values the caller does not send.'
-                  : 'JSON handed to the run. The clock carries no data, so this is what the workflow works on.'}
-            </p>
           </div>
         </div>
 

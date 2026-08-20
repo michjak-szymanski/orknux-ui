@@ -1,0 +1,20 @@
+/*
+ * The one part of this form's look that is its own.
+ *
+ * Everything else is handed in by whichever frame is holding the form — a modal
+ * over the conditions it is about to join, a panel beside a workflow graph, a
+ * card on the condition's own page. This row is not theirs to describe: it is
+ * where a label and the (?) explaining it stand, and it is the same row on all
+ * three, for the reason `FieldHint` keeps its own stylesheet rather than taking
+ * class names from whatever draws the field.
+ *
+ * Asking the frames for it would mean asking every frame, and a frame that had
+ * not been told yet would draw its question mark under the label instead of
+ * beside it.
+ */
+.labelWithHint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  min-width: 0;
+}
