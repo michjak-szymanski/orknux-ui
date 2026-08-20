@@ -38,6 +38,23 @@ for one person or one team can run on a SQLite file instead and drop the
 container entirely; see **The database** under Administration for what that
 costs.
 
+If you only want to look at Orknux, there is a smaller way in still.
+**`orknux-one`** is the server, the interface and a SQLite file in one
+container, with nothing to supply and nothing to copy:
+
+```
+docker run -d --name orknux -p 8080:8080 -v orknux-data:/var/lib/orknux orknux/orknux-one
+```
+
+It writes its own encryption key on the first start and prints an
+administrator's password in the log. Use it to try Orknux, to develop against
+and to show somebody - and not for work whose runs matter, because there is no
+Temporal in it: nothing is retried, nothing resumes, and a restart in the middle
+of a run strands that run. It has no directory and no single sign-on either.
+This manual describes the product rather than that container, so the pages that
+follow are true of it except where they are about those things; `deploy/README.md`
+sets out the whole trade.
+
 The `compose.yaml` at the *root* of the repository is a different file and not a
 smaller version of this one. It brings up only the dependencies, for working on
 Orknux rather than for running it.
@@ -90,12 +107,23 @@ It is a strange answer the first time you meet it, and it is the right one - the
 alternative tells anybody with an account roughly how much this installation
 holds and what of, one number at a time.
 
-The top bar carries the whole of it. On the left, beside the mark, are the two
-parts of the product you work inside:
+The top bar carries the whole of it. On the left, beside the mark, are the four
+parts of the product you work inside. Each one opens a menu of its own down the
+left-hand side:
 
-- **Workspace** — everything a workspace owns.
+- **AI** — what a model is given to work with: agents, models, tools, skills
+  and memory.
+- **Workflow** — the work itself and what it is made of: executions, workflows,
+  actions, functions, triggers, conditions and objects.
+- **Workspace** — what the whole of it is set up with: variables, plugins,
+  issues, the audit log, integrations and settings.
 - **Chat** — talking to a model, with your workspace's agents and tools within
   reach. Can be switched off for an installation.
+
+A page belongs to exactly one of them, so opening a link somebody sent you
+lights the part it lives in and puts that menu beside it. Nothing changed
+address when the sections were split up: a bookmark saved before still opens the
+same page.
 
 On the right, in front of your account: the **workspace picker**, then **Docs**,
 then **Admin** - the organisation, its workspaces, its connections and what this
@@ -107,6 +135,11 @@ Changing it keeps you where you are when that means anything: a list stays the
 same list in the workspace you moved to, while a page about one particular thing
 falls back to its list, since issue #4 somewhere else is a different issue or
 none at all.
+
+The menu down the left **collapses** to its icons, by the round handle on the
+edge of the column. It stays collapsed until you open it again, on every page
+and in every workspace, because the pages that most need the width - a graph, a
+long issue - are the ones you stay on.
 
 Each workspace also keeps a tracker of what is wrong with its work; see Issues.
 The bell beside your name is where anything that concerns you on one of them

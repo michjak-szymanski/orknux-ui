@@ -11,6 +11,8 @@ import { CompactPagination } from '../../components/CompactPagination';
 import {
   ExportComponentButton,
   ImportComponentsButton,
+  SaveAsTemplateButton,
+  UseTemplateButton,
   transferStyles,
 } from '../../components/ComponentTransfer';
 import { Loader } from '../../components/Loader';
@@ -62,11 +64,10 @@ export function WorkspaceConditionsPage({ session, onSignOut }: WorkspaceConditi
   return (
     <AppShell
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="conditions" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <section className={styles.card}>
         <header className={styles.header}>
@@ -78,6 +79,7 @@ export function WorkspaceConditionsPage({ session, onSignOut }: WorkspaceConditi
           </div>
           <div className={transferStyles.headerActions}>
             <ImportComponentsButton workspaceId={workspaceId} onImported={load} />
+            <UseTemplateButton workspaceId={workspaceId} kind="CONDITION" onImported={load} />
             <Link className={styles.createCondition} to={`/workspace/${workspaceId}/conditions/new`}>
               + Create Condition
             </Link>
@@ -117,6 +119,13 @@ export function WorkspaceConditionsPage({ session, onSignOut }: WorkspaceConditi
                   kind="CONDITION"
                   id={condition.id}
                   name={condition.name}
+                />
+                <SaveAsTemplateButton
+                  workspaceId={workspaceId}
+                  kind="CONDITION"
+                  id={condition.id}
+                  name={condition.name}
+                  canPublish={session.admin}
                 />
                 <Link
                   className={styles.rowAction}

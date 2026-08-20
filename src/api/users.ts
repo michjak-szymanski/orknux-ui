@@ -25,6 +25,8 @@ export interface AppUser {
   email: string | null;
   /** True where the address was typed here, so sign-in leaves it alone. */
   emailChosen: boolean;
+  /** Whether the news that rings their bell is posted to their address as well. */
+  emailNotifications: boolean;
   type: UserType;
   roles: RoleRef[];
   /** False for anybody the identity provider defines. */
@@ -36,7 +38,7 @@ export interface AppUser {
 }
 
 const USER_FIELDS =
-  'id username displayName email emailChosen type roles { id name } editable hasPassword lastModifiedAt lastModifiedBy';
+  'id username displayName email emailChosen emailNotifications type roles { id name } editable hasPassword lastModifiedAt lastModifiedBy';
 
 /** A token, as it is listed: never its secret, which is shown once. */
 export interface UserToken {
@@ -107,6 +109,23 @@ export async function setUserEmail(email: string, id?: string): Promise<AppUser>
     { id: id ?? null, email },
   );
   return data.setUserEmail;
+}
+
+/**
+ * Turns issue mail on or off: yours when no id is given, anybody's for an
+ * administrator.
+ *
+ * It decides only whether what the bell already shows is posted as well. Who
+ * hears about an issue is the tracker's decision and is not changed by this.
+ */
+export async function setUserEmailNotifications(enabled: boolean, id?: string): Promise<AppUser> {
+  const data = await graphql<{ setUserEmailNotifications: AppUser }>(
+    `mutation ($id: ID, $enabled: Boolean!) {
+       setUserEmailNotifications(id: $id, enabled: $enabled) { ${USER_FIELDS} }
+     }`,
+    { id: id ?? null, enabled },
+  );
+  return data.setUserEmailNotifications;
 }
 
 export async function changeMyPassword(currentPassword: string, newPassword: string): Promise<boolean> {

@@ -58,11 +58,10 @@ export function AgentsPage({ session, onSignOut }: AgentsPageProps) {
   return (
     <AppShell
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="agents" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <header className={styles.header}>
         <div className={styles.titleGroup}>

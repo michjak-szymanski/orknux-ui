@@ -131,11 +131,10 @@ export function WorkspacePluginsPage({ session, onSignOut }: WorkspacePluginsPag
   return (
     <AppShell
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="plugins" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <section className={styles.card}>
         <header className={styles.header}>

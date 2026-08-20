@@ -63,7 +63,6 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
   return (
     <AppShell
       user={shellUser(session)}
-      section="admin"
       onSignOut={onSignOut}
       sidebar={<AdminSidebar active="settings" />}
     >

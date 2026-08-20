@@ -271,11 +271,10 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
     <AppShell
       title={adding ? 'New provider' : provider?.name}
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="models" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <header className={styles.headerBlock}>
         <p className={styles.breadcrumbs}>

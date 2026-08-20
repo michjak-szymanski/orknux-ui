@@ -192,11 +192,10 @@ export function MemoryEditorPage({ session, onSignOut }: MemoryEditorPageProps) 
     <AppShell
       title={adding ? 'New note' : memory?.title}
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="memory" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <header className={styles.breadcrumbBar}>
         <BackLink to={`/workspace/${workspaceId}/memory`} label="Memory" />

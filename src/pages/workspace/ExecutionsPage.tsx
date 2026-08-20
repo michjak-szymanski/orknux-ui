@@ -91,11 +91,10 @@ export function ExecutionsPage({ session, onSignOut }: ExecutionsPageProps) {
   return (
     <AppShell
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="executions" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <header className={styles.contentHeader}>
         <div className={styles.headerText}>

@@ -101,11 +101,10 @@ export function WorkspaceAuditPage({ session, onSignOut }: WorkspaceAuditPagePro
   return (
     <AppShell
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="audit" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <header className={styles.titleHeader}>
         <h1 className={styles.title}>Audit Log</h1>

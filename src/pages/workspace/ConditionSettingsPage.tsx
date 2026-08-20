@@ -140,11 +140,10 @@ export function ConditionSettingsPage({ session, onSignOut }: ConditionSettingsP
     <AppShell
       title={adding ? 'New condition' : condition?.name}
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="conditions" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <header className={styles.headerBlock}>
         <p className={styles.breadcrumbs}>

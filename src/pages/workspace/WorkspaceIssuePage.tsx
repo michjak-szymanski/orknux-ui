@@ -681,11 +681,10 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
     <AppShell
       title={creating ? 'New issue' : issue === null ? undefined : `#${issue.number} ${issue.title}`}
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="issues" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       {loadError !== null ? (
         <section className={styles.card}>

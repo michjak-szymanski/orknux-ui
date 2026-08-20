@@ -136,7 +136,6 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
   return (
     <AppShell
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
@@ -146,7 +145,7 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
        * its height and the content scrolls inside it.
        */
       scrollContent
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="triggers" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <section className={styles.card}>
         <header className={styles.header}>

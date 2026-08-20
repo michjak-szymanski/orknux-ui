@@ -2188,7 +2188,6 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     <AppShell
       title={name === '' ? undefined : name}
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}

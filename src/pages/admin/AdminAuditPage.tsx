@@ -72,7 +72,6 @@ export function AdminAuditPage({ session, onSignOut }: AdminAuditPageProps) {
   return (
     <AppShell
       user={shellUser(session)}
-      section="admin"
       onSignOut={onSignOut}
       sidebar={<AdminSidebar active="audit" />}
     >

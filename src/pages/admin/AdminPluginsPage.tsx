@@ -169,7 +169,6 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
   return (
     <AppShell
       user={shellUser(session)}
-      section="admin"
       onSignOut={onSignOut}
       sidebar={<AdminSidebar active="plugins" />}
     >

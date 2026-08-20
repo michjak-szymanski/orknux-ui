@@ -56,7 +56,6 @@ export function AdminDoctorPage({ session, onSignOut }: AdminDoctorPageProps) {
   return (
     <AppShell
       user={shellUser(session)}
-      section="admin"
       showAdmin={session.admin}
       onSignOut={onSignOut}
       scrollContent

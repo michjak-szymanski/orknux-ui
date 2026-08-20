@@ -2,6 +2,7 @@ import commandIcon from '../assets/command.svg';
 import chartLineIcon from '../assets/chart-line.svg';
 import fileTextIcon from '../assets/file-text.svg';
 import globeIcon from '../assets/globe.svg';
+import layersIcon from '../assets/layers.svg';
 import plugIcon from '../assets/plug.svg';
 import puzzleIcon from '../assets/puzzle.svg';
 import settingsIcon from '../assets/settings.svg';
@@ -19,6 +20,7 @@ export type AdminSection =
   | 'audit'
   | 'integrations'
   | 'plugins'
+  | 'templates'
   | 'networking'
   | 'shell'
   | 'monitoring'
@@ -50,6 +52,16 @@ export function AdminSidebar({ active }: { active: AdminSection }) {
         icon={puzzleIcon}
         active={active === 'plugins'}
         to="/admin/plugins"
+      />
+      {/*
+        Beside Plugins, because both are things the installation offers to every
+        workspace rather than things a workspace owns.
+      */}
+      <SidebarNavItem
+        label="Templates"
+        icon={layersIcon}
+        active={active === 'templates'}
+        to="/admin/templates"
       />
       {/*
         Beside Plugins rather than beside Monitoring: this is something the

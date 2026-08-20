@@ -67,11 +67,10 @@ export function WorkspaceIntegrationsPage({ session, onSignOut }: WorkspaceInteg
   return (
     <AppShell
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="integrations" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <header className={styles.contentHeader}>
         <h1 className={styles.title}>Integrations</h1>

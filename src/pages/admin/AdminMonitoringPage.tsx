@@ -45,7 +45,6 @@ export function AdminMonitoringPage({ session, onSignOut }: AdminMonitoringPageP
   return (
     <AppShell
       user={shellUser(session)}
-      section="admin"
       onSignOut={onSignOut}
       sidebar={<AdminSidebar active="monitoring" />}
     >

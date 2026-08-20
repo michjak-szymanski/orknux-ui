@@ -114,7 +114,6 @@ export function AdminRolesPage({ session, onSignOut }: AdminRolesPageProps) {
   return (
     <AppShell
       user={shellUser(session)}
-      section="admin"
       showAdmin={session.admin}
       onSignOut={onSignOut}
       scrollContent

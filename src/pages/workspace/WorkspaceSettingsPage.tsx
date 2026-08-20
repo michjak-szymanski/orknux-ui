@@ -168,11 +168,10 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
   return (
     <AppShell
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="settings" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <header className={styles.header}>
         <h1 className={styles.title}>Workspace Settings</h1>

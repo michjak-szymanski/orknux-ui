@@ -267,11 +267,10 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
   return (
     <AppShell
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="issues" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
       /*
        * The list scrolls inside the frame rather than growing it.
        *

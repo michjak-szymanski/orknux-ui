@@ -52,7 +52,6 @@ export function AdminIntegrationsPage({ session, onSignOut }: AdminIntegrationsP
   return (
     <AppShell
       user={shellUser(session)}
-      section="admin"
       onSignOut={onSignOut}
       sidebar={<AdminSidebar active="integrations" />}
     >

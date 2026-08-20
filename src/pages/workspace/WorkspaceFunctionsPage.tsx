@@ -17,6 +17,8 @@ import { CompactPagination } from '../../components/CompactPagination';
 import {
   ExportComponentButton,
   ImportComponentsButton,
+  SaveAsTemplateButton,
+  UseTemplateButton,
   transferStyles,
 } from '../../components/ComponentTransfer';
 import { Loader } from '../../components/Loader';
@@ -130,11 +132,10 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
   return (
     <AppShell
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="functions" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <section className={styles.card}>
         <header className={styles.header}>
@@ -151,6 +152,7 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
           */}
           <div className={transferStyles.headerActions}>
             <ImportComponentsButton workspaceId={workspaceId} onImported={load} />
+            <UseTemplateButton workspaceId={workspaceId} kind="FUNCTION" onImported={load} />
             <button
               type="button"
               className={styles.createFunction}
@@ -218,12 +220,21 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
                   function nobody can point back at the plugin.
                 */}
                 {fn.editable && (
-                  <ExportComponentButton
-                    workspaceId={workspaceId}
-                    kind="FUNCTION"
-                    id={fn.id}
-                    name={fn.name}
-                  />
+                  <>
+                    <ExportComponentButton
+                      workspaceId={workspaceId}
+                      kind="FUNCTION"
+                      id={fn.id}
+                      name={fn.name}
+                    />
+                    <SaveAsTemplateButton
+                      workspaceId={workspaceId}
+                      kind="FUNCTION"
+                      id={fn.id}
+                      name={fn.name}
+                      canPublish={session.admin}
+                    />
+                  </>
                 )}
                 <button
                   type="button"

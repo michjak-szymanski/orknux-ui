@@ -103,11 +103,10 @@ export function TriggerSettingsPage({ session, onSignOut }: TriggerSettingsPageP
     <AppShell
       title={trigger?.name}
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="triggers" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <header className={styles.headerBlock}>
         <p className={styles.breadcrumbs}>

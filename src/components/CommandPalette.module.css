@@ -11,6 +11,36 @@
   justify-self: center;
   width: min(420px, 34vw);
   min-width: 200px;
+  /* Never wider than the column it is in — below a wide screen that column is
+     what the two ends of the bar leave rather than a share of the window. */
+  max-width: 100%;
+}
+
+/*
+ * On a laptop the box gives way rather than the sections do.
+ *
+ * The floor of 200px was written when the box had a column of its own that was
+ * always at least that wide. It is the thing here that still works when it is
+ * small — the magnifier and a caret are enough to type into, and the shortcut
+ * opens it from anywhere regardless — so below that width it shrinks instead of
+ * pushing the corner over the sections.
+ */
+@media (max-width: 1439px) {
+  .palette {
+    min-width: 0;
+  }
+}
+
+/*
+ * And on a small one the keycap goes before the box does. It is a reminder,
+ * not a control — half a keycap sliced down the middle by the edge of the box
+ * reminds nobody of anything, and the shortcut works whether it is drawn or
+ * not.
+ */
+@media (max-width: 1099px) {
+  .shortcut {
+    display: none;
+  }
 }
 
 .box {

@@ -157,7 +157,6 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
     <AppShell
       title={adding ? 'New shell' : shell?.name}
       user={shellUser(session)}
-      section="admin"
       onSignOut={onSignOut}
       sidebar={<AdminSidebar active="shell" />}
     >

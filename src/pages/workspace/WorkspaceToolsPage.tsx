@@ -13,6 +13,8 @@ import { CompactPagination } from '../../components/CompactPagination';
 import {
   ExportComponentButton,
   ImportComponentsButton,
+  SaveAsTemplateButton,
+  UseTemplateButton,
   transferStyles,
 } from '../../components/ComponentTransfer';
 import { Loader } from '../../components/Loader';
@@ -62,11 +64,10 @@ export function WorkspaceToolsPage({ session, onSignOut }: WorkspaceToolsPagePro
   return (
     <AppShell
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="tools" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <header className={styles.header}>
         <div className={styles.titleGroup}>
@@ -75,6 +76,7 @@ export function WorkspaceToolsPage({ session, onSignOut }: WorkspaceToolsPagePro
         </div>
         <div className={transferStyles.headerActions}>
           <ImportComponentsButton workspaceId={workspaceId} onImported={load} />
+          <UseTemplateButton workspaceId={workspaceId} kind="TOOL" onImported={load} />
           <button type="button" className={styles.createButton} onClick={() => setCreating(true)}>
             + Create Tool
           </button>
@@ -127,6 +129,13 @@ export function WorkspaceToolsPage({ session, onSignOut }: WorkspaceToolsPagePro
             <span className={`${styles.colModified} ${styles.modified}`}>{timeAgo(tool.lastModifiedAt)}</span>
             <span className={styles.colActions}>
               <ExportComponentButton workspaceId={workspaceId} kind="TOOL" id={tool.id} name={tool.name} />
+              <SaveAsTemplateButton
+                workspaceId={workspaceId}
+                kind="TOOL"
+                id={tool.id}
+                name={tool.name}
+                canPublish={session.admin}
+              />
               <Link
                 className={styles.rowAction}
                 to={`/workspace/${workspaceId}/tools/${tool.id}`}

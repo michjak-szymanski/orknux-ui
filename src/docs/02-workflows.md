@@ -92,7 +92,7 @@ Editing the definition changes every workflow using it.
 ## The catalogue
 
 A definition made once and used by several workflows lives in the workspace's
-catalogue, down the left of every workspace page.
+catalogue, listed under **Workflow** in the menu down the left.
 
 ![The action catalogue: what each action calls, and what it hands
 back](/screens/actions.png)
@@ -106,6 +106,24 @@ of](/screens/conditions.png)
 
 **Conditions** are the questions: a property, a check, and the values to check
 against. A condition node follows one edge or the other on the answer.
+
+![A condition on its own page: what it asks, and what it asks it
+of](/screens/condition.png)
+
+A condition is a **page**, at `/conditions/<id>`, and a new one is written at
+`/conditions/new`. That matters because an address can be kept: a half-written
+condition survives a reload, can be sent to somebody, and opens in a tab of its
+own from the list.
+
+A condition can ask a **function** instead of a property, and then **Open
+definition** sits beside the picker and opens that function in a new tab rather
+than in this one. The form you are in is holding edits nobody has saved, and in
+the workflow editor the same form is a panel beside the graph - a jump in the
+same tab would take both off screen.
+
+It is the same form wherever it is: this page, the editor's node panel, and the
+trigger and action dialogs all draw it, so there is one thing to learn rather
+than two that drift apart.
 
 ![The workspace's functions](/screens/functions.png)
 

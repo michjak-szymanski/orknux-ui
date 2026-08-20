@@ -36,6 +36,39 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+/*
+ * Two equal columns cost more than they look like they do once there are four
+ * sections rather than two (issue #110).
+ *
+ * `1fr auto 1fr` centres the box on the window by giving both ends the same
+ * width whether they need it or not. The corner needs 380px and will not
+ * shrink; the left now needs nearly 500. Below a wide screen each end is handed
+ * less than that, and since the box is painted after them it is painted *over*
+ * them: at 1280 the Chat link disappeared under it, at 1024 Workspace went too,
+ * and the box ran into the workspace selector on its other side.
+ *
+ * So below that width the two ends are given what they ask for and the box
+ * takes what is left. It is no longer centred on the window — it is centred on
+ * the room between them, which is where it looks like it is anyway — and
+ * nothing is drawn on top of anything.
+ */
+@media (max-width: 1439px) {
+  .topNav {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+}
+
+/*
+ * Narrower still, the wordmark goes and the mark stands for it. Ninety pixels
+ * of a word nobody needs to read twice, against two section links; the mark
+ * beside it is the same link to the same place.
+ */
+@media (max-width: 1199px) {
+  .wordmark {
+    display: none;
+  }
+}
+
 /* The left of the bar, so the middle column is free to hold the centred box. */
 .topLeft {
   display: flex;

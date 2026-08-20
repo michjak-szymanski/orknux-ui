@@ -12,7 +12,7 @@ conversation underneath.
 
 ![The tracker: the states along the top, one search beside them, and the labels in use underneath](/screens/issues.png)
 
-**Issues** in the workspace sidebar opens it.
+**Issues**, under **Workspace** in the menu down the left, opens it.
 
 Four states along the top: **Open**, **In progress**, **Closed** and **All**.
 Open is what you get when the address says nothing, because that is what
@@ -113,6 +113,9 @@ only where it reads as one: inside code it is left alone, and so is anything
 longer than five digits, which is a colour.
 
 ## History
+
+![The History tab: what has happened to an issue, oldest
+first](/screens/issue-history.png)
 
 Below the header are two tabs: **Issue**, which is everything above, and
 **History**, which is what has happened to it. Every line names somebody and

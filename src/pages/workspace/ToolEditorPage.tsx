@@ -264,11 +264,10 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
     <AppShell
       title={tool?.name}
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="tools" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <header className={styles.headerBlock}>
         <p className={styles.breadcrumbs}>

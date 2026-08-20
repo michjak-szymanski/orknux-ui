@@ -1,60 +1,45 @@
 import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 
 import type { Workspace } from '../api/workspaces';
-import activityIcon from '../assets/activity.svg';
-import bellIcon from '../assets/bell.svg';
-import bookIcon from '../assets/book.svg';
-import boxIcon from '../assets/box.svg';
-import memoryIcon from '../assets/memory.svg';
-import botIcon from '../assets/bot.svg';
-import chartNetworkIcon from '../assets/chart-network.svg';
-import clipboardListIcon from '../assets/clipboard-list.svg';
-import codeIcon from '../assets/code.svg';
-import databaseIcon from '../assets/database.svg';
-import filterIcon from '../assets/filter.svg';
-import gitBranchIcon from '../assets/git-branch.svg';
-import lockKeyholeIcon from '../assets/lock-keyhole.svg';
-import plugIcon from '../assets/plug.svg';
-import settingsIcon from '../assets/settings.svg';
-import puzzleIcon from '../assets/puzzle.svg';
-import toolIcon from '../assets/tool.svg';
-import alertTriangleIcon from '../assets/alert-triangle.svg';
+import { sectionAt, sectionLinks } from '../navigation';
+import type { Where } from '../navigation';
 import { rememberWorkspace } from '../session/lastWorkspace';
 import { cachedWorkspaces, loadWorkspaces } from '../session/workspaces';
 import { SidebarNavItem } from './AppShell';
 
-export type WorkspaceSection =
-  | 'executions'
-  | 'workflows'
-  | 'actions'
-  | 'functions'
-  | 'triggers'
-  | 'conditions'
-  | 'agents'
-  | 'tools'
-  | 'skills'
-  | 'objects'
-  | 'variables'
-  | 'plugins'
-  | 'memory'
-  | 'issues'
-  | 'audit'
-  | 'integrations'
-  | 'models'
-  | 'settings';
-
 export interface WorkspaceSidebarProps {
   workspaceId: string;
-  active: WorkspaceSection;
   /** Called with the workspaces once loaded, so pages can show the workspace's name. */
   onWorkspacesLoaded?: (workspaces: Workspace[]) => void;
 }
 
 const WORKSPACE_LIST_SIZE = 100;
 
-export function WorkspaceSidebar({ workspaceId, active, onWorkspacesLoaded }: WorkspaceSidebarProps) {
-  // So the top bar's Workspace tab and its selector can come back here from the
-  // admin side.
+/**
+ * Which menu the address falls under when it falls under none.
+ *
+ * Only reachable if this column is drawn on a page the registry does not know,
+ * which the router does not allow. A workspace's front page is the least
+ * surprising place to be pointed at if it ever happens.
+ */
+const FALLBACK: Where = 'Workflow';
+
+/**
+ * The menu down the side of a workspace page.
+ *
+ * There are three of these now — AI, Workflow and Workspace (issue #110) — and
+ * this component is all three, because which one it is follows from the address
+ * rather than from anything the page says. That is deliberate: a page used to
+ * name its own menu entry (`active="agents"`), which meant every page stated
+ * where it lived a second time, and the three sections would have made it a
+ * third. The registry says it once; this reads it.
+ */
+export function WorkspaceSidebar({ workspaceId, onWorkspacesLoaded }: WorkspaceSidebarProps) {
+  const { pathname } = useLocation();
+
+  // So the top bar's section links and the workspace selector can come back
+  // here from the admin side.
   useEffect(() => rememberWorkspace(workspaceId), [workspaceId]);
 
   useEffect(() => {
@@ -72,6 +57,14 @@ export function WorkspaceSidebar({ workspaceId, active, onWorkspacesLoaded }: Wo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /*
+    The nearest page above here that is somewhere to be — so the editor of one
+    function marks Functions, and one agent's settings marks Agents, without
+    either page saying so.
+  */
+  const here = sectionAt(pathname);
+  const links = sectionLinks(here?.goTo.where ?? FALLBACK, `/workspace/${workspaceId}`);
+
   return (
     <>
       {/*
@@ -80,120 +73,17 @@ export function WorkspaceSidebar({ workspaceId, active, onWorkspacesLoaded }: Wo
         screen and not only to the ones with this column on them. Where switching
         lands is still `workspaceSwitchPath`; the shell calls it.
       */}
-      <SidebarNavItem
-        label="Executions"
-        icon={gitBranchIcon}
-        active={active === 'executions'}
-        to={`/workspace/${workspaceId}/executions`}
-      />
-      <SidebarNavItem
-        label="Workflows"
-        icon={chartNetworkIcon}
-        active={active === 'workflows'}
-        to={`/workspace/${workspaceId}`}
-      />
-      <SidebarNavItem
-        label="Actions"
-        icon={activityIcon}
-        active={active === 'actions'}
-        to={`/workspace/${workspaceId}/actions`}
-      />
-      <SidebarNavItem
-        label="Functions"
-        icon={codeIcon}
-        active={active === 'functions'}
-        to={`/workspace/${workspaceId}/functions`}
-      />
-      <SidebarNavItem
-        label="Triggers"
-        icon={bellIcon}
-        active={active === 'triggers'}
-        to={`/workspace/${workspaceId}/triggers`}
-      />
-      <SidebarNavItem
-        label="Conditions"
-        icon={filterIcon}
-        active={active === 'conditions'}
-        to={`/workspace/${workspaceId}/conditions`}
-      />
-      <SidebarNavItem
-        label="Agents"
-        icon={botIcon}
-        active={active === 'agents'}
-        to={`/workspace/${workspaceId}/agents`}
-      />
-      <SidebarNavItem
-        label="Tools"
-        icon={toolIcon}
-        active={active === 'tools'}
-        to={`/workspace/${workspaceId}/tools`}
-      />
-      <SidebarNavItem
-        label="Skills"
-        icon={bookIcon}
-        active={active === 'skills'}
-        to={`/workspace/${workspaceId}/skills`}
-      />
-      <SidebarNavItem
-        label="Variables"
-        icon={lockKeyholeIcon}
-        active={active === 'variables'}
-        to={`/workspace/${workspaceId}/variables`}
-      />
-      {/*
-        Beside Variables, because that is what most of a plugin's parameters end
-        up pointing at, and because both answer the same question: what this
-        workspace has told something that runs on its behalf.
-      */}
-      <SidebarNavItem
-        label="Plugins"
-        icon={puzzleIcon}
-        active={active === 'plugins'}
-        to={`/workspace/${workspaceId}/plugins`}
-      />
-      <SidebarNavItem
-        label="Objects"
-        icon={boxIcon}
-        active={active === 'objects'}
-        to={`/workspace/${workspaceId}/objects`}
-      />
-      <SidebarNavItem
-        label="Memory"
-        icon={memoryIcon}
-        active={active === 'memory'}
-        to={`/workspace/${workspaceId}/memory`}
-      />
-      {/* What is wrong with this workspace's work, beside the work itself. */}
-      <SidebarNavItem
-        label="Issues"
-        icon={alertTriangleIcon}
-        active={active === 'issues'}
-        to={`/workspace/${workspaceId}/issues`}
-      />
-      <SidebarNavItem
-        label="Audit Log"
-        icon={clipboardListIcon}
-        active={active === 'audit'}
-        to={`/workspace/${workspaceId}/audit`}
-      />
-      <SidebarNavItem
-        label="Integrations"
-        icon={plugIcon}
-        active={active === 'integrations'}
-        to={`/workspace/${workspaceId}/integrations`}
-      />
-      <SidebarNavItem
-        label="Models"
-        icon={databaseIcon}
-        active={active === 'models'}
-        to={`/workspace/${workspaceId}/models`}
-      />
-      <SidebarNavItem
-        label="Settings"
-        icon={settingsIcon}
-        active={active === 'settings'}
-        to={`/workspace/${workspaceId}/settings`}
-      />
+      {links.map((link) => (
+        <SidebarNavItem
+          key={link.path}
+          label={link.label}
+          icon={link.icon}
+          /* The pattern, not the address: `/workspace/1` and `/workspace/2` are
+             the same entry of the same menu. */
+          active={link.path === here?.path}
+          to={link.to}
+        />
+      ))}
     </>
   );
 }

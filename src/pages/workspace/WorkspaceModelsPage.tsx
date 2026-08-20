@@ -75,11 +75,10 @@ export function WorkspaceModelsPage({ session, onSignOut }: WorkspaceModelsPageP
   return (
     <AppShell
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="models" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <header className={styles.contentHeader}>
         <h1 className={styles.title}>Models</h1>

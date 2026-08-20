@@ -174,11 +174,10 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
     <AppShell
       title={skill?.name}
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="skills" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <header className={styles.headerBlock}>
         <p className={styles.breadcrumbs}>

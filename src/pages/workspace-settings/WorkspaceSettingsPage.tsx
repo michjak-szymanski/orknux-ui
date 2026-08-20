@@ -107,7 +107,6 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
   return (
     <AppShell
       user={shellUser(session)}
-      section="admin"
       onSignOut={onSignOut}
       sidebar={<AdminSidebar active="workspaces" />}
     >

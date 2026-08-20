@@ -118,11 +118,10 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
   return (
     <AppShell
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="workflows" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <section className={styles.card}>
         <header className={styles.header}>

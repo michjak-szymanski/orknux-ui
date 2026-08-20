@@ -22,6 +22,7 @@ import memoryIcon from './assets/memory.svg';
 import messageSquareIcon from './assets/message-square.svg';
 import plugIcon from './assets/plug.svg';
 import puzzleIcon from './assets/puzzle.svg';
+import templateIcon from './assets/layers.svg';
 import settingsIcon from './assets/settings.svg';
 import slidersIcon from './assets/sliders-horizontal.svg';
 import terminalIcon from './assets/terminal.svg';
@@ -35,12 +36,38 @@ import toolIcon from './assets/tool.svg';
  */
 export type Access = 'signed-in' | 'admin';
 
+/**
+ * Which part of the product a page belongs to.
+ *
+ * One answer, in one place. It decides three things that used to be decided
+ * separately and could therefore disagree: which link across the top is lit,
+ * which menu is drawn down the side and what is in it, and which heading the
+ * page appears under in Go to. A page states this once, here, and everything
+ * else is read off it.
+ *
+ * The first four are the links across the top, in that order. `Docs`, `Admin`
+ * and `You` are reached from the corner instead, and light nothing in the bar.
+ */
+export type Where = 'AI' | 'Workflow' | 'Workspace' | 'Chat' | 'Docs' | 'Admin' | 'You';
+
+/**
+ * The links across the top, in the order they are drawn.
+ *
+ * Where each one *goes* is not written here: a section link opens the first
+ * page of its own menu, so the destination is wherever the registry lists that
+ * section first. Saying it twice is how a link ends up pointing at a page its
+ * own menu no longer starts with.
+ */
+export const TOP_SECTIONS = ['AI', 'Workflow', 'Workspace', 'Chat'] as const;
+
+export type TopSection = (typeof TOP_SECTIONS)[number];
+
 /** Where a page is listed in Go to, and what finds it. */
 export interface GoTo {
   /** As the sidebar and the top bar name it — the same word, or it cannot be found. */
   label: string;
-  /** The heading it appears under: Workspace, Admin, Chat, Docs, You. */
-  where: string;
+  /** The section it belongs to: the link it lights, the menu it is listed in. */
+  where: Where;
   icon: string;
   /**
    * Other words somebody might type for it.
@@ -75,58 +102,84 @@ export interface Page {
 /**
  * Every page, once.
  *
- * Ordered as the interface is: a workspace's own screens, then chat and docs, then
- * the admin section, then what belongs to the person signed in.
+ * Ordered as the interface is, and that order is used: a workspace's three
+ * sections in the order they are drawn across the top and, within each, the
+ * order its menu lists them in. Then chat and the manual, then the admin
+ * section, then what belongs to the person signed in.
  */
 export const PAGES = [
-  // ---- A workspace ----
+  // ---- AI: what a model is given to work with ----
+  //
+  // The order inside each of the three sections is the order its menu is drawn
+  // in, and the first one is where the link at the top of the page lands.
   {
-    path: '/workspace/:workspaceId',
+    path: '/workspace/:workspaceId/agents',
     access: 'signed-in',
-    goTo: { label: 'Workflows', where: 'Workspace', icon: chartNetworkIcon, also: 'graph editor' },
+    goTo: { label: 'Agents', where: 'AI', icon: botIcon, also: 'llm' },
   },
+  {
+    path: '/workspace/:workspaceId/models',
+    access: 'signed-in',
+    goTo: { label: 'Models', where: 'AI', icon: databaseIcon, also: 'providers usage' },
+  },
+  {
+    path: '/workspace/:workspaceId/tools',
+    access: 'signed-in',
+    goTo: { label: 'Tools', where: 'AI', icon: toolIcon },
+  },
+  {
+    path: '/workspace/:workspaceId/skills',
+    access: 'signed-in',
+    goTo: { label: 'Skills', where: 'AI', icon: bookIcon },
+  },
+  {
+    path: '/workspace/:workspaceId/memory',
+    access: 'signed-in',
+    goTo: { label: 'Memory', where: 'AI', icon: memoryIcon },
+  },
+
+  // ---- Workflow: the work itself, and what it is made of ----
   {
     path: '/workspace/:workspaceId/executions',
     access: 'signed-in',
-    goTo: { label: 'Executions', where: 'Workspace', icon: gitBranchIcon, also: 'runs history' },
+    goTo: { label: 'Executions', where: 'Workflow', icon: gitBranchIcon, also: 'runs history' },
   },
   {
-    path: '/workspace/:workspaceId/triggers',
+    // The workspace's own front page, and the first thing anybody opens: the
+    // address has no word on the end because there was nothing else here when
+    // it was written. It stays as it is — every link in the manual and every
+    // bookmark points at it.
+    path: '/workspace/:workspaceId',
     access: 'signed-in',
-    goTo: { label: 'Triggers', where: 'Workspace', icon: bellIcon, also: 'events schedule webhook' },
+    goTo: { label: 'Workflows', where: 'Workflow', icon: chartNetworkIcon, also: 'graph editor' },
   },
   {
     path: '/workspace/:workspaceId/actions',
     access: 'signed-in',
-    goTo: { label: 'Actions', where: 'Workspace', icon: activityIcon },
-  },
-  {
-    path: '/workspace/:workspaceId/issues',
-    access: 'signed-in',
-    goTo: { label: 'Issues', where: 'Workspace', icon: alertTriangleIcon },
-  },
-  { path: '/workspace/:workspaceId/issues/new', access: 'signed-in', goTo: false },
-  { path: '/workspace/:workspaceId/issues/:number', access: 'signed-in', goTo: false },
-  {
-    path: '/workspace/:workspaceId/conditions',
-    access: 'signed-in',
-    goTo: { label: 'Conditions', where: 'Workspace', icon: filterIcon },
+    goTo: { label: 'Actions', where: 'Workflow', icon: activityIcon },
   },
   {
     path: '/workspace/:workspaceId/functions',
     access: 'signed-in',
-    goTo: { label: 'Functions', where: 'Workspace', icon: codeIcon, also: 'javascript typescript' },
+    goTo: { label: 'Functions', where: 'Workflow', icon: codeIcon, also: 'javascript typescript' },
   },
   {
-    path: '/workspace/:workspaceId/agents',
+    path: '/workspace/:workspaceId/triggers',
     access: 'signed-in',
-    goTo: { label: 'Agents', where: 'Workspace', icon: botIcon, also: 'llm' },
+    goTo: { label: 'Triggers', where: 'Workflow', icon: bellIcon, also: 'events schedule webhook' },
+  },
+  {
+    path: '/workspace/:workspaceId/conditions',
+    access: 'signed-in',
+    goTo: { label: 'Conditions', where: 'Workflow', icon: filterIcon },
   },
   {
     path: '/workspace/:workspaceId/objects',
     access: 'signed-in',
-    goTo: { label: 'Objects', where: 'Workspace', icon: boxIcon, also: 'shapes data' },
+    goTo: { label: 'Objects', where: 'Workflow', icon: boxIcon, also: 'shapes data' },
   },
+
+  // ---- Workspace: what the whole of it is set up with ----
   {
     path: '/workspace/:workspaceId/variables',
     access: 'signed-in',
@@ -143,34 +196,21 @@ export const PAGES = [
     },
   },
   {
-    path: '/workspace/:workspaceId/memory',
+    path: '/workspace/:workspaceId/issues',
     access: 'signed-in',
-    goTo: { label: 'Memory', where: 'Workspace', icon: memoryIcon },
+    goTo: { label: 'Issues', where: 'Workspace', icon: alertTriangleIcon },
   },
+  { path: '/workspace/:workspaceId/issues/new', access: 'signed-in', goTo: false },
+  { path: '/workspace/:workspaceId/issues/:number', access: 'signed-in', goTo: false },
   {
-    path: '/workspace/:workspaceId/skills',
+    path: '/workspace/:workspaceId/audit',
     access: 'signed-in',
-    goTo: { label: 'Skills', where: 'Workspace', icon: bookIcon },
-  },
-  {
-    path: '/workspace/:workspaceId/tools',
-    access: 'signed-in',
-    goTo: { label: 'Tools', where: 'Workspace', icon: toolIcon },
-  },
-  {
-    path: '/workspace/:workspaceId/models',
-    access: 'signed-in',
-    goTo: { label: 'Models', where: 'Workspace', icon: databaseIcon, also: 'providers usage' },
+    goTo: { label: 'Audit Log', where: 'Workspace', icon: clipboardListIcon, also: 'activity history' },
   },
   {
     path: '/workspace/:workspaceId/integrations',
     access: 'signed-in',
     goTo: { label: 'Integrations', where: 'Workspace', icon: plugIcon, also: 'connections slack mcp' },
-  },
-  {
-    path: '/workspace/:workspaceId/audit',
-    access: 'signed-in',
-    goTo: { label: 'Audit Log', where: 'Workspace', icon: clipboardListIcon, also: 'activity history' },
   },
   {
     path: '/workspace/:workspaceId/settings',
@@ -231,6 +271,19 @@ export const PAGES = [
     access: 'admin',
     goTo: { label: 'Plugins', where: 'Admin', icon: puzzleIcon, also: 'extensions javascript' },
   },
+  {
+    path: '/admin/templates',
+    access: 'admin',
+    goTo: {
+      label: 'Templates',
+      where: 'Admin',
+      icon: templateIcon,
+      also: 'components export import reuse share',
+    },
+  },
+  /* Before the one with an id in it: `new` is a page, not a template called new. */
+  { path: '/admin/templates/new', access: 'admin', goTo: false },
+  { path: '/admin/templates/:templateId', access: 'admin', goTo: false },
   {
     path: '/admin/networking',
     access: 'admin',
@@ -375,6 +428,60 @@ export function sectionAt(pathname: string): SectionPage | undefined {
   }
 
   return undefined;
+}
+
+/**
+ * Which section the address is in, or undefined where it is in none.
+ *
+ * The one answer to "which link is lit". A deep link into
+ * `/workspace/1/agents/7/settings` answers AI, because the page it walks up to
+ * says so — nobody had to remember to tell the shell.
+ */
+export function whereAt(pathname: string): Where | undefined {
+  return sectionAt(pathname)?.goTo.where;
+}
+
+/** One entry of a section's menu: what to draw, where it goes, and what it is. */
+export interface SectionLink {
+  label: string;
+  icon: string;
+  /** With `:workspaceId` filled in — somewhere to actually go. */
+  to: string;
+  /** The pattern it was made from, so the current page can be recognised. */
+  path: string;
+}
+
+/**
+ * The pages of one section, in the order its menu draws them.
+ *
+ * Read straight off the registry, so a page moved from one section to another
+ * moves in the menu, in the top bar and in Go to together. [workspacePath] is
+ * what `/workspace/:workspaceId` becomes; a section holding no workspace pages
+ * ignores it.
+ */
+export function sectionLinks(where: Where, workspacePath: string): SectionLink[] {
+  return PAGES.flatMap((page) =>
+    page.goTo === false || page.goTo.where !== where
+      ? []
+      : [
+          {
+            label: page.goTo.label,
+            icon: page.goTo.icon,
+            to: page.path.replace('/workspace/:workspaceId', workspacePath),
+            path: page.path,
+          },
+        ],
+  );
+}
+
+/**
+ * Where a link at the top of the page goes: the first page of its own menu.
+ *
+ * Undefined only for a section with no pages at all; every section in
+ * [TOP_SECTIONS] has some, so in practice this answers.
+ */
+export function sectionHome(where: Where, workspacePath: string): string | undefined {
+  return sectionLinks(where, workspacePath)[0]?.to;
 }
 
 /**

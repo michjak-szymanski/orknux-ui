@@ -12,6 +12,8 @@ import { CompactPagination } from '../../components/CompactPagination';
 import {
   ExportComponentButton,
   ImportComponentsButton,
+  SaveAsTemplateButton,
+  UseTemplateButton,
   transferStyles,
 } from '../../components/ComponentTransfer';
 import { Loader } from '../../components/Loader';
@@ -59,11 +61,10 @@ export function WorkspaceObjectsPage({ session, onSignOut }: WorkspaceObjectsPag
   return (
     <AppShell
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="objects" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <header className={styles.header}>
         <div className={styles.titleGroup}>
@@ -72,6 +73,7 @@ export function WorkspaceObjectsPage({ session, onSignOut }: WorkspaceObjectsPag
         </div>
         <div className={transferStyles.headerActions}>
           <ImportComponentsButton workspaceId={workspaceId} onImported={load} />
+          <UseTemplateButton workspaceId={workspaceId} kind="OBJECT" onImported={load} />
           <button type="button" className={styles.createButton} onClick={() => setCreating(true)}>
             + Create Object
           </button>
@@ -116,6 +118,13 @@ export function WorkspaceObjectsPage({ session, onSignOut }: WorkspaceObjectsPag
             <span className={`${styles.colModified} ${styles.modified}`}>{timeAgo(held.lastModifiedAt)}</span>
             <span className={styles.colActions}>
               <ExportComponentButton workspaceId={workspaceId} kind="OBJECT" id={held.id} name={held.name} />
+              <SaveAsTemplateButton
+                workspaceId={workspaceId}
+                kind="OBJECT"
+                id={held.id}
+                name={held.name}
+                canPublish={session.admin}
+              />
               <Link
                 className={styles.rowAction}
                 to={`/workspace/${workspaceId}/objects/${held.id}`}

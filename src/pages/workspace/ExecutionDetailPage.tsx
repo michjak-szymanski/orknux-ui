@@ -424,11 +424,10 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
     <AppShell
       title={run?.workflowName}
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="executions" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
       /*
        * A run is a long page - a summary, a graph, and a step for every node -
        * so it scrolls inside the frame rather than growing it. Growing pushed

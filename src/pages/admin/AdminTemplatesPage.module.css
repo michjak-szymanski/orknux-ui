@@ -1,0 +1,217 @@
+/*
+  The same layout as the other admin tables - shell, networking, plugins -
+  because this is another list of things the installation holds. The Holds
+  column is the one that earns its place: what somebody wants off this screen is
+  which template is worth opening, and "3 objects and a function" answers that
+  where a name and a date do not.
+*/
+
+.titleBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.titleBlock {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--text-2xl);
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+.addTemplate {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-10) var(--space-14);
+  background: var(--color-accent-brand);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* ---- Table ---- */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  overflow: clip;
+}
+
+.tableHeader,
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.tableHeader {
+  padding: var(--space-12) var(--space-16);
+  background: var(--color-surface-raised);
+  border-bottom: 1px solid var(--color-border);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.row {
+  padding: var(--space-14) var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.colName {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.colHolds {
+  flex-shrink: 0;
+  width: 220px;
+}
+
+.colVersion {
+  flex-shrink: 0;
+  width: 140px;
+}
+
+.colWho {
+  flex-shrink: 0;
+  width: 160px;
+  min-width: 0;
+}
+
+.colActions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-8);
+  width: 60px;
+}
+
+.name {
+  overflow: hidden;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.description {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.holds {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.version {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* A template from a version this installation does not read, said plainly. */
+.unusable {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-danger);
+}
+
+.who {
+  display: block;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowAction {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.rowAction:hover {
+  border-color: var(--color-text-muted);
+}
+
+/* ---- Loading / empty / error ---- */
+
+.notice {
+  margin: 0;
+  padding: var(--space-14) var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.noticeError {
+  color: var(--color-danger);
+}
+
+/* ---- Footer note ---- */
+
+.disclaimer {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  width: 100%;
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.disclaimer img {
+  flex-shrink: 0;
+  margin-top: 3px;
+}

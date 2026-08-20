@@ -33,7 +33,7 @@ export function AdminPage({ session, onSignOut }: AdminPageProps) {
 
   const workspaces = useLoadedPage(() => fetchWorkspaces(workspacesPage - 1, WORKSPACES_PAGE_SIZE), [workspacesPage, reloadToken]);
 
-  // The Workspace tab needs somewhere to go; the first workspace listed is the sensible default.
+  // The section links need somewhere to go; the first workspace listed is the sensible default.
   const firstWorkspace = workspaces.data?.content[0];
   const workspacePath = firstWorkspace === undefined ? undefined : `/workspace/${firstWorkspace.id}`;
 
@@ -46,7 +46,6 @@ export function AdminPage({ session, onSignOut }: AdminPageProps) {
   return (
     <AppShell
       user={shellUser(session)}
-      section="admin"
       workspacePath={workspacePath}
       onSignOut={onSignOut}
       sidebar={<AdminSidebar active="workspaces" />}

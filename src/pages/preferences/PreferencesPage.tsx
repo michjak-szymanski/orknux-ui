@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import type { SessionUser } from '../../api/session';
-import { setUserEmail } from '../../api/users';
+import { setUserEmail, setUserEmailNotifications } from '../../api/users';
 import moonIcon from '../../assets/moon.svg';
 import sunIcon from '../../assets/sun.svg';
 import { AppShell } from '../../components/AppShell';
@@ -153,6 +153,37 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
     }
   }
 
+  /*
+   * Whether the tracker writes to that address as well as ringing the bell.
+   *
+   * Seeded from the session for the reason the address above is: it arrives with
+   * the page, and asking a second question for one boolean would be a round trip
+   * to show a control somebody may never touch. Saved on the click rather than
+   * behind a button - there is nothing to type and nothing to get wrong, so a
+   * Save beside it would only be a second thing to remember to press.
+   */
+  const [notify, setNotify] = useState(session.emailNotifications !== false);
+  const [savingNotify, setSavingNotify] = useState(false);
+  const [notifyError, setNotifyError] = useState<string | null>(null);
+
+  async function chooseNotify(next: boolean) {
+    if (savingNotify || next === notify) return;
+    setSavingNotify(true);
+    setNotifyError(null);
+    // Shown at once, and put back below if the server disagrees: the control is
+    // a switch, and a switch that waits for a round trip reads as a broken one.
+    setNotify(next);
+    try {
+      const held = await setUserEmailNotifications(next);
+      setNotify(held.emailNotifications);
+    } catch (cause) {
+      setNotify(!next);
+      setNotifyError(cause instanceof Error ? cause.message : 'Could not save that.');
+    } finally {
+      setSavingNotify(false);
+    }
+  }
+
   function choose(next: Theme) {
     // Applied first: the page it changes is the page being looked at.
     applyTheme(next);
@@ -163,7 +194,6 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
   return (
     <AppShell
       user={shellUser(session)}
-      section="none"
       showAdmin={session.admin}
       onSignOut={onSignOut}
       hideSidebar
@@ -216,6 +246,50 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
               {emailError !== null && (
                 <p className={styles.error} role="alert">
                   {emailError}
+                </p>
+              )}
+            </div>
+          </section>
+
+          <section className={styles.card}>
+            <h2 className={styles.sectionTitle}>Notifications</h2>
+
+            <div className={styles.setting}>
+              <span className={styles.settingLabel} id="issue-email">
+                Issue Email
+              </span>
+              <div className={styles.options} role="radiogroup" aria-labelledby="issue-email">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={notify}
+                  disabled={savingNotify}
+                  className={notify ? styles.optionCurrent : styles.option}
+                  onClick={() => void chooseNotify(true)}
+                >
+                  On
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={!notify}
+                  disabled={savingNotify}
+                  className={notify ? styles.option : styles.optionCurrent}
+                  onClick={() => void chooseNotify(false)}
+                >
+                  Off
+                </button>
+              </div>
+              <p className={styles.settingNote}>
+                Sends you what the bell already shows - an issue you filed, hold or observe being
+                opened, assigned, commented on or closed, and any comment with your name in it. It
+                changes nothing about what you hear, only where. Mail goes to the address above, so
+                without one there is nothing to send; an installation whose administrator has not
+                configured a mail server sends nothing either way.
+              </p>
+              {notifyError !== null && (
+                <p className={styles.error} role="alert">
+                  {notifyError}
                 </p>
               )}
             </div>

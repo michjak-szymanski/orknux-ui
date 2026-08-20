@@ -113,7 +113,6 @@ export function AdminNetworkingPage({ session, onSignOut }: AdminNetworkingPageP
   return (
     <AppShell
       user={shellUser(session)}
-      section="admin"
       onSignOut={onSignOut}
       sidebar={<AdminSidebar active="networking" />}
     >

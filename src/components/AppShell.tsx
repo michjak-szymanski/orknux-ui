@@ -11,7 +11,7 @@ import orknuxMark from '../assets/orknux-mark.svg';
 import settingsIcon from '../assets/settings.svg';
 import shieldIcon from '../assets/shield.svg';
 import { lastWorkspaceId } from '../session/lastWorkspace';
-import { sectionAt, workspaceSwitchPath } from '../navigation';
+import { TOP_SECTIONS, sectionAt, sectionHome, whereAt, workspaceSwitchPath } from '../navigation';
 import { useInstallation } from '../session/installation';
 import { setSidebarCollapsed, useSidebarCollapsed } from '../session/sidebar';
 import { Attribution } from './Attribution';
@@ -38,9 +38,21 @@ export interface AppShellUser {
 
 export interface AppShellProps {
   user: AppShellUser;
-  /** Which top-bar link is current. */
-  section: 'admin' | 'workspace' | 'chat' | 'docs' | 'none';
-  /** Destination for the Workspace link; the link is inert while no workspace is known. */
+  /**
+   * Ignored. Which link is current comes from the address, through the
+   * registry (issue #110).
+   *
+   * It used to be one of `workspace | chat | docs | admin | none`, passed by
+   * every page. A workspace is three sections now — AI, Workflow, Workspace —
+   * so `workspace` no longer says which, and answering it per page would have
+   * written down in fifty files what `navigation.ts` already knows. Removed
+   * from every caller but `pages/chat`, which is being worked on elsewhere
+   * right now; the prop goes when those two lines do.
+   *
+   * @deprecated
+   */
+  section?: string;
+  /** Which workspace the section links point into; they are inert without one. */
   workspacePath?: string;
   /**
    * Whether the admin section is offered — the button in the corner, and the
@@ -88,13 +100,13 @@ export interface AppShellProps {
   children: ReactNode;
 }
 
-/** How many workspaces to look at when deciding where the Workspace tab goes. */
+/** How many workspaces to look at when deciding where the section links go. */
 const WORKSPACE_LOOKUP = 100;
 
 /**
- * Where the Workspace tab goes when the page it is on knows no workspace: the workspace last
- * looked at, or the first one visible. Without it the tab is dead on every
- * admin page but the dashboard.
+ * Which workspace the section links point into when the page they are drawn on
+ * knows of none: the workspace last looked at, or the first one visible.
+ * Without it all three are dead on every admin page but the dashboard.
  */
 function useWorkspaceFallback(needed: boolean): string | undefined {
   const [path, setPath] = useState<string | undefined>(undefined);
@@ -155,7 +167,6 @@ function useDocumentTitle(title: string | undefined, pathname: string) {
 
 export function AppShell({
   user,
-  section,
   workspacePath,
   sidebar,
   hideSidebar = false,
@@ -175,6 +186,12 @@ export function AppShell({
   // the admin half of Go to appear together and only for an administrator.
   const canAdmin = showAdmin ?? user.admin;
   const workspaceHere = workspacePath ?? workspaceFallback;
+  /*
+    Which part of the product this address is in, from the registry. Everything
+    that used to read the `section` prop reads this: the lit link, the two round
+    ones in the corner, and whether the floating assistant is drawn.
+  */
+  const where = whereAt(pathname);
 
   useDocumentTitle(title, pathname);
 
@@ -193,7 +210,7 @@ export function AppShell({
           of an interface that otherwise only goes to itself.
 
           Nothing is lost by it. The mark was inert before this, and the way
-          back to a workspace is the Workspace tab immediately beside it.
+          back to a workspace is the section links immediately beside it.
         */}
         <a className={styles.brand} href={WEBSITE} target="_blank" rel="noreferrer noopener">
           <span className={styles.logoIcon}>
@@ -204,27 +221,43 @@ export function AppShell({
         </a>
 
         {/*
-          What is left on this side is where the work is: the workspace you are
-          in, and the chat about it. Admin and the manual moved to the corner
+          What is left on this side is where the work is: what a model is given
+          to work with, the work itself, what the workspace is set up with, and
+          the chat about all of it. Admin and the manual moved to the corner
           with the account (issue #106) — both are somewhere you step out to,
           not a section of the thing being worked on.
+
+          Drawn from `TOP_SECTIONS`, in its order, going wherever the registry
+          lists each section first. Nothing about which pages are in which
+          section is decided here.
         */}
         <nav className={styles.navLinks} aria-label="Sections">
           <span className={styles.navDivider} aria-hidden="true" />
-          <TopNavLink to={workspaceHere} current={section === 'workspace'}>
-            Workspace
-          </TopNavLink>
-          {/*
-            Dropped rather than disabled where the installation has no chat: a
-            tab that leads to "this is turned off" is a worse answer than no tab.
-            Absent while the settings are unknown, so it does not appear and
-            vanish a moment later.
-          */}
-          {installation?.chatEnabled === true && (
-            <TopNavLink to="/chat" current={section === 'chat'}>
-              Chat
-            </TopNavLink>
-          )}
+          {TOP_SECTIONS.map((name) => {
+            /*
+              Chat is dropped rather than disabled where the installation has
+              none: a link that leads to "this is turned off" is a worse answer
+              than no link. Absent while the settings are unknown, so it does
+              not appear and vanish a moment later.
+            */
+            if (name === 'Chat' && installation?.chatEnabled !== true) return null;
+
+            /*
+              The three workspace sections have nowhere to go until a workspace
+              is known, and a link with no destination is drawn inert. Chat
+              belongs to no workspace, so it always has one.
+            */
+            const to =
+              workspaceHere === undefined && name !== 'Chat'
+                ? undefined
+                : sectionHome(name, workspaceHere ?? '');
+
+            return (
+              <TopNavLink key={name} to={to} current={where === name}>
+                {name}
+              </TopNavLink>
+            );
+          })}
         </nav>
         </div>
 
@@ -255,14 +288,14 @@ export function AppShell({
         <div className={styles.topRight}>
           <WorkspaceSwitcher workspacePath={workspaceHere} />
           <div className={styles.topRightIcons}>
-            <TopIconLink to="/docs" icon={bookIcon} label="Docs" current={section === 'docs'} />
+            <TopIconLink to="/docs" icon={bookIcon} label="Docs" current={where === 'Docs'} />
             {/*
               Not rendered at all for anybody else, rather than hidden: a button
               drawn and then covered is still in the tab order and still read
               aloud, and the pages behind it refuse them anyway.
             */}
             {canAdmin && (
-              <TopIconLink to="/admin" icon={shieldIcon} label="Admin" current={section === 'admin'} />
+              <TopIconLink to="/admin" icon={shieldIcon} label="Admin" current={where === 'Admin'} />
             )}
             <NotificationBell />
           </div>
@@ -341,7 +374,7 @@ export function AppShell({
         floating over the one already open — two boxes to type a question into,
         one of which keeps no history.
       */}
-      {section !== 'chat' && <QuickChat workspacePath={workspaceHere} />}
+      {where !== 'Chat' && <QuickChat workspacePath={workspaceHere} />}
 
       {/*
         The attribution the licence asks to be kept visible. In the shell rather

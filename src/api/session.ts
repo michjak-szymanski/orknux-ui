@@ -7,6 +7,12 @@ export interface SessionUser {
   admin: boolean;
   /** The directory's mail attribute; absent when the entry has none. */
   email?: string | null;
+  /**
+   * Whether issue news is posted to that address as well as rung on the bell.
+   * True until somebody turns it off, and nothing is sent at all on an
+   * installation with no mail server configured.
+   */
+  emailNotifications?: boolean;
 }
 
 export interface Credentials {

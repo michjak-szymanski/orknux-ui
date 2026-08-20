@@ -331,7 +331,6 @@ export function DocsPage({ session, onSignOut }: DocsPageProps) {
     <AppShell
       title={current.title}
       user={shellUser(session)}
-      section="docs"
       onSignOut={onSignOut}
       scrollContent
       sidebar={

@@ -81,6 +81,18 @@ model and called if the model decides to.
 
 ![The tool editor](/screens/tool-editor.png)
 
+Beside Validate is a **wand**, and it is the quickest way to get help with what
+is on the screen. It opens the quick chat with this tool already in hand, so a
+question about the code does not have to describe the code first. What comes
+back, when the answer is a change, is drawn against what the tool says now, with
+Accept and Reject underneath it.
+
+Accepting compiles the change in the browser and saves it, exactly as Save
+does - what runs is the JavaScript stored beside the TypeScript it came from.
+Nothing is written before that, and whichever you press is said back into the
+conversation, so a change that will not compile can be answered rather than
+silently dropped. The function editor's wand works the same way.
+
 ## Letting an agent drive orknux
 
 An agent's settings carry one switch that is not an MCP server: **Orknux**. It

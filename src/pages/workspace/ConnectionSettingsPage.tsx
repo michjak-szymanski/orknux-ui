@@ -196,11 +196,10 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
     <AppShell
       title={connection?.name}
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="integrations" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <header className={styles.contentHeader}>
         <p className={styles.breadcrumb}>

@@ -183,11 +183,10 @@ export function WorkspaceMemoryPage({ session, onSignOut }: WorkspaceMemoryPageP
   return (
     <AppShell
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="memory" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <div className={styles.split}>
         <aside className={styles.catalogs}>

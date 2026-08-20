@@ -654,11 +654,10 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
   return (
     <AppShell
       user={shellUser(session)}
-      section="workspace"
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
-      sidebar={<WorkspaceSidebar workspaceId={workspaceId} active="functions" />}
+      sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       {loadError !== null ? (
         <section className={styles.card}>
