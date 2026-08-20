@@ -1,7 +1,12 @@
 /* Preferences: one centred column, whatever the window is doing around it. */
 
 /*
- * This page scrolls itself, and has to.
+ * This page scrolls itself when the frame is held to the window.
+ *
+ * It is not, today: #105 took the pin off every shell but the one that scrolls
+ * internally, so the window scrolls and the scroller below is idle. It stays
+ * because the flush variant still hides its overflow, so the moment anything
+ * holds the frame again this page is the one page with nothing to scroll.
  *
  * `hideSidebar` on the shell means two things at once: draw no sidebar, and
  * give the content the flush variant - no padding, `overflow: hidden` - which
@@ -17,6 +22,22 @@
 .page {
   display: flex;
   justify-content: center;
+  /*
+   * The column is as tall as what is in it, not as tall as the window.
+   *
+   * A row's items stretch by default, and a stretched item takes the height of
+   * the *visible* box - so once this page is the one scrolling, the column is
+   * fixed at one screen and the cards spill out of the bottom of it. The
+   * scrollable area is then measured from the spill rather than from the
+   * column, and everything below the last card - this rule's padding included -
+   * falls outside it: 0px under the last shortcut instead of the clearance,
+   * which is the "still missing padding to bottom" of #102.
+   *
+   * It changes nothing while the window is the thing scrolling, which is the
+   * shape the shell is in today. It is here for the other shape - the one the
+   * scroller below is kept for - so the foot cannot go missing a second time.
+   */
+  align-items: flex-start;
   width: 100%;
   padding: var(--space-40);
   /* The flush content is a flex column with hidden overflow; without this the

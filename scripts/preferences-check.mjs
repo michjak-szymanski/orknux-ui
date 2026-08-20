@@ -1,0 +1,120 @@
+/**
+ * User Preferences reaches its own end, and has room under it (issue #102).
+ *
+ * The page bounced twice: first it was truncated - the shell pinned the row to
+ * the window height and the flush content hid what would not fit - and then,
+ * once it scrolled, its last control sat hard against the foot with no room
+ * under it, which is what "still missing padding to bottom" was about.
+ *
+ * Both halves are measured here rather than looked at: that the end is reachable
+ * by wheel and by End, and that the gap under the last card is the same
+ * clearance the rest of the app leaves for the floating launcher. The second
+ * pass forces that clearance away again, so the number the fix is worth is in
+ * the output beside the number it replaced.
+ *
+ * Temporary: delete once it has been looked at.
+ */
+import { chromium } from 'playwright';
+
+const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
+const SIZES = [
+  { width: 1440, height: 900 },
+  { width: 1280, height: 720 },
+];
+
+/** Scroll to the foot the way a person does, not with scrollTo: a scroller that
+ *  swallows the wheel would still pass a programmatic scroll. */
+async function toTheFoot(page, viewport) {
+  await page.mouse.move(viewport.width / 2, viewport.height / 2);
+  for (let i = 0; i < 40; i += 1) await page.mouse.wheel(0, 300);
+  await page.waitForTimeout(400);
+}
+
+async function measure(page) {
+  return page.evaluate(() => {
+    const pageEl = document.querySelector('[class*="_page_"]');
+    const cards = pageEl.querySelectorAll('[class*="_card_"]');
+    const last = cards[cards.length - 1].getBoundingClientRect();
+    const strip = document.querySelector('[class*="_attributionBar_"]');
+    return {
+      atTheEnd:
+        Math.round(window.scrollY) >=
+        document.documentElement.scrollHeight - window.innerHeight - 1,
+      sideways: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      lastCardInView: last.bottom <= window.innerHeight && last.top < window.innerHeight,
+      underLastCard: strip ? Math.round(strip.getBoundingClientRect().top - last.bottom) : null,
+    };
+  });
+}
+
+const browser = await chromium.launch();
+let ok = true;
+
+for (const viewport of SIZES) {
+  const context = await browser.newContext({ viewport });
+  const page = await context.newPage();
+
+  const signedIn = await context.request.post(`${BASE}/api/session`, {
+    data: { username: 'alice', password: 'password' },
+  });
+  if (!signedIn.ok()) {
+    console.error('sign-in failed');
+    process.exit(1);
+  }
+
+  const name = `${viewport.width}x${viewport.height}`;
+  await page.goto(`${BASE}/preferences`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('h1');
+  await page.waitForTimeout(600);
+
+  await toTheFoot(page, viewport);
+  const after = await measure(page);
+  await page.screenshot({ path: `preferences-foot-${name}.png` });
+
+  /*
+   * The same page with the frame held to the window - the shape the shell was
+   * in when this was reported, and the one #106 is putting back. This is where
+   * the page does its own scrolling, and where a stretched column used to drop
+   * everything under the last card. Injected rather than checked out so both
+   * numbers come off one run of one build.
+   */
+  await page.addStyleTag({
+    content: `
+      [class*="_shell_"] { height: 100%; min-height: 0; overflow: hidden; }
+      [class*="_workspace_"] { min-height: 0; }
+    `,
+  });
+  await page.waitForTimeout(200);
+  await toTheFoot(page, viewport);
+  const pinned = await measure(page);
+  await page.screenshot({ path: `preferences-foot-pinned-${name}.png` });
+
+  console.log(
+    `${name}: under the last card - window scrolling ${after.underLastCard}px, ` +
+      `page scrolling ${pinned.underLastCard}px`,
+  );
+  console.log(`${name}: sideways overflow ${after.sideways}px`);
+
+  const reaches = after.atTheEnd && after.lastCardInView;
+  const roomy = after.underLastCard >= 112 && pinned.underLastCard >= 112;
+  const straight = after.sideways === 0;
+
+  console.log(
+    reaches
+      ? `PASS ${name}: the wheel reaches the end and the last card is whole`
+      : `FAIL ${name}: the end is out of reach (${JSON.stringify(after)})`,
+  );
+  console.log(
+    roomy
+      ? `PASS ${name}: the launcher's clearance under the last card either way`
+      : `FAIL ${name}: ${after.underLastCard}px under the last card with the window scrolling, ` +
+        `${pinned.underLastCard}px with the page scrolling`,
+  );
+  console.log(straight ? `PASS ${name}: nothing hangs off the side` : `FAIL ${name}: ${after.sideways}px off the side`);
+
+  ok = ok && reaches && roomy && straight;
+  await context.close();
+}
+
+await browser.close();
+process.exit(ok ? 0 : 1);
