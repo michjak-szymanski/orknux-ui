@@ -1,14 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
-import { deleteObject, fetchObject, fetchWorkspaceObjects, updateObject, validateObject } from '../../api/objects';
+import {
+  FIELD_DESCRIPTION_LIMIT,
+  deleteObject,
+  fetchObject,
+  fetchWorkspaceObjects,
+  updateObject,
+  validateObject,
+} from '../../api/objects';
 import type { ObjectPropertyInput, PropertyKind, WorkflowObject } from '../../api/objects';
 import type { SessionUser } from '../../api/session';
 import { timeAgo } from '../../api/tools';
-import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import fileTextIcon from '../../assets/file-text.svg';
 import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
+import { DefinitionPicker } from '../../components/DefinitionPicker';
+import type { DefinitionOption } from '../../components/DefinitionPicker';
 import { Loader } from '../../components/Loader';
 import { TrashIcon } from '../../components/TrashIcon';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
@@ -24,26 +32,36 @@ export interface ObjectEditorPageProps {
 const ALL_OBJECTS = 200;
 
 /**
- * One row of the editor, before it is a property: the type is held as the
- * picker's single value so the cell can stay one control, the way the design
- * draws it.
+ * One row of the editor, before it is a property.
+ *
+ * What it holds and how many of them are two answers rather than one. They used
+ * to be a single picker value - `ARRAY:OBJECT:12` beside `OBJECT:12` - which
+ * made every type appear twice in the list and made "a list of these" something
+ * you found by scrolling rather than something you said.
  */
 interface Row {
   name: string;
-  /** `STRING`, `OBJECT:12`, `ARRAY:STRING`, `ARRAY:OBJECT:12`. */
+  /** `STRING`, `NUMBER`, `BOOLEAN` or `OBJECT:12`. What one of it is. */
   type: string;
+  /** One of that type, or a list of them. */
+  many: boolean;
+  /** What the field means, for whoever - or whatever - reads it. */
+  description: string;
 }
 
-/** What the picker's value means, unpacked for the server. */
+/** What the two controls mean together, unpacked for the server. */
 function asProperty(row: Row): ObjectPropertyInput {
-  const parts = row.type.split(':');
-  if (parts[0] === 'ARRAY') {
-    return parts[1] === 'OBJECT'
-      ? { name: row.name, kind: 'ARRAY', refObjectId: parts[2] }
-      : { name: row.name, kind: 'ARRAY', elementKind: parts[1] as PropertyKind };
+  const [kind, refObjectId] = row.type.split(':');
+  const description = row.description.trim();
+  const said = description === '' ? null : description;
+
+  if (row.many) {
+    return kind === 'OBJECT'
+      ? { name: row.name, kind: 'ARRAY', refObjectId, description: said }
+      : { name: row.name, kind: 'ARRAY', elementKind: kind as PropertyKind, description: said };
   }
-  if (parts[0] === 'OBJECT') return { name: row.name, kind: 'OBJECT', refObjectId: parts[1] };
-  return { name: row.name, kind: parts[0] as PropertyKind };
+  if (kind === 'OBJECT') return { name: row.name, kind: 'OBJECT', refObjectId, description: said };
+  return { name: row.name, kind: kind as PropertyKind, description: said };
 }
 
 /**
@@ -66,16 +84,27 @@ function indicatorTone(status: Status | null): string {
   return status.ok ? styles.indicatorOk : styles.indicatorBad;
 }
 
-/** And back again, so a saved object reopens on the value it was saved with. */
+/**
+ * And back again, so a saved object reopens on what it was saved with.
+ *
+ * An array saved before this existed comes back as its element type with Many
+ * chosen, which is the same property said the new way - nothing is migrated and
+ * nothing is lost, because the two halves were always in the row anyway.
+ */
 function asRow(property: WorkflowObject['properties'][number]): Row {
+  const description = property.description ?? '';
   if (property.kind === 'ARRAY') {
     return {
       name: property.name,
-      type: property.refObjectId !== null ? `ARRAY:OBJECT:${property.refObjectId}` : `ARRAY:${property.elementKind}`,
+      type: property.refObjectId !== null ? `OBJECT:${property.refObjectId}` : `${property.elementKind}`,
+      many: true,
+      description,
     };
   }
-  if (property.kind === 'OBJECT') return { name: property.name, type: `OBJECT:${property.refObjectId}` };
-  return { name: property.name, type: property.kind };
+  if (property.kind === 'OBJECT') {
+    return { name: property.name, type: `OBJECT:${property.refObjectId}`, many: false, description };
+  }
+  return { name: property.name, type: property.kind, many: false, description };
 }
 
 /**
@@ -129,6 +158,29 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
       .then((page) => setOthers(page.content))
       .catch(() => setOthers([]));
   }, [workspaceId]);
+
+  /**
+   * What a field can be one of.
+   *
+   * The scalars first, because that is what most fields are, and then every
+   * shape the workspace has named - an object included in its own list, which is
+   * how a tree is described. Each object carries its own description as the
+   * second line, so choosing between two similar names does not mean opening
+   * both of them.
+   */
+  const typeOptions = useMemo<DefinitionOption[]>(
+    () => [
+      { value: 'STRING', label: 'string' },
+      { value: 'NUMBER', label: 'number' },
+      { value: 'BOOLEAN', label: 'boolean' },
+      ...others.map((other) => ({
+        value: `OBJECT:${other.id}`,
+        label: other.name,
+        hint: other.description ?? `${other.propertyCount} ${other.propertyCount === 1 ? 'field' : 'fields'}`,
+      })),
+    ],
+    [others],
+  );
 
   function edit(index: number, change: Partial<Row>) {
     setRows((current) => current.map((row, at) => (at === index ? { ...row, ...change } : row)));
@@ -248,78 +300,111 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
               <div className={styles.propertyHeader}>
                 <span className={styles.propertyNameCol}>Property name</span>
                 <span className={styles.propertyTypeCol}>Type</span>
+                <span className={styles.propertyHoldsCol}>Holds</span>
                 <span className={styles.propertyActionCol} />
               </div>
 
               {rows.length === 0 && (
                 <p className={styles.propertyEmpty}>
-                  No properties yet. Each one is a name and a type, and every type has to resolve.
+                  No properties yet. Each one is a name, a type and a sentence saying what it means — the
+                  sentence is what a reader has instead of guessing from the name, and what a model has
+                  instead of nothing at all.
                 </p>
               )}
 
-              {rows.map((row, index) => (
-                <div className={styles.propertyRow} key={index}>
-                  <input
-                    className={`${styles.propertyNameCol} ${styles.propertyName}`}
-                    value={row.name}
-                    spellCheck={false}
-                    placeholder="channel"
-                    aria-label={`Name of property ${index + 1}`}
-                    onChange={(event) => edit(index, { name: event.target.value })}
-                  />
-                  <span className={styles.propertyTypeCol}>
-                    <span className={styles.typeSelect}>
-                      <select
-                        className={styles.propertyType}
-                        value={row.type}
-                        aria-label={`Type of ${row.name || `property ${index + 1}`}`}
-                        onChange={(event) => edit(index, { type: event.target.value })}
-                      >
-                        <option value="STRING">string</option>
-                        <option value="NUMBER">number</option>
-                        <option value="BOOLEAN">boolean</option>
-                        <option value="ARRAY:STRING">array&lt;string&gt;</option>
-                        <option value="ARRAY:NUMBER">array&lt;number&gt;</option>
-                        <option value="ARRAY:BOOLEAN">array&lt;boolean&gt;</option>
-                        {/* An object may hold one of itself, which is how a tree is described. */}
-                        {others.map((other) => (
-                          <option key={`o-${other.id}`} value={`OBJECT:${other.id}`}>
-                            {other.name}
-                          </option>
-                        ))}
-                        {others.map((other) => (
-                          <option key={`a-${other.id}`} value={`ARRAY:OBJECT:${other.id}`}>
-                            array&lt;{other.name}&gt;
-                          </option>
-                        ))}
-                      </select>
-                      <img src={chevronDown12Icon} alt="" width={12} height={12} />
-                    </span>
-                  </span>
-                  <span className={styles.propertyActionCol}>
-                    <button
-                      type="button"
-                      className={styles.propertyDelete}
-                      aria-label={`Remove ${row.name || `property ${index + 1}`}`}
-                      title="Remove this property"
-                      onClick={() => {
-                        setRows((current) => current.filter((_, at) => at !== index));
-                        setSaved(false);
-                        setStatus(null);
-                      }}
-                    >
-                      <TrashIcon />
-                    </button>
-                  </span>
-                </div>
-              ))}
+              {rows.map((row, index) => {
+                const called = row.name || `property ${index + 1}`;
+                return (
+                  <div className={styles.propertyRow} key={index}>
+                    <div className={styles.propertyMain}>
+                      <input
+                        className={`${styles.propertyNameCol} ${styles.propertyName}`}
+                        value={row.name}
+                        spellCheck={false}
+                        placeholder="channel"
+                        aria-label={`Name of property ${index + 1}`}
+                        onChange={(event) => edit(index, { name: event.target.value })}
+                      />
+                      <span className={styles.propertyTypeCol}>
+                        <DefinitionPicker
+                          id={`property-type-${index}`}
+                          value={row.type}
+                          options={typeOptions}
+                          onChoose={(value) => edit(index, { type: value })}
+                          placeholder="Choose a type…"
+                          searchPlaceholder="Search types…"
+                          ariaLabel={`Type of ${called}`}
+                        />
+                      </span>
+                      {/*
+                        Scalar or vector, asked once for whichever type is chosen.
+                        Two buttons rather than a checkbox because both answers are
+                        worth reading: a field that holds one of something is a
+                        decision somebody made, not the absence of one.
+                      */}
+                      <span className={styles.propertyHoldsCol}>
+                        <span className={styles.holds} role="group" aria-label={`How many ${called} holds`}>
+                          <button
+                            type="button"
+                            aria-pressed={!row.many}
+                            className={row.many ? styles.holdsOption : styles.holdsOptionActive}
+                            onClick={() => edit(index, { many: false })}
+                          >
+                            One
+                          </button>
+                          <button
+                            type="button"
+                            aria-pressed={row.many}
+                            className={row.many ? styles.holdsOptionActive : styles.holdsOption}
+                            onClick={() => edit(index, { many: true })}
+                          >
+                            Many
+                          </button>
+                        </span>
+                      </span>
+                      <span className={styles.propertyActionCol}>
+                        <button
+                          type="button"
+                          className={styles.propertyDelete}
+                          aria-label={`Remove ${called}`}
+                          title="Remove this property"
+                          onClick={() => {
+                            setRows((current) => current.filter((_, at) => at !== index));
+                            setSaved(false);
+                            setStatus(null);
+                          }}
+                        >
+                          <TrashIcon />
+                        </button>
+                      </span>
+                    </div>
+                    {/*
+                      The sentence, on a line of its own and always visible.
+                      Behind a disclosure it would be written for the fields
+                      somebody remembered to open, which is the half that needed
+                      explaining least.
+                    */}
+                    <input
+                      className={styles.propertyDescription}
+                      value={row.description}
+                      maxLength={FIELD_DESCRIPTION_LIMIT}
+                      placeholder="What this field means — for whoever opens this, and for any model handed it"
+                      aria-label={`What ${called} means`}
+                      onChange={(event) => edit(index, { description: event.target.value })}
+                    />
+                  </div>
+                );
+              })}
 
               <footer className={styles.editorFooter}>
                 <button
                   type="button"
                   className={styles.addProperty}
                   onClick={() => {
-                    setRows((current) => [...current, { name: '', type: 'STRING' }]);
+                    setRows((current) => [
+                      ...current,
+                      { name: '', type: 'STRING', many: false, description: '' },
+                    ]);
                     setSaved(false);
                     setStatus(null);
                   }}

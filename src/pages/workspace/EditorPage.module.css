@@ -344,23 +344,38 @@
  * separate dialog per property would be four clicks to rename a field.
  */
 .propertyHeader,
-.propertyRow {
+.propertyMain {
   display: flex;
   align-items: center;
   gap: var(--space-16);
   width: 100%;
-  padding: var(--space-12) var(--space-16);
-  border-bottom: 1px solid var(--color-border);
 }
 
 .propertyHeader {
-  padding-top: var(--space-12);
-  padding-bottom: var(--space-8);
+  padding: var(--space-12) var(--space-16) var(--space-8);
+  border-bottom: 1px solid var(--color-border);
   font-weight: 700;
   font-size: var(--text-xs);
   letter-spacing: 0.5px;
   text-transform: uppercase;
   color: var(--color-text-muted);
+}
+
+/*
+ * Two lines rather than one, because the second is prose.
+ *
+ * A name, a type and how many of it are three short answers and sit across a
+ * row comfortably. What a field means is a sentence, and a sentence squeezed
+ * into a fourth column is a sentence nobody writes - which would leave the
+ * description there and unused, which is the one outcome worth avoiding.
+ */
+.propertyRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+  padding: var(--space-12) var(--space-16);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .propertyNameCol {
@@ -372,7 +387,15 @@
   display: flex;
   flex-shrink: 0;
   align-items: center;
-  width: 220px;
+  width: 200px;
+}
+
+/* Scalar or vector, beside the type rather than folded into it. */
+.propertyHoldsCol {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  width: 128px;
 }
 
 .propertyActionCol {
@@ -430,6 +453,79 @@
 
 .propertyDelete:hover {
   color: var(--color-danger);
+}
+
+/*
+ * One of that type, or a list of them.
+ *
+ * Its own control because it is its own question. Folded into the type it
+ * doubled the list - every scalar twice, every object twice - and asked somebody
+ * to find `array<InvoiceLine>` among two hundred rows when they already knew
+ * both halves of the answer.
+ */
+.holds {
+  display: flex;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.holdsOption,
+.holdsOptionActive {
+  flex: 1 0 0;
+  padding: var(--space-4) var(--space-8);
+  border: 0;
+  border-radius: var(--radius-4);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.holdsOption {
+  background: none;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.holdsOption:hover {
+  color: var(--color-text-secondary);
+}
+
+.holdsOptionActive {
+  background: var(--color-accent-brand);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+/* The sentence under the row, drawn as quietly as it reads. */
+.propertyDescription {
+  width: 100%;
+  padding: var(--space-4) var(--space-8);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-4);
+  font: inherit;
+  font-size: var(--text-sm);
+  line-height: 18px;
+  color: var(--color-text-secondary);
+}
+
+.propertyDescription::placeholder {
+  color: var(--color-text-muted);
+}
+
+.propertyDescription:hover {
+  border-color: var(--color-border);
+}
+
+.propertyDescription:focus {
+  background: var(--color-bg);
+  border-color: var(--color-accent-brand);
+  color: var(--color-text-primary);
+  outline: none;
 }
 
 .propertyEmpty {

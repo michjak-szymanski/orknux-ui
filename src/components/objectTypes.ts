@@ -18,7 +18,10 @@ export function objectTypes(objects: WorkflowObject[]): string {
   const usable = objects.filter((held) => IDENTIFIER.test(held.name));
 
   const declarations = usable.map((held) => {
-    const fields = held.properties.map((property) => `  ${field(property)}: ${typeOf(property, names)};`);
+    const fields = held.properties.flatMap((property) => [
+      ...described(property),
+      `  ${field(property)}: ${typeOf(property, names)};`,
+    ]);
     return [
       `/** ${held.description ?? `${held.name}, as this workspace defines it.`} */`,
       `interface ${held.name} {`,
@@ -38,6 +41,23 @@ export function objectTypes(objects: WorkflowObject[]): string {
  * editor and the picker disagreeing about what the object is called.
  */
 const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
+
+/**
+ * What a field means, put where the editor will show it.
+ *
+ * A doc comment rather than a plain one, because that is the form the language
+ * service reads: hovering the field in a function shows the sentence its author
+ * wrote, and so does completion while the field is being typed. A field with
+ * nothing said about it gets no comment at all - an empty one would occupy the
+ * hover with a blank.
+ */
+function described(property: ObjectProperty): string[] {
+  const said = property.description?.trim() ?? '';
+  // Any close-comment inside would end the comment early and leave the rest of
+  // the sentence declared as TypeScript, which is a parse error on a shape
+  // nobody typed wrong.
+  return said === '' ? [] : [`  /** ${said.replace(/\*\//g, '* /')} */`];
+}
 
 /** A property's name, quoted when it is not something that can be written plainly. */
 function field(property: ObjectProperty): string {

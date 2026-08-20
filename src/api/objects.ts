@@ -11,6 +11,8 @@ export interface ObjectProperty {
   refObjectId: string | null;
   /** What an array holds when it holds scalars. */
   elementKind: PropertyKind | null;
+  /** What this field means, for whoever - or whatever - reads it. */
+  description: string | null;
   /** Ready to show: `string`, `ApiResponse`, `array<FileObject>`. */
   display: string;
 }
@@ -33,7 +35,12 @@ export interface ObjectPropertyInput {
   kind: PropertyKind;
   refObjectId?: string | null;
   elementKind?: PropertyKind | null;
+  /** At most 500 characters; blank says nothing, which is not the same as a guess. */
+  description?: string | null;
 }
+
+/** How much a field may say about itself, which the server refuses past. */
+export const FIELD_DESCRIPTION_LIMIT = 500;
 
 /** What Validate answers; it is a report, not a failure. */
 export interface ObjectValidation {
@@ -43,7 +50,7 @@ export interface ObjectValidation {
 
 const OBJECT_FIELDS = `
   id workspaceId name description propertyCount createdAt createdBy lastModifiedAt lastModifiedBy
-  properties { name kind refObjectId elementKind display }
+  properties { name kind refObjectId elementKind description display }
 `;
 
 export async function fetchWorkspaceObjects(
