@@ -1,0 +1,221 @@
+/*
+ * Linked issues, in the main column rather than the side one.
+ *
+ * A row here is a number, a title and a status, which is a sentence rather than
+ * a chip - the side column holds the things that fit in one word. It sits under
+ * the addresses because they are the same question asked twice: what else is
+ * this about, outside the tracker and inside it.
+ */
+.related {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+
+/* The same heading treatment every other block on the page uses. */
+.label {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.textButton {
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-accent-brand);
+  cursor: pointer;
+}
+
+.textButton:hover {
+  text-decoration: underline;
+}
+
+.nothing {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-10);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.kind,
+.search {
+  padding: var(--space-8) var(--space-10);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+/*
+ * In the flow rather than over the page, unlike the assignee box: this one is
+ * as wide as the description and has nothing beneath it that somebody is in the
+ * middle of reading.
+ */
+.found {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.option {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-8);
+  padding: var(--space-6) var(--space-8);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-4);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.option:hover:not(:disabled) {
+  background: var(--color-background);
+}
+
+.option:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.notice {
+  margin: 0;
+  padding: var(--space-6) var(--space-8);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+/*
+ * The relation, given a fixed width so a column of them lines up: what somebody
+ * scanning this list is reading down is which of these blocks and which merely
+ * relate, and ragged left edges make that a hunt.
+ */
+.kindChip {
+  flex: none;
+  width: 96px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.rowLink {
+  display: flex;
+  flex: 1;
+  gap: var(--space-6);
+  min-width: 0;
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.rowLink:hover .title {
+  text-decoration: underline;
+}
+
+.number {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.title,
+.optionTitle {
+  overflow: hidden;
+  font-size: var(--text-md);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.optionTitle {
+  flex: 1;
+  min-width: 0;
+  color: var(--color-text-primary);
+}
+
+/*
+ * Whether the issue at the far end is still open, which is the whole of what a
+ * blocking link is worth: a closed one is a line that no longer stops anything,
+ * and it should read as spent rather than as a warning.
+ */
+.status {
+  flex: none;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.statusClosed {
+  flex: none;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.remove {
+  flex: none;
+  padding: 0 var(--space-6);
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.remove:hover:not(:disabled) {
+  color: var(--color-text-primary);
+}
+
+.remove:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.error {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+}

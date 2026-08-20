@@ -200,9 +200,9 @@ following the issue.
 
 Some issues are refused rather than moved, and the refusal says what is in the
 way. An issue assigned to an agent or a model of the workspace it is leaving has
-no assignee where it is going, and an observer that is such an agent would
-simply stop hearing about it - so those are refused, naming what to change,
-rather than quietly cleared. People are never in the way: a person belongs to
+no assignee where it is going, an observer that is such an agent would simply
+stop hearing about it, and a link to another issue here cannot follow it at all
+- so those are refused, naming what to change, rather than quietly cleared. People are never in the way: a person belongs to
 the installation rather than to a workspace, and so does an `@name` written in a
 comment.
 
@@ -240,6 +240,58 @@ clicking what looks like a reference.
 A link is taken off by whoever added it and by nobody else, administrators
 included. The same rule as a comment and a file, for the same reason: what
 somebody else put on an issue is part of the record.
+
+## Linked issues
+
+The other half of what a report points at is in this same tracker: the thing
+that has to land first, the report somebody filed a second time, the one worth
+reading beside it. Under **Linked issues**, **Link an issue** asks two things -
+how they are linked, and which issue.
+
+There are five to choose from, and they are three relations read from both
+sides:
+
+- **Relates to**, which promises nothing beyond "read that one too".
+- **Blocks** and **Blocked by**, which say which of the two has to happen first.
+- **Duplicates** and **Duplicated by**, which say the same thing was reported
+  twice.
+
+Parent and child are deliberately not offered. A parent is a promise about
+adding things up - a status read off its children, a tree to open and close -
+and this tracker has a flat list and a number, so a parent link would only be a
+"relates to" wearing a word that makes people expect a roll-up that never
+arrives.
+
+A link is one fact and is stored once. Made here, it appears on the issue it
+names as well, phrased from that issue's side: #7 **Blocked by** #4 on one page
+is #4 **Blocks** #7 on the other, and nobody has to go and write the other half.
+Taking it off from either end takes it off both.
+
+Finding the far end is a search, and it looks for the number first - `#124`
+finds #124 - with the titles behind it. What is already linked is not offered
+again, and neither is the issue itself. The status of the issue at the far end
+is shown beside it, because "blocked by #4" is only worth reading if it also
+says whether #4 is still open; a closed one is struck through.
+
+Two issues are linked in one way or not at all. Linking a pair that is already
+linked some other way is refused rather than quietly replaced - saying that this
+blocks something you had previously called a duplicate of it is a change worth
+making on purpose. Linking the same pair the same way twice does nothing.
+
+Unlike an address or a file, a link between two issues is taken off by anybody
+who can see them. It is a claim about both issues rather than something one
+person said, and the people at the far end never made it.
+
+Linking is written into both issues' histories, and both issues' audiences are
+told - somebody watching an issue that has just been declared blocked is exactly
+somebody who wanted to know. Taking a link off is written into the histories and
+not announced: it is most often a correction, and a bell that rings for
+corrections is a bell people learn to ignore.
+
+An issue with a link to another issue cannot be moved to another workspace. The
+link is drawn as a number, and a number means one thing per workspace, so it
+would arrive pointing at whatever holds that number where it landed. The move is
+refused and names the issues in the way.
 
 ## Comments
 

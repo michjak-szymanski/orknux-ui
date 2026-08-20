@@ -70,6 +70,104 @@ export interface IssueLink {
 }
 
 /**
+ * What one issue has to do with another.
+ *
+ * Three relations and five names, because two of the three read differently
+ * from each end: a link is one row on the server, and the same row is "blocks
+ * #7" on one issue and "is blocked by #4" on the other. Which of the two this
+ * page is looking at has already been decided by the time it arrives.
+ */
+export type IssueRelationKind =
+  | 'RELATES_TO'
+  | 'BLOCKS'
+  | 'BLOCKED_BY'
+  | 'DUPLICATES'
+  | 'DUPLICATED_BY';
+
+/** What each relation is called where it is read as a heading over the issue it names. */
+export const ISSUE_RELATION_LABEL: Record<IssueRelationKind, string> = {
+  RELATES_TO: 'Relates to',
+  BLOCKS: 'Blocks',
+  BLOCKED_BY: 'Blocked by',
+  DUPLICATES: 'Duplicates',
+  DUPLICATED_BY: 'Duplicated by',
+};
+
+/**
+ * The same five as the middle of a sentence about the issue reading them.
+ *
+ * "#7 is blocked by #4" rather than "#7 Blocked by #4". Two sets of words
+ * because the two places they are read are different shapes: a heading over a
+ * row of links names the relation, and a line in a history says what somebody
+ * did.
+ */
+export const ISSUE_RELATION_READS: Record<IssueRelationKind, string> = {
+  RELATES_TO: 'relates to',
+  BLOCKS: 'blocks',
+  BLOCKED_BY: 'is blocked by',
+  DUPLICATES: 'duplicates',
+  DUPLICATED_BY: 'is duplicated by',
+};
+
+/**
+ * "is blocked by #4" from the "BLOCKED_BY #4" the server writes.
+ *
+ * The history and the news each have one text field to say what happened in,
+ * and both carry the relation and the other issue's number in it. Read back in
+ * one place so the bell and the history tab cannot phrase it differently.
+ */
+export function readRelation(said: string | null): string | null {
+  if (said === null) return null;
+  const at = said.indexOf(' ');
+  if (at < 0) return null;
+  const reads = ISSUE_RELATION_READS[said.slice(0, at) as IssueRelationKind];
+  return reads === undefined ? null : `${reads} ${said.slice(at + 1)}`;
+}
+
+/**
+ * The five as something to choose from, in the order they are offered.
+ *
+ * The cheap one first, because it is the honest answer far more often than a
+ * link menu usually admits, and each directed pair kept together so that
+ * picking the wrong end of one is a mistake made next to its correction.
+ */
+export const ISSUE_RELATION_KINDS: IssueRelationKind[] = [
+  'RELATES_TO',
+  'BLOCKS',
+  'BLOCKED_BY',
+  'DUPLICATES',
+  'DUPLICATED_BY',
+];
+
+/**
+ * Another issue this one is linked to, read from this one's side.
+ *
+ * The far issue's number, title and status come with it because the row is read
+ * rather than clicked through: whether the thing blocking this one is closed is
+ * the whole question somebody has when they see the word "blocked".
+ */
+export interface IssueRelation {
+  /** The link's own id, which is what taking it off again needs. */
+  id: string;
+  kind: IssueRelationKind;
+  /** The issue at the far end. */
+  issueId: string;
+  number: number;
+  title: string;
+  status: IssueStatus;
+  linkedBy: string;
+  linkedAt: string;
+}
+
+/** An issue as a row in the box that offers something to link to. */
+export interface IssueRef {
+  id: string;
+  number: number;
+  title: string;
+  status: IssueStatus;
+}
+
+/**
  * Somebody who asked to hear about an issue without being given it.
  *
  * A person or an agent; never a model, which has nowhere to read its news.
@@ -117,6 +215,8 @@ export interface Issue {
   attachments: IssueAttachment[];
   /** Addresses hung on the issue, oldest first. */
   links: IssueLink[];
+  /** Other issues this one is linked to, oldest first, each read from this one's side. */
+  related: IssueRelation[];
   /** Whoever asked to hear about it, oldest first. */
   observers: IssueObserver[];
   comments: IssueComment[];
@@ -135,7 +235,7 @@ export interface IssuePage {
 /**
  * What kind of change one line in an issue's history is.
  *
- * Five of these are recorded when they happen; OPENED is read off the issue
+ * Six of these are recorded when they happen; OPENED is read off the issue
  * itself and COMMENT off its comments, because both were already kept
  * faithfully and a second copy of a comment goes stale the moment somebody
  * edits it.
@@ -147,6 +247,7 @@ export type IssueEventKind =
   | 'LABEL'
   | 'ASSIGNEE'
   | 'OBSERVER'
+  | 'LINK'
   | 'COMMENT';
 
 export interface IssueEvent {
@@ -215,12 +316,15 @@ const LINK_FIELDS = 'id url title github addedBy addedAt mine';
 
 const OBSERVER_FIELDS = 'kind id name hint addedBy addedAt mine';
 
+const RELATION_FIELDS = 'id kind issueId number title status linkedBy linkedAt';
+
 const FULL_FIELDS = `
   id workspaceId number title description status reporter
   assignee { kind id name hint }
   labels
   attachments { ${ATTACHMENT_FIELDS} }
   links { ${LINK_FIELDS} }
+  related { ${RELATION_FIELDS} }
   observers { ${OBSERVER_FIELDS} }
   comments { id author content createdAt editedAt mine attachments { ${ATTACHMENT_FIELDS} } }
   createdAt lastModifiedAt lastCommentAt lastModifiedBy
@@ -441,6 +545,61 @@ export async function moveIssue(id: string, workspaceId: string): Promise<Issue>
     { id, workspaceId },
   );
   return data.moveIssue;
+}
+
+/**
+ * What this issue could be linked to, narrowed by what was typed.
+ *
+ * Asked of the server rather than filtered here, and asked about the number
+ * first: issues are said out loud as numbers in this tracker, so `#124` has to
+ * find #124 and not the eleven issues with 124 somewhere in their titles. What
+ * is already linked, and the issue itself, are left out of the answer.
+ */
+export async function fetchIssuesToLink(id: string, search?: string): Promise<IssueRef[]> {
+  const data = await graphql<{ issuesToLink: IssueRef[] }>(
+    `query ($id: ID!, $search: String) {
+       issuesToLink(id: $id, search: $search) { id number title status }
+     }`,
+    { id, search: search || null },
+  );
+  return data.issuesToLink;
+}
+
+/**
+ * Says that this issue has something to do with another one.
+ *
+ * The relation is given as this issue reads it - "blocked by" is what somebody
+ * picks on this page - and the server stores the single row that fact makes,
+ * facing whichever way it stores such things. Both issues then show it, each
+ * from its own side, which is why the answer is the whole issue.
+ */
+export async function relateIssue(
+  id: string,
+  otherId: string,
+  kind: IssueRelationKind,
+): Promise<Issue> {
+  const data = await graphql<{ relateIssue: Issue }>(
+    `mutation ($id: ID!, $otherId: ID!, $kind: IssueRelationKind!) {
+       relateIssue(id: $id, otherId: $otherId, kind: $kind) { ${FULL_FIELDS} }
+     }`,
+    { id, otherId, kind },
+  );
+  return data.relateIssue;
+}
+
+/**
+ * Takes a link between two issues off, from either end.
+ *
+ * Anybody who can see them, unlike an address or a file: a link is a claim
+ * about both issues rather than something one person said, and the team at the
+ * far end never made it.
+ */
+export async function unrelateIssue(id: string): Promise<boolean> {
+  const data = await graphql<{ unrelateIssue: boolean }>(
+    `mutation ($id: ID!) { unrelateIssue(id: $id) }`,
+    { id },
+  );
+  return data.unrelateIssue;
 }
 
 /** Takes one off again. Only whoever added it may, administrators included. */

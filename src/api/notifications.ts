@@ -1,7 +1,14 @@
 import { graphql } from './client';
 
 /** What kind of thing happened on an issue. */
-export type NotificationKind = 'OPENED' | 'ASSIGNED' | 'STATUS' | 'COMMENT' | 'MENTIONED' | 'OBSERVING';
+export type NotificationKind =
+  | 'OPENED'
+  | 'ASSIGNED'
+  | 'STATUS'
+  | 'COMMENT'
+  | 'MENTIONED'
+  | 'OBSERVING'
+  | 'LINKED';
 
 /**
  * One thing that happened, as the bell shows it.
@@ -17,7 +24,7 @@ export interface Notification {
   kind: NotificationKind;
   /** Whoever did it; never the person reading, since your own doing is not news. */
   actor: string;
-  /** What was said, or the status it moved to. */
+  /** What was said, the status it moved to, or the link that was made as "BLOCKS #4". */
   says: string | null;
   at: string;
   /** Still unread when it was asked for. The bell counts these; the panel shows everything. */

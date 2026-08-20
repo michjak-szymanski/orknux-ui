@@ -15,6 +15,7 @@ import {
   fetchIssueHistory,
   fetchIssueLabels,
   issueAttachmentUrl,
+  readRelation,
   removeIssueAttachment,
   removeIssueLink,
   updateIssue,
@@ -35,6 +36,7 @@ import { AppShell } from '../../components/AppShell';
 import { AssigneePicker } from '../../components/AssigneePicker';
 import { AttachmentViewer } from '../../components/AttachmentViewer';
 import { BackLink } from '../../components/BackLink';
+import { IssueRelationList } from '../../components/IssueRelationList';
 import { Loader } from '../../components/Loader';
 import { Markdown } from '../../components/Markdown';
 import { MarkdownEditor } from '../../components/MarkdownEditor';
@@ -1009,6 +1011,26 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
                 )}
               </section>
 
+              {/*
+                What this issue has to do with the others, under the addresses
+                because the two are the same question asked twice: what else is
+                this about, outside the tracker and inside it.
+
+                Only once the issue exists, unlike the addresses above. A link
+                is a row naming two issues, and while this form is still being
+                written there is only one of them - the same reason the observer
+                list and the reporter block wait.
+              */}
+              {!creating && issue !== null && (
+                <IssueRelationList
+                  workspaceId={workspaceId}
+                  issueId={issue.id}
+                  number={issue.number}
+                  related={issue.related}
+                  onChanged={setIssue}
+                />
+              )}
+
               {!creating && (
                 <section className={styles.comments}>
                   <h2 className={styles.commentsTitle}>Comments</h2>
@@ -1691,6 +1713,21 @@ function said(event: IssueEvent) {
       ) : (
         <>
           {who} took <strong>{event.was}</strong> off the observers
+        </>
+      );
+    case 'LINK':
+      /*
+       * Read as what this issue became rather than as what somebody did to a
+       * table: "recorded that this is blocked by #4" is the sentence, and it
+       * is written on both issues, each in its own words.
+       */
+      return event.became !== null ? (
+        <>
+          {who} recorded that this <span className={styles.historyChip}>{readRelation(event.became)}</span>
+        </>
+      ) : (
+        <>
+          {who} took off: this <span className={styles.historyChip}>{readRelation(event.was)}</span>
         </>
       );
     default:

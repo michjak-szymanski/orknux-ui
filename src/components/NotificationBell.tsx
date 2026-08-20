@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import { readRelation } from '../api/issues';
 import { fetchNotificationCount, fetchNotifications, readNotifications } from '../api/notifications';
 import type { Notification } from '../api/notifications';
 import { timeAgo } from '../api/tools';
@@ -18,6 +19,7 @@ const SAYS: Record<Notification['kind'], string> = {
   COMMENT: 'new comment',
   MENTIONED: 'mentioned you',
   OBSERVING: 'you are now an observer',
+  LINKED: 'linked',
 };
 
 /**
@@ -143,10 +145,15 @@ export function NotificationBell() {
               </span>
               <span className={styles.by}>
                 {item.actor}
-                {/* The words themselves, for the two kinds that have any. */}
+                {/*
+                  The words themselves, for the two kinds that have any - and
+                  for a link, the relation, which is the whole of what happened:
+                  "linked" alone says nothing anybody can act on.
+                */}
                 {item.says !== null && (item.kind === 'COMMENT' || item.kind === 'MENTIONED')
                   ? `: ${item.says.slice(0, 90)}`
                   : ''}
+                {item.kind === 'LINKED' ? `: this ${readRelation(item.says) ?? 'was linked'}` : ''}
               </span>
             </Link>
           ))}
