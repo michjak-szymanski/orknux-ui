@@ -9,7 +9,6 @@ import {
   attachToIssue,
   commentOnIssue,
   createIssue,
-  deleteIssue,
   editIssueComment,
   fetchIssue,
   fetchIssueHistory,
@@ -36,6 +35,7 @@ import { AppShell } from '../../components/AppShell';
 import { AssigneePicker } from '../../components/AssigneePicker';
 import { AttachmentViewer } from '../../components/AttachmentViewer';
 import { BackLink } from '../../components/BackLink';
+import { DeleteIssueDialog } from '../../components/DeleteIssueDialog';
 import { IssueRelationList } from '../../components/IssueRelationList';
 import { Loader } from '../../components/Loader';
 import { Markdown } from '../../components/Markdown';
@@ -144,6 +144,8 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
    * dialogs elsewhere work.
    */
   const [moving, setMoving] = useState<Issue | null>(null);
+  /* The issue being deleted, opened and closed the same way as the move. */
+  const [deleting, setDeleting] = useState<Issue | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -736,10 +738,7 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
                   className={styles.delete}
                   aria-label="Delete this issue"
                   title="Delete"
-                  onClick={() => {
-                    if (issue === null) return;
-                    void deleteIssue(issue.id).then(() => navigate(`/workspace/${workspaceId}/issues`));
-                  }}
+                  onClick={() => setDeleting(issue)}
                 >
                   <TrashIcon />
                 </button>
@@ -1361,6 +1360,19 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
         onMoved={(moved) => {
           setMoving(null);
           navigate(`/workspace/${moved.workspaceId}/issues/${moved.number}`);
+        }}
+      />
+
+      {/*
+        Back to the list once it is gone: this page's address no longer names
+        anything, so staying here would only show the not-found card.
+      */}
+      <DeleteIssueDialog
+        issue={deleting}
+        onClose={() => setDeleting(null)}
+        onDeleted={() => {
+          setDeleting(null);
+          navigate(`/workspace/${workspaceId}/issues`);
         }}
       />
     </AppShell>
