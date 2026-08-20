@@ -73,7 +73,9 @@ try {
   record((await page.locator('#workspace-connection-url').count()) === 0, 'no URL is asked for');
   record((await page.locator('#workspace-connection-auth').count()) === 0, 'no Auth Type is asked for');
   record(
-    !(await page.evaluate(() => document.querySelector('dialog').innerText)).includes('Custom Headers'),
+    // Scoped to the dialog that is actually open: the page holds more than one
+    // <dialog>, and the first in document order is not necessarily this one.
+    !(await page.evaluate(() => document.querySelector('dialog[open]')?.innerText ?? '')).includes('Custom Headers'),
     'and no Custom Headers',
   );
 
