@@ -112,6 +112,18 @@
   text-transform: uppercase;
 }
 
+/*
+ * A label and the (?) that explains it, kept together on the left of the field
+ * so the question mark reads as belonging to that label rather than floating
+ * off at the edge of the card.
+ */
+.labelWithHint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
 .input {
   padding: var(--space-10) var(--space-12);
   background: var(--color-background);
@@ -149,13 +161,22 @@
   font-weight: 600;
 }
 
+/*
+ * What a role is for, beside its checkbox. Not a footnote about a field but the
+ * only thing telling two roles apart, so it stays printed.
+ */
 .roleHint,
-.hint {
+.fieldNote {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
 
-.hint {
+/*
+ * A note the panel keeps: what a field has instead of contents, or what it
+ * reports about the account. The explanations of what a field means are behind
+ * the (?) beside its label instead - see FieldHint.
+ */
+.fieldNote {
   margin: 0;
 }
 

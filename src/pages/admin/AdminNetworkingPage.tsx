@@ -16,6 +16,7 @@ import toggleOffIcon from '../../assets/toggle-off.svg';
 import toggleOnIcon from '../../assets/toggle-on.svg';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { AppShell } from '../../components/AppShell';
+import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { ProxyRuleDialog } from '../../components/ProxyRuleDialog';
 import { shellUser } from '../../session/user';
@@ -239,11 +240,15 @@ export function AdminNetworkingPage({ session, onSignOut }: AdminNetworkingPageP
         requests, so it cannot drift from what a real call would do.
       */}
       <section className={styles.testCard}>
-        <h2 className={styles.testTitle}>Which rule fires for an address</h2>
-        <p className={styles.testHint}>
-          Rules are consulted from the top and the first one that matches is used. Put an address in
-          here to see which one that is, and which rules it beat to it.
-        </p>
+        <h2 className={styles.testTitle}>
+          <span className={styles.titleWithHint}>
+            Which rule fires for an address
+            <FieldHint label="Which rule fires for an address">
+              Rules are consulted from the top and the first one that matches is used. Put an
+              address in here to see which one that is, and which rules it beat to it.
+            </FieldHint>
+          </span>
+        </h2>
         <form className={styles.testRow} onSubmit={test}>
           <input
             className={styles.testInput}

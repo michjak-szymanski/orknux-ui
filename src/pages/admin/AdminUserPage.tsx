@@ -20,6 +20,7 @@ import { timeAgo } from '../../api/tools';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
+import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { shellUser } from '../../session/user';
 import styles from './AdminUserPage.module.css';
@@ -296,14 +297,16 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
             */}
             {!creating && (
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="user-email">
-                  Email
-                </label>
-                <p className={styles.hint}>
-                  {external
-                    ? 'Taken from their directory entry, and refreshed from it at every sign-in until one is set here. Emptying it hands it back.'
-                    : 'Where to write to them. Internal users have no directory entry to inherit one from.'}
-                </p>
+                <span className={styles.labelWithHint}>
+                  <label className={styles.label} htmlFor="user-email">
+                    Email
+                  </label>
+                  <FieldHint label="Email">
+                    {external
+                      ? 'Taken from their directory entry, and refreshed from it at every sign-in until one is set here. Emptying it hands it back.'
+                      : 'Where to write to them. Internal users have no directory entry to inherit one from.'}
+                  </FieldHint>
+                </span>
                 <div className={styles.row}>
                   <input
                     id="user-email"
@@ -332,7 +335,7 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
             <fieldset className={styles.rolesBox} disabled={external}>
               <legend className={styles.label}>Roles</legend>
               {roles.length === 0 ? (
-                <p className={styles.hint}>No roles are defined yet.</p>
+                <p className={styles.fieldNote}>No roles are defined yet.</p>
               ) : (
                 roles.map((role) => (
                   <label key={role.id} className={styles.role}>
@@ -364,7 +367,13 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
               <>
                 <div className={styles.field}>
                   <span className={styles.label}>Password</span>
-                  <p className={styles.hint}>
+                  {/*
+                    Whether this account can be signed into at all, which is a
+                    reading of the user and not an explanation of the box: it
+                    stays on screen rather than going behind a (?), because
+                    somebody looking at the page to find out came for this.
+                  */}
+                  <p className={styles.fieldNote}>
                     {hasPassword
                       ? 'They can sign in with a password. Setting a new one replaces it.'
                       : 'They cannot sign in. Setting a password lets them.'}
@@ -395,11 +404,13 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
                 </div>
 
                 <div className={styles.field}>
-                  <span className={styles.label}>Access Tokens</span>
-                  <p className={styles.hint}>
-                    A token is this user by another door: it carries their roles and nothing more. Sent as an
-                    Authorization: Bearer header.
-                  </p>
+                  <span className={styles.labelWithHint}>
+                    <span className={styles.label}>Access Tokens</span>
+                    <FieldHint label="Access Tokens">
+                      A token is this user by another door: it carries their roles and nothing more. Sent as
+                      an Authorization: Bearer header.
+                    </FieldHint>
+                  </span>
 
                   {tokens.map((token) => (
                     <div key={token.id} className={styles.token}>

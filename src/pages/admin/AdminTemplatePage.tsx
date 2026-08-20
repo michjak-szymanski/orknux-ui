@@ -16,6 +16,7 @@ import { KIND_LABEL, saveJson } from '../../api/transfer';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
+import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { shellUser } from '../../session/user';
 import styles from './AdminTemplatePage.module.css';
@@ -194,9 +195,14 @@ export function AdminTemplatePage({ session, onSignOut }: AdminTemplatePageProps
             <div className={styles.divider} />
 
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="template-name">
-                Name <span className={styles.required}>*</span>
-              </label>
+              <span className={styles.labelWithHint}>
+                <label className={styles.label} htmlFor="template-name">
+                  Name <span className={styles.required}>*</span>
+                </label>
+                <FieldHint label="Name">
+                  What it is called everywhere it is offered, and unique across this installation.
+                </FieldHint>
+              </span>
               <input
                 id="template-name"
                 className={styles.input}
@@ -208,15 +214,18 @@ export function AdminTemplatePage({ session, onSignOut }: AdminTemplatePageProps
                 autoFocus
                 required
               />
-              <p className={styles.hint}>
-                What it is called everywhere it is offered, and unique across this installation.
-              </p>
             </div>
 
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="template-description">
-                Description
-              </label>
+              <span className={styles.labelWithHint}>
+                <label className={styles.label} htmlFor="template-description">
+                  Description
+                </label>
+                <FieldHint label="Description">
+                  A template with a name and nothing else is a row people scroll past. Say what it
+                  does and what somebody has to have already.
+                </FieldHint>
+              </span>
               <textarea
                 id="template-description"
                 className={`${styles.input} ${styles.textarea}`}
@@ -226,15 +235,20 @@ export function AdminTemplatePage({ session, onSignOut }: AdminTemplatePageProps
                 maxLength={1000}
                 rows={3}
               />
-              <p className={styles.hint}>
-                A template with a name and nothing else is a row people scroll past. Say what it does
-                and what somebody has to have already.
-              </p>
             </div>
           </section>
 
           <section className={styles.card}>
-            <h2 className={styles.cardTitle}>{adding ? 'File' : 'What is inside'}</h2>
+            <h2 className={styles.cardTitle}>
+              <span className={styles.labelWithHint}>
+                {adding ? 'File' : 'What is inside'}
+                <FieldHint label="File">
+                  The JSON an Export control downloads. It is read before anything is saved, so a
+                  file this installation cannot read is refused here rather than at the button
+                  somebody presses later.
+                </FieldHint>
+              </span>
+            </h2>
             <div className={styles.divider} />
 
             {!adding && template !== null && (
@@ -311,11 +325,18 @@ export function AdminTemplatePage({ session, onSignOut }: AdminTemplatePageProps
                 )}
               </div>
               {fileName !== '' && <p className={styles.fileName}>{fileName}</p>}
-              <p className={styles.hint}>
-                {adding
-                  ? 'The JSON an Export control downloads. It is read before anything is saved, so a file this installation cannot read is refused here rather than at the button somebody presses later.'
-                  : 'Uploading one replaces what this template holds. Workspaces that already used it keep what they took: a template is a copy, and this changes what the next one gets.'}
-              </p>
+              {/*
+                What uploading does to a template that already exists, which is
+                a consequence and not an explanation: it stays on screen. What
+                the file has to be is behind the (?) on the heading.
+              */}
+              {!adding && (
+                <p className={styles.fieldNote}>
+                  Uploading one replaces what this template holds. Workspaces that already used it
+                  keep what they took: a template is a copy, and this changes what the next one
+                  gets.
+                </p>
+              )}
             </div>
           </section>
 

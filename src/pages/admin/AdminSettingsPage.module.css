@@ -52,6 +52,17 @@
   color: var(--color-text-primary);
 }
 
+/*
+ * A heading and the (?) that says where the setting under it comes from, kept
+ * on one line so the question mark belongs to that heading rather than to the
+ * switch below it.
+ */
+.headingWithHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
 /* A switch, with what it does said beside it rather than under the page. */
 .setting {
   display: flex;
@@ -156,14 +167,20 @@
   font-size: var(--text-sm);
 }
 
-.hint {
+/*
+ * What the page reports rather than what it explains: the one paragraph left
+ * printed here reads the environment against the stored answer, and an operator
+ * whose config file is being overruled is owed that without asking. The
+ * explanations went behind the (?) beside their heading - see FieldHint.
+ */
+.fieldNote {
   margin: 0;
   max-width: 70ch;
   font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
 
-.hint code {
+.fieldNote code {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   color: var(--color-text-secondary);

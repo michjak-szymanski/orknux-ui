@@ -9,6 +9,7 @@ import pencilIcon from '../../assets/pencil.svg';
 import plusIcon from '../../assets/plus.svg';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { AppShell } from '../../components/AppShell';
+import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { TrashIcon } from '../../components/TrashIcon';
 import { shellUser } from '../../session/user';
@@ -122,10 +123,22 @@ export function AdminRolesPage({ session, onSignOut }: AdminRolesPageProps) {
       <section className={styles.card}>
         <header className={styles.header}>
           <div className={styles.titleGroup}>
-            <h1 className={styles.title}>Roles</h1>
+            <h1 className={styles.title}>
+              <span className={styles.titleWithHint}>
+                Roles
+                {/*
+                  Where a role comes from is a thing somebody asks once and then
+                  knows, so it is behind the (?) rather than printed under the
+                  title on every visit.
+                */}
+                <FieldHint label="Roles">
+                  Which of the identity provider&apos;s groups or claims grants a role is set in the
+                  server&apos;s configuration, not here.
+                </FieldHint>
+              </span>
+            </h1>
             <p className={styles.subtitle}>
-              What somebody may do here, in this installation&apos;s own terms. Which of the identity
-              provider&apos;s groups or claims grants a role is set in the server&apos;s configuration.
+              What somebody may do here, in this installation&apos;s own terms.
             </p>
           </div>
           <button

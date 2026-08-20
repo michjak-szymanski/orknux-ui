@@ -253,10 +253,15 @@
   color: var(--color-text-primary);
 }
 
-.testHint {
-  margin: 0;
-  font-size: var(--text-md);
-  color: var(--color-text-secondary);
+/*
+ * The heading and the (?) that explains what the box under it answers, on one
+ * line so the question mark belongs to that heading. What it had to say used to
+ * be printed here as a paragraph - see FieldHint.
+ */
+.titleWithHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
 }
 
 .testRow {

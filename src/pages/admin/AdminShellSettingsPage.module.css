@@ -135,6 +135,18 @@
   color: var(--color-text-secondary);
 }
 
+/*
+ * A label and the (?) that explains it, kept together on the left of the field
+ * so the question mark reads as belonging to that label rather than floating
+ * off at the edge of the card.
+ */
+.labelWithHint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
 .required {
   font-weight: 400;
   color: var(--color-danger-solid);
@@ -173,11 +185,6 @@
   opacity: 0.6;
 }
 
-.hint {
-  margin: 0;
-  font-size: var(--text-md);
-  color: var(--color-text-muted);
-}
 
 .checkboxField {
   display: flex;

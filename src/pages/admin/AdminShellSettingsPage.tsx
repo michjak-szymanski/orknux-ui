@@ -8,6 +8,7 @@ import type { SessionUser } from '../../api/session';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
+import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { shellUser } from '../../session/user';
 import styles from './AdminShellSettingsPage.module.css';
@@ -225,9 +226,15 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
 
             <div className={styles.fieldRow}>
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="shell-host">
-                  Host <span className={styles.required}>*</span>
-                </label>
+                <span className={styles.labelWithHint}>
+                  <label className={styles.label} htmlFor="shell-host">
+                    Host <span className={styles.required}>*</span>
+                  </label>
+                  <FieldHint label="Host">
+                    A host name or address, without a scheme. Changing it forgets the host key this
+                    shell was first seen with, because that key was about a different machine.
+                  </FieldHint>
+                </span>
                 <input
                   id="shell-host"
                   name="shellHost"
@@ -238,10 +245,6 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
                   onChange={(event) => setHost(event.target.value)}
                   required
                 />
-                <p className={styles.hint}>
-                  A host name or address, without a scheme. Changing it forgets the host key this
-                  shell was first seen with, because that key was about a different machine.
-                </p>
               </div>
 
               <div className={styles.fieldNarrow}>
@@ -292,9 +295,18 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
             <div className={styles.divider} />
 
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="shell-username">
-                Username
-              </label>
+              <span className={styles.labelWithHint}>
+                <label className={styles.label} htmlFor="shell-username">
+                  Username
+                </label>
+                <FieldHint label="Username">
+                  The account commands run as. Whatever this account can do, an agent given the
+                  shells can do - so give it the least that is useful. Leaving it empty means the
+                  account this server itself runs as, the same as running ssh with no user in front
+                  of the host
+                  {shell !== null && shell.username === null ? ` - here, that is ${shell.account}` : ''}.
+                </FieldHint>
+              </span>
               <input
                 id="shell-username"
                 name="shellUsername"
@@ -304,19 +316,19 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
               />
-              <p className={styles.hint}>
-                The account commands run as. Whatever this account can do, an agent given the shells
-                can do - so give it the least that is useful. Leaving it empty means the account
-                this server itself runs as, the same as running ssh with no user in front of the
-                host
-                {shell !== null && shell.username === null ? ` - here, that is ${shell.account}` : ''}.
-              </p>
             </div>
 
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="shell-key">
-                Private key
-              </label>
+              <span className={styles.labelWithHint}>
+                <label className={styles.label} htmlFor="shell-key">
+                  Private key
+                </label>
+                <FieldHint label="Private key">
+                  OpenSSH or PEM. Stored encrypted and never shown again; leaving this empty keeps
+                  whatever is already stored. Its matching public key has to be in the
+                  account&apos;s authorized_keys on the far side.
+                </FieldHint>
+              </span>
               <textarea
                 id="shell-key"
                 name="shellKey"
@@ -334,11 +346,6 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
                 }}
                 disabled={clearKey}
               />
-              <p className={styles.hint}>
-                OpenSSH or PEM. Stored encrypted and never shown again; leaving this empty keeps
-                whatever is already stored. Its matching public key has to be in the account&apos;s
-                authorized_keys on the far side.
-              </p>
             </div>
 
             <div className={styles.field}>

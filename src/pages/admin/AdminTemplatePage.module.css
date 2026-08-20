@@ -135,6 +135,18 @@
   color: var(--color-text-secondary);
 }
 
+/*
+ * A label - or a card's title - and the (?) that explains it, kept together on
+ * the left so the question mark reads as belonging to that label rather than
+ * floating off at the edge of the card.
+ */
+.labelWithHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
 .required {
   font-weight: 400;
   color: var(--color-danger-solid);
@@ -173,7 +185,12 @@
   opacity: 0.6;
 }
 
-.hint {
+/*
+ * A note the card keeps: what uploading a file does to a template that already
+ * exists. Not an explanation of a field - those are behind the (?) beside the
+ * label, see FieldHint - so this stays printed.
+ */
+.fieldNote {
   margin: 0;
   font-size: var(--text-md);
   color: var(--color-text-muted);

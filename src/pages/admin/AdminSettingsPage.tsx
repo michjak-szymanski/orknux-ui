@@ -12,6 +12,7 @@ import toggleOffIcon from '../../assets/toggle-off.svg';
 import toggleOnIcon from '../../assets/toggle-on.svg';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { AppShell } from '../../components/AppShell';
+import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { forgetInstallation } from '../../session/installation';
 import { shellUser } from '../../session/user';
@@ -92,7 +93,14 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
 
         {settings !== null && (
           <>
-            <h2 className={styles.sectionHeading}>Chat</h2>
+            <h2 className={styles.sectionHeading}>
+              <span className={styles.headingWithHint}>
+                Chat
+                <FieldHint label="Chat">
+                  Set in the configuration file, under <code>orknux.chat</code>.
+                </FieldHint>
+              </span>
+            </h2>
 
             <div className={styles.setting}>
               <div className={styles.settingText}>
@@ -122,11 +130,15 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
               </button>
             </div>
 
-            <p className={styles.hint}>
-              Set in the configuration file, under <code>orknux.chat</code>.
-            </p>
-
-            <h2 className={styles.sectionHeading}>Attachments</h2>
+            <h2 className={styles.sectionHeading}>
+              <span className={styles.headingWithHint}>
+                Attachments
+                <FieldHint label="Attachments">
+                  Set in the configuration file, under <code>orknux.attachments</code>. Each
+                  workspace keeps its files in its own directory beneath that location.
+                </FieldHint>
+              </span>
+            </h2>
 
             <div className={styles.setting}>
               <div className={styles.settingText}>
@@ -175,11 +187,6 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
                 <dd className={styles.factValue}>{settings.attachmentMaxFileSizeMb} MB</dd>
               </div>
             </dl>
-            <p className={styles.hint}>
-              Set in the configuration file, under <code>orknux.attachments</code>. Each workspace keeps its
-              files in its own directory beneath that location.
-            </p>
-
             <h2 className={styles.sectionHeading}>Metrics</h2>
 
             <div className={styles.setting}>
@@ -229,7 +236,7 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
               finds the screen ignoring it is owed the reason, so the two are
               only ever silent about each other when they agree.
             */}
-            <p className={styles.hint}>
+            <p className={styles.fieldNote}>
               {settings.metricsAnonymous === settings.metricsAnonymousConfigured ? (
                 <>
                   <code>ORKNUX_METRICS_ANONYMOUS</code> in the environment says{' '}

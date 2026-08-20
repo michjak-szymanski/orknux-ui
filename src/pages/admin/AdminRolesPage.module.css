@@ -30,6 +30,16 @@
   color: var(--color-text-primary);
 }
 
+/*
+ * The title and the (?) beside it, on one line so the question mark reads as
+ * belonging to the heading rather than sitting above the subtitle.
+ */
+.titleWithHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
 .subtitle {
   margin: 0;
   max-width: 70ch;
