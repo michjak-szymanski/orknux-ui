@@ -697,6 +697,44 @@
  * Its own line because the row above is already three controls wide and an object's
  * name is longer than a type's — side by side, both would be truncated to nothing.
  */
+/*
+ * The object select and the way out to what it names, on one line.
+ *
+ * A wrapper around the select rather than another child of it: the chevron is
+ * positioned against the select's own box, and a link dropped in beside it would
+ * end up underneath the arrow.
+ */
+.paramObjectLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+.paramObjectLine > .paramObjectRow,
+.paramObjectLine > .selectWrapper {
+  flex: 1 0 0;
+  min-width: 0;
+}
+
+/*
+ * The link out of a field, to the definition the field is pointing at - the same
+ * one the trigger and condition forms put beside their pickers. Kept off the
+ * line's shrinking half so a long object name truncates the select, not the way
+ * to go and read it.
+ */
+.jump {
+  flex: none;
+  font-size: var(--text-sm);
+  color: var(--color-accent-brand);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.jump:hover {
+  text-decoration: underline;
+}
+
 .paramObjectRow {
   position: relative;
   display: flex;

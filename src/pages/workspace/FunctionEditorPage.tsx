@@ -999,27 +999,53 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                       else there is nothing to choose.
                     */}
                     {namesObject(param.type) && (
-                      <div className={styles.paramObjectRow}>
-                        <select
-                          className={`${styles.paramObject} ${styles.inputMono}`}
-                          value={param.objectId ?? ''}
-                          aria-label={`Object for ${param.name || `parameter ${index + 1}`}`}
-                          onChange={(event) => {
-                            setParams((current) =>
-                              current.map((row, at) =>
-                                at === index ? { ...row, objectId: event.target.value } : row,
-                              ),
-                            );
-                            setSaved(false);
-                          }}
-                        >
-                          {objects.map((held) => (
-                            <option key={held.id} value={held.id}>
-                              {held.name} · {held.propertyCount} fields
-                            </option>
-                          ))}
-                        </select>
-                        <img src={chevronDown12Icon} alt="" width={12} height={12} />
+                      <div className={styles.paramObjectLine}>
+                        <div className={styles.paramObjectRow}>
+                          <select
+                            className={`${styles.paramObject} ${styles.inputMono}`}
+                            value={param.objectId ?? ''}
+                            aria-label={`Object for ${param.name || `parameter ${index + 1}`}`}
+                            onChange={(event) => {
+                              setParams((current) =>
+                                current.map((row, at) =>
+                                  at === index ? { ...row, objectId: event.target.value } : row,
+                                ),
+                              );
+                              setSaved(false);
+                            }}
+                          >
+                            {objects.map((held) => (
+                              <option key={held.id} value={held.id}>
+                                {held.name} · {held.propertyCount} fields
+                              </option>
+                            ))}
+                          </select>
+                          <img src={chevronDown12Icon} alt="" width={12} height={12} />
+                        </div>
+                        {/*
+                          The way to read the shape this parameter names, which the
+                          select only names. The trigger and condition forms put the
+                          same link beside their pickers; this editor is where it is
+                          wanted most, since the code below is being written against
+                          that shape and the select says nothing about its fields.
+
+                          A tab of its own, for the reason the way out to Variables
+                          gives further down: this editor has nothing listening for a
+                          navigation away, so the same tab would throw out the code
+                          being written without saying so.
+                        */}
+                        {param.objectId !== null && param.objectId !== undefined && param.objectId !== '' && (
+                          <Link
+                            className={styles.jump}
+                            to={`/workspace/${workspaceId}/objects/${param.objectId}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            title="Opens the object's definition in a new tab"
+                            aria-label={`Open definition of ${objectNameOf(param.objectId) ?? 'the object'} for ${param.name || `parameter ${index + 1}`}`}
+                          >
+                            Open definition &#8599;
+                          </Link>
+                        )}
                       </div>
                     )}
                     </Fragment>
@@ -1161,30 +1187,65 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                 </div>
 
                 {namesObject(returnType) && (
-                  <div className={styles.selectWrapper}>
-                    <select
-                      className={`${styles.input} ${styles.inputMono}`}
-                      value={returnObjectId ?? ''}
-                      aria-label="Returned object"
-                      onChange={(event) => {
-                        setReturnObjectId(event.target.value);
-                        setSaved(false);
-                      }}
-                    >
-                      {objects.map((held) => (
-                        <option key={held.id} value={held.id}>
-                          {held.name} · {held.propertyCount} fields
-                        </option>
-                      ))}
-                    </select>
-                    <img src={chevronDown12Icon} alt="" width={12} height={12} />
+                  /* Beside the select, exactly as a parameter's is: one rule for
+                     reaching an object's definition, wherever this panel names one. */
+                  <div className={styles.paramObjectLine}>
+                    <div className={styles.selectWrapper}>
+                      <select
+                        className={`${styles.input} ${styles.inputMono}`}
+                        value={returnObjectId ?? ''}
+                        aria-label="Returned object"
+                        onChange={(event) => {
+                          setReturnObjectId(event.target.value);
+                          setSaved(false);
+                        }}
+                      >
+                        {objects.map((held) => (
+                          <option key={held.id} value={held.id}>
+                            {held.name} · {held.propertyCount} fields
+                          </option>
+                        ))}
+                      </select>
+                      <img src={chevronDown12Icon} alt="" width={12} height={12} />
+                    </div>
+                    {returnObjectId !== null && returnObjectId !== '' && (
+                      <Link
+                        className={styles.jump}
+                        to={`/workspace/${workspaceId}/objects/${returnObjectId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Opens the object's definition in a new tab"
+                        aria-label={`Open definition of ${objectNameOf(returnObjectId) ?? 'the returned object'}`}
+                      >
+                        Open definition &#8599;
+                      </Link>
+                    )}
                   </div>
                 )}
 
                 <p className={styles.paramHint}>
-                  {objects.length === 0
-                    ? 'An object type names one of this workspace’s objects; there are none yet, so define one first or use map.'
-                    : 'An object names a shape this workspace defines, and the editor checks the code against it. Map is for a structure with no defined shape.'}
+                  {objects.length === 0 ? (
+                    <>
+                      {'An object type names one of this workspace’s objects; there are none yet, so define one first or use map.'}{' '}
+                      {/*
+                        Only in the empty case, and for the reason the Variables link
+                        exists: there is no definition to jump to yet, and the sentence
+                        that says to define one otherwise leaves somebody to find the
+                        page themselves. Once objects exist, the way out is the
+                        "Open definition" link beside the select, not a second one here.
+                      */}
+                      <Link
+                        className={styles.shortcutLink}
+                        to={`/workspace/${workspaceId}/objects`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Open Objects
+                      </Link>
+                    </>
+                  ) : (
+                    'An object names a shape this workspace defines, and the editor checks the code against it. Map is for a structure with no defined shape.'
+                  )}
                 </p>
               </section>
 
