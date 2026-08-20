@@ -19,6 +19,13 @@ import toggleOnIcon from '../../assets/toggle-on.svg';
 import { AppShell } from '../../components/AppShell';
 import { AutoRefresh } from '../../components/AutoRefresh';
 import { CompactPagination } from '../../components/CompactPagination';
+import {
+  ExportComponentButton,
+  ImportComponentsButton,
+  SaveAsTemplateButton,
+  UseTemplateButton,
+  transferStyles,
+} from '../../components/ComponentTransfer';
 import { CreateTriggerDialog } from '../../components/CreateTriggerDialog';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
@@ -153,9 +160,13 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
             <h1 className={styles.title}>Triggers</h1>
             <p className={styles.subtitle}>Define events that start workflow executions.</p>
           </div>
-          <button type="button" className={styles.createTrigger} onClick={() => setCreating(true)}>
-            + Create Trigger
-          </button>
+          <div className={transferStyles.headerActions}>
+            <ImportComponentsButton workspaceId={workspaceId} onImported={load} />
+            <UseTemplateButton workspaceId={workspaceId} kind="TRIGGER" onImported={load} />
+            <button type="button" className={styles.createTrigger} onClick={() => setCreating(true)}>
+              + Create Trigger
+            </button>
+          </div>
         </header>
 
         <div className={styles.table}>
@@ -237,6 +248,21 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
                 </button>
               </span>
               <span className={styles.colActions}>
+                <ExportComponentButton
+                  workspaceId={workspaceId}
+                  kind="TRIGGER"
+                  id={trigger.id}
+                  name={trigger.name}
+                  className={styles.rowAction}
+                />
+                <SaveAsTemplateButton
+                  workspaceId={workspaceId}
+                  kind="TRIGGER"
+                  id={trigger.id}
+                  name={trigger.name}
+                  className={styles.rowAction}
+                  canPublish={session.admin}
+                />
                 <Link
                   className={styles.rowAction}
                   to={settingsPath(trigger)}

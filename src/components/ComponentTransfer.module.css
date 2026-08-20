@@ -136,6 +136,73 @@
   color: var(--color-text-muted);
 }
 
+/*
+ * What the import does of its own accord on arrival. Reassuring rather than
+ * alarming, so it reads as a note under the plan and not as a warning over it.
+ */
+.arrival {
+  margin: 0;
+  padding: var(--space-10) var(--space-12);
+  background: var(--color-surface-raised);
+  border-radius: var(--radius-6);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+/* ---- The binding step ---- */
+
+/*
+ * The questions the file cannot answer, above the plan rather than inside it:
+ * the list below says what will happen, and this is what has to be said first
+ * for any of it to happen at all.
+ */
+.questions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+  padding: var(--space-12);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.questionsLead {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.questionList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * The name above the picker rather than beside it: a model's name is a provider
+ * and a model, and a row that fits one question on a line and wraps the next
+ * reads as two different controls.
+ */
+.question {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.questionHead {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.picker {
+  width: 100%;
+}
+
 /* The depth choice: two rows, each saying what it means. */
 .choices {
   display: flex;

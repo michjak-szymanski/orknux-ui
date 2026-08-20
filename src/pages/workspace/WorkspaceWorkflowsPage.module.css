@@ -95,8 +95,9 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--space-12);
-  width: 96px;
+  /* Run and the switch, then Export and Save as template beside the way in. */
+  gap: var(--space-6);
+  width: 208px;
 }
 
 .name {

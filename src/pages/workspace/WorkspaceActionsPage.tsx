@@ -9,6 +9,13 @@ import settingsIcon from '../../assets/settings-14.svg';
 import { ActionDialog } from '../../components/ActionDialog';
 import { AppShell } from '../../components/AppShell';
 import { CompactPagination } from '../../components/CompactPagination';
+import {
+  ExportComponentButton,
+  ImportComponentsButton,
+  SaveAsTemplateButton,
+  UseTemplateButton,
+  transferStyles,
+} from '../../components/ComponentTransfer';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
@@ -89,9 +96,13 @@ export function WorkspaceActionsPage({ session, onSignOut }: WorkspaceActionsPag
             <h1 className={styles.title}>Actions</h1>
             <p className={styles.subtitle}>Reusable action blocks used inside workflows.</p>
           </div>
-          <button type="button" className={styles.createAction} onClick={() => setCreating(true)}>
-            + Create Action
-          </button>
+          <div className={transferStyles.headerActions}>
+            <ImportComponentsButton workspaceId={workspaceId} onImported={load} />
+            <UseTemplateButton workspaceId={workspaceId} kind="ACTION" onImported={load} />
+            <button type="button" className={styles.createAction} onClick={() => setCreating(true)}>
+              + Create Action
+            </button>
+          </div>
         </header>
 
         <div className={styles.table}>
@@ -131,6 +142,21 @@ export function WorkspaceActionsPage({ session, onSignOut }: WorkspaceActionsPag
                 {paramSummary(action.outputParams)}
               </span>
               <span className={styles.colActions}>
+                <ExportComponentButton
+                  workspaceId={workspaceId}
+                  kind="ACTION"
+                  id={action.id}
+                  name={action.name}
+                  className={styles.rowAction}
+                />
+                <SaveAsTemplateButton
+                  workspaceId={workspaceId}
+                  kind="ACTION"
+                  id={action.id}
+                  name={action.name}
+                  className={styles.rowAction}
+                  canPublish={session.admin}
+                />
                 <button
                   type="button"
                   className={styles.rowAction}

@@ -1,4 +1,6 @@
 import { graphql } from './client';
+import { fetchMcpServers, fetchWorkspaceConnections } from './integrations';
+import { answers, fetchModels } from './models';
 
 /**
  * Moving components between installations as JSON.
@@ -10,8 +12,27 @@ import { graphql } from './client';
  * that is what a screen has to render.
  */
 
-/** What can be exported and imported. Agents and workflows are not here yet. */
-export type ComponentKind = 'OBJECT' | 'FUNCTION' | 'CONDITION' | 'TOOL' | 'SKILL';
+/** What can be exported and imported: the whole catalogue. */
+export type ComponentKind =
+  | 'OBJECT'
+  | 'FUNCTION'
+  | 'CONDITION'
+  | 'TOOL'
+  | 'SKILL'
+  | 'ACTION'
+  | 'TRIGGER'
+  | 'AGENT'
+  | 'WORKFLOW';
+
+/**
+ * What a file points at and can never carry.
+ *
+ * Each of these is a row kept beside a credential, so what travels is the name
+ * and the type. Saying which of this workspace's rows a name means is the
+ * binding step, and until it is said the import is refused rather than left to
+ * invent a connection to nowhere.
+ */
+export type ExternalKind = 'MODEL' | 'CONNECTION' | 'MCP_SERVER';
 
 /** How much of what a component reaches travels with it. */
 export type ExportDepth = 'SHALLOW' | 'DEEP';
@@ -25,13 +46,35 @@ export interface ComponentExport {
 }
 
 export interface ImportEntry {
-  /** Null for a variable, which is pointed at and never created. */
+  /** The kind, for something the file carries. Null for an external and for a variable. */
   kind: ComponentKind | null;
+  /** The kind, for something no file could carry. Set only where `kind` is not. */
+  external: ExternalKind | null;
+  /**
+   * The name in the file, and the key a binding answers by.
+   *
+   * For a model, the provider's name and the model's. Opaque: it is compared
+   * and sent back as it stands, never taken apart.
+   */
   name: string;
-  /** What it will be called here; differs from `name` when it was renamed. */
+  /** What it will be called here; differs from `name` when it was renamed or bound. */
   targetName: string;
   disposition: ImportDisposition;
   detail: string;
+}
+
+/**
+ * One answer to something the file could not carry.
+ *
+ * `name` is the plan's, sent back exactly as it came; `targetId` says which of
+ * this workspace's rows it means. A binding naming a row this workspace does not
+ * hold is refused rather than ignored, so a form left open while the workspace
+ * changed gets an error and not a quietly different import.
+ */
+export interface ComponentBinding {
+  kind: ExternalKind;
+  name: string;
+  targetId: string;
 }
 
 export interface ImportPlan {
@@ -44,9 +87,15 @@ export interface ImportPlan {
   problems: string[];
 }
 
-const PLAN_FIELDS = `
+/**
+ * Shared with the template queries, which answer the same plan.
+ *
+ * Using a template is this import with the file already chosen, so a second copy
+ * of these fields would be a second place for a new one to be forgotten.
+ */
+export const PLAN_FIELDS = `
   formatVersion producedBy depth importable problems
-  entries { kind name targetName disposition detail }
+  entries { kind external name targetName disposition detail }
 `;
 
 export async function exportComponent(
@@ -64,24 +113,84 @@ export async function exportComponent(
   return data.exportComponent;
 }
 
-export async function componentImportPlan(workspaceId: string, envelope: string): Promise<ImportPlan> {
+export async function componentImportPlan(
+  workspaceId: string,
+  envelope: string,
+  bindings: ComponentBinding[] = [],
+): Promise<ImportPlan> {
   const data = await graphql<{ componentImportPlan: ImportPlan }>(
-    `query ComponentImportPlan($workspaceId: ID!, $envelope: String!) {
-       componentImportPlan(workspaceId: $workspaceId, envelope: $envelope) { ${PLAN_FIELDS} }
+    `query ComponentImportPlan($workspaceId: ID!, $envelope: String!, $bindings: [ComponentBindingInput!]) {
+       componentImportPlan(workspaceId: $workspaceId, envelope: $envelope, bindings: $bindings) {
+         ${PLAN_FIELDS}
+       }
      }`,
-    { workspaceId, envelope },
+    { workspaceId, envelope, bindings },
   );
   return data.componentImportPlan;
 }
 
-export async function importComponents(workspaceId: string, envelope: string): Promise<ImportPlan> {
+export async function importComponents(
+  workspaceId: string,
+  envelope: string,
+  bindings: ComponentBinding[] = [],
+): Promise<ImportPlan> {
   const data = await graphql<{ importComponents: ImportPlan }>(
-    `mutation ImportComponents($workspaceId: ID!, $envelope: String!) {
-       importComponents(workspaceId: $workspaceId, envelope: $envelope) { ${PLAN_FIELDS} }
+    `mutation ImportComponents($workspaceId: ID!, $envelope: String!, $bindings: [ComponentBindingInput!]) {
+       importComponents(workspaceId: $workspaceId, envelope: $envelope, bindings: $bindings) {
+         ${PLAN_FIELDS}
+       }
      }`,
-    { workspaceId, envelope },
+    { workspaceId, envelope, bindings },
   );
   return data.importComponents;
+}
+
+/** One of this workspace's rows, offered as an answer to a name in the file. */
+export interface BindingChoice {
+  id: string;
+  /** Named as the plan names it, so the two lists read alike. */
+  label: string;
+  /** What it is here — the type, the address — for telling two of them apart. */
+  note: string | null;
+}
+
+/**
+ * What this workspace can point a name at.
+ *
+ * Asked of the catalogues that already answer these questions elsewhere rather
+ * than through a query of its own: the picker offers the same models the agent
+ * form offers and the same connections the integrations page lists, and a second
+ * route to them would be a second thing to keep in step.
+ *
+ * A model is labelled with its provider, because that is what the file names and
+ * what the plan echoes back — two providers offering a model of one name is
+ * common enough that the bare name would be ambiguous on both sides.
+ */
+export async function bindingChoices(workspaceId: string, kind: ExternalKind): Promise<BindingChoice[]> {
+  switch (kind) {
+    case 'MODEL': {
+      const models = await fetchModels(workspaceId);
+      // An agent talks; a model that only hears or reads is not what it thinks with.
+      return models.filter(answers).map((model) => ({
+        id: model.id,
+        label: `${model.providerName} / ${model.name}`,
+        note: model.modelId,
+      }));
+    }
+    case 'CONNECTION': {
+      const connections = await fetchWorkspaceConnections(workspaceId);
+      return connections.map((connection) => ({
+        id: connection.id,
+        label: connection.name,
+        // The type as the plan writes it, so "(slack)" in the file has a match here.
+        note: connection.type.toLowerCase().replace(/_/g, ' '),
+      }));
+    }
+    case 'MCP_SERVER': {
+      const servers = await fetchMcpServers(workspaceId);
+      return servers.map((server) => ({ id: server.id, label: server.name, note: server.address }));
+    }
+  }
 }
 
 /** What the file is called on the way in, once the browser has taken it. */
@@ -104,6 +213,16 @@ export const KIND_LABEL: Record<ComponentKind, string> = {
   CONDITION: 'Condition',
   TOOL: 'Tool',
   SKILL: 'Skill',
+  ACTION: 'Action',
+  TRIGGER: 'Trigger',
+  AGENT: 'Agent',
+  WORKFLOW: 'Workflow',
+};
+
+export const EXTERNAL_LABEL: Record<ExternalKind, string> = {
+  MODEL: 'Model',
+  CONNECTION: 'Connection',
+  MCP_SERVER: 'MCP server',
 };
 
 export const DISPOSITION_LABEL: Record<ImportDisposition, string> = {

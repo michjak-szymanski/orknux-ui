@@ -1,4 +1,5 @@
-import type { ComponentKind, ExportDepth, ImportPlan } from './transfer';
+import type { ComponentBinding, ComponentKind, ExportDepth, ImportPlan } from './transfer';
+import { PLAN_FIELDS } from './transfer';
 import { graphql } from './client';
 
 /**
@@ -55,11 +56,6 @@ const TEMPLATE_FIELDS = `
   contents { kind name }
 `;
 
-const PLAN_FIELDS = `
-  formatVersion producedBy depth importable problems
-  entries { kind name targetName disposition detail }
-`;
-
 /** Every template, or only the ones carrying a kind. */
 export async function fetchComponentTemplates(holding?: ComponentKind): Promise<ComponentTemplate[]> {
   const data = await graphql<{ componentTemplates: ComponentTemplate[] }>(
@@ -89,22 +85,34 @@ export async function fetchTemplateEnvelope(id: string): Promise<string> {
 }
 
 /** What using it here would do. The import's own plan, from the import's reader. */
-export async function componentTemplatePlan(workspaceId: string, templateId: string): Promise<ImportPlan> {
+export async function componentTemplatePlan(
+  workspaceId: string,
+  templateId: string,
+  bindings: ComponentBinding[] = [],
+): Promise<ImportPlan> {
   const data = await graphql<{ componentTemplatePlan: ImportPlan }>(
-    `query ComponentTemplatePlan($workspaceId: ID!, $templateId: ID!) {
-       componentTemplatePlan(workspaceId: $workspaceId, templateId: $templateId) { ${PLAN_FIELDS} }
+    `query ComponentTemplatePlan($workspaceId: ID!, $templateId: ID!, $bindings: [ComponentBindingInput!]) {
+       componentTemplatePlan(workspaceId: $workspaceId, templateId: $templateId, bindings: $bindings) {
+         ${PLAN_FIELDS}
+       }
      }`,
-    { workspaceId, templateId },
+    { workspaceId, templateId, bindings },
   );
   return data.componentTemplatePlan;
 }
 
-export async function useComponentTemplate(workspaceId: string, templateId: string): Promise<ImportPlan> {
+export async function useComponentTemplate(
+  workspaceId: string,
+  templateId: string,
+  bindings: ComponentBinding[] = [],
+): Promise<ImportPlan> {
   const data = await graphql<{ useComponentTemplate: ImportPlan }>(
-    `mutation UseComponentTemplate($workspaceId: ID!, $templateId: ID!) {
-       useComponentTemplate(workspaceId: $workspaceId, templateId: $templateId) { ${PLAN_FIELDS} }
+    `mutation UseComponentTemplate($workspaceId: ID!, $templateId: ID!, $bindings: [ComponentBindingInput!]) {
+       useComponentTemplate(workspaceId: $workspaceId, templateId: $templateId, bindings: $bindings) {
+         ${PLAN_FIELDS}
+       }
      }`,
-    { workspaceId, templateId },
+    { workspaceId, templateId, bindings },
   );
   return data.useComponentTemplate;
 }

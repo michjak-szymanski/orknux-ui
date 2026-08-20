@@ -216,8 +216,11 @@
 .colActions {
   display: flex;
   flex-shrink: 0;
-  justify-content: center;
-  width: 80px;
+  align-items: center;
+  justify-content: flex-end;
+  /* Wide enough for Export and Save as template beside the way in. */
+  gap: var(--space-6);
+  width: 112px;
   text-align: center;
 }
 

@@ -97,7 +97,9 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: flex-end;
-  width: 80px;
+  /* Wide enough for Export and Save as template beside the way in. */
+  gap: var(--space-6);
+  width: 112px;
 }
 
 .agentCell {

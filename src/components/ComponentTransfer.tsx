@@ -1,9 +1,19 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { ComponentKind, ExportDepth, ImportEntry, ImportPlan } from '../api/transfer';
+import type {
+  BindingChoice,
+  ComponentBinding,
+  ComponentKind,
+  ExportDepth,
+  ExternalKind,
+  ImportEntry,
+  ImportPlan,
+} from '../api/transfer';
 import {
   DISPOSITION_LABEL,
+  EXTERNAL_LABEL,
   KIND_LABEL,
+  bindingChoices,
   componentImportPlan,
   exportComponent,
   importComponents,
@@ -17,6 +27,7 @@ import {
   saveComponentAsTemplate,
   useComponentTemplate,
 } from '../api/templates';
+import chevronDownIcon from '../assets/chevron-down-12.svg';
 import downloadIcon from '../assets/download.svg';
 import layersIcon from '../assets/layers.svg';
 import dialogStyles from './Dialog.module.css';
@@ -25,10 +36,17 @@ import styles from './ComponentTransfer.module.css';
 /**
  * Export and Import for a workspace's catalogue.
  *
- * Two controls, on five lists. The export asks how much to take before it takes
- * it, and the import says what it will do before it does it — a button that
- * silently creates nine things is worse than one that lists them first, which is
- * the whole reason the plan is a separate round trip rather than a return value.
+ * Two controls, on every list that holds something a file can carry. The export
+ * asks how much to take before it takes it, and the import says what it will do
+ * before it does it — a button that silently creates nine things is worse than
+ * one that lists them first, which is the whole reason the plan is a separate
+ * round trip rather than a return value.
+ *
+ * Half the catalogue points at something no file can carry: a model, a
+ * connection, an MCP server, each of them kept beside a credential. Those arrive
+ * as questions rather than as failures, and answering one is asking for the same
+ * plan again with the answer attached — which is why the dialog owns the plan
+ * rather than being handed one.
  */
 
 export interface ExportComponentButtonProps {
@@ -119,7 +137,9 @@ function ExportDialog({ open, workspaceId, kind, id, name, onClose }: ExportDial
         </header>
         <p className={dialogStyles.dialogMessage}>
           A JSON file you can import into another workspace. Nothing secret travels: a variable this is
-          handed is named in the file, and the workspace it lands in supplies its own value.
+          handed is named in the file, and the workspace it lands in supplies its own value. So is a model,
+          a connection or an MCP server it points at — each of those is kept beside a credential, and the
+          workspace it lands in says which of its own the name means.
         </p>
 
         <div className={styles.choices}>
@@ -133,8 +153,8 @@ function ExportDialog({ open, workspaceId, kind, id, name, onClose }: ExportDial
             <span className={styles.choiceText}>
               <span className={styles.choiceTitle}>Everything it uses</span>
               <span className={styles.choiceNote}>
-                The objects it is typed against, the functions it calls, the conditions it combines — so it
-                lands somewhere it can be opened.
+                The objects it is typed against, the functions it calls, the actions and agents a workflow
+                runs — so it lands somewhere it can be opened.
               </span>
             </span>
           </label>
@@ -193,47 +213,31 @@ export function ImportComponentsButton({ workspaceId, onImported, label = 'Impor
   const fileRef = useRef<HTMLInputElement>(null);
   const [envelope, setEnvelope] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string>('');
-  const [plan, setPlan] = useState<ImportPlan | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
 
   async function chosen(file: File | undefined) {
     if (file === undefined) return;
     setFileName(file.name);
-    setError(null);
-    setPlan(null);
-    setBusy(true);
-    const text = await file.text();
-    setEnvelope(text);
-    try {
-      setPlan(await componentImportPlan(workspaceId, text));
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not read that file.');
-    }
-    setBusy(false);
+    setEnvelope(await file.text());
   }
 
   function close() {
     setEnvelope(null);
-    setPlan(null);
-    setError(null);
-    setBusy(false);
     if (fileRef.current !== null) fileRef.current.value = '';
   }
 
-  async function go() {
-    if (envelope === null) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await importComponents(workspaceId, envelope);
-      close();
-      onImported();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not import it.');
-      setBusy(false);
-    }
-  }
+  /*
+   * Keyed on the file rather than rebuilt each render: the dialog asks for the
+   * plan again whenever these change, which is what choosing a second file
+   * should do and what re-rendering should not.
+   */
+  const planFor = useCallback(
+    (bindings: ComponentBinding[]) => componentImportPlan(workspaceId, envelope ?? '', bindings),
+    [workspaceId, envelope],
+  );
+  const commit = useCallback(
+    (bindings: ComponentBinding[]) => importComponents(workspaceId, envelope ?? '', bindings),
+    [workspaceId, envelope],
+  );
 
   return (
     <>
@@ -250,11 +254,14 @@ export function ImportComponentsButton({ workspaceId, onImported, label = 'Impor
       <ImportDialog
         open={envelope !== null}
         title={`Import ${fileName}`}
-        plan={plan}
-        error={error}
-        busy={busy}
+        workspaceId={workspaceId}
+        planFor={planFor}
+        commit={commit}
         onClose={close}
-        onConfirm={() => void go()}
+        onImported={() => {
+          close();
+          onImported();
+        }}
       />
     </>
   );
@@ -264,17 +271,53 @@ interface ImportDialogProps {
   open: boolean;
   /** "Import orders.orkx.json", or "Use Order handling". */
   title: string;
-  plan: ImportPlan | null;
-  error: string | null;
-  busy: boolean;
+  workspaceId: string;
+  /**
+   * What this would do, given these answers.
+   *
+   * The same call for the first look and for every answer after it — asking what
+   * needs binding is asking for the plan, and answering is asking again with the
+   * answers attached. Must be stable while one file is open.
+   */
+  planFor: (bindings: ComponentBinding[]) => Promise<ImportPlan>;
+  /** Does it, with the answers that were given. */
+  commit: (bindings: ComponentBinding[]) => Promise<ImportPlan>;
   onClose: () => void;
-  onConfirm: () => void;
+  /** Called once something was actually created. */
+  onImported: () => void;
   /** What the button says. "Import" for a file, "Use template" for a row. */
   confirmLabel?: string;
 }
 
-function ImportDialog({ open, title, plan, error, busy, onClose, onConfirm, confirmLabel = 'Import' }: ImportDialogProps) {
+/**
+ * What the file would do here, and the questions it cannot answer itself.
+ *
+ * The plan is asked for again after every answer rather than patched: the server
+ * is the one reader of the file, and a dialog that worked out for itself what a
+ * binding settled would be a second reader — the lenient one, offering Import
+ * for a file the mutation then refuses.
+ */
+function ImportDialog({
+  open,
+  title,
+  workspaceId,
+  planFor,
+  commit,
+  onClose,
+  onImported,
+  confirmLabel = 'Import',
+}: ImportDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const [plan, setPlan] = useState<ImportPlan | null>(null);
+  const [bindings, setBindings] = useState<ComponentBinding[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  /*
+   * Told apart from `busy` only so the button can say which of the two waits
+   * this is: asking for the plan again is not importing, and a button that
+   * says it is has somebody watching for a change that has not happened.
+   */
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -283,7 +326,78 @@ function ImportDialog({ open, title, plan, error, busy, onClose, onConfirm, conf
     else if (!open && dialog.open) dialog.close();
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    let current = true;
+    setPlan(null);
+    setBindings([]);
+    setError(null);
+    setImporting(false);
+    setBusy(true);
+    planFor([])
+      .then((first) => {
+        if (current) setPlan(first);
+      })
+      .catch((cause: unknown) => {
+        if (current) setError(cause instanceof Error ? cause.message : 'Could not read that file.');
+      })
+      .finally(() => {
+        if (current) setBusy(false);
+      });
+    return () => {
+      current = false;
+    };
+  }, [open, planFor]);
+
+  /**
+   * One answer, and the plan again with every answer so far.
+   *
+   * An empty choice takes the answer back rather than sending an empty one, so
+   * the entry returns to the question it was.
+   */
+  async function answer(entry: ImportEntry, targetId: string) {
+    if (entry.external === null) return;
+    const external = entry.external;
+    const next = bindings
+      .filter((binding) => !(binding.kind === external && binding.name === entry.name))
+      .concat(targetId === '' ? [] : [{ kind: external, name: entry.name, targetId }]);
+    setBindings(next);
+    setBusy(true);
+    setError(null);
+    try {
+      setPlan(await planFor(next));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not read that file.');
+    }
+    setBusy(false);
+  }
+
+  async function go() {
+    setBusy(true);
+    setImporting(true);
+    setError(null);
+    try {
+      await commit(bindings);
+      onImported();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not import it.');
+      setImporting(false);
+      setBusy(false);
+    }
+  }
+
   const creating = plan?.entries.filter((entry) => entry.disposition !== 'REUSE').length ?? 0;
+
+  /*
+   * Everything the file points outward at that this workspace did not match on
+   * its own — the ones still unanswered, and the ones answered here, which stay
+   * so an answer can be changed or taken back.
+   */
+  const questions = (plan?.entries ?? []).filter(
+    (entry) =>
+      entry.external !== null &&
+      (entry.disposition === 'MISSING' || chosenFor(bindings, entry) !== ''),
+  );
 
   return (
     <dialog ref={dialogRef} className={`${dialogStyles.dialog} ${dialogStyles.dialogWide}`} onCancel={onClose} onClose={onClose}>
@@ -302,13 +416,23 @@ function ImportDialog({ open, title, plan, error, busy, onClose, onConfirm, conf
                 : 'This cannot be imported yet. What it points at has to exist here first.'}
             </p>
 
+            {questions.length > 0 && (
+              <BindingQuestions
+                workspaceId={workspaceId}
+                questions={questions}
+                bindings={bindings}
+                busy={busy}
+                onAnswer={(entry, targetId) => void answer(entry, targetId)}
+              />
+            )}
+
             <ul className={styles.plan}>
               {plan.entries.map((entry) => (
-                <li className={styles.entry} key={`${entry.kind ?? 'VARIABLE'}:${entry.name}`}>
+                <li className={styles.entry} key={entryKey(entry)}>
                   <span className={styles.entryHead}>
-                    <span className={styles.entryKind}>{entry.kind === null ? 'Variable' : KIND_LABEL[entry.kind]}</span>
+                    <span className={styles.entryKind}>{entryKindLabel(entry)}</span>
                     <span className={styles.entryName}>
-                      {entry.disposition === 'RENAME' ? `${entry.name} → ${entry.targetName}` : entry.name}
+                      {entry.name === entry.targetName ? entry.name : `${entry.name} → ${entry.targetName}`}
                     </span>
                     <span className={`${styles.badge} ${badgeOf(entry)}`}>
                       {DISPOSITION_LABEL[entry.disposition]}
@@ -318,6 +442,15 @@ function ImportDialog({ open, title, plan, error, busy, onClose, onConfirm, conf
                 </li>
               ))}
             </ul>
+
+            {plan.entries.some((entry) => entry.kind === 'WORKFLOW') && (
+              <p className={styles.arrival}>
+                A workflow arrives as a draft: publishing takes a copy of the graph to run from, and that
+                first publish is yours to make once you have looked at what came. Its name belongs to the
+                whole installation rather than to this workspace, so a copy landing beside the original is
+                renamed rather than replacing it.
+              </p>
+            )}
 
             <p className={styles.summary}>
               Format version {plan.formatVersion}
@@ -339,15 +472,134 @@ function ImportDialog({ open, title, plan, error, busy, onClose, onConfirm, conf
           <button
             type="button"
             className={dialogStyles.filled}
-            onClick={onConfirm}
+            onClick={() => void go()}
             disabled={busy || plan === null || !plan.importable}
           >
-            {busy ? 'Importing…' : confirmLabel}
+            {importing ? 'Importing…' : confirmLabel}
           </button>
         </div>
       </div>
     </dialog>
   );
+}
+
+interface BindingQuestionsProps {
+  workspaceId: string;
+  questions: ImportEntry[];
+  bindings: ComponentBinding[];
+  busy: boolean;
+  onAnswer: (entry: ImportEntry, targetId: string) => void;
+}
+
+/**
+ * A row per thing the file could not carry, and this workspace's own to point it at.
+ *
+ * The name on the left is the file's, shown and sent back exactly as the plan
+ * gave it — for a model it reads as a provider and a model, but nothing here
+ * takes it apart, because what makes it unique is the server's business.
+ */
+function BindingQuestions({ workspaceId, questions, bindings, busy, onAnswer }: BindingQuestionsProps) {
+  const [choices, setChoices] = useState<Partial<Record<ExternalKind, BindingChoice[]>>>({});
+  const [error, setError] = useState<string | null>(null);
+
+  // Only the kinds actually asked about: a file naming no model has no business
+  // fetching the workspace's models.
+  const wanted = [...new Set(questions.map((entry) => entry.external))].filter(
+    (kind): kind is ExternalKind => kind !== null,
+  );
+  const key = wanted.join(',');
+
+  useEffect(() => {
+    let current = true;
+    setError(null);
+    Promise.all(
+      key
+        .split(',')
+        .filter((kind) => kind !== '')
+        .map(async (kind) => [kind, await bindingChoices(workspaceId, kind as ExternalKind)] as const),
+    )
+      .then((loaded) => {
+        if (current) setChoices(Object.fromEntries(loaded));
+      })
+      .catch((cause: unknown) => {
+        if (current) setError(cause instanceof Error ? cause.message : 'Could not load what is here.');
+      });
+    return () => {
+      current = false;
+    };
+  }, [workspaceId, key]);
+
+  return (
+    <section className={styles.questions}>
+      <p className={styles.questionsLead}>
+        Some of what this file points at is kept beside a credential, so no export could carry it — the
+        file has the name and nothing else. Say which of this workspace's own each name means.
+      </p>
+
+      {error !== null && (
+        <p className={dialogStyles.error} role="alert">
+          {error}
+        </p>
+      )}
+
+      <ul className={styles.questionList}>
+        {questions.map((entry) => {
+          const kind = entry.external as ExternalKind;
+          const offered = choices[kind];
+          return (
+            <li className={styles.question} key={entryKey(entry)}>
+              <span className={styles.questionHead}>
+                <span className={styles.entryKind}>{EXTERNAL_LABEL[kind]}</span>
+                <span className={styles.entryName}>{entry.name}</span>
+              </span>
+              <div className={`${dialogStyles.inputWrapper} ${styles.picker}`}>
+                <select
+                  className={`${dialogStyles.input} ${dialogStyles.select}`}
+                  value={chosenFor(bindings, entry)}
+                  aria-label={`Which ${EXTERNAL_LABEL[kind].toLowerCase()} ${entry.name} means here`}
+                  disabled={busy || offered === undefined}
+                  onChange={(event) => onAnswer(entry, event.target.value)}
+                >
+                  <option value="">
+                    {offered === undefined
+                      ? 'Loading…'
+                      : offered.length === 0
+                        ? 'Nothing here to point it at — make one first'
+                        : 'Choose one…'}
+                  </option>
+                  {(offered ?? []).map((choice) => (
+                    <option key={choice.id} value={choice.id}>
+                      {choice.note === null ? choice.label : `${choice.label} — ${choice.note}`}
+                    </option>
+                  ))}
+                </select>
+                <img src={chevronDownIcon} alt="" width={12} height={12} />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+/** Which row was chosen for one question, or "" while none has been. */
+function chosenFor(bindings: ComponentBinding[], entry: ImportEntry): string {
+  return (
+    bindings.find((binding) => binding.kind === entry.external && binding.name === entry.name)?.targetId ?? ''
+  );
+}
+
+/** Unique across a plan: a name can be a component's, an external's and a variable's at once. */
+function entryKey(entry: ImportEntry): string {
+  return `${entry.kind ?? entry.external ?? 'VARIABLE'}:${entry.name}`;
+}
+
+/** "Function", "MCP server", "Variable" — the three things an entry can be about. */
+function entryKindLabel(entry: ImportEntry): string {
+  if (entry.kind !== null) return KIND_LABEL[entry.kind];
+  if (entry.external !== null) return EXTERNAL_LABEL[entry.external];
+  return 'Variable';
 }
 
 export interface UseTemplateButtonProps {
@@ -372,9 +624,7 @@ export function UseTemplateButton({ workspaceId, kind, onImported, label = 'Use 
   const [picking, setPicking] = useState(false);
   const [templates, setTemplates] = useState<ComponentTemplate[] | null>(null);
   const [chosen, setChosen] = useState<ComponentTemplate | null>(null);
-  const [plan, setPlan] = useState<ImportPlan | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
 
   function open() {
     setPicking(true);
@@ -387,40 +637,15 @@ export function UseTemplateButton({ workspaceId, kind, onImported, label = 'Use 
       );
   }
 
-  async function choose(template: ComponentTemplate) {
-    setChosen(template);
-    setPicking(false);
-    setPlan(null);
-    setError(null);
-    setBusy(true);
-    try {
-      setPlan(await componentTemplatePlan(workspaceId, template.id));
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not read that template.');
-    }
-    setBusy(false);
-  }
-
-  function close() {
-    setChosen(null);
-    setPlan(null);
-    setError(null);
-    setBusy(false);
-  }
-
-  async function go() {
-    if (chosen === null) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await useComponentTemplate(workspaceId, chosen.id);
-      close();
-      onImported();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not use that template.');
-      setBusy(false);
-    }
-  }
+  const templateId = chosen?.id ?? '';
+  const planFor = useCallback(
+    (bindings: ComponentBinding[]) => componentTemplatePlan(workspaceId, templateId, bindings),
+    [workspaceId, templateId],
+  );
+  const commit = useCallback(
+    (bindings: ComponentBinding[]) => useComponentTemplate(workspaceId, templateId, bindings),
+    [workspaceId, templateId],
+  );
 
   return (
     <>
@@ -431,18 +656,24 @@ export function UseTemplateButton({ workspaceId, kind, onImported, label = 'Use 
         open={picking}
         templates={templates}
         error={picking ? error : null}
-        onChoose={(template) => void choose(template)}
+        onChoose={(template) => {
+          setChosen(template);
+          setPicking(false);
+        }}
         onClose={() => setPicking(false)}
       />
       <ImportDialog
         open={chosen !== null}
         title={chosen === null ? '' : `Use ${chosen.name}`}
-        plan={plan}
-        error={chosen === null ? null : error}
-        busy={busy}
+        workspaceId={workspaceId}
+        planFor={planFor}
+        commit={commit}
         confirmLabel="Use template"
-        onClose={close}
-        onConfirm={() => void go()}
+        onClose={() => setChosen(null)}
+        onImported={() => {
+          setChosen(null);
+          onImported();
+        }}
       />
     </>
   );

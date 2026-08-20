@@ -15,6 +15,12 @@ import toggleOnIcon from '../../assets/toggle-on.svg';
 import { AppShell } from '../../components/AppShell';
 import { AutoRefresh } from '../../components/AutoRefresh';
 import { CompactPagination } from '../../components/CompactPagination';
+import {
+  ExportComponentButton,
+  ImportComponentsButton,
+  SaveAsTemplateButton,
+  UseTemplateButton,
+} from '../../components/ComponentTransfer';
 import { CreateWorkflowDialog } from '../../components/CreateWorkflowDialog';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
@@ -129,6 +135,8 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
           <span className={styles.headerSpacer} />
           {/* A workflow's status changes as runs finish, without this page asking. */}
           <AutoRefresh onRefresh={load} />
+          <ImportComponentsButton workspaceId={workspaceId} onImported={load} />
+          <UseTemplateButton workspaceId={workspaceId} kind="WORKFLOW" onImported={load} />
           <button type="button" className={styles.createWorkflow} onClick={() => setCreating(true)}>
             <span aria-hidden="true">+</span>
             Create Workflow
@@ -212,6 +220,26 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
                 >
                   <img src={workflow.enabled ? toggleOnIcon : toggleOffIcon} alt="" width={36} height={20} data-keeps-colour />
                 </button>
+                {/*
+                  The definition's id rather than the assignment's: what travels
+                  is the workflow itself, and the row this workspace holds it by
+                  means nothing anywhere else.
+                */}
+                <ExportComponentButton
+                  workspaceId={workspaceId}
+                  kind="WORKFLOW"
+                  id={workflow.workflowId}
+                  name={workflow.name}
+                  className={styles.settings}
+                />
+                <SaveAsTemplateButton
+                  workspaceId={workspaceId}
+                  kind="WORKFLOW"
+                  id={workflow.workflowId}
+                  name={workflow.name}
+                  className={styles.settings}
+                  canPublish={session.admin}
+                />
                 <Link
                   className={styles.settings}
                   to={`/workspace/${workspaceId}/workflows/${workflow.id}/settings`}

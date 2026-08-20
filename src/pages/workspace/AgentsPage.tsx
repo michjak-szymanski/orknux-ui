@@ -10,6 +10,13 @@ import toggleOffIcon from '../../assets/toggle-off.svg';
 import toggleOnIcon from '../../assets/toggle-on.svg';
 import { AppShell } from '../../components/AppShell';
 import { CompactPagination } from '../../components/CompactPagination';
+import {
+  ExportComponentButton,
+  ImportComponentsButton,
+  SaveAsTemplateButton,
+  UseTemplateButton,
+  transferStyles,
+} from '../../components/ComponentTransfer';
 import { CreateAgentDialog } from '../../components/CreateAgentDialog';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
@@ -68,9 +75,13 @@ export function AgentsPage({ session, onSignOut }: AgentsPageProps) {
           <h1 className={styles.title}>Agents</h1>
           <p className={styles.subtitle}>Configure and manage AI agents for your workspace</p>
         </div>
-        <button type="button" className={styles.createAgent} onClick={() => setCreating(true)}>
-          + Create Agent
-        </button>
+        <div className={transferStyles.headerActions}>
+          <ImportComponentsButton workspaceId={workspaceId} onImported={load} />
+          <UseTemplateButton workspaceId={workspaceId} kind="AGENT" onImported={load} />
+          <button type="button" className={styles.createAgent} onClick={() => setCreating(true)}>
+            + Create Agent
+          </button>
+        </div>
       </header>
 
       <section className={styles.card}>
@@ -110,6 +121,21 @@ export function AgentsPage({ session, onSignOut }: AgentsPageProps) {
               </button>
             </span>
             <span className={styles.colActions}>
+              <ExportComponentButton
+                workspaceId={workspaceId}
+                kind="AGENT"
+                id={agent.id}
+                name={agent.name}
+                className={styles.settings}
+              />
+              <SaveAsTemplateButton
+                workspaceId={workspaceId}
+                kind="AGENT"
+                id={agent.id}
+                name={agent.name}
+                className={styles.settings}
+                canPublish={session.admin}
+              />
               <Link
                 className={styles.settings}
                 to={`/workspace/${workspaceId}/agents/${agent.id}/settings`}
