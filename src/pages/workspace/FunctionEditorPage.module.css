@@ -123,10 +123,83 @@
 .split {
   display: flex;
   flex: 1 0 0;
-  gap: var(--space-24);
+  /*
+   * No gap: the handle between the columns is the gap now, and it is exactly as
+   * wide as this used to be. A gap as well would put 24px on each side of it and
+   * push the two columns half a handle further apart than they have ever been.
+   */
+  gap: 0;
   align-items: stretch;
   width: 100%;
   min-height: 0;
+}
+
+/*
+ * While the divider is being dragged, the whole row says so.
+ *
+ * The cursor, because the pointer is captured by the handle and can be well
+ * outside it - over the code, over the panel - and reverting to a text caret
+ * halfway through a drag reads as the drag having been dropped. The selection,
+ * because a press that began on the handle would otherwise sweep a selection
+ * across whichever column the pointer crosses.
+ */
+.splitDragging {
+  cursor: col-resize;
+  user-select: none;
+}
+
+/*
+ * What the two columns are divided by.
+ *
+ * The split used to be fixed: 380px of panel and whatever was left for the
+ * code. That is the wrong answer for both of the people who open this page -
+ * writing a function wants the code wide, filling in its parameters wants the
+ * details wide - and neither of them could do anything about it.
+ *
+ * The whole 24px is the target, which is a comfortable thing to aim at, while
+ * only the line inside it is drawn - a 24px bar between two cards would read as
+ * a third column. It lights on hover and on focus, so the thing that can be
+ * taken hold of is the thing that looks like it can.
+ */
+.handle {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: col-resize;
+  /* Or the browser takes the drag as a scroll and the divider never moves. */
+  touch-action: none;
+}
+
+.handle::before {
+  content: '';
+  width: 2px;
+  height: 100%;
+  background: var(--color-border);
+  border-radius: var(--radius-4);
+  /* Width and colour only. Nothing here is positioned, so nothing lags a drag. */
+  transition:
+    width 120ms ease,
+    background 120ms ease;
+}
+
+.handle:hover::before,
+.handle:focus-visible::before,
+.handleDragging::before {
+  width: 4px;
+  background: var(--color-accent-brand);
+}
+
+/*
+ * The lit bar is the focus indicator. A ring around a 24px column of nothing
+ * would draw a box in the gap between two cards and say less than this does.
+ */
+.handle:focus-visible {
+  outline: none;
 }
 
 .editorCard {
@@ -327,7 +400,12 @@
   flex-direction: column;
   flex-shrink: 0;
   gap: var(--space-24);
-  width: 380px;
+  /*
+   * As wide as the divider beside it has been left. The fallback is the width
+   * this panel always had, and is what a browser that will not remember, or a
+   * person who has never dragged it, still gets.
+   */
+  width: var(--panel-width, 380px);
   padding: var(--space-20);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -755,11 +833,28 @@
 @media (width < 1300px) {
   .split {
     flex-direction: column;
+    /* Stacked, the columns need the gap back: there is no handle between them. */
+    gap: var(--space-24);
   }
 
   .panel {
+    /*
+     * The whole measure, whatever the split was dragged to. What was chosen is
+     * still stored and comes back with the room to honour it - this is the same
+     * clamp the page applies in pixels, said in CSS for the case where there is
+     * no divider to clamp.
+     */
     width: 100%;
     align-self: stretch;
+  }
+
+  /*
+   * Nothing to divide. One above the other, a vertical handle would be a
+   * horizontal one, and dragging it would change a height nobody asked about.
+   * `display: none` rather than hiding it, so it leaves the tab order too.
+   */
+  .handle {
+    display: none;
   }
 }
 

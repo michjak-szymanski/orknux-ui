@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import type { ValueType } from '../../api/actions';
@@ -52,6 +53,50 @@ export interface FunctionEditorPageProps {
 
 /** The whole of a workspace's shapes fits the picker. */
 const OBJECT_PAGE_SIZE = 100;
+
+/*
+ * How the two columns share the row, in pixels of panel.
+ *
+ * Kept for the person and not for the function. Somebody writing a function
+ * wants the code wide and somebody filling in its parameters wants the details
+ * wide, and which of those they are does not change when they open a different
+ * function - so one number, not one per function.
+ *
+ * In the browser rather than on the server, and under the prefix the rest of
+ * this platform's view state uses. It is one person's arrangement of their own
+ * screen: a colleague opening the same function sees the split as it opens for
+ * them, and dragging it here does not drag it there. The workflow editor keeps
+ * where its lines have been pulled to the same way, for the same reason.
+ */
+const SPLIT_KEY = 'orknux.function-editor.panel-width';
+
+/** What the panel is worth until somebody says otherwise - the width it always had. */
+const DEFAULT_PANEL = 380;
+
+/*
+ * How little either side can be dragged to.
+ *
+ * The editor's floor is the width this page's own breakpoint already calls too
+ * narrow: below about 425px a line of ordinary TypeScript stops fitting, which
+ * is why the columns stack at all rather than getting narrower. The panel's is
+ * what its widest row needs - a name, a type and a remove button on one line -
+ * before the fields start truncating each other.
+ */
+const MIN_EDITOR = 420;
+const MIN_PANEL = 300;
+
+/**
+ * The handle's own track: the room between the columns, which neither gets.
+ *
+ * It is the gap that used to be there. `.split` had 24px of it and now has
+ * none, because the handle stands in the gap's place - so the two columns are
+ * exactly as far apart as they were, and there is something in between to take
+ * hold of.
+ */
+const HANDLE_WIDTH = 24;
+
+/** One press of an arrow key. Coarse enough that a few presses get somewhere. */
+const NUDGE = 24;
 
 /** A compiler's complaint, with the line if it knew one. */
 function said(reason: string, line: number | null): string {
@@ -207,6 +252,163 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
   const format = useFormatShortcut();
   /** The editor itself, for the things only it can do — laying the code out. */
   const editor = useRef<CodeEditorHandle>(null);
+  /*
+   * The row the two columns share, held so a drag can be measured against its
+   * edges and its width watched.
+   *
+   * A callback ref rather than `useRef`: the row is not rendered at all while
+   * the function is still loading, so an effect reading a ref would find
+   * nothing on the pass that matters and never be run again.
+   */
+  const [split, setSplit] = useState<HTMLDivElement | null>(null);
+  /** How much room the row has, which is not the window and changes with it. */
+  const [room, setRoom] = useState(0);
+  /** What the panel has been dragged to, or null before anything has been read. */
+  const [wantedPanel, setWantedPanel] = useState<number | null>(null);
+  const [dragging, setDragging] = useState(false);
+
+  useEffect(() => {
+    if (split === null) return;
+    const watch = new ResizeObserver((entries) => {
+      const seen = entries[0]?.contentRect.width;
+      if (seen !== undefined) setRoom(seen);
+    });
+    watch.observe(split);
+    return () => watch.disconnect();
+  }, [split]);
+
+  useEffect(() => {
+    try {
+      const held = Number(window.localStorage.getItem(SPLIT_KEY));
+      if (Number.isFinite(held) && held > 0) setWantedPanel(held);
+    } catch {
+      // Unreadable, or turned off: the split simply opens where it always did.
+    }
+  }, []);
+
+  /** The widest the panel may be here, which depends on how much row there is. */
+  const widest = Math.max(MIN_PANEL, room - HANDLE_WIDTH - MIN_EDITOR);
+
+  /*
+   * Where the divider is drawn, which is not always where it was put.
+   *
+   * A window too narrow for the stored width gets the nearest split that still
+   * leaves an editor. Clamped for the drawing only: what was chosen is still
+   * what is stored, so widening the window gives it back rather than having
+   * quietly forgotten it on the way through.
+   */
+  const panelWidth = useMemo(() => {
+    const asked = wantedPanel ?? DEFAULT_PANEL;
+    // Nothing measured yet: honour what was asked for and correct it once the
+    // observer has reported, rather than clamping against a width of zero.
+    if (room === 0) return asked;
+    return Math.min(Math.max(asked, MIN_PANEL), widest);
+  }, [wantedPanel, room, widest]);
+
+  /**
+   * The editor is told to measure itself again, every time the split moves.
+   *
+   * This is the whole of what makes the drag correct rather than merely wide.
+   * Monaco does not read its size from the DOM: it caches the box it was last
+   * given and positions every glyph, the caret and the arithmetic that turns a
+   * click into an offset against that cache. Widen the column without saying so
+   * and the code goes on being drawn at the old measure - wrapped where it no
+   * longer wraps, and with a click landing the caret several characters from
+   * where the pointer actually was.
+   *
+   * `automaticLayout` is on and covers the sizes the page arrives at, but it
+   * observes on its own schedule; a drag changes the width every frame and the
+   * editor has to be right on the frame, not after it.
+   *
+   * A layout effect, so the measurement happens between the DOM changing and
+   * the frame being painted. In an ordinary effect there is one painted frame
+   * of an editor drawn at the previous width, which during a drag is every
+   * other frame.
+   */
+  useLayoutEffect(() => {
+    editor.current?.layout();
+  }, [panelWidth]);
+
+  /** Writes the split down. A browser that will not remember is no reason to refuse the drag. */
+  function rememberSplit(width: number) {
+    try {
+      window.localStorage.setItem(SPLIT_KEY, String(Math.round(width)));
+    } catch {
+      // Private mode, or storage full. The split still moves; it just does not
+      // survive the next visit, which is better than a drag that does nothing.
+    }
+  }
+
+  /** Where the pointer puts the divider, read as a width for the panel. */
+  function panelWidthAt(clientX: number): number {
+    if (split === null) return panelWidth;
+    const box = split.getBoundingClientRect();
+    const most = Math.max(MIN_PANEL, box.width - HANDLE_WIDTH - MIN_EDITOR);
+    // The pointer is holding the middle of the handle, not its edge.
+    return Math.min(Math.max(box.right - clientX - HANDLE_WIDTH / 2, MIN_PANEL), most);
+  }
+
+  function startSplitDrag(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.button !== 0) return;
+    // Otherwise the press begins a selection that runs across the editor as the
+    // pointer moves, and the drag ends with half the function highlighted.
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDragging(true);
+  }
+
+  function moveSplitDrag(event: ReactPointerEvent<HTMLDivElement>) {
+    if (!dragging) return;
+    setWantedPanel(panelWidthAt(event.clientX));
+  }
+
+  function endSplitDrag(event: ReactPointerEvent<HTMLDivElement>) {
+    if (!dragging) return;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    setDragging(false);
+    // Written once, at the end. Storing on every frame of a drag would be a
+    // hundred writes to say what the last one says.
+    rememberSplit(panelWidth);
+  }
+
+  /** Back to the width the page opens at, for a split dragged somewhere unhelpful. */
+  function resetSplit() {
+    setWantedPanel(DEFAULT_PANEL);
+    rememberSplit(DEFAULT_PANEL);
+  }
+
+  /**
+   * The same drag from the keyboard, for somebody who cannot hold a pointer
+   * down - the way the workflow editor's own handle answers arrows. Left widens
+   * the panel because left is where the divider goes; the delete keys put the
+   * split back rather than removing anything, since there is nothing to remove.
+   */
+  function onSplitKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    const by = event.key === 'ArrowLeft' ? NUDGE : event.key === 'ArrowRight' ? -NUDGE : 0;
+    if (by !== 0) {
+      // Kept from the column behind, which would scroll instead.
+      event.preventDefault();
+      const next = Math.min(Math.max(panelWidth + by, MIN_PANEL), widest);
+      setWantedPanel(next);
+      rememberSplit(next);
+      return;
+    }
+    if (event.key === 'Escape' || event.key === 'Delete' || event.key === 'Backspace') {
+      event.preventDefault();
+      resetSplit();
+    }
+  }
+
+  /**
+   * What the divider says about itself: the editor's share of the row.
+   *
+   * A separator that can be moved has to report a value, and a percentage is
+   * the one somebody can act on - "the editor has 62%" rather than a pixel
+   * count that means nothing without knowing how wide the window is.
+   */
+  const editorShare = (width: number) =>
+    room === 0 ? 0 : Math.round(((room - HANDLE_WIDTH - width) / room) * 100);
+
   /** Read by the keyboard handler, which must not start a second save. */
   const savingRef = useRef(saving);
   savingRef.current = saving;
@@ -747,8 +949,19 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
             </div>
           </header>
 
-          <div className={styles.split}>
-            <section className={styles.editorCard}>
+          {/*
+            The row, and how the two columns divide it.
+            The width goes in as a custom property rather than as a style on the
+            panel itself, so the stylesheet keeps the rule - and the breakpoint
+            further down can go on overriding it when the columns stack, which a
+            style attribute would have won against.
+          */}
+          <div
+            className={dragging ? `${styles.split} ${styles.splitDragging}` : styles.split}
+            ref={setSplit}
+            style={{ '--panel-width': `${panelWidth}px` } as CSSProperties}
+          >
+            <section className={styles.editorCard} id="function-code-column">
               <header className={styles.editorHeader}>
                 <span className={styles.editorTitle}>
                   <img src={codeIcon} alt="" width={16} height={16} />
@@ -862,6 +1075,37 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                 </span>
               </footer>
             </section>
+
+            {/*
+              The divider, standing in the gap that used to be between them.
+
+              A separator rather than a button: it is not a thing that happens
+              when pressed, it is a thing that has a position, and saying so is
+              what lets it report where it has been put. Focusable and answering
+              arrows for the same reason the workflow editor's handle does -
+              a split that can only be set by holding a pointer down cannot be
+              set by everybody.
+            */}
+            <div
+              className={dragging ? `${styles.handle} ${styles.handleDragging}` : styles.handle}
+              role="separator"
+              tabIndex={0}
+              aria-orientation="vertical"
+              aria-label="Width of the code editor"
+              aria-controls="function-code-column"
+              aria-valuenow={editorShare(panelWidth)}
+              // The extremes are the minimums, seen from the editor's side: the
+              // panel at its widest is the editor at its narrowest.
+              aria-valuemin={editorShare(widest)}
+              aria-valuemax={editorShare(MIN_PANEL)}
+              title="Drag to change the split; double-click to put it back"
+              onPointerDown={startSplitDrag}
+              onPointerMove={moveSplitDrag}
+              onPointerUp={endSplitDrag}
+              onPointerCancel={endSplitDrag}
+              onKeyDown={onSplitKeyDown}
+              onDoubleClick={resetSplit}
+            />
 
             <aside className={styles.panel}>
               <section className={styles.panelSection}>

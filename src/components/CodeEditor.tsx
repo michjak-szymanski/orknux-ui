@@ -16,6 +16,20 @@ export interface CodeEditorHandle {
    * code it was next to ended up.
    */
   format: () => void;
+  /**
+   * Measures the box again and redraws to fit it.
+   *
+   * Monaco does not lay itself out from the DOM: it caches the width and height
+   * it was last given and positions every glyph, the caret and the click-to-
+   * offset arithmetic against them. Change the box under it and it goes on
+   * drawing at the old measure - so the text is clipped or floating, and a click
+   * lands the caret several characters from where the pointer was.
+   *
+   * `automaticLayout` covers the sizes a page arrives at, but it observes on its
+   * own schedule and a drag changes the width every frame. Whatever moves the
+   * split says so here, and the editor is right on the frame it happens.
+   */
+  layout: () => void;
 }
 
 export interface CodeEditorProps {
@@ -131,6 +145,9 @@ export function CodeEditor({
         // output: a read-only model refuses the edit anyway.
         void editor.current?.getAction('editor.action.formatDocument')?.run();
       },
+      // No argument: measuring the host is the whole point, and passing a size
+      // would pin the editor to whatever the caller believed the box to be.
+      layout: () => editor.current?.layout(),
     }),
     [],
   );
