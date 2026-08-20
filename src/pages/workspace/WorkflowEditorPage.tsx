@@ -70,6 +70,7 @@ import botIcon from '../../assets/bot.svg';
 import boxIcon from '../../assets/box.svg';
 import cloudUploadIcon from '../../assets/cloud-upload.svg';
 import copyIcon from '../../assets/copy.svg';
+import downloadIcon from '../../assets/download.svg';
 import filterIcon from '../../assets/filter.svg';
 import messageSquareIcon from '../../assets/message-square.svg';
 import pencilIcon from '../../assets/pencil.svg';
@@ -81,6 +82,7 @@ import saveIcon from '../../assets/save.svg';
 import undoIcon from '../../assets/undo.svg';
 import { ActionDialog } from '../../components/ActionDialog';
 import { AppShell } from '../../components/AppShell';
+import { ExportComponentDialog } from '../../components/ComponentTransfer';
 import { ConditionDialog } from '../../components/ConditionDialog';
 import { DefinitionPicker } from '../../components/DefinitionPicker';
 import { FieldHint } from '../../components/FieldHint';
@@ -1285,6 +1287,8 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [removing, setRemoving] = useState(false);
+  /** The depth choice is open, on its way to a downloaded file. */
+  const [exporting, setExporting] = useState(false);
   /** A run is being started, and the editor is on its way to it. */
   const [running, setRunning] = useState(false);
   const [browsingIcons, setBrowsingIcons] = useState(false);
@@ -3026,6 +3030,26 @@ Change the keystroke in Preferences.`}
           >
             <img src={copyIcon} alt="" width={16} height={16} />
           </ToolButton>
+          {/*
+            Beside Duplicate, because it is the same gesture at a longer range:
+            one makes a second copy on this canvas, the other makes one that can
+            leave the installation. It was on the workflows list and nowhere
+            else, so getting a file of the workflow somebody was looking at
+            meant going back to the list and finding the row again.
+
+            The download is of what the server holds, which is what the last
+            save put there - the canvas is not sent first. Saying so on the
+            button is cheaper than a file that quietly predates the last ten
+            minutes of work, and it is the same sentence Discard already uses
+            for the same boundary.
+          */}
+          <ToolButton
+            label="Export"
+            note="Downloads the workflow as a file, as it was last saved."
+            onClick={() => setExporting(true)}
+          >
+            <img src={downloadIcon} alt="" width={16} height={16} />
+          </ToolButton>
           <ToolButton
             label="Remove workflow from workspace"
             className={styles.deleteButton}
@@ -4117,6 +4141,20 @@ Change the keystroke in Preferences.`}
         selected={draft?.icon ?? null}
         onPick={(name) => setDraft(draft === null ? draft : { ...draft, icon: name })}
         onClose={() => setBrowsingIcons(false)}
+      />
+
+      {/*
+        The same dialog the workflows list opens, asked for by name rather than
+        copied: it is the one place the depth choice is worded, and two wordings
+        of "everything it uses" would be two different exports.
+      */}
+      <ExportComponentDialog
+        open={exporting}
+        workspaceId={workspaceId}
+        kind="WORKFLOW"
+        id={workflowId}
+        name={name}
+        onClose={() => setExporting(false)}
       />
 
       <WorkflowConfirmDialog

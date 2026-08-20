@@ -80,7 +80,7 @@ export function ExportComponentButton({ workspaceId, kind, id, name, className }
       >
         <img src={downloadIcon} alt="" width={14} height={14} />
       </button>
-      <ExportDialog
+      <ExportComponentDialog
         open={open}
         workspaceId={workspaceId}
         kind={kind}
@@ -92,12 +92,21 @@ export function ExportComponentButton({ workspaceId, kind, id, name, className }
   );
 }
 
-interface ExportDialogProps extends ExportComponentButtonProps {
+export interface ExportComponentDialogProps extends ExportComponentButtonProps {
   open: boolean;
   onClose: () => void;
 }
 
-function ExportDialog({ open, workspaceId, kind, id, name, onClose }: ExportDialogProps) {
+/**
+ * The depth choice and the download, without the row action that opens it.
+ *
+ * Exported because a list row is not the only place somebody wants a copy of
+ * something: the workflow editor offers the same thing from its toolbar, where
+ * the control has to be one of that bar's icon buttons rather than this one's.
+ * What opens the dialog differs; what the dialog asks must not, or two screens
+ * would be offering two different exports under one word.
+ */
+export function ExportComponentDialog({ open, workspaceId, kind, id, name, onClose }: ExportComponentDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [depth, setDepth] = useState<ExportDepth>('DEEP');
   const [busy, setBusy] = useState(false);
