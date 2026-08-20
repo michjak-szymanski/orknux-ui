@@ -20,7 +20,8 @@
  * pictures are of a product talking to a model - a chat with an answer in it, a
  * run with an agent step, a provider with a green light - and pointed at
  * nothing they are pictures of a 404. Whatever it is pointed at, its address is
- * replaced in every image before the shutter: see `hideTheEndpoint` below.
+ * replaced in every image before the shutter: see `hideEverywhere` below, which
+ * does the same for the address of whoever is taking the pictures.
  *
  * The seed comes first and is not optional. These pictures used to be taken of
  * whatever was in the developer's database, which is how the manual ended up
@@ -73,6 +74,26 @@ const COLLEAGUE = process.env.ORKNUX_DEMO_COLLEAGUE ?? 'dana';
  * one that will one day be configured once.
  */
 const SHOWN_ENDPOINT = process.env.ORKNUX_DEMO_ENDPOINT_SHOWN ?? 'http://ollama.northwind.internal:11434';
+/**
+ * What the other workspaces on this installation are called instead.
+ *
+ * Up here rather than inside the admin list's redaction, because the same names
+ * are needed in two places now. The corner of every screen carries a workspace
+ * picker, and on the admin pages it shows whichever workspace was last open -
+ * which on the machine these are taken on is a real one, sitting above a list
+ * whose rows have just been given invented names. One picture, two names for
+ * the same thing, and one of them somebody's own.
+ *
+ * Applied by sorted position of the real name rather than by the order the rows
+ * happen to be in, so the list and the picker agree on which workspace is which
+ * without either of them knowing about the other.
+ */
+const INVENTED_WORKSPACES = [
+  ['Billing Operations', 'The nightly export, and who hears about it when it stops.'],
+  ['Onboarding', 'What a new customer is walked through in their first week.'],
+  ['Field Engineering', 'The questions that arrive from site, and what answers them.'],
+];
+
 /*
  * `screens` rather than `docs`, which would put the files under the same path
  * as the documentation's own route. A static file wins that race today; a
@@ -130,11 +151,12 @@ const found = await gql(`{
   functions: workspaceFunctions(workspaceId: "${ws}") { content { id name } }
   tools: workspaceTools(workspaceId: "${ws}") { content { id name } }
   skills: workspaceSkills(workspaceId: "${ws}") { content { id name } }
+  conditions: workspaceConditions(workspaceId: "${ws}", page: 0, size: 100) { content { id name } }
   providers: modelProviders(workspaceId: "${ws}") { id name endpoint }
   issues: workspaceIssues(workspaceId: "${ws}", size: 100) {
     content { number title attachments { id } comments { id } }
   }
-  users { id username type }
+  users { id username type email }
 }`);
 
 const byName = (list, name) => list.find((item) => item.name === name) ?? list[0];
@@ -143,6 +165,7 @@ const responder = byName(found.agents.content, 'Support responder');
 const fn = byName(found.functions.content, 'escalationNote');
 const tool = byName(found.tools.content, 'lookupCustomer');
 const skill = byName(found.skills.content, 'When to escalate');
+const condition = byName(found.conditions.content, 'Mentions an outage');
 const run = found.executions.content[0];
 const provider = found.providers[0];
 /*
@@ -179,6 +202,26 @@ if (!internal) {
  * nobody seeded rather than a workspace with nothing to hide.
  */
 const REAL_ENDPOINT = provider?.endpoint ?? '';
+
+/*
+ * And the address of whoever is taking the pictures.
+ *
+ * The account these are photographed as is an external one: its address comes
+ * from the directory this installation signs in against, and on the machine
+ * these are taken on that is somebody's own mailbox. It is drawn in at least
+ * two places - the Users table has a column of them, and the Preferences page
+ * puts the signed-in person's in an editable field under "Email Address" - and
+ * both of those shipped it into a public manual.
+ *
+ * Taken from the data rather than from an environment variable, for the same
+ * reason the endpoint above is: a redaction that has to be configured is one
+ * that will one day not be. What it is replaced with is the same address the
+ * rest of the cast has, so the users page reads as one company's directory
+ * rather than as three people from three different places.
+ */
+const owner = found.users.find((user) => user.username === USER);
+const REAL_EMAIL = owner?.email ?? '';
+const SHOWN_EMAIL = process.env.ORKNUX_DEMO_EMAIL_SHOWN ?? `${USER}@northwind.example`;
 
 /**
  * What to photograph.
@@ -235,6 +278,28 @@ const SHOTS = [
     name: 'issue',
     path: `/workspace/${ws}/issues/${illustrated.number}`,
     waitFor: 'textarea[aria-label="Add a comment"]',
+  },
+  /*
+   * The same issue, on its other tab.
+   *
+   * The same issue on purpose rather than whichever one has the busiest
+   * history: a reader who has just met this page above recognises it, and what
+   * the picture is about is the second tab, not the issue underneath it.
+   *
+   * The history is fetched when the tab is opened and not before, so the panel
+   * is on screen a moment before anything is in it. What is waited for is the
+   * line every history has - the issue being opened - because a shot taken on
+   * the spinner is a picture of a tab that appears to do nothing.
+   */
+  illustrated && {
+    name: 'issue-history',
+    path: `/workspace/${ws}/issues/${illustrated.number}`,
+    waitFor: 'textarea[aria-label="Add a comment"]',
+    prepare: async (page) => {
+      await page.click('button[role="tab"]:has-text("History")');
+      await page.waitForSelector('text=opened this issue', { timeout: 15_000 });
+      await page.waitForTimeout(300);
+    },
   },
   { name: 'agents', path: `/workspace/${ws}/agents` },
   responder && { name: 'agent-settings', path: `/workspace/${ws}/agents/${responder.id}/settings` },
@@ -319,6 +384,20 @@ const SHOTS = [
   },
   { name: 'actions', path: `/workspace/${ws}/actions` },
   { name: 'conditions', path: `/workspace/${ws}/conditions` },
+  /*
+   * One condition, open at its own address.
+   *
+   * Worth a picture of its own because the change it documents is exactly that
+   * there is an address: this used to be a dialog over the list, and a picture
+   * of the list alone cannot show that a row now opens as a page. It waits for
+   * the name field, which the page draws only once the condition has arrived -
+   * before that it is a spinner in a card.
+   */
+  condition && {
+    name: 'condition',
+    path: `/workspace/${ws}/conditions/${condition.id}`,
+    waitFor: '#condition-name',
+  },
   { name: 'objects', path: `/workspace/${ws}/objects` },
   { name: 'variables', path: `/workspace/${ws}/variables` },
   { name: 'integrations', path: `/workspace/${ws}/integrations` },
@@ -422,20 +501,20 @@ const SHOTS = [
      * each with a description and a way into its settings. Only whose they are
      * is hidden.
      */
-    redact: () => {
-      const invented = [
-        ['Billing Operations', 'The nightly export, and who hears about it when it stops.'],
-        ['Onboarding', 'What a new customer is walked through in their first week.'],
-        ['Field Engineering', 'The questions that arrive from site, and what answers them.'],
-      ];
-      const keep = 'Northwind Support';
-      let next = 0;
+    redactWith: { invented: INVENTED_WORKSPACES, keep: WORKSPACE_NAME },
+    redact: ({ invented, keep }) => {
       const main = document.querySelector('main');
       if (main === null) return;
-      for (const link of main.querySelectorAll('a[href^="/workspace/"]')) {
-        if (link.textContent?.trim() === keep) continue;
-        const [name, description] = invented[next] ?? ['Another workspace', '—'];
-        next += 1;
+      const links = [...main.querySelectorAll('a[href^="/workspace/"]')];
+      // By sorted name, which is what the corner's picker uses too.
+      const others = links
+        .map((link) => link.textContent?.trim() ?? '')
+        .filter((name) => name !== keep)
+        .sort();
+      for (const link of links) {
+        const was = link.textContent?.trim() ?? '';
+        if (was === keep) continue;
+        const [name, description] = invented[others.indexOf(was)] ?? ['Another workspace', '—'];
         link.textContent = name;
         // The row is `name cell`, `description cell`, `settings link`; the
         // link sits inside the first of those.
@@ -496,6 +575,16 @@ const SHOTS = [
         if (nodes[0] !== undefined) nodes[0].nodeValue = initials;
         if (nodes[1] !== undefined) nodes[1].nodeValue = name;
         if (nodes[2] !== undefined) nodes[2].nodeValue = username;
+        /*
+         * And the address beside them, which is the next cell along.
+         *
+         * A renamed row with somebody's real mailbox still in it is a row that
+         * was not renamed. Only rewritten where there is an address to rewrite:
+         * an account the directory gave no address to shows a dash, and turning
+         * that dash into a mailbox would invent a fact rather than hide one.
+         */
+        const address = row?.children[1];
+        if (address?.textContent?.includes('@')) address.textContent = `${username}@northwind.example`;
       }
     },
   },
@@ -637,94 +726,26 @@ const SHOTS = [
   // content out beside `main` rather than inside it, so the default wait never
   // sees anything and times out on a page that was ready immediately.
   { name: 'preferences', path: '/preferences', waitFor: '#palette-shortcut' },
-  /*
-   * Last, and not by accident.
-   *
-   * Opening the bell is what marks its notifications seen, and the panel only
-   * ever lists the ones still waiting - so a capture that let that mutation
-   * through would empty the thing it had just photographed, and every run after
-   * this one would take a picture of "Nothing waiting". The refusal is a route
-   * on this page, which is why this shot goes at the end: nothing after it has
-   * to reason about a request being intercepted.
-   *
-   * This is the second and last place where the capture does not simply look at
-   * the product. The other is `doctor`, above.
-   */
-  {
-    name: 'notifications',
-    path: `/workspace/${ws}/issues`,
-    prepare: async (page) => {
-      await page.route('**/graphql', async (route) => {
-        if ((route.request().postData() ?? '').includes('readMyNotifications')) {
-          await route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({ data: { readMyNotifications: 0 } }),
-          });
-          return;
-        }
-        await route.continue();
-      });
-      await page.click('button[aria-label^="Notifications"]');
-      // The panel appears before its contents do, so the wait is for a row.
-      const rows = 'div[role="dialog"][aria-label="Notifications"] a';
-      try {
-        await page.waitForSelector(rows, { timeout: 10_000 });
-      } catch {
-        /*
-         * Nothing waiting. Not a failure - the panel is still the panel - but
-         * it is a picture of an empty box, so it is said out loud rather than
-         * quietly shipped as documentation of the feature.
-         */
-        console.warn('  notifications: nothing is waiting, so the panel is empty');
-      }
-      await page.waitForTimeout(400);
-
-      /*
-       * And the one check in this file that stops a picture being taken.
-       *
-       * The bell is not a workspace's. It lists what is waiting for whoever is
-       * signed in, across every workspace they can see - so on the machine that
-       * takes these pictures it can hold the titles of somebody's real issues,
-       * from a tracker that has nothing to do with the demonstration. Every
-       * other page here is reached by a path with the demo workspace's id in
-       * it; this one is the exception, and it is the exception on the page most
-       * likely to be full of sentences somebody wrote about their own work.
-       *
-       * Each row links to the issue it is about, so the workspace it belongs to
-       * is in the link. If any of them is from somewhere else the shot fails
-       * and is reported, rather than being written and looked at later.
-       */
-      const strays = await page.evaluate((prefix) => {
-        const links = [...document.querySelectorAll('div[role="dialog"][aria-label="Notifications"] a')];
-        return links.map((link) => link.getAttribute('href') ?? '').filter((href) => !href.startsWith(prefix));
-      }, `/workspace/${ws}/`);
-      if (strays.length > 0) {
-        throw new Error(
-          `the bell is holding ${strays.length} notification(s) from outside ${WORKSPACE_NAME} — ` +
-            'they belong to whoever uses this installation, so this is not a picture that can be published',
-        );
-      }
-    },
-  },
 ].filter(Boolean);
 
 /**
- * The provider's real address, gone, on whatever page happens to be showing it.
+ * One string, gone, on whatever page happens to be showing it.
  *
- * The only thing in this file that runs before *every* screenshot rather than
- * before one. The three `redact` hooks above each know which page they are for;
- * this one cannot, because the address turns up in places nobody would go
- * looking - a chat that says which provider answered, a check's message on the
- * doctor page, an error a page kept from an earlier attempt. A per-page list
- * would have to be right about all of them forever, and being wrong once means
- * publishing somebody's home network.
+ * Run before *every* screenshot rather than before one, for the two things this
+ * installation knows that the manual must not: the provider's real address and
+ * the address of whoever took the pictures. The `redact` hooks above each know
+ * which page they are for; this cannot, because both of these turn up in places
+ * nobody would go looking - a chat that says which provider answered, a check's
+ * message on the doctor page, a profile field on a preferences screen, an error
+ * a page kept from an earlier attempt. A per-page list would have to be right
+ * about all of them forever, and being wrong once means publishing somebody's
+ * home network or somebody's mailbox.
  *
- * Text nodes and field values both. The models list draws the address as text;
+ * Text nodes and field values both. The models list draws the endpoint as text;
  * the provider's own page draws it in an input, where a text-node walk finds
  * nothing at all - which is exactly the sort of half-done job this replaces.
  */
-function hideTheEndpoint({ real, shown }) {
+function hideEverywhere({ real, shown }) {
   if (real === '' || real === shown) return;
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
@@ -737,13 +758,48 @@ function hideTheEndpoint({ real, shown }) {
   }
 }
 
+/**
+ * Everybody else's workspaces, renamed in the corner's picker.
+ *
+ * The second thing that runs before every screenshot, and for the same reason
+ * the first one does: the picker is on every screen, including the admin
+ * section and the docs, and it names whichever workspace was last open. On the
+ * machine these are taken on that is somebody's real work, and it sat above an
+ * admin list whose rows had just been given invented names - so the one
+ * picture contradicted itself and leaked what the redaction underneath it was
+ * hiding.
+ *
+ * The whole list is renamed rather than only the selected option: the select is
+ * a real one, and its options are in the page whether or not it is open.
+ */
+function hideOtherWorkspaces({ keep, invented }) {
+  const picker = document.querySelector('select[aria-label="Selected workspace"]');
+  if (picker === null) return;
+  const options = [...picker.options];
+  const others = options
+    .map((option) => option.textContent?.trim() ?? '')
+    .filter((name) => name !== keep)
+    .sort();
+  for (const option of options) {
+    const was = option.textContent?.trim() ?? '';
+    if (was === keep) continue;
+    option.textContent = invented[others.indexOf(was)]?.[0] ?? 'Another workspace';
+  }
+}
+
 /*
  * `ORKNUX_ONLY=doctor,chat` takes just those, for when one page has changed and
  * rewriting thirty other files would be noise in the diff.
  */
 const only = (process.env.ORKNUX_ONLY ?? '').split(',').map((name) => name.trim()).filter(Boolean);
 const CHOSEN = only.length === 0 ? SHOTS : SHOTS.filter((shot) => only.includes(shot.name));
-if (only.length > 0 && CHOSEN.length === 0) {
+/*
+ * Two shots are not in the list: `sign-in`, which is taken before anybody is
+ * signed in, and `notifications`, which is taken as somebody else. Both are
+ * still nameable here.
+ */
+const APART = ['sign-in', 'notifications'];
+if (only.length > 0 && CHOSEN.length === 0 && !only.some((name) => APART.includes(name))) {
   console.error(`Nothing called ${only.join(', ')}. Names come from the list above.`);
   process.exit(1);
 }
@@ -784,6 +840,32 @@ for (const shot of CHOSEN) {
       );
     }
 
+    /*
+     * The two things in the frame that arrive after the page does.
+     *
+     * The workspace picker in the corner is drawn only once the list of
+     * workspaces has been fetched - it is a select with nothing to select until
+     * then, so it renders as nothing at all. The AI button is the same: it
+     * appears once the workspace's settings say a model has been chosen for it.
+     * Neither is part of the page being photographed, which is exactly why they
+     * were missed: every `waitFor` above asks about the content, and the
+     * chrome around it filled in a moment later. Half the set shipped without a
+     * picker while the manual's prose described one.
+     *
+     * Warned about rather than failed on. Some workspace pages legitimately
+     * have no AI button - a workspace with no quick chat model - and losing a
+     * good picture of a page over a missing corner is the wrong trade.
+     */
+    if (shot.path.startsWith('/workspace/')) {
+      for (const corner of ['select[aria-label="Selected workspace"]', 'button[aria-label="Ask about this page"]']) {
+        try {
+          await page.waitForSelector(corner, { timeout: 10_000 });
+        } catch {
+          console.warn(`  ${shot.name}: ${corner} never arrived`);
+        }
+      }
+    }
+
     if (shot.editor) {
       // Fit the graph to the frame, then select a node so the properties panel
       // has something in it.
@@ -799,7 +881,9 @@ for (const shot of CHOSEN) {
     await page.waitForTimeout(700);
     if (shot.prepare) await shot.prepare(page);
     if (shot.redact) await page.evaluate(shot.redact, shot.redactWith);
-    await page.evaluate(hideTheEndpoint, { real: REAL_ENDPOINT, shown: SHOWN_ENDPOINT });
+    await page.evaluate(hideEverywhere, { real: REAL_ENDPOINT, shown: SHOWN_ENDPOINT });
+    await page.evaluate(hideEverywhere, { real: REAL_EMAIL, shown: SHOWN_EMAIL });
+    await page.evaluate(hideOtherWorkspaces, { keep: WORKSPACE_NAME, invented: INVENTED_WORKSPACES });
     await page.screenshot({ path: `${OUT}${shot.name}.png` });
     taken += 1;
     console.log(shot.name);
@@ -809,6 +893,94 @@ for (const shot of CHOSEN) {
     failures += 1;
     console.warn(`  ${shot.name}: ${failure.message.split('\n')[0]}`);
   }
+}
+
+/*
+ * The bell, photographed as the colleague rather than as the owner of this
+ * machine (issue #114 made this necessary).
+ *
+ * The panel shows what happened rather than only what is unread, which is the
+ * whole point of it - and on a development installation what happened includes
+ * the real tracker somebody keeps here. The guard below still refuses anything
+ * from outside the demonstration workspace; signing in as the colleague is what
+ * makes that guard pass honestly instead of by emptying somebody's bell.
+ */
+if (only.length === 0 || only.includes('notifications')) {
+  const colleagueContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
+  const signedInAs = await colleagueContext.request.post(`${BASE}/api/session`, {
+    data: { username: COLLEAGUE, password: process.env.ORKNUX_DEMO_COLLEAGUE_PASSWORD ?? 'demo-password' },
+  });
+  if (!signedInAs.ok()) {
+    console.warn(`  notifications: could not sign in as ${COLLEAGUE}, so the bell was not photographed`);
+    failures += 1;
+  } else {
+    const bell = await colleagueContext.newPage();
+    await bell.goto(`${BASE}/workspace/${ws}/issues`, { waitUntil: 'domcontentloaded' });
+    await bell.waitForSelector('main', { timeout: 15_000 });
+    await bell.waitForTimeout(600);
+    try {
+      await bell.route('**/graphql', async (route) => {
+        if ((route.request().postData() ?? '').includes('readMyNotifications')) {
+          await route.fulfill({
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify({ data: { readMyNotifications: 0 } }),
+          });
+          return;
+        }
+        await route.continue();
+      });
+      await bell.click('button[aria-label^="Notifications"]');
+      // The panel appears before its contents do, so the wait is for a row.
+      const rows = 'div[role="dialog"][aria-label="Notifications"] a';
+      try {
+        await bell.waitForSelector(rows, { timeout: 10_000 });
+      } catch {
+        /*
+         * Nothing waiting. Not a failure - the panel is still the panel - but
+         * it is a picture of an empty box, so it is said out loud rather than
+         * quietly shipped as documentation of the feature.
+         */
+        console.warn('  notifications: nothing is waiting, so the panel is empty');
+      }
+      await bell.waitForTimeout(400);
+
+      /*
+       * And the one check in this file that stops a picture being taken.
+       *
+       * The bell is not a workspace's. It lists what is waiting for whoever is
+       * signed in, across every workspace they can see - so on the machine that
+       * takes these pictures it can hold the titles of somebody's real issues,
+       * from a tracker that has nothing to do with the demonstration. Every
+       * other page here is reached by a path with the demo workspace's id in
+       * it; this one is the exception, and it is the exception on the page most
+       * likely to be full of sentences somebody wrote about their own work.
+       *
+       * Each row links to the issue it is about, so the workspace it belongs to
+       * is in the link. If any of them is from somewhere else the shot fails
+       * and is reported, rather than being written and looked at later.
+       */
+      const strays = await bell.evaluate((prefix) => {
+        const links = [...document.querySelectorAll('div[role="dialog"][aria-label="Notifications"] a')];
+        return links.map((link) => link.getAttribute('href') ?? '').filter((href) => !href.startsWith(prefix));
+      }, `/workspace/${ws}/`);
+      if (strays.length > 0) {
+        throw new Error(
+          `the bell is holding ${strays.length} notification(s) from outside ${WORKSPACE_NAME} — ` +
+              'they belong to whoever uses this installation, so this is not a picture that can be published',
+        );
+      }
+      await bell.evaluate(hideEverywhere, { real: REAL_ENDPOINT, shown: SHOWN_ENDPOINT });
+      await bell.evaluate(hideEverywhere, { real: REAL_EMAIL, shown: SHOWN_EMAIL });
+      await bell.screenshot({ path: `${OUT}notifications.png` });
+      console.log('notifications');
+      taken += 1;
+    } catch (refused) {
+      console.warn(`  notifications: ${refused.message}`);
+      failures += 1;
+    }
+  }
+  await colleagueContext.close();
 }
 
 await browser.close();

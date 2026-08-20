@@ -1178,8 +1178,17 @@ const ISSUES = [
   },
 ];
 
-/** What an issue can be handed to here, so an agent can be found by its name. */
-const { issueAssignees } = await gql(`{ issueAssignees(workspaceId: "${ws}") { kind id name } }`);
+/**
+ * What an issue can be handed to here, so an agent can be found by its name.
+ *
+ * `hint` is asked for as well as `name`, and it is not decoration: further down
+ * both people are found by it - `hint` is the username, and a display name is
+ * not one. Without it the two lookups compared against `undefined`, found
+ * nobody, and silently skipped the handover to alice and everything that makes
+ * the colleague's bell ring. The manual's picture of the notifications panel
+ * shipped as an empty box because a field was missing from this line.
+ */
+const { issueAssignees } = await gql(`{ issueAssignees(workspaceId: "${ws}") { kind id name hint } }`);
 const assigneeNamed = (name) => issueAssignees.find((candidate) => candidate.name === name);
 
 const filed = [];
@@ -1328,6 +1337,36 @@ if (asColleague) {
   if (lowercase) {
     await say(lowercase, 'Out with this morning. The pattern is case-insensitive now and the reference is upper-cased on the way out.');
   }
+  /*
+   * And the same in the other direction, so the colleague's own bell has
+   * something in it.
+   *
+   * The tracker never tells you about your own doing, so a seed where the
+   * colleague only ever acts leaves her notifications empty - which matters
+   * because the bell is photographed as her: it is installation-wide, and on a
+   * development machine the owner's bell holds the owner's real tracker.
+   */
+  const forDana = filed.find((issue) => issue.title.includes('handover summary'));
+  const dana = issueAssignees.find((candidate) => candidate.kind === 'USER' && candidate.hint === COLLEAGUE.username);
+  if (forDana && dana) {
+    await gql(
+      'mutation($id: ID!, $input: IssueInput!) { updateIssue(id: $id, input: $input) { id } }',
+      { id: forDana.id, input: { assigneeKind: dana.kind, assigneeId: dana.id } },
+    );
+    await gql(
+      'mutation($id: ID!, $content: String!) { commentOnIssue(id: $id, content: $content) { id } }',
+      {
+        id: forDana.id,
+        content:
+          '@Dana Whitfield this one is yours - it reads yesterday morning as today whenever the shift ends after midnight.',
+      },
+    );
+    await gql(
+      'mutation($id: ID!, $input: IssueInput!) { updateIssue(id: $id, input: $input) { id } }',
+      { id: forDana.id, input: { status: 'IN_PROGRESS' } },
+    );
+  }
+
   log(`the desk answered, as ${COLLEAGUE.displayName}`);
 }
 
