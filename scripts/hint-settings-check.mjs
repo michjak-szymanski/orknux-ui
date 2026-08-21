@@ -24,12 +24,25 @@ mkdirSync(SHOTS, { recursive: true });
 
 const { browser, page } = await open({ viewport: { width: 1440, height: 1000 } });
 
-/** The first link on a list page that looks like the page under test. */
+/**
+ * The first link on a list page that looks like the page under test.
+ *
+ * Waited for rather than sampled once. A list read a second and a half after
+ * the navigation is a list that may not have been fetched yet, and an empty one
+ * reads here as "no page to open" - a whole page of this check reported missing
+ * because a request was slow. Twenty seconds of asking, and a list that really
+ * is empty still reports it.
+ */
 async function findLink(listPath, pattern) {
   await page.goto(`${BASE}${listPath}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(1500);
-  const hrefs = await page.locator('a').evaluateAll((links) => links.map((one) => one.getAttribute('href')));
-  return hrefs.find((href) => href !== null && pattern.test(href)) ?? null;
+  const upTo = Date.now() + 20_000;
+  for (;;) {
+    const hrefs = await page.locator('a').evaluateAll((links) => links.map((one) => one.getAttribute('href')));
+    const found = hrefs.find((href) => href !== null && pattern.test(href));
+    if (found !== undefined) return found;
+    if (Date.now() >= upTo) return null;
+    await page.waitForTimeout(250);
+  }
 }
 
 const agent = await findLink(`/workspace/${WORKSPACE}/agents`, /\/agents\/[^/]+\/settings$/);
@@ -125,6 +138,30 @@ const pages = [
   },
 ];
 
+/**
+ * Wait for the page, rather than for two seconds.
+ *
+ * Two seconds was enough against a warm dev server and not against a cold one,
+ * and what a page that has not arrived yet looks like here is an empty body -
+ * the loader stays silent for its first three seconds on purpose. So every
+ * "no longer printed under a field" passed on nothing at all, and only the
+ * count of (?) failed. That reads exactly like a page whose prose was deleted
+ * and never replaced, which sent somebody looking for a bug that was not there.
+ *
+ * So the emptiness is failed on directly and by name, and the waiting is done
+ * on the page instead of on the clock.
+ */
+async function drawn(name) {
+  const upTo = Date.now() + 25_000;
+  while (Date.now() < upTo) {
+    const text = (await page.locator('body').innerText()).trim();
+    const loading = (await page.locator('[role="status"]').count()) > 0;
+    if (text.length > 0 && !loading) return true;
+    await page.waitForTimeout(250);
+  }
+  return record(false, `${name}: the page never drew anything, so nothing read off it means a thing`);
+}
+
 const note = page.locator('[role="note"]');
 const shown = async () => (await note.count()) > 0 && (await note.first().isVisible());
 const away = async () => {
@@ -143,21 +180,51 @@ for (const one of pages) {
   }
 
   await page.goto(`${BASE}${one.path}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(2000);
+  if (!(await drawn(one.name))) continue;
 
   // The plugins page keeps its parameters shut until a plugin is opened.
   if (one.opens === true) {
     const opener = page.locator('main button[aria-expanded]').first();
+    await opener.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => {});
     if ((await opener.count()) > 0) {
       await opener.click();
       await page.waitForTimeout(800);
     }
   }
 
+  /*
+   * And on the thing being looked for, where the page is meant to have one. A
+   * (?) that never comes still fails, twenty seconds later; a (?) that is
+   * merely late no longer reads as one that was never written.
+   */
+  const hints = page.locator('[data-hint]');
+  const wantsHint = one.hints > 0 || one.gone.length > 0;
+  if (wantsHint) {
+    await hints.first().waitFor({ state: 'attached', timeout: 20_000 }).catch(() => {});
+  }
+
   await away();
   await page.screenshot({ path: `${SHOTS}/${WHEN}-${one.name.replace(/ /g, '-')}.png`, fullPage: true });
   if (WHEN === 'before') {
     console.log(`photographed ${one.name}`);
+    continue;
+  }
+
+  const many = await hints.count();
+
+  /*
+   * The fields first, and then what is printed under them - in that order,
+   * because "is no longer printed under a field" is a sentence about a field
+   * that is on the screen. On a page whose form has not arrived it passes on
+   * an empty body, and the only complaint left is the count of (?), which
+   * reads as prose deleted and never replaced. It happened twice and sent
+   * somebody looking for a deletion that was never made.
+   *
+   * So a page that owes a (?) and has none after twenty seconds fails here,
+   * saying which of the two it is, and nothing further is read off it.
+   */
+  if (wantsHint && many === 0) {
+    record(false, `${one.name}: no (?) after 20s - either the fields never drew or the (?) is missing; nothing below is worth reading`);
     continue;
   }
 
@@ -169,8 +236,6 @@ for (const one of pages) {
     record(body.includes(sentence), `${one.name}: "${sentence}" is still printed, as it must be`);
   }
 
-  const hints = page.locator('[data-hint]');
-  const many = await hints.count();
   if (one.hints > 0) record(many >= one.hints, `${one.name}: ${many} (?) on the page, expecting ${one.hints}`);
   if (many === 0) continue;
 
@@ -217,20 +282,35 @@ if (WHEN !== 'before' && only === null) {
    * page, which changes what is drawn and not what is stored.
    */
   await page.goto(`${BASE}/workspace/${WORKSPACE}/models/providers/new`, { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(1500);
-  await page.selectOption('#provider-type', 'AZURE_OPENAI');
-  await page.waitForTimeout(600);
-  const azureHints = await page.locator('[data-hint]').evaluateAll((all) =>
-    all.map((one) => one.getAttribute('data-hint')),
-  );
-  record(
-    azureHints.includes('Authentication Method'),
-    `new provider (Azure): the authentication method has a (?), not a paragraph [${azureHints.join(', ')}]`,
-  );
-  record(
-    !(await page.locator('body').innerText()).includes('on every request'),
-    'new provider (Azure): what the method does is no longer printed under it',
-  );
+  /*
+   * Waited for by name, and reported rather than thrown. The form is behind a
+   * loader, and a `selectOption` against a chooser that has not drawn yet ends
+   * this whole script in a stack trace - which leaves every assertion after it
+   * unrun and unreported, and the run says nothing about the eight pages that
+   * had already passed.
+   */
+  const chooser = page.locator('#provider-type');
+  const chooserDrew = await chooser
+    .waitFor({ state: 'visible', timeout: 30_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (!chooserDrew) {
+    record(false, 'new provider (Azure): the form never drew its type chooser');
+  } else {
+    await page.selectOption('#provider-type', 'AZURE_OPENAI');
+    await page.waitForTimeout(600);
+    const azureHints = await page.locator('[data-hint]').evaluateAll((all) =>
+      all.map((one) => one.getAttribute('data-hint')),
+    );
+    record(
+      azureHints.includes('Authentication Method'),
+      `new provider (Azure): the authentication method has a (?), not a paragraph [${azureHints.join(', ')}]`,
+    );
+    record(
+      !(await page.locator('body').innerText()).includes('on every request'),
+      'new provider (Azure): what the method does is no longer printed under it',
+    );
+  }
 
   if (connection !== null) {
     for (const kind of ['SMTP', 'SLACK']) {
@@ -242,6 +322,9 @@ if (WHEN !== 'before' && only === null) {
       });
       await page.goto(`${BASE}${connection}`, { waitUntil: 'domcontentloaded' });
       await page.waitForTimeout(1800);
+      // Same reason as `drawn`: a list read off a page that has not arrived is
+      // empty, and an empty list of labels is not a missing (?).
+      await page.locator('[data-hint]').first().waitFor({ state: 'attached', timeout: 20_000 }).catch(() => {});
       const labels = await page.locator('[data-hint]').evaluateAll((all) =>
         all.map((one) => one.getAttribute('data-hint')),
       );
@@ -265,15 +348,24 @@ if (WHEN !== 'before' && only === null) {
   await page.goto(`${BASE}/workspace/${WORKSPACE}/settings`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(1800);
   const measured = page.locator('[data-hint]').first();
-  await measured.click();
+  // A reading and not a verdict, so a page that did not draw one costs a line
+  // of output and not the run: everything above has already been judged.
+  const clicked = await measured
+    .click({ timeout: 30_000 })
+    .then(() => true)
+    .catch(() => false);
   await page.waitForTimeout(400);
-  const control = await measured.boundingBox();
-  const placed = await page.locator('[role="note"]').first().boundingBox();
-  console.log(
-    `NOTE: the (?) is at ${Math.round(control.x)},${Math.round(control.y)} and its note at ` +
-      `${Math.round(placed.x)},${Math.round(placed.y)}. Under the control is right; offset by 240,64 ` +
-      `means main became the containing block, which is the shared control's to answer.`,
-  );
+  const control = clicked ? await measured.boundingBox() : null;
+  const placed = clicked ? await page.locator('[role="note"]').first().boundingBox() : null;
+  if (control === null || placed === null) {
+    console.log('NOTE: nothing to measure - no (?) opened on the workspace settings page.');
+  } else {
+    console.log(
+      `NOTE: the (?) is at ${Math.round(control.x)},${Math.round(control.y)} and its note at ` +
+        `${Math.round(placed.x)},${Math.round(placed.y)}. Under the control is right; offset by 240,64 ` +
+        `means main became the containing block, which is the shared control's to answer.`,
+    );
+  }
 }
 
 if (WHEN === 'before') {
