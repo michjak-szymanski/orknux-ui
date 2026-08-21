@@ -42,9 +42,22 @@
   white-space: nowrap;
 }
 
+/*
+ * Truncated rather than allowed to push the control open.
+ *
+ * The group beside it already was; the name itself was not, on the assumption
+ * that it sits in an inspector or a settings page with room. In a header row it
+ * sits between a switch and a remove button, and a variable called
+ * ACME_PRODUCTION_BEARER_TOKEN ran straight through both - the trash icon ended
+ * up printed on top of the name. Nothing is lost by the ellipsis: the full name
+ * is in the menu this opens, and the row is not where it is read from.
+ */
 .chosenField {
+  overflow: hidden;
   font-family: var(--font-mono);
   color: var(--color-accent-brand);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .empty {
@@ -53,8 +66,11 @@
 
 /* A reference whose source has gone. Visible on purpose. */
 .missing {
+  overflow: hidden;
   font-family: var(--font-mono);
   color: var(--color-danger);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .caret {

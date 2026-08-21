@@ -23,6 +23,49 @@
   gap: var(--space-8);
 }
 
+/*
+ * A row with a source switch is two lines: the name and the remove, then the
+ * switch and the value under them. The row gap is smaller than the gap between
+ * rows, so the two lines read as one row rather than as two.
+ */
+/*
+ * Reordered rather than rearranged. The remove control belongs at the end of the
+ * row in the markup, which is where it has always been drawn for the dialogs
+ * that have no switch - moving it in the DOM to get it onto the first line here
+ * put it between the name and the value there, which is somebody else's dialog
+ * changing shape for a reason that has nothing to do with it.
+ */
+.rowSourced {
+  flex-wrap: wrap;
+  row-gap: var(--space-6);
+}
+
+.rowSourced .input {
+  order: 1;
+}
+
+.rowSourced .remove {
+  order: 2;
+}
+
+.rowSourced .source {
+  order: 3;
+}
+
+.source {
+  display: flex;
+  flex: 1 1 100%;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+/* No switch, no second line: the wrapper leaves the layout entirely, so the
+   rows the connection and MCP dialogs draw are exactly what they always were. */
+.sourceInline {
+  display: contents;
+}
+
 .input {
   flex: 1 0 0;
   min-width: 0;

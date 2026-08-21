@@ -101,7 +101,12 @@ export function HeaderRowsEditor({
         return (
           // Rows have no identity of their own until they are saved.
           // eslint-disable-next-line react/no-array-index-key
-          <div className={compact ? `${styles.row} ${styles.rowCompact}` : styles.row} key={index}>
+          <div
+            className={[styles.row, compact ? styles.rowCompact : '', variables !== undefined ? styles.rowSourced : '']
+              .filter(Boolean)
+              .join(' ')}
+            key={index}
+          >
             <input
               className={styles.input}
               type="text"
@@ -111,6 +116,15 @@ export function HeaderRowsEditor({
               onChange={(event) => update(index, { name: event.target.value })}
             />
 
+
+            {/*
+              The name and the remove hold the first line; the switch and the
+              value take the second. Four controls abreast fit a settings page
+              and do not fit a dialog's column - squeezed onto one line the
+              picker came out seventy pixels wide, which is an ellipsis and a
+              caret and no variable name at all.
+            */}
+            <div className={variables === undefined ? styles.sourceInline : styles.source}>
             {variables !== undefined && (
               <div className={styles.modeSwitch} role="group" aria-label={`Header ${index + 1} source`}>
                 {SOURCES.map((option) => (
@@ -164,6 +178,7 @@ export function HeaderRowsEditor({
                 onChange={(event) => update(index, { value: event.target.value })}
               />
             )}
+            </div>
 
             <button
               type="button"
