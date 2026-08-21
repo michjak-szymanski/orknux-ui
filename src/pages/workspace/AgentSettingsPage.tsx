@@ -10,6 +10,7 @@ import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
 import { DeleteAgentDialog } from '../../components/DeleteAgentDialog';
 import { Loader } from '../../components/Loader';
+import { RevisionHistory } from '../../components/RevisionHistory';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './AgentSettingsPage.module.css';
@@ -53,6 +54,15 @@ export function AgentSettingsPage({ session, onSignOut }: AgentSettingsPageProps
   const [agent, setAgent] = useState<Agent | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  /**
+   * How many times a version has been put back.
+   *
+   * Part of the form's key. The form reads its fields as it mounts and never
+   * again, which is right for a form somebody is typing into — but a restore
+   * rewrites the row underneath it, and a form left holding the version from
+   * before would put that version straight back on its next save.
+   */
+  const [restores, setRestores] = useState(0);
 
   useEffect(() => {
     fetchAgent(agentId)
@@ -107,13 +117,37 @@ export function AgentSettingsPage({ session, onSignOut }: AgentSettingsPageProps
             than leaving the previous one's values behind.
           */}
           <AgentForm
-            key={agent.id}
+            key={`${agent.id}-${restores}`}
             workspaceId={workspaceId}
             agent={agent}
             styles={FORM_STYLES}
             heading={<h2 className={styles.sectionHeading}>General</h2>}
             onSaved={setAgent}
           />
+
+          {/*
+            What this agent has been, between what it is and the way to delete
+            it. A restore rewrites the row, so the form above is keyed on the
+            count of restores and starts over against what came back - a form
+            left holding the version before it would put that back on its next
+            save.
+          */}
+          <section className={styles.card}>
+            <RevisionHistory
+              kind="AGENT"
+              componentId={agentId}
+              currentName={agent.name}
+              onRestored={() => {
+                void fetchAgent(agentId)
+                  .then((found) => {
+                    if (found === null) return;
+                    setAgent(found);
+                    setRestores((held) => held + 1);
+                  })
+                  .catch(() => undefined);
+              }}
+            />
+          </section>
 
           <section className={`${styles.card} ${styles.dangerCard}`}>
             <h2 className={styles.dangerHeading}>Danger Zone</h2>

@@ -28,6 +28,7 @@ import { CodeDiff } from '../../components/CodeDiff';
 import { CodeEditor } from '../../components/CodeEditor';
 import type { CodeEditorHandle } from '../../components/CodeEditor';
 import { Loader } from '../../components/Loader';
+import { RevisionHistory } from '../../components/RevisionHistory';
 import { UnsavedWorkDialog } from '../../components/UnsavedWorkDialog';
 import { useLeaveGuard } from '../../components/leaveGuard';
 import { compile, declareObjects } from '../../components/monaco';
@@ -846,6 +847,27 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                   </span>
                 </div>
               )}
+
+              {/*
+                What this tool has been, under the panel that says what it is
+                now. A restore rewrites the row, so the page reads it again -
+                the editor is holding the version from before, and its next
+                save would put that back.
+              */}
+              <div className={styles.panelSection}>
+                <RevisionHistory
+                  kind="TOOL"
+                  componentId={toolId}
+                  currentName={tool?.name}
+                  onRestored={() => {
+                    void fetchTool(toolId)
+                      .then((found) => {
+                        if (found !== null) apply(found);
+                      })
+                      .catch(() => undefined);
+                  }}
+                />
+              </div>
 
               <button
                 type="button"

@@ -137,6 +137,11 @@ export const TESTS = [
     what: 'how long component history is kept: typed, saved, reloaded, and zero refused',
     needs: ['session'],
   },
+  {
+    name: 'component-history-check',
+    what: "a tool's versions and a workflow's publications: browsed, read, restored",
+    needs: ['workspace'],
+  },
 
   // --- pages that are pages -------------------------------------------------
   {

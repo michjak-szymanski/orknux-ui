@@ -1,0 +1,189 @@
+/*
+ * What a component has been, wherever it is shown.
+ *
+ * Its own stylesheet rather than classes handed in by the page, because this
+ * stands in three different frames already - the panel beside a code editor,
+ * the card stack on the agent settings page, and the same on a workflow's - and
+ * a look described three times is a look that eventually differs in one of
+ * them. What it does take from the page is the surrounding card: this draws no
+ * border and no background of its own, so it reads as a section of whatever it
+ * was dropped into rather than as a box inside a box.
+ */
+.history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  width: 100%;
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.note,
+.empty,
+.undo {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.item:last-child {
+  border-bottom: 0;
+}
+
+/*
+ * The whole row is the control, not a link inside it.
+ *
+ * A date and a name are what somebody aims at, and a target the width of the
+ * word "yesterday" is a target people miss. It is a button rather than a
+ * summary element so that opening one can fetch what it holds.
+ */
+.row {
+  display: flex;
+  gap: var(--space-8);
+  align-items: baseline;
+  width: 100%;
+  padding: var(--space-8) 0;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.row:hover {
+  color: var(--color-accent-brand);
+}
+
+.when {
+  flex: none;
+  font-weight: 600;
+}
+
+.who {
+  color: var(--color-text-secondary);
+}
+
+/* The one change a list of dates cannot show, said where it happened. */
+.renamed {
+  margin-left: auto;
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: 0 0 var(--space-12);
+}
+
+/*
+ * The version, as it was written.
+ *
+ * Read-only text rather than an editor: this is a thing to look at before
+ * deciding, and an editable copy of an old version would be a fourth state
+ * nobody asked for - not what is stored, not what was stored, and not saved.
+ * Bounded and scrolling, because a skill is prose and can be pages of it.
+ */
+.content {
+  max-height: 320px;
+  margin: 0;
+  padding: var(--space-12);
+  overflow: auto;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--color-text-primary);
+}
+
+.restore {
+  align-self: flex-start;
+  padding: var(--space-8) var(--space-16);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.restore:hover {
+  border-color: var(--color-accent-brand);
+}
+
+.restore:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/*
+ * A publication's row, which is read rather than opened.
+ *
+ * The component rows above are buttons because opening one fetches what it
+ * held; a publication carries a whole graph and there is nothing useful to
+ * unfold in a settings card, so this is a line with its control at the end of
+ * it. Same rhythm, no cursor and no hover - a row that looks pressable and is
+ * not is worse than a plain one.
+ */
+.publicationRow {
+  display: flex;
+  gap: var(--space-8);
+  align-items: center;
+  width: 100%;
+  padding: var(--space-8) 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+/* Which one the runner reads. Exactly one publication of each workflow is. */
+.live {
+  margin-left: auto;
+  padding: var(--space-2, 2px) var(--space-8);
+  background: var(--color-accent-brand-soft);
+  border-radius: var(--radius-full, 999px);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-accent-brand);
+}
+
+.publicationRow .restore {
+  margin-left: auto;
+}
+
+.publicationRow .renamed {
+  margin-left: 0;
+}

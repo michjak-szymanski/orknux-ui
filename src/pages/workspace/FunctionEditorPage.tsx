@@ -35,6 +35,7 @@ import { CodeEditor } from '../../components/CodeEditor';
 import type { CodeEditorHandle } from '../../components/CodeEditor';
 import { LinkIcon } from '../../components/LinkIcon';
 import { Loader } from '../../components/Loader';
+import { RevisionHistory } from '../../components/RevisionHistory';
 import { compile, declareObjects } from '../../components/monaco';
 import { objectTypes } from '../../components/objectTypes';
 import { fetchWorkspaceObjects } from '../../api/objects';
@@ -1632,6 +1633,45 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                   )}
                 </p>
               </div>
+
+              {/*
+                What this function has been. Not while creating one: there is
+                nothing it has been yet, and the panel would be asking about an
+                id that does not exist.
+              */}
+              {!creating && (
+                <>
+                  <hr className={styles.divider} />
+                  <RevisionHistory
+                    kind="FUNCTION"
+                    componentId={functionId}
+                    currentName={fn?.name}
+                    onRestored={() => {
+                      /*
+                        The editor is holding the version from before, and its
+                        next save would put that back - so it reads the row
+                        again, exactly as it does when a suggestion is accepted.
+                      */
+                      synced.current = false;
+                      printed.current = null;
+                      void fetchFunction(functionId)
+                        .then((found) => {
+                          if (found === null) return;
+                          setFn(found);
+                          setName(found.name);
+                          setDescription(found.description ?? '');
+                          setSource(found.typescript ?? found.source);
+                          setReturnType(found.returnType);
+                          setReturnObjectId(found.returnObjectId);
+                          setParams(found.params);
+                          setExternals(found.externals.map((external) => external.variableId));
+                          setSaved(false);
+                        })
+                        .catch(() => undefined);
+                    }}
+                  />
+                </>
+              )}
             </aside>
           </div>
         </>

@@ -7,6 +7,7 @@ import { fetchWorkspaceWorkflows, removeWorkflow, updateWorkflow } from '../../a
 import type { WorkspaceWorkflow } from '../../api/workflows';
 import { AppShell } from '../../components/AppShell';
 import { Loader } from '../../components/Loader';
+import { PublicationHistory } from '../../components/PublicationHistory';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { WorkflowConfirmDialog } from '../../components/WorkflowConfirmDialog';
 import { shellUser } from '../../session/user';
@@ -35,6 +36,15 @@ export function WorkflowSettingsPage({ session, onSignOut }: WorkflowSettingsPag
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
+  /**
+   * What the workflow's badge said after a restore.
+   *
+   * A restore puts an older publication back into service and leaves the draft
+   * alone, so the two can end up disagreeing - the answer is the status the
+   * server worked out, said here rather than left for somebody to discover in
+   * the editor.
+   */
+  const [restored, setRestored] = useState<string | null>(null);
 
   useEffect(() => {
     if (workspaceId === '') return;
@@ -164,6 +174,28 @@ export function WorkflowSettingsPage({ session, onSignOut }: WorkflowSettingsPag
               </button>
             </div>
           </form>
+
+          {/*
+            A workflow's versions are its publications, so this is the history
+            and the canvas is not. It sits above the Danger Zone for the same
+            reason it exists: somebody who has just broken a live workflow is
+            looking for the way back, not the way out.
+          */}
+          <section className={styles.card}>
+            <PublicationHistory
+              workspaceId={workspaceId}
+              workflowId={workflowId}
+              onRestored={setRestored}
+            />
+            {restored !== null && (
+              <p className={styles.savedNote}>
+                {restored === 'PUBLISHED'
+                  ? 'Restored. What runs is what the editor is drawing.'
+                  : 'Restored. What runs is now that publication; the draft on the canvas is untouched, ' +
+                    'so the workflow reads as a draft until it is published again.'}
+              </p>
+            )}
+          </section>
 
           <section className={`${styles.card} ${styles.dangerCard}`}>
             <h2 className={styles.dangerHeading}>Danger Zone</h2>

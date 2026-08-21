@@ -17,6 +17,7 @@ import fileTextIcon from '../../assets/file-text.svg';
 import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
 import { Loader } from '../../components/Loader';
+import { RevisionHistory } from '../../components/RevisionHistory';
 import { UnsavedWorkDialog } from '../../components/UnsavedWorkDialog';
 import { useLeaveGuard } from '../../components/leaveGuard';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
@@ -430,6 +431,26 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
                   </span>
                 </div>
               )}
+
+              {/*
+                What this skill has been. A restore rewrites the row, so the
+                page reads it again - the editor is holding the version from
+                before, and its next save would put that back.
+              */}
+              <div className={styles.panelSection}>
+                <RevisionHistory
+                  kind="SKILL"
+                  componentId={skillId}
+                  currentName={skill?.name}
+                  onRestored={() => {
+                    void fetchSkill(skillId)
+                      .then((found) => {
+                        if (found !== null) apply(found);
+                      })
+                      .catch(() => undefined);
+                  }}
+                />
+              </div>
 
               <button
                 type="button"
