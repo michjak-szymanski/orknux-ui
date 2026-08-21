@@ -6,11 +6,22 @@
  * a parameter an object type - presses the link that appears, and checks the tab
  * it opens is that object's editor.
  */
-import { BASE, WORKSPACE, open, shot, finish } from './suite/harness.mjs';
+import { BASE, WORKSPACE, open, record, shot, finish } from './suite/harness.mjs';
+import { NAMES, idOf } from './suite/named.mjs';
 
-const FUNCTION = process.env.ORKNUX_FUNCTION ?? '28';
+const { browser, context, page, graphql } = await open({ viewport: { width: 1440, height: 900 } });
 
-const { browser, context, page } = await open({ viewport: { width: 1440, height: 900 } });
+/*
+ * Looked up rather than written down. This said `?? '28'`, which is a function
+ * in one developer's database; anywhere else 28 belongs to nothing and the
+ * editor answers with "That function does not exist" - a page this check would
+ * then have waited twenty seconds on, and reported as a page that drew nothing.
+ */
+const FUNCTION = await idOf(graphql, 'function', WORKSPACE, NAMES.FUNCTION, process.env.ORKNUX_FUNCTION);
+if (FUNCTION === null) {
+  record(false, `there is no function called ${NAMES.FUNCTION} to give an object parameter to`);
+  await finish(browser);
+}
 
 await page.goto(`${BASE}/workspace/${WORKSPACE}/functions/${FUNCTION}`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('text=Parameters', { timeout: 20_000 });

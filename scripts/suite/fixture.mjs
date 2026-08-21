@@ -22,34 +22,29 @@
  * whole exercise exists to remove.
  */
 import { BASE, USER, PASSWORD } from './harness.mjs';
-
-const WORKSPACE_NAME = process.env.ORKNUX_DEMO_WORKSPACE ?? 'Northwind Support';
-
 /*
- * The workflow the editor checks drive. It is the one with an agent in it -
- * retries, the doubling wait and the second handle all hang off an agent node -
- * and the one that carries the object field `editor-check` types into.
+ * The names live in `named.mjs` now, because the checks look them up for
+ * themselves at the moment they run rather than being handed numbers through
+ * the environment. Two copies of a fixture's names is two fixtures; this file
+ * and every check read the one list.
  */
-const WORKFLOW_NAME = 'Answer a question asked in Slack';
+import { NAMES } from './named.mjs';
 
-/** The function `definition-jump-check` gives an object parameter to. */
-const FUNCTION_NAME = 'ticketReference';
-
-/** The one `param-panel-check` and `split-check` open. */
-const PANEL_FUNCTION_NAME = 'minutesUntilBreach';
-
-/** The tool `tool-wand-check` edits, when it is run at all. */
-const TOOL_NAME = 'lookupCustomer';
+const WORKSPACE_NAME = NAMES.WORKSPACE;
+const WORKFLOW_NAME = NAMES.WORKFLOW;
+const FUNCTION_NAME = NAMES.FUNCTION;
+const PANEL_FUNCTION_NAME = NAMES.PANEL_FUNCTION;
+const TOOL_NAME = NAMES.TOOL;
+const BIGGER_NAME = NAMES.BIGGER_WORKSPACE;
+const BARE_NAME = NAMES.BARE_WORKSPACE;
 
 /*
  * `import-refresh-check` switches out of a page that has ended, so it needs a
- * workspace with more than one page of workflows - four to a page - and
- * `import-leave-out-check` needs one with none of what a workflow runs, so that
- * "Not here" is what the dialog actually says. Neither is content anybody would
- * photograph, so they are made here rather than seeded.
+ * workspace with more than one page of workflows, and `import-leave-out-check`
+ * needs one with none of what a workflow runs, so that "Not here" is what the
+ * dialog actually says. Neither is content anybody would photograph, so they
+ * are made here rather than seeded.
  */
-const BIGGER_NAME = 'zz Suite - a second page of workflows';
-const BARE_NAME = 'zz Suite - nothing in it';
 const PAGE_SIZE = 4;
 
 const response = await fetch(`${BASE}/api/session`, {

@@ -10,7 +10,7 @@
  * A scratch tool of its own, created and deleted through the API, so the
  * workspace's own tools are not edited to prove a point.
  */
-import { BASE, WORKSPACE, open, finish } from './suite/harness.mjs';
+import { BASE, WORKSPACE, open, record, finish } from './suite/harness.mjs';
 
 const NAME = 'signatureCheck140';
 
@@ -26,8 +26,13 @@ async function graphql(query, variables = {}) {
 let toolId = null;
 let failures = 0;
 
+/*
+ * Recorded as well as printed. Six measurements went to a private counter and
+ * `finish` was handed one boolean, so a green run of this said "ALL PASS (1
+ * checks)" over six - and the suite is read by that number.
+ */
 function check(said, ok) {
-  console.log(`${ok ? 'PASS' : 'FAIL'} ${said}`);
+  record(ok, said);
   if (!ok) failures += 1;
 }
 
@@ -94,7 +99,7 @@ try {
 
   await page.screenshot({ path: '/tmp/tool-signature.png' });
 } catch (failure) {
-  console.log(`FAIL ${failure.message}`);
+  record(false, `the check threw: ${failure.message}`);
   failures += 1;
 } finally {
   if (toolId !== null) {
@@ -103,4 +108,4 @@ try {
   await browser.close();
 }
 
-await finish(browser, failures === 0);
+await finish(browser);

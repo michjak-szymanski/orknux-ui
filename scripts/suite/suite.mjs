@@ -81,6 +81,14 @@ export const TESTS = [
     name: 'hint-placement-check',
     what: 'the note lands under its own control on a page inside the shell',
     needs: ['workflow'],
+    /*
+     * It named `/admin/shell`, which is the list of machines and has never
+     * carried a (?) - so one of its four pages found nothing, wrote "(skipped
+     * …: no (?) found)" and moved on, and the run reported three measurements
+     * where the file names four. It opens `/admin/shell/new`, which is the form
+     * this was meant to be about, and a page that draws no (?) is a failure
+     * with a name on it rather than a line of prose in the log.
+     */
   },
   {
     name: 'hint-settings-check',
@@ -130,13 +138,20 @@ export const TESTS = [
     name: 'condition-page-check',
     what: 'the condition editor as a page: create, find, change, reload, jump to its function',
     needs: ['workspace'],
-    ci: false,
     /*
-     * "the workspace has no function to point a condition at". A condition
-     * names a function, the picker offers only the ones it can use, and the
-     * four the seed builds are not among them. The check is right to refuse
-     * rather than pass: it says what is missing. To let it in, the seed needs
-     * a function a condition can point at.
+     * In, and for two reasons that were both about the check.
+     *
+     * It waited for a link reading "Open definition", and 2df9a15 made every
+     * one of those a link mark - the words moved into the title and the
+     * aria-label. So it spent thirty seconds waiting for text nothing draws and
+     * then reported a missing link on a form that has one. It asks for the
+     * accessible name now, which is what the convention actually promises, and
+     * checks the mark is a mark.
+     *
+     * And it was held out of CI for "the workspace has no function to point a
+     * condition at" - true, because only a function returning a boolean can
+     * answer a condition and the seed writes none. It makes its own now, and
+     * deletes it, so it says the same thing on every installation.
      */
   },
   {
@@ -228,15 +243,19 @@ export const TESTS = [
     name: 'loader-check',
     what: 'a slow load shows the mark, a finished one hides it, an empty list says so',
     needs: ['fixture'],
-    // Names issue 117 by number, and needs at least one execution to open.
-    ci: false,
     /*
-     * "executions list never settled". The seed starts eight runs and every one
-     * of them fails, because a runner has no model to call - so the executions
-     * screen this waits on is drawn from rows in a state it does not settle on
-     * within twenty seconds. What it asserts is worth keeping: a load slow
-     * enough to notice shows the mark, a finished one hides it, an empty list
-     * says so instead of spinning. It needs a fixture whose runs finished.
+     * "executions list never settled" was the check's own fixture assumption,
+     * not the screen's fault. It leaned on a sentence about one database -
+     * *this workspace's runs are all older than a day, so the default range
+     * loads to an empty list* - and waited for "No runs match those filters."
+     * on a workspace whose runs are recent enough to be drawn. It settles on
+     * either answer now, and makes its own empty list by answering the query
+     * with nothing, so the half about a list that finished and has none in it
+     * is measured rather than hoped for.
+     *
+     * What is left of the fixture is one run to open a detail screen on, which
+     * the seed starts eight of. With none, it says so and fails on that rather
+     * than throwing.
      */
   },
   {
@@ -277,14 +296,20 @@ export const TESTS = [
   {
     name: 'import-leave-out-check',
     what: 'Leave out is offered on what a file carries, and takes dependants with it',
-    needs: ['workflow'],
-    ci: false,
+    needs: ['workflow', 'fixture'],
     /*
-     * It presses `Leave out Send Slack Message`, naming a component of the
-     * developer's workflow. The seed's workflow carries different ones, so the
-     * button it wants is not there. The fix is to read a name out of the
-     * envelope rather than write one in - the check already downloads the file
-     * it imports, so the name is in its hands.
+     * In. It pressed `Leave out Send Slack Message`, which names a component of
+     * one developer's workflow #118, and imported into workspace 24 on the
+     * grounds that 24 was empty on that machine. It reads the action's name out
+     * of the envelope it just downloaded, takes whichever workflow here
+     * actually carries an action, and finds the empty workspace by the name
+     * `fixture.mjs` gives it - so it needs that to have been run, which is what
+     * 'fixture' says.
+     *
+     * Its last assertion moved with the same fix: "the left-out action was not
+     * created" was written as `actionsAfter === actionsBefore`, which is only
+     * true of a workflow carrying exactly one action. It names the one that was
+     * left out and looks for that.
      */
   },
   {
@@ -303,14 +328,24 @@ export const TESTS = [
     ci: false,
     /*
      * Half of this asks a model a question and reads the answer, and it waits
-     * two minutes for one. On a server that cannot call a model it says so
-     * rather than failing - it asks the doctor first - but that graceful path
-     * relies on the doctor reporting unreadable secrets, which is a developer
-     * machine's problem and not a fresh CI database's. In CI there is no model
-     * at all and the check would fail honestly and uselessly. Run it by hand
-     * against a server whose model answers:
+     * two minutes for one. A server that cannot call a model cannot answer
+     * that half, and in CI there is no model at all. Run it by hand against a
+     * server whose model answers:
      *
      *   node scripts/suite/run.mjs --only tool-wand-check
+     *
+     * Two things about it were the suite's own dishonesty rather than the
+     * gesture's. It printed NOT VERIFIED when no model could be reached and
+     * counted nothing, so a server with no model reported this as a pass over
+     * an untested half; that is recorded and failed now, saying whose fault it
+     * is. And its fourteen verdicts went to a private counter, so a green run
+     * announced "ALL PASS (1 checks)" - they are recorded.
+     *
+     * It also asserted that the model's answer names the tool. A model that
+     * replies "What would you like to change about this tool?" has plainly been
+     * told what it is looking at, and the check failed on a correct product for
+     * a wording nobody controls. What the issue was about is in the request the
+     * panel sends, so that is what is asserted; the wording is a NOTE.
      */
   },
 ];

@@ -2,7 +2,7 @@
  * Drives the editor to see that an agent node now has what an action node has:
  * a Retries box, a "When it fails" switch, and a second handle once it is on.
  */
-import { BASE, WORKSPACE, WORKFLOW, open, shot, finish } from './suite/harness.mjs';
+import { BASE, WORKSPACE, WORKFLOW, open, record, shot, finish } from './suite/harness.mjs';
 
 const { browser, page } = await open({ viewport: { width: 1440, height: 900 } });
 
@@ -12,8 +12,10 @@ await page.waitForSelector('.react-flow__node', { timeout: 20_000 });
 // Whatever agent node this workflow has; the kind label is what says so.
 const agent = page.locator('.react-flow__node').filter({ hasText: 'Agent' }).first();
 if ((await agent.count()) === 0) {
-  console.log('FAIL - no agent node on this canvas to click');
-  process.exit(1);
+  // Recorded and closed down properly rather than exited out of: the message
+  // belongs in the tally, and a bare exit leaves a chromium behind.
+  record(false, 'no agent node on this canvas to click');
+  await finish(browser);
 }
 await agent.click();
 await page.waitForTimeout(600);

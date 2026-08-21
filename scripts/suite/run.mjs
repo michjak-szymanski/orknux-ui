@@ -19,6 +19,40 @@
  * The JUnit file at the end is for the same reason the server's suite writes
  * one: GitHub renders it, and "SOME FAILED" in a log twelve thousand lines down
  * is not a report.
+ *
+ * ---------------------------------------------------------------------------
+ * Before blaming the product for a check that timed out
+ *
+ * Against the development server these checks speak to vite on 5173, which
+ * proxies /graphql and /api through to the server on 8080. That proxy stalls.
+ * Measured while a full run was going, the same trivial query sent alternately
+ * both ways from one process, 1567 times each:
+ *
+ *   through vite  : median 30ms, p99 1145ms, max 35.8s, 3 unanswered in 45s
+ *   straight at it: median 17ms, p99   25ms, max  1.9s, none over 2s
+ *
+ * So a few requests in a thousand hang for half a minute, and none of them are
+ * the server's doing - the two figures come from requests interleaved a fifth
+ * of a second apart. What that looks like from inside a check is a
+ * `page.waitForSelector` that never resolves, an `apiRequestContext.post:
+ * Timeout 30000ms exceeded`, or a screen reported as having drawn nothing -
+ * which is exactly what a real defect looks like too. Several of this session's
+ * failures were that and nothing else.
+ *
+ * How to tell them apart, in this order:
+ *
+ *   1. Run the one check again, alone, on a quiet machine. A defect repeats;
+ *      a stall does not. Three times is enough to be sure.
+ *   2. Look at what failed. A stall reads as a thirty-second timeout on a
+ *      request that ordinarily takes thirty milliseconds, or as a page that
+ *      drew nothing at all. A defect usually names something specific that was
+ *      on the screen and should not have been, or the other way round.
+ *
+ * Not something a check can be written around: every one of them speaks to one
+ * origin, and in development that origin is the proxy. CI serves both halves
+ * from the all-in-one image and has no proxy in the way, which is why this is
+ * a development-machine problem and not a CI one.
+ * ---------------------------------------------------------------------------
  */
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';

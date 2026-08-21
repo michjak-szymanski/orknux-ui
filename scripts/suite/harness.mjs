@@ -20,6 +20,10 @@
  * `finish` is the only exit. It closes the browser first, so a check that fails
  * does not leave a chromium behind for the runner to wait on, and it prints one
  * summary line the runner reads back.
+ *
+ * And `drawn(page, name)`, for the other half of the same problem: a check that
+ * reads a page which has not arrived is a check that asserts things about an
+ * empty screen. See its own note below.
  */
 import { mkdirSync } from 'node:fs';
 import { basename } from 'node:path';
@@ -137,6 +141,49 @@ export function check(ok, pass, fail) {
 /** How many recorded assertions failed. For a check that prints its own tally. */
 export function failures() {
   return results.filter((ok) => !ok).length;
+}
+
+/**
+ * Wait until a page has actually drawn something, and fail by name if it never
+ * does.
+ *
+ * This is the shape that produced most of this suite's false alarms. A check
+ * navigates, sleeps a fixed second and a half, and reads the page - and the
+ * loader deliberately draws nothing for its first three seconds, so a page that
+ * was merely slow is an *empty* page. Every assertion of the form "X is no
+ * longer printed under a field" then passes on a blank screen, and the only
+ * thing left to complain about is a missing control, which reads exactly like
+ * prose deleted and never replaced. It sent somebody looking for a deletion
+ * that was never made, twice.
+ *
+ * So: wait on the page rather than on the clock, and when nothing arrives, say
+ * *that* - with what the page did hold, because a settings page asked for a
+ * thing that is not there answers with a short card saying so, and a bare "drew
+ * nothing" cannot tell that from a page that failed to render.
+ *
+ * Returns true when the page drew, false when it did not - having already
+ * recorded the failure, so the caller's job is only to stop reading.
+ *
+ *   if (!(await drawn(page, 'admin settings'))) continue;
+ */
+export async function drawn(page, name, options = {}) {
+  const { within = 20_000, atLeast = 1, where = 'body' } = options;
+  const upTo = Date.now() + within;
+  let held = '';
+  for (;;) {
+    held = await page.evaluate((selector) => document.querySelector(selector)?.innerText ?? '', where);
+    // A [role="status"] is the loading mark; while one is on screen the page is
+    // still deciding what it holds, and what it holds now is not an answer.
+    const loading = (await page.locator('[role="status"]').count()) > 0;
+    if (held.trim().length >= atLeast && !loading) return true;
+    if (Date.now() >= upTo) break;
+    await page.waitForTimeout(250);
+  }
+  return record(
+    false,
+    `${name}: the page drew ${held.trim().length} characters in ${within / 1000}s and settled on none of it, ` +
+      `so nothing read off it means a thing. <${where}> holds: ${JSON.stringify(held.replace(/\s+/g, ' ').slice(0, 200))}`,
+  );
 }
 
 /**

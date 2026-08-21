@@ -12,6 +12,18 @@ import { BASE, WORKSPACE, open, check, shot, finish } from './suite/harness.mjs'
 const stamp = Date.now();
 const NAME = `zz Scratch Condition ${stamp}`;
 const RENAMED = `${NAME} edited`;
+/**
+ * The function this condition is pointed at, made here rather than borrowed.
+ *
+ * This used to take whichever of the workspace's functions happened to answer
+ * a question, and on a database built from nothing there is no such function -
+ * the seed writes none that returns a boolean, and the two that do on a
+ * developer's machine arrive with plugins. So the check refused to run at all,
+ * which is why it was held out of CI. A function of its own costs one mutation,
+ * is deleted at the end, and makes the check say the same thing on every
+ * installation.
+ */
+const FUNCTION_NAME = `zzScratchConditionFn${stamp}`;
 
 const { browser, context, page } = await open({ viewport: { width: 1440, height: 900 } });
 
@@ -33,13 +45,51 @@ async function pick(pickerId, label) {
   await menu.locator('[role="option"]', { hasText: label }).first().click();
 }
 
+/*
+ * Anything a run that was killed halfway through left behind. Swept at the
+ * start rather than guarded at the end, because a `finally` cannot clean up
+ * after the suite's own timeout.
+ */
+const before = await gql(
+  `query($workspaceId: ID!) {
+     workspaceConditions(workspaceId: $workspaceId, page: 0, size: 200) { content { id name } }
+     workspaceFunctions(workspaceId: $workspaceId, page: 0, size: 200) { content { id name } }
+   }`,
+  { workspaceId: WORKSPACE },
+);
+for (const old of before.workspaceConditions.content.filter((row) => row.name.startsWith('zz Scratch Condition'))) {
+  await gql(`mutation($id: ID!) { deleteCondition(id: $id) }`, { id: old.id }).catch(() => undefined);
+  console.log(`swept condition ${old.name} (#${old.id}) from an earlier run`);
+}
+for (const old of before.workspaceFunctions.content.filter((row) => row.name.startsWith('zzScratchConditionFn'))) {
+  await gql(`mutation($id: ID!) { deleteFunction(id: $id) }`, { id: old.id }).catch(() => undefined);
+  console.log(`swept function ${old.name} (#${old.id}) from an earlier run`);
+}
+
+// The function the condition will name. BOOLEAN because only a function that
+// answers a question can be a condition, which is what the picker filters on.
+const target = (
+  await gql(
+    `mutation($input: CreateFunctionInput!) { createFunction(input: $input) { id name } }`,
+    {
+      input: {
+        workspaceId: WORKSPACE,
+        name: FUNCTION_NAME,
+        returnType: 'BOOLEAN',
+        description: 'Made by scripts/condition-page-check.mjs, and removed again by it.',
+      },
+    },
+  )
+).createFunction;
+console.log(`made ${target.name} (#${target.id}) for the condition to point at`);
+
 // --- #87: the list opens the editor as a page -------------------------------
 
 await page.goto(`${BASE}/workspace/${WORKSPACE}/conditions`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('text=Create Condition', { timeout: 20_000 });
 
 await page.locator('a', { hasText: 'Create Condition' }).first().click();
-await page.waitForURL(/\/conditions\/new$/, { timeout: 10_000 });
+await page.waitForURL(/\/conditions\/new$/, { timeout: 30_000 });
 
 const openDialogs = await page.locator('dialog[open]').count();
 check(
@@ -57,28 +107,45 @@ await page.locator('#condition-name').fill(NAME);
 await page.locator('#condition-type').selectOption('FUNCTION');
 await page.waitForTimeout(300);
 
-const functionBody = await gql(
-  `query($workspaceId: ID!) {
-     workspaceFunctions(workspaceId: $workspaceId, page: 0, size: 100) {
-       content { id name returnType }
-     }
-   }`,
-  { workspaceId: WORKSPACE },
-);
-// Only a function that answers a question can be a condition, so only those
-// are in the picker.
-const target = functionBody.workspaceFunctions.content.find((fn) => fn.returnType === 'BOOLEAN');
-if (target === undefined) {
-  console.log('FAIL: the workspace has no function to point a condition at');
-  process.exit(1);
-}
 await pick('condition-function', target.name);
 await page.waitForTimeout(300);
 
 // --- #88: Open definition, beside the function ------------------------------
 
-const jump = page.locator('a', { hasText: 'Open definition' });
-check(await jump.first().isVisible(), 'Open definition is offered beside the function', 'no Open definition link');
+/*
+ * Found by its name and not by its words.
+ *
+ * It was written as `hasText: 'Open definition'`, which was the label until
+ * 2df9a15 made every one of these a link mark: the arrow and the two words went,
+ * and "Open definition" lives on in the title and the aria-label, which is what
+ * a pointer and a screen reader get. The check went on waiting thirty seconds
+ * for text nothing draws and reported a missing link on a form that has one -
+ * a check problem wearing a product problem's clothes. The accessible name is
+ * what the convention actually guarantees, so that is what this asks for.
+ */
+const jump = page.locator(`a[aria-label="Open the function's definition"]`);
+const appeared = await jump
+  .first()
+  .waitFor({ state: 'visible', timeout: 30_000 })
+  .then(() => true)
+  .catch(() => false);
+check(appeared, 'Open definition is offered beside the function', 'no Open definition link beside the function');
+if (!appeared) {
+  const drew = await page.locator('main').innerText().catch(() => '<there is no main>');
+  console.log(`      the form holds: ${JSON.stringify(drew.replace(/\s+/g, ' ').slice(0, 300))}`);
+  await gql(`mutation($id: ID!) { deleteFunction(id: $id) }`, { id: target.id }).catch(() => undefined);
+  await finish(browser);
+}
+
+// The mark, and nothing else: the same shape action-jump-check holds the
+// action dialog's four to, so there is one convention and not two.
+const words = (await jump.first().innerText()).trim();
+const titled = await jump.first().getAttribute('title');
+check(
+  words === '' && (titled ?? '') !== '',
+  `drawn as the link mark, named by its title ("${titled}")`,
+  `expected a mark with a title, got text ${JSON.stringify(words)} and title ${JSON.stringify(titled)}`,
+);
 
 const href = await jump.first().getAttribute('href');
 check(
@@ -89,7 +156,7 @@ check(
 
 // Where it lands: a tab of its own, as the trigger form's own link does.
 const [opened] = await Promise.all([
-  context.waitForEvent('page', { timeout: 10_000 }),
+  context.waitForEvent('page', { timeout: 30_000 }),
   jump.first().click(),
 ]);
 await opened.waitForLoadState('domcontentloaded');
@@ -106,7 +173,7 @@ await opened.close();
 // --- #87 again: it saves, and the page survives a reload --------------------
 
 await page.locator('button[type="submit"]', { hasText: 'Create Condition' }).click();
-await page.waitForURL(new RegExp(`/workspace/${WORKSPACE}/conditions$`), { timeout: 10_000 });
+await page.waitForURL(new RegExp(`/workspace/${WORKSPACE}/conditions$`), { timeout: 30_000 });
 
 const madeBody = await gql(
   `query($workspaceId: ID!) {
@@ -117,13 +184,13 @@ const madeBody = await gql(
 const mine = madeBody.workspaceConditions.content.find((row) => row.name === NAME) ?? null;
 check(mine !== null, 'saving from the page created the condition', 'the condition was not created');
 if (mine === null) {
-  await browser.close();
-  process.exit(1);
+  await gql(`mutation($id: ID!) { deleteFunction(id: $id) }`, { id: target.id }).catch(() => undefined);
+  await finish(browser);
 }
 
 // Opened from its own address, as a link that can be pasted or reloaded.
 await page.goto(`${BASE}/workspace/${WORKSPACE}/conditions/${mine.id}`, { waitUntil: 'domcontentloaded' });
-await page.waitForSelector('#condition-name', { timeout: 10_000 });
+await page.waitForSelector('#condition-name', { timeout: 30_000 });
 const loadedName = await page.locator('#condition-name').inputValue();
 check(loadedName === NAME, `the address alone opens the condition ("${loadedName}")`, `the page showed "${loadedName}"`);
 
@@ -133,10 +200,10 @@ check(stillNoDialog === 0, 'editing an existing condition is a page too', 'a mod
 // Edit, save, reload, and find the change.
 await page.locator('#condition-name').fill(RENAMED);
 await page.locator('button[type="submit"]', { hasText: 'Save Changes' }).click();
-await page.waitForURL(new RegExp(`/workspace/${WORKSPACE}/conditions$`), { timeout: 10_000 });
+await page.waitForURL(new RegExp(`/workspace/${WORKSPACE}/conditions$`), { timeout: 30_000 });
 
 await page.goto(`${BASE}/workspace/${WORKSPACE}/conditions/${mine.id}`, { waitUntil: 'domcontentloaded' });
-await page.waitForSelector('#condition-name', { timeout: 10_000 });
+await page.waitForSelector('#condition-name', { timeout: 30_000 });
 await page.waitForTimeout(500);
 const afterReload = await page.locator('#condition-name').inputValue();
 check(
@@ -151,7 +218,9 @@ check(danger > 0, 'an existing condition has a Danger Zone', 'no Danger Zone on 
 
 await page.screenshot({ path: shot('condition-page.png'), fullPage: true });
 
-// Clear up after ourselves: this condition was made by the check.
+// Clear up after ourselves: both of these were made by the check. The
+// condition first, because it is the thing pointing at the function.
 await gql(`mutation($id: ID!) { deleteCondition(id: $id) }`, { id: mine.id });
+await gql(`mutation($id: ID!) { deleteFunction(id: $id) }`, { id: target.id });
 
 await finish(browser);

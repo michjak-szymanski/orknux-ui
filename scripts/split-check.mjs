@@ -15,12 +15,27 @@
  *    editor cannot resolve to the character under the pointer.
  *  - the handle answers the keyboard, for somebody who cannot hold a pointer.
  */
-import { BASE, WORKSPACE, open, SHOT_DIR, finish } from './suite/harness.mjs';
+import { BASE, WORKSPACE, open, record, SHOT_DIR, finish } from './suite/harness.mjs';
+import { NAMES, idOf } from './suite/named.mjs';
 
-const FUNCTION = process.env.ORKNUX_PANEL_FUNCTION ?? process.env.ORKNUX_FUNCTION ?? '29';
 const SHOTS = SHOT_DIR;
 
-const { browser, page } = await open({ viewport: { width: 1600, height: 1000 } });
+const { browser, page, graphql } = await open({ viewport: { width: 1600, height: 1000 } });
+
+// By name: `?? '29'` was one developer's function number, and against any other
+// database this check dragged a divider on the page that says the function does
+// not exist.
+const FUNCTION = await idOf(
+  graphql,
+  'function',
+  WORKSPACE,
+  NAMES.PANEL_FUNCTION,
+  process.env.ORKNUX_PANEL_FUNCTION ?? process.env.ORKNUX_FUNCTION,
+);
+if (FUNCTION === null) {
+  record(false, `there is no function called ${NAMES.PANEL_FUNCTION} whose editor to split`);
+  await finish(browser);
+}
 
 const where = `${BASE}/workspace/${WORKSPACE}/functions/${FUNCTION}`;
 await page.goto(where, { waitUntil: 'domcontentloaded' });

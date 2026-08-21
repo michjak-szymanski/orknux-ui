@@ -16,8 +16,8 @@ await page.waitForTimeout(800);
 
 const hint = page.locator('[data-hint]').first();
 if ((await hint.count()) === 0) {
-  console.error('no (?) on this panel');
-  process.exit(1);
+  record(false, 'no (?) on this panel');
+  await finish(browser);
 }
 const note = page.locator('[role="note"]');
 const shown = async () => (await note.count()) > 0 && (await note.first().isVisible());

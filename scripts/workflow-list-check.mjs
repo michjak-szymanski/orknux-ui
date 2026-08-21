@@ -177,9 +177,10 @@ try {
   const upSecond = await asDrawn();
   const upDrawn = [...names(upFirst), ...names(upSecond)];
 
-  const upServer = names((await asServer('NAME', true)).content).slice(0, upDrawn.length);
+  /** The entire list by name, which is what "the whole list" below means. */
+  const byName = names((await asServer('NAME', true)).content);
   record(
-    same(upDrawn, upServer),
+    same(upDrawn, byName.slice(0, upDrawn.length)),
     'the two pages read one after the other are the list in the order the server put it',
   );
   record(
@@ -213,9 +214,18 @@ try {
    * screen rather than to the list, the first page descending would hold the
    * same ten names as the first page ascending - just upside down - and this
    * would fail on the very first name.
+   *
+   * Against the whole list rather than against the two pages read going up.
+   * `downDrawn === upDrawn.reverse()` is only true when those two pages *are*
+   * the list; with twenty-two workflows in the workspace the two pages hold
+   * twenty, so going up reads names one to twenty and coming down reads
+   * twenty-two to three, and the check failed on a list the server had ordered
+   * perfectly. It said so three times running before anybody noticed the
+   * arithmetic was the check's, not the page's - the same shape as every other
+   * false alarm here: an accident of one database written down as a fact.
    */
   record(
-    same(downDrawn, [...upDrawn].reverse()),
+    same(downDrawn, [...byName].reverse().slice(0, downDrawn.length)),
     'descending is the whole list turned round, not each page turned round',
   );
   record(

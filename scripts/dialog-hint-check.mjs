@@ -11,7 +11,7 @@
  * nothing asked for, because a unit, an empty state and a consequence are not
  * explanations and a hover is the wrong place for them.
  */
-import { BASE, WORKSPACE, open, record, finish } from './suite/harness.mjs';
+import { BASE, WORKSPACE, open, record, drawn, finish } from './suite/harness.mjs';
 
 const { browser, context, page } = await open({ viewport: { width: 1440, height: 1000 } });
 
@@ -196,22 +196,39 @@ const issues = await context.request.post(`${BASE}/graphql`, {
     variables: { workspaceId: WORKSPACE },
   },
 });
+/*
+ * Recorded, not skipped.
+ *
+ * Both ways out of this block used to be a `SKIP:` line and nothing else, so a
+ * workspace with no issue in it - or an issue whose Move button was late -
+ * dropped the last assertion in the file and the run still said everything
+ * passed, one assertion shorter than the file claims. A precondition this check
+ * cannot meet is a failure of the check, and the only honest way to say so is
+ * in the tally.
+ */
 const first = (await issues.json())?.data?.workspaceIssues?.content?.[0]?.number;
 if (first === undefined) {
-  console.log('SKIP: no issue in this workspace to open');
+  record(false, 'Move Issue: no issue in this workspace to open, so the paragraph that stays was not read');
 } else {
   await page.goto(`${BASE}/workspace/${WORKSPACE}/issues/${first}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(1500);
-  const mover = page.locator('button', { hasText: /^Move$/ }).first();
-  if ((await mover.count()) === 0) {
-    console.log('SKIP: no Move button on this issue');
+  if (!(await drawn(page, 'Move Issue'))) {
+    // `drawn` has already said so; there is nothing on the page to press.
   } else {
-    await mover.click();
-    await page.waitForTimeout(800);
-    await stayed(
-      'what moving an issue costs',
-      'Its comments, labels, links, observers and files come with it.',
-    );
+    const mover = page.locator('button', { hasText: /^Move$/ }).first();
+    const there = await mover
+      .waitFor({ state: 'visible', timeout: 15_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!there) {
+      record(false, `Move Issue: no Move button on issue #${first} after 15s`);
+    } else {
+      await mover.click();
+      await page.waitForTimeout(800);
+      await stayed(
+        'what moving an issue costs',
+        'Its comments, labels, links, observers and files come with it.',
+      );
+    }
   }
 }
 

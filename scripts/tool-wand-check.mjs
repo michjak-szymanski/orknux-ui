@@ -16,9 +16,9 @@
  *
  * The tool is put back the way it was before this exits.
  */
-import { BASE, WORKSPACE, open, shot, finish } from './suite/harness.mjs';
+import { BASE, WORKSPACE, open, record, shot, finish } from './suite/harness.mjs';
+import { NAMES, idOf } from './suite/named.mjs';
 
-const TOOL = process.env.ORKNUX_TOOL ?? '13';
 const MARKER = '// wand-check marker';
 
 const { browser, context, page } = await open({ viewport: { width: 1440, height: 900 } });
@@ -30,16 +30,46 @@ async function graphql(query, variables = {}) {
   return payload.data;
 }
 
+/*
+ * By name. `?? '13'` was one developer's tool number; anywhere else it is a
+ * tool that does not exist, and this check would have driven a wand on the page
+ * that says so.
+ */
+const TOOL = await idOf(graphql, 'tool', WORKSPACE, NAMES.TOOL, process.env.ORKNUX_TOOL);
+if (TOOL === null) {
+  record(false, `there is no tool called ${NAMES.TOOL} to open the wand on`);
+  await finish(browser);
+}
+
 const { tool: before } = await graphql('query ($id: ID!) { tool(id: $id) { id name source typescript } }', {
   id: TOOL,
 });
 const original = before.typescript ?? before.source;
 
+/*
+ * Recorded, not merely printed.
+ *
+ * These fourteen verdicts went to `console.log` and a private counter, and the
+ * only thing `finish` was ever handed was `failures === 0` - so a green run of
+ * this check announced "ALL PASS (1 checks)" over fourteen measurements, and a
+ * red one "SOME FAILED (1 of 1)". The tally is the thing a suite is read by;
+ * a check that keeps its own is a check nobody can count.
+ */
 let failures = 0;
 function check(ok, pass, fail) {
-  console.log(ok ? `PASS: ${pass}` : `FAIL: ${fail}`);
+  record(ok, ok ? pass : fail);
   if (!ok) failures += 1;
 }
+
+/*
+ * What the panel actually sends, which is the deterministic half of "it was
+ * told what it is looking at". The answer's wording is the model's; the
+ * question's contents are the product's.
+ */
+let asked = null;
+page.on('request', (request) => {
+  if (asked === null && request.url().includes('/quick-chat')) asked = request.postData();
+});
 
 try {
   await page.goto(`${BASE}/workspace/${WORKSPACE}/tools/${TOOL}`, { waitUntil: 'domcontentloaded' });
@@ -84,20 +114,54 @@ try {
     const secrets = doctor.find((check) => check.name === 'Stored secrets');
     const shown = await panel.innerText();
     if (secrets !== undefined && secrets.verdict === 'FAIL' && secrets.detail.includes('model_provider.secret')) {
-      console.log('NOT VERIFIED: no model can be called on this server, so the answer half is untested.');
-      console.log(`  the doctor says: ${secrets.detail}`);
-      console.log(`  the panel says:  ${shown.split('\n').filter((line) => line.trim() !== '').pop()}`);
+      /*
+       * Recorded, not waved through.
+       *
+       * This used to print NOT VERIFIED and count nothing, so a server that
+       * cannot call a model reported this check as a pass over an untested
+       * half - which is the same dishonesty as a check that skips an assertion
+       * because its fixture is missing. The message still says whose fault it
+       * is, so nobody reads it as a broken wand; the tally says the wand's
+       * answer was not seen, because it was not.
+       */
+      record(
+        false,
+        'no model can be called on this server, so the answer half is untested. ' +
+          `The doctor says: ${secrets.detail}. The panel says: ` +
+          `${shown.split('\n').filter((line) => line.trim() !== '').pop()}`,
+      );
+      failures += 1;
     } else {
-      console.log(`FAIL: no answer came back within two minutes. The panel says:\n${shown}`);
+      record(false, `no answer came back within two minutes. The panel says: ${shown.replace(/\s+/g, ' ')}`);
       failures += 1;
     }
   } else {
     console.log(`--- the assistant said ---\n${replied.slice(0, 600)}\n--------------------------`);
-    check(true, 'the model answered', '');
-    // It was told what it is looking at if it names the tool rather than
-    // reaching for a function, which is the bug the issue reported.
+    check(replied.trim() !== '', 'the model answered', 'the model answered with nothing');
+
+    /*
+     * Where the question said it was asked from.
+     *
+     * This used to be `the answer names the tool`, read out of the model's
+     * prose - and a model that replies "What would you like to change about
+     * this tool?" has plainly been told what it is looking at and has simply
+     * not repeated the name. The check failed on a correct product because it
+     * was asserting a wording nobody controls. The thing the issue was actually
+     * about - whether the panel says which page it is on, so the server can
+     * hand the model the tool rather than reach for a function - is in the
+     * request, where it is the same every time.
+     */
+    const path = asked === null ? null : (JSON.parse(asked).page?.path ?? null);
+    check(
+      path === `/workspace/${WORKSPACE}/tools/${TOOL}`,
+      `the question says which page it came from (${path})`,
+      `the question named ${JSON.stringify(path)}, not the tool's own page`,
+    );
+
+    // A reading and not a verdict: whether it repeated the name is the model's
+    // business, and worth seeing in the log when an answer looks wrong.
     const knows = replied.toLowerCase().includes(before.name.toLowerCase());
-    check(knows, `the answer names the tool (${before.name})`, `the answer never names ${before.name}`);
+    console.log(`NOTE: the answer ${knows ? 'names' : 'does not name'} ${before.name}.`);
   }
 
   // A change offered for the tool on screen, exactly as the panel announces one.
@@ -179,4 +243,10 @@ try {
   await browser.close();
 }
 
-await finish(browser, failures === 0);
+/*
+ * Nothing extra: every verdict above is recorded now, so the tally is the
+ * count of measurements and `failures` is only what the NOT VERIFIED path
+ * below reads. Handing `failures === 0` in as well would count it twice.
+ */
+console.log(`${failures} of the measurements above failed`);
+await finish(browser);

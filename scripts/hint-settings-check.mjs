@@ -237,7 +237,22 @@ for (const one of pages) {
   }
 
   if (one.hints > 0) record(many >= one.hints, `${one.name}: ${many} (?) on the page, expecting ${one.hints}`);
-  if (many === 0) continue;
+  if (many === 0) {
+    /*
+     * A page in this list that costs the run no measurement at all.
+     *
+     * Four of these are here for the hover behaviour alone - nothing listed as
+     * moved, nothing listed as kept, and no count owed - so a page that drew no
+     * (?) fell straight through this `continue` and contributed nothing. The
+     * run then reported however many assertions it happened to make, which is
+     * fewer than the file names pages, and passed. Whether such a page should
+     * carry a (?) is a question; that nobody was told it carried none is not.
+     */
+    if (one.gone.length === 0 && one.kept.length === 0) {
+      record(false, `${one.name}: no (?) on the page and nothing listed to look for, so this page asserted nothing`);
+    }
+    continue;
+  }
 
   const hint = hints.first();
   const label = await hint.getAttribute('data-hint');

@@ -18,7 +18,7 @@
  * thing as a context that was that size when the shell measured itself. So it
  * takes the harness's sign-in and screenshot folder and leaves the rest.
  */
-import { BASE, chromium, shot, signIn, finish } from './suite/harness.mjs';
+import { BASE, chromium, record, shot, signIn, finish } from './suite/harness.mjs';
 
 const SIZES = [
   { width: 1440, height: 900 },
@@ -94,21 +94,31 @@ for (const viewport of SIZES) {
   const roomy = after.underLastCard >= 112 && pinned.underLastCard >= 112;
   const straight = after.sideways === 0;
 
-  console.log(
+  /*
+   * Recorded, not only printed. Six measurements - three at each of two window
+   * sizes - were ANDed into one boolean and handed to `finish`, which then
+   * reported "ALL PASS (1 checks)" over all of them. The tally is what a suite
+   * is read by, and one is not six.
+   */
+  record(
+    reaches,
     reaches
-      ? `PASS ${name}: the wheel reaches the end and the last card is whole`
-      : `FAIL ${name}: the end is out of reach (${JSON.stringify(after)})`,
+      ? `${name}: the wheel reaches the end and the last card is whole`
+      : `${name}: the end is out of reach (${JSON.stringify(after)})`,
   );
-  console.log(
+  record(
+    roomy,
     roomy
-      ? `PASS ${name}: the launcher's clearance under the last card either way`
-      : `FAIL ${name}: ${after.underLastCard}px under the last card with the window scrolling, ` +
+      ? `${name}: the launcher's clearance under the last card either way`
+      : `${name}: ${after.underLastCard}px under the last card with the window scrolling, ` +
         `${pinned.underLastCard}px with the page scrolling`,
   );
-  console.log(straight ? `PASS ${name}: nothing hangs off the side` : `FAIL ${name}: ${after.sideways}px off the side`);
+  record(straight, straight ? `${name}: nothing hangs off the side` : `${name}: ${after.sideways}px off the side`);
 
   ok = ok && reaches && roomy && straight;
   await context.close();
 }
 
-await finish(browser, ok);
+// Everything above is recorded; `ok` is only what the log says out loud.
+console.log(ok ? 'both window sizes are right' : 'see the failures above');
+await finish(browser);

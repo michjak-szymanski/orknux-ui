@@ -14,11 +14,25 @@
  * Three: "Open definition ↗" is a link mark now, and a mark with no words has to
  * carry its name some other way.
  */
-import { BASE, WORKSPACE, open, finish } from './suite/harness.mjs';
+import { BASE, WORKSPACE, open, record, finish } from './suite/harness.mjs';
+import { NAMES, idOf } from './suite/named.mjs';
 
-const FUNCTION = process.env.ORKNUX_PANEL_FUNCTION ?? process.env.ORKNUX_FUNCTION ?? '29';
+const { browser, page, graphql } = await open({ viewport: { width: 1600, height: 1000 } });
 
-const { browser, page } = await open({ viewport: { width: 1600, height: 1000 } });
+// By name, not by the number it happens to be on the machine this was written
+// on. `?? '29'` pointed at nothing on any other database, and a details panel
+// that never drew is not a details panel that lost its row.
+const FUNCTION = await idOf(
+  graphql,
+  'function',
+  WORKSPACE,
+  NAMES.PANEL_FUNCTION,
+  process.env.ORKNUX_PANEL_FUNCTION ?? process.env.ORKNUX_FUNCTION,
+);
+if (FUNCTION === null) {
+  record(false, `there is no function called ${NAMES.PANEL_FUNCTION} whose details panel to read`);
+  await finish(browser);
+}
 
 await page.goto(`${BASE}/workspace/${WORKSPACE}/functions/${FUNCTION}`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('text=Function Details', { timeout: 20_000 });

@@ -6,7 +6,7 @@
  * nothing has gone yet, cancels, presses again and confirms, and then checks the
  * issue is really gone from the server and not only from the page.
  */
-import { BASE, WORKSPACE, open, shot, finish } from './suite/harness.mjs';
+import { BASE, WORKSPACE, open, drawn, shot, finish } from './suite/harness.mjs';
 
 const TITLE = `Delete confirmation check ${Date.now()}`;
 
@@ -39,16 +39,32 @@ const stillLoads = (await page.locator('input[aria-label="Title"]').inputValue()
 await trash.click();
 await page.waitForTimeout(400);
 await page.locator('dialog[open] button', { hasText: /^Delete Issue$/ }).click();
-await page.waitForURL(new RegExp(`/workspace/${WORKSPACE}/issues$`), { timeout: 20_000 });
-const left = true;
+/*
+ * Judged, not assumed. This was `const left = true;` under a `waitForURL` -
+ * a line printed as a verdict that could only ever say yes, and a wait whose
+ * failure would have thrown before it anyway. What it means is asked instead.
+ */
+const left = await page
+  .waitForURL(new RegExp(`/workspace/${WORKSPACE}/issues$`), { timeout: 20_000 })
+  .then(() => true)
+  .catch(() => false);
 
 await page.screenshot({ path: shot('delete-issue-confirm.png') });
 
-// Gone on the server, not just off the page.
+/*
+ * Gone on the server, not just off the page - and read off a page that has
+ * actually drawn.
+ *
+ * "the title is not on this page" is the assertion, and eight hundred
+ * milliseconds after a navigation the page may be showing nothing at all: the
+ * loader draws nothing for its first three seconds, so a slow reload is a blank
+ * screen and a blank screen contains no title. The strongest evidence in this
+ * check would have passed on an empty document.
+ */
 await page.goto(url, { waitUntil: 'domcontentloaded' });
-await page.waitForTimeout(800);
-const body = await page.locator('body').innerText();
-const gone = !body.includes(TITLE);
+const drewIt = await drawn(page, 'the deleted issue, reopened');
+const body = drewIt ? await page.locator('body').innerText() : '';
+const gone = drewIt && !body.includes(TITLE);
 
 console.log(`dialog on the first click: ${asks ? 'shown' : 'not shown'}`);
 console.log(`it names the issue:        ${names ? 'yes' : 'no'}`);
@@ -58,6 +74,7 @@ console.log(`after confirm:             ${left ? 'back at the list' : 'stayed'},
 console.log(asks ? 'PASS: the click asks first' : 'FAIL: it deleted without asking');
 console.log(names ? 'PASS: the dialog names the issue' : 'FAIL: the dialog does not say which issue');
 console.log(closed && stillHere && stillLoads ? 'PASS: cancel keeps the issue' : 'FAIL: cancel did not keep the issue');
+console.log(left ? 'PASS: confirm goes back to the list' : 'FAIL: confirm stayed where it was');
 console.log(gone ? 'PASS: confirm deletes it' : 'FAIL: confirm did not delete it');
 
-await finish(browser, asks, names, closed, stillHere, stillLoads, gone);
+await finish(browser, asks, names, closed, stillHere, stillLoads, left, gone);

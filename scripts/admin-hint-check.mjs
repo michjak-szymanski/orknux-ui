@@ -9,7 +9,7 @@
  * the page while every note is shut, and that the ones deliberately kept -
  * empty states, consequences, live readings - still are.
  */
-import { BASE, open, record, SHOT_DIR, finish } from './suite/harness.mjs';
+import { BASE, open, record, drawn, SHOT_DIR, finish } from './suite/harness.mjs';
 
 /** "before" or "after"; only what the pictures are called. */
 const WHEN = process.argv[2] ?? 'after';
@@ -95,8 +95,16 @@ const away = async () => {
 
 for (const each of pages) {
   await page.goto(`${BASE}${each.path}`, { waitUntil: 'domcontentloaded' });
-  // These pages ask the server before they draw the form, so the wait is for a
-  // control to exist rather than for a number of milliseconds to pass.
+  /*
+   * The page first, and then the control on it.
+   *
+   * Both waits are on the page rather than on the clock, and both fail by name
+   * rather than quietly. "…is no longer printed under a field" is a sentence
+   * about a field that is on the screen: read off a page that has not arrived
+   * it passes on an empty body, and the only complaint left is a missing (?),
+   * which is indistinguishable from prose deleted and never replaced.
+   */
+  if (!(await drawn(page, each.name))) continue;
   await page
     .locator('button[data-hint]')
     .first()
@@ -116,6 +124,22 @@ for (const each of pages) {
     continue;
   }
 
+  /*
+   * Every page in this list owes at least one (?). None after fifteen seconds
+   * is either a form that never drew or a control that is missing, and which of
+   * the two it is decides whether there is a bug - so it is said, and nothing
+   * further is read off the page. It used to `continue` without a word, which
+   * dropped six assertions out of the run and still reported a pass.
+   */
+  if (found === 0) {
+    record(
+      false,
+      `${each.name}: no (?) after 15s - either the fields never drew or the (?) is missing; ` +
+        `nothing below is worth reading. The page holds: ${JSON.stringify(body.slice(0, 200))}`,
+    );
+    continue;
+  }
+
   for (const label of each.hints) {
     const control = page.locator(`button[data-hint="${label}"]`);
     record((await control.count()) === 1, `${each.name}: a (?) for ${label}`);
@@ -127,9 +151,16 @@ for (const each of pages) {
     record(body.includes(sentence), `${each.name}: "${sentence.slice(0, 40)}…" is still on screen`);
   }
 
-  if (found === 0) continue;
-
+  /*
+   * The one this page's behaviour is driven through. Its absence has already
+   * been recorded above; what it must not do is throw out of the loop, which
+   * would leave every page after this one unrun and unreported.
+   */
   const first = page.locator(`button[data-hint="${each.hints[0]}"]`).first();
+  if ((await first.count()) === 0) {
+    record(false, `${each.name}: no (?) called "${each.hints[0]}" to drive, so the rest of this page is unread`);
+    continue;
+  }
   await first.scrollIntoViewIfNeeded();
 
   await away();

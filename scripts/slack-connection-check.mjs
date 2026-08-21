@@ -121,9 +121,17 @@ try {
   await page.goto(`${BASE}/workspace/${WORKSPACE}/integrations/connections/${id}`, {
     waitUntil: 'domcontentloaded',
   });
-  await page.waitForTimeout(1500);
-
+  /*
+   * Waited for, not slept through. Half of what follows is a negative - *no
+   * Auth Type*, *no Webhook URL Override* - and a negative read a second and a
+   * half after a navigation is true of a page that has not drawn yet, which the
+   * loader keeps deliberately blank for its first three seconds. The form's own
+   * first field is the thing that says the form is there.
+   */
   const secretBox = page.locator('#connection-secret');
+  await secretBox.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => undefined);
+  await page.waitForTimeout(400);
+
   record((await secretBox.count()) === 1, 'the connection page offers the bot token');
   const secretLabel = await page.locator('label[for="connection-secret"]').innerText();
   record(secretLabel.trim() === 'Bot token', `named the same as the dialog names it (${secretLabel.trim()})`);
@@ -155,7 +163,9 @@ try {
 
   // Read it back the way somebody checking a rotation would.
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(1500);
+  // The same again: the form, not the clock.
+  await page.locator('#connection-app-token').waitFor({ state: 'visible', timeout: 20_000 }).catch(() => undefined);
+  await page.waitForTimeout(400);
   const reveal = page.locator('#connection-app-token').locator('xpath=../button');
   record((await reveal.count()) > 0, 'and it can be revealed again');
   await reveal.first().click();

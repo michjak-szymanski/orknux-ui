@@ -274,10 +274,18 @@ for (const one of screens) {
    * one of them until the agent's settings page - which asks for more than the
    * rest - drew nothing in time and reported every sentence on it as gone.
    */
+  /*
+   * Thirty seconds rather than twenty. These forms have been measured taking
+   * eleven to draw against a loaded development server - the vite dev server
+   * transforms modules on demand and the page fetches four catalogues before
+   * it can lay a field out - and a budget that a healthy page misses under load
+   * is a budget that reports load as breakage.
+   */
+  let settled = true;
   try {
     await page.waitForFunction(
       () => (document.querySelector('main')?.innerText?.length ?? 0) > 300,
-      { timeout: 20_000 },
+      { timeout: 30_000 },
     );
   } catch {
     /*
@@ -287,13 +295,24 @@ for (const one of screens) {
      * cannot tell a page that failed to render from a page that rendered a
      * refusal. The first two hundred characters settle it at a glance.
      */
+    settled = false;
     const drew = await page.evaluate(() => document.querySelector('main')?.innerText ?? '<there is no main>');
     record(
       false,
-      `${one.name}: the page did not settle in twenty seconds; <main> holds ${drew.length} characters: ` +
+      `${one.name}: the page did not settle in thirty seconds; <main> holds ${drew.length} characters: ` +
         JSON.stringify(drew.slice(0, 200)),
     );
   }
+  /*
+   * And nothing is read off a page that did not settle.
+   *
+   * This used to fall through and go on asserting. "…is no longer printed under
+   * a field" passed on the empty body, which is the shape of every false alarm
+   * this suite has produced: a screen that never drew, reported as a screen
+   * whose prose was deleted. The refusal above is the whole of what this page
+   * has to say.
+   */
+  if (!settled) continue;
   await page.waitForTimeout(1500);
   if (one.drive !== undefined) await one.drive();
 
