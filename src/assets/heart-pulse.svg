@@ -1,0 +1,6 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="heart-pulse">
+<path d="M1.333 6.333 a3.667 3.667 0 0 1 6.394 -2.451 0.373 0.373 0 0 0 0.545 0 A3.66 3.66 0 0 1 14.667 6.333 c0 1.527 -1 2.667 -2 3.667 l-3.661 3.542 a1.333 1.333 0 0 1 -2 0.013 L3.333 10 c-1 -1 -2 -2.133 -2 -3.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M2.147 8.667 H6.333 l0.333 -0.667 1.333 3 1.333 -4.667 1 2.333 h3.513" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

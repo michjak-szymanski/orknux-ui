@@ -1,0 +1,7 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="cloud-off">
+<path d="m1.333 1.333 13.333 13.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M3.855 3.855 A4.667 4.667 0 0 0 6 12.667 h5.667 a3 3 0 0 0 0.871 -0.129" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M14.355 11 A3 3 0 0 0 11.667 6.667 h-1.193 A4.672 4.672 0 0 0 6.667 3.38" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

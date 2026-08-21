@@ -1,0 +1,7 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="octagon-alert">
+<path d="M8 10.667 h0.007" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M8 5.333 v2.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M10.208 1.333 a1.333 1.333 0 0 1 0.943 0.391 l3.125 3.125 A1.333 1.333 0 0 1 14.667 5.792 v4.416 a1.333 1.333 0 0 1 -0.391 0.943 l-3.125 3.125 a1.333 1.333 0 0 1 -0.943 0.391 H5.792 a1.333 1.333 0 0 1 -0.943 -0.391 l-3.125 -3.125 A1.333 1.333 0 0 1 1.333 10.208 V5.792 a1.333 1.333 0 0 1 0.391 -0.943 l3.125 -3.125 A1.333 1.333 0 0 1 5.792 1.333 z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

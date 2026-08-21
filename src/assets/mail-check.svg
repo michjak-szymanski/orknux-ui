@@ -1,0 +1,7 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="mail-check">
+<path d="M14.667 8.667 V4 a1.333 1.333 0 0 0 -1.333 -1.333 H2.667 a1.333 1.333 0 0 0 -1.333 1.333 v8 c0 0.733 0.6 1.333 1.333 1.333 h5.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m14.667 4.667 -5.98 3.8 a1.293 1.293 0 0 1 -1.373 0 L1.333 4.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m10.667 12.667 1.333 1.333 2.667 -2.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

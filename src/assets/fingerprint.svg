@@ -1,0 +1,13 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="fingerprint">
+<path d="M8 6.667 a1.333 1.333 0 0 0 -1.333 1.333 c0 0.68 -0.067 1.673 -0.173 2.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M9.333 8.747 c0 1.587 0 4.253 -0.667 5.92" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M11.527 14.013 c0.08 -0.4 0.287 -1.533 0.333 -2.013" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M1.333 8 a6.667 6.667 0 0 1 12 -4" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M1.333 10.667 h0.007" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M14.533 10.667 c0.133 -1.333 0.087 -3.569 0 -4" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M3.333 13 C3.667 12 4 10 4 8 a4 4 0 0 1 0.227 -1.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M5.767 14.667 c0.14 -0.44 0.3 -0.88 0.38 -1.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M6 4.533 a4 4 0 0 1 6 3.467 v1.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

@@ -1,0 +1,5 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="plane">
+<path d="M11.867 12.8 10.667 7.333 l2.333 -2.333 C14 4 14.333 2.667 14 2 c-0.667 -0.333 -2 0 -3 1 L8.667 5.333 3.2 4.133 c-0.333 -0.067 -0.6 0.067 -0.733 0.333 l-0.2 0.333 c-0.133 0.333 -0.067 0.667 0.2 0.867 L6 8 l-1.333 2 H2.667 l-0.667 0.667 2 1.333 1.333 2 0.667 -0.667 v-2 l2 -1.333 2.333 3.533 c0.2 0.267 0.533 0.333 0.867 0.2 l0.333 -0.133 c0.267 -0.2 0.4 -0.467 0.333 -0.8 z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

@@ -1,0 +1,9 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="ship">
+<path d="M8 6.793 V9.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M8 1.333 v2" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M12.667 8.667 V4.667 a1.333 1.333 0 0 0 -1.333 -1.333 H4.667 a1.333 1.333 0 0 0 -1.333 1.333 v4" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M12.92 13.333 A7.733 7.733 0 0 0 14 9.333 l-5.459 -2.426 a1.333 1.333 0 0 0 -1.083 0 L2 9.333 a7.733 7.733 0 0 0 1.873 5.173" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M1.333 14 c0.4 0.333 0.8 0.667 1.667 0.667 1.667 0 1.667 -1.333 3.333 -1.333 0.867 0 1.267 0.333 1.667 0.667 s0.8 0.667 1.667 0.667 c1.667 0 1.667 -1.333 3.333 -1.333 0.867 0 1.267 0.333 1.667 0.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

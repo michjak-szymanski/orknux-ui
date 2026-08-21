@@ -1,0 +1,6 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="messages-square">
+<path d="M10.667 6.667 a1.333 1.333 0 0 1 -1.333 1.333 H4.552 a1.333 1.333 0 0 0 -0.943 0.391 l-1.468 1.468 A0.473 0.473 0 0 1 1.333 9.524 V2.667 a1.333 1.333 0 0 1 1.333 -1.333 h6.667 a1.333 1.333 0 0 1 1.333 1.333 z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M13.333 6 a1.333 1.333 0 0 1 1.333 1.333 v6.857 a0.473 0.473 0 0 1 -0.808 0.335 l-1.468 -1.468 A1.333 1.333 0 0 0 11.448 12.667 H6.667 a1.333 1.333 0 0 1 -1.333 -1.333 v-0.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

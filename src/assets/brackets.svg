@@ -1,0 +1,6 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="brackets">
+<path d="M10.667 2 h2 a0.667 0.667 0 0 1 0.667 0.667 v10.667 a0.667 0.667 0 0 1 -0.667 0.667 h-2" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M5.333 14 H3.333 a0.667 0.667 0 0 1 -0.667 -0.667 V2.667 a0.667 0.667 0 0 1 0.667 -0.667 h2" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

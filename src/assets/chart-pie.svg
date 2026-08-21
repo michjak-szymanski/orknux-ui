@@ -1,0 +1,6 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="chart-pie">
+<path d="M14 8 c0.368 0 0.67 -0.299 0.633 -0.665 a6.667 6.667 0 0 0 -5.969 -5.967 c-0.367 -0.037 -0.665 0.265 -0.665 0.633 v5.333 a0.667 0.667 0 0 0 0.667 0.667 z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M14.14 10.593 A6.667 6.667 0 1 1 5.333 1.887" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

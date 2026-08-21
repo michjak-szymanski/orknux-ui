@@ -1,0 +1,9 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="palette">
+<path d="M8 14.667 a0.667 0.667 0 0 1 0 -13.333 6.667 6 0 0 1 6.667 6 3.333 3.333 0 0 1 -3.333 3.333 h-1.5 a1.167 1.167 0 0 0 -0.933 1.867 l0.2 0.267 a1.167 1.167 0 0 1 -0.933 1.867 z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="9" cy="4.333" r="0.333" fill="white" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="11.667" cy="7" r="0.333" fill="white" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="4.333" cy="8.333" r="0.333" fill="white" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="5.667" cy="5" r="0.333" fill="white" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

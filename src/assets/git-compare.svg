@@ -1,0 +1,8 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="git-compare">
+<circle cx="12" cy="12" r="2" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="4" cy="4" r="2" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M8.667 4 h2 a1.333 1.333 0 0 1 1.333 1.333 v4.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M7.333 12 H5.333 a1.333 1.333 0 0 1 -1.333 -1.333 V6" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

@@ -1,0 +1,9 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="stethoscope">
+<path d="M7.333 1.333 v1.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M3.333 1.333 v1.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M3.333 2 H2.667 a1.333 1.333 0 0 0 -1.333 1.333 v2.667 a4 4 0 0 0 8 0 V3.333 a1.333 1.333 0 0 0 -1.333 -1.333 h-0.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M5.333 10 a4 4 0 0 0 8 0 v-2" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="13.333" cy="6.667" r="1.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

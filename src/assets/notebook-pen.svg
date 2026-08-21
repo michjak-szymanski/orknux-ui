@@ -1,0 +1,10 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="notebook-pen">
+<path d="M8.933 1.333 H4 a1.333 1.333 0 0 0 -1.333 1.333 v10.667 a1.333 1.333 0 0 0 1.333 1.333 h8 a1.333 1.333 0 0 0 1.333 -1.333 v-4.933" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M1.333 4 h2.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M1.333 6.667 h2.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M1.333 9.333 h2.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M1.333 12 h2.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M14.252 3.751 a0.667 0.667 0 1 0 -2.003 -2.003 l-3.34 3.341 a1.333 1.333 0 0 0 -0.337 0.569 l-0.558 1.913 a0.333 0.333 0 0 0 0.413 0.413 l1.913 -0.558 a1.333 1.333 0 0 0 0.569 -0.337 z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

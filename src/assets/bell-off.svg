@@ -1,0 +1,8 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="bell-off">
+<path d="M6.845 14 a1.333 1.333 0 0 0 2.309 0" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M11.333 11.333 H2.667 a0.667 0.667 0 0 1 -0.493 -1.115 C3.06 9.304 4 8.333 4 5.333 a4 4 0 0 1 0.172 -1.161" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m1.333 1.333 13.333 13.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M5.779 2.007 A4 4 0 0 1 12 5.333 c0 1.791 0.513 3.102 1.138 4.033" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

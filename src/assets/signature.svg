@@ -1,0 +1,6 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="signature">
+<path d="m14 11.333 -1.437 -1.245 A0.333 0.333 0 0 0 12 10.333 v0.333 a0.667 0.667 0 0 1 -0.667 0.667 h-1.333 a0.667 0.667 0 0 1 -0.667 -0.667 c0 -1.697 -2.661 -2.647 -5.667 -2.667 a0.667 0.667 0 0 0 0 3.333 c2.769 0 3.163 -7.53 3.805 -9 a1.667 1.667 0 1 1 2.207 2.189" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M2 14 h12" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

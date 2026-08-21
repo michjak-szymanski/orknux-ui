@@ -1,0 +1,7 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="milestone">
+<path d="M8 8.667 v5.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M8 2 v2" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M2.667 4 a0.667 0.667 0 0 0 -0.667 0.667 v3.333 a0.667 0.667 0 0 0 0.667 0.667 h8.667 a1.333 1.333 0 0 0 0.768 -0.243 l2.283 -1.545 a0.667 0.667 0 0 0 0 -1.09 l-2.283 -1.545 A1.333 1.333 0 0 0 11.333 4 z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

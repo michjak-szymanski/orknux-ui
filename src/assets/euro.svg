@@ -1,0 +1,7 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="euro">
+<path d="M2.667 6.667 h8" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M2.667 9.333 h6" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M12.667 4 a5.133 5.133 0 0 0 -3.467 -1.333 A5.267 5.267 0 0 0 4 8 c0 2.933 2.333 5.333 5.2 5.333 1.333 0 2.533 -0.533 3.467 -1.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

@@ -1,0 +1,9 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="hand-coins">
+<path d="M7.333 10 h1.333 a1.333 1.333 0 1 0 0 -2.667 h-2 c-0.4 0 -0.733 0.133 -0.933 0.4 L2 11.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m4.667 14 1.067 -0.933 c0.2 -0.267 0.533 -0.4 0.933 -0.4 h2.667 c0.733 0 1.4 -0.267 1.867 -0.8 l3.067 -2.933 a1.333 1.333 0 0 0 -1.833 -1.94 l-2.8 2.6" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m1.333 10.667 4 4" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="10.667" cy="6" r="1.933" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="4" cy="3.333" r="2" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

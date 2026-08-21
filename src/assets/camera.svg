@@ -1,0 +1,6 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="camera">
+<path d="M9.331 2.667 a1.333 1.333 0 0 1 1.173 0.7 l0.324 0.6 A1.333 1.333 0 0 0 12.002 4.667 H13.333 a1.333 1.333 0 0 1 1.333 1.333 v6 a1.333 1.333 0 0 1 -1.333 1.333 H2.667 a1.333 1.333 0 0 1 -1.333 -1.333 V6 a1.333 1.333 0 0 1 1.333 -1.333 h1.331 a1.333 1.333 0 0 0 1.173 -0.699 l0.326 -0.603 A1.333 1.333 0 0 1 6.669 2.667 z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="8" cy="8.667" r="2" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

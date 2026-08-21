@@ -1,0 +1,9 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="file-output">
+<path d="M9.333 1.333 v2.667 a1.333 1.333 0 0 0 1.333 1.333 h2.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M2.667 4.667 V2.667 a1.333 1.333 0 0 1 1.333 -1.333 1.333 1.333 0 0 0 -1.333 1.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M2.709 13.999 a1.333 1.333 0 0 0 1.333 0.667 L12 14.667 a1.333 1.333 0 0 0 1.333 -1.333 V4.667 l-3.333 -3.333 H4" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m3.333 7.333 -2 2" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m3.333 11.333 -2 -2 h6.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

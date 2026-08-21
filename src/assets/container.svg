@@ -1,0 +1,9 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="container">
+<path d="M14.667 5.133 c0 -0.4 -0.267 -0.8 -0.533 -1 l-4.2 -2.6 a1.147 1.147 0 0 0 -1.133 0 l-6.867 4 c-0.333 0.133 -0.6 0.533 -0.6 0.933 v4.4 c0 0.333 0.267 0.8 0.533 1 l4.2 2.6 a1.147 1.147 0 0 0 1.133 0 l6.867 -4 c0.333 -0.2 0.6 -0.667 0.6 -1 Z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M6.667 14.6 V9.333 L1.4 6.067" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m6.667 9.333 7.933 -4.6" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M9.333 13.2 v-5.4" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M12 11.667 V6.267" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

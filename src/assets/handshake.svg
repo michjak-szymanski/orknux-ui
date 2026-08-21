@@ -1,0 +1,9 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="handshake">
+<path d="m7.333 11.333 1.333 1.333 a0.667 0.667 0 1 0 2 -2" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m9.333 9.333 1.667 1.667 a0.667 0.667 0 1 0 2 -2 l-2.587 -2.587 a2 2 0 0 0 -2.827 0 l-0.587 0.587 a0.667 0.667 0 1 1 -2 -2 l1.873 -1.873 a3.86 3.86 0 0 1 4.707 -0.58 l0.313 0.187 a1.333 1.333 0 0 0 0.947 0.167 L14 2.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m14 2 0.667 7.333 h-1.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M2 2 1.333 9.333 l4.333 4.333 a0.667 0.667 0 1 0 2 -2" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M2 2.667 h5.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

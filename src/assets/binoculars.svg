@@ -1,0 +1,10 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="binoculars">
+<path d="M6.667 6.667 h2.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M12.667 4.667 V2.667 a0.667 0.667 0 0 0 -0.667 -0.667 h-1.333 a0.667 0.667 0 0 0 -0.667 0.667 v2" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M13.333 14 a1.333 1.333 0 0 0 1.333 -1.333 v-2.567 c0 -0.927 -1.333 -1.975 -1.333 -3.219 V5.333 a0.667 0.667 0 0 0 -0.667 -0.667 h-2.667 a0.667 0.667 0 0 0 -0.667 0.667 v7.333 a1.333 1.333 0 0 0 1.333 1.333 z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M14.667 10.667 L1.333 10.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M2.667 14 a1.333 1.333 0 0 1 -1.333 -1.333 v-2.567 c0 -0.927 1.333 -1.975 1.333 -3.219 V5.333 a0.667 0.667 0 0 1 0.667 -0.667 h2.667 a0.667 0.667 0 0 1 0.667 0.667 v7.333 a1.333 1.333 0 0 1 -1.333 1.333 z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M6 4.667 V2.667 a0.667 0.667 0 0 0 -0.667 -0.667 H4 a0.667 0.667 0 0 0 -0.667 0.667 v2" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

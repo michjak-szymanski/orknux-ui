@@ -1,0 +1,7 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="store">
+<path d="M10 14 v-3.333 a0.667 0.667 0 0 0 -0.667 -0.667 h-2.667 a0.667 0.667 0 0 0 -0.667 0.667 v3.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M11.849 6.873 a0.747 0.747 0 0 0 -1.033 0 1.667 1.667 0 0 1 -2.301 0 0.747 0.747 0 0 0 -1.032 0 1.667 1.667 0 0 1 -2.301 0 0.747 0.747 0 0 0 -1.033 0 1.667 1.667 0 0 1 -2.513 -2.165 l1.926 -2.789 A1.333 1.333 0 0 1 4.667 1.333 h6.667 a1.333 1.333 0 0 1 1.102 0.582 l1.93 2.795 a1.667 1.667 0 0 1 -2.516 2.163" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M2.667 7.3 V12.667 a1.333 1.333 0 0 0 1.333 1.333 h8 a1.333 1.333 0 0 0 1.333 -1.333 v-5.367" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

@@ -1,0 +1,9 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="truck">
+<path d="M9.333 12 V4 a1.333 1.333 0 0 0 -1.333 -1.333 H2.667 a1.333 1.333 0 0 0 -1.333 1.333 v7.333 a0.667 0.667 0 0 0 0.667 0.667 h1.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M10 12 H6" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M12.667 12 h1.333 a0.667 0.667 0 0 0 0.667 -0.667 v-2.433 a0.667 0.667 0 0 0 -0.147 -0.416 l-2.32 -2.9 A0.667 0.667 0 0 0 11.68 5.333 H9.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="11.333" cy="12" r="1.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="4.667" cy="12" r="1.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

@@ -1,0 +1,8 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="rocket">
+<path d="M3 11 c-1 0.84 -1.333 3.333 -1.333 3.333 s2.493 -0.333 3.333 -1.333 c0.473 -0.56 0.467 -1.42 -0.06 -1.94 a1.453 1.453 0 0 0 -1.94 -0.06 z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m8 10 -2 -2 a14.667 14.667 0 0 1 1.333 -2.633 A8.587 8.587 0 0 1 14.667 1.333 c0 1.813 -0.52 5 -4 7.333 a14.9 14.9 0 0 1 -2.667 1.333 z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M6 8 H2.667 s0.367 -2.02 1.333 -2.667 c1.08 -0.72 3.333 0 3.333 0" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M8 10 v3.333 s2.02 -0.367 2.667 -1.333 c0.72 -1.08 0 -3.333 0 -3.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

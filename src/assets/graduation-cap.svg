@@ -1,0 +1,7 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="graduation-cap">
+<path d="M14.28 7.281 a0.667 0.667 0 0 0 -0.013 -1.225 L8.553 3.453 a1.333 1.333 0 0 0 -1.107 0 L1.733 6.053 a0.667 0.667 0 0 0 0 1.221 l5.713 2.605 a1.333 1.333 0 0 0 1.107 0 z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M14.667 6.667 v4" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M4 8.333 V10.667 a4 2 0 0 0 8 0 v-2.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

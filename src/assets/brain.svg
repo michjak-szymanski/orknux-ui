@@ -1,0 +1,12 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="brain">
+<path d="M8 12 V3.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M10 8.667 a2.78 2.78 0 0 1 -2 -2.667 2.78 2.78 0 0 1 -2 2.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M11.732 4.333 A2 2 0 1 0 8 3.333 a2 2 0 1 0 -3.732 1" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M11.998 3.417 a2.667 2.667 0 0 1 1.684 3.847" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M12 12 a2.667 2.667 0 0 0 1.333 -4.976" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M13.311 11.655 A2.667 2.667 0 1 1 8 12 a2.667 2.667 0 1 1 -5.311 -0.345" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M4 12 a2.667 2.667 0 0 1 -1.333 -4.976" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M4.002 3.417 a2.667 2.667 0 0 0 -1.684 3.847" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

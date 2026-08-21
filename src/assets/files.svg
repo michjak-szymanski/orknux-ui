@@ -1,0 +1,7 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="files">
+<path d="M10 1.333 a1.333 1.333 0 0 1 0.943 0.391 l2.667 2.667 A1.333 1.333 0 0 1 14 5.333 v4.667 a1.333 1.333 0 0 1 -1.333 1.333 h-5.333 a1.333 1.333 0 0 1 -1.333 -1.333 V2.667 a1.333 1.333 0 0 1 1.333 -1.333 z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M10 1.333 v2.667 a1.333 1.333 0 0 0 1.333 1.333 h2.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M3.333 4.667 a1.333 1.333 0 0 0 -1.333 1.333 v7.333 a1.333 1.333 0 0 0 1.333 1.333 h5.333 a1.333 1.333 0 0 0 1.155 -0.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

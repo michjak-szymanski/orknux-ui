@@ -1,0 +1,7 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="shield-alert">
+<path d="M13.333 8.667 c0 3.333 -2.333 5 -5.107 5.967 a0.667 0.667 0 0 1 -0.447 -0.007 C5 13.667 2.667 12 2.667 8.667 V4 a0.667 0.667 0 0 1 0.667 -0.667 c1.333 0 3 -0.8 4.16 -1.813 a0.78 0.78 0 0 1 1.013 0 C9.673 2.54 11.333 3.333 12.667 3.333 a0.667 0.667 0 0 1 0.667 0.667 z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M8 5.333 v2.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M8 10.667 h0.007" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

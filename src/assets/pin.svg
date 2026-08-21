@@ -1,0 +1,6 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="pin">
+<path d="M8 11.333 v3.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M6 7.173 a1.333 1.333 0 0 1 -0.74 1.193 l-1.187 0.6 A1.333 1.333 0 0 0 3.333 10.16 V10.667 a0.667 0.667 0 0 0 0.667 0.667 h8 a0.667 0.667 0 0 0 0.667 -0.667 v-0.507 a1.333 1.333 0 0 0 -0.74 -1.193 l-1.187 -0.6 A1.333 1.333 0 0 1 10 7.173 V4.667 a0.667 0.667 0 0 1 0.667 -0.667 1.333 1.333 0 0 0 0 -2.667 H5.333 a1.333 1.333 0 0 0 0 2.667 0.667 0.667 0 0 1 0.667 0.667 z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

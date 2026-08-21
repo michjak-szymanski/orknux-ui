@@ -1,0 +1,10 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="train-front">
+<path d="M5.333 2.067 V4.667 a2.667 2.667 0 0 0 5.333 0 V2.067" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m6 10 -0.667 -0.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m10 10 0.667 -0.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M6 12.667 c-1.867 0 -3.333 -1.467 -3.333 -3.333 v-2.667 a5.333 5.333 0 0 1 10.667 0 v2.667 c0 1.867 -1.467 3.333 -3.333 3.333 Z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m5.333 12.667 -1.333 2" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m10.667 12.667 1.333 2" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

@@ -1,0 +1,7 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="atom">
+<circle cx="8" cy="8" r="0.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M13.467 13.467 c1.36 -1.353 0.013 -4.907 -3 -7.933 -3.027 -3.013 -6.58 -4.36 -7.933 -3 -1.36 1.353 -0.013 4.907 3 7.933 3.027 3.013 6.58 4.36 7.933 3 Z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M10.467 10.467 c3.013 -3.027 4.36 -6.58 3 -7.933 -1.353 -1.36 -4.907 -0.013 -7.933 3 -3.013 3.027 -4.36 6.58 -3 7.933 1.353 1.36 4.907 0.013 7.933 -3 Z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

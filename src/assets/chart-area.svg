@@ -1,0 +1,6 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="chart-area">
+<path d="M2 2 v10.667 a1.333 1.333 0 0 0 1.333 1.333 h10.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M4.667 7.471 a0.333 0.333 0 0 1 0.097 -0.235 l1.333 -1.333 a0.333 0.333 0 0 1 0.472 0 l2.195 2.195 a0.333 0.333 0 0 0 0.472 0 l2.861 -2.861 a0.333 0.333 0 0 1 0.569 0.235 V10.667 a0.667 0.667 0 0 1 -0.667 0.667 H5.333 a0.667 0.667 0 0 1 -0.667 -0.667 z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

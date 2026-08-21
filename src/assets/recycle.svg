@@ -1,0 +1,10 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="recycle">
+<path d="M4.667 12.667 H3.21 a1.22 1.22 0 0 1 -1.047 -0.587 1.19 1.19 0 0 1 -0.003 -1.189 L4.797 6.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M7.333 12.667 h5.469 a1.22 1.22 0 0 0 1.037 -0.593 1.189 1.189 0 0 0 0 -1.183 l-0.817 -1.413" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m9.333 10.667 -2 2 2 2" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M5.529 9.064 4.797 6.333 2.067 7.065" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m6.229 3.874 0.729 -1.261 A1.22 1.22 0 0 1 7.99 2 a1.189 1.189 0 0 1 1.031 0.592 l2.629 4.562" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m8.919 6.422 2.731 0.732 0.731 -2.731" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

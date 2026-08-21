@@ -1,0 +1,7 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="printer">
+<path d="M4 12 H2.667 a1.333 1.333 0 0 1 -1.333 -1.333 v-3.333 a1.333 1.333 0 0 1 1.333 -1.333 h10.667 a1.333 1.333 0 0 1 1.333 1.333 v3.333 a1.333 1.333 0 0 1 -1.333 1.333 h-1.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M4 6 V2 a0.667 0.667 0 0 1 0.667 -0.667 h6.667 a0.667 0.667 0 0 1 0.667 0.667 v4" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="4" y="9.333" width="8" height="5.333" rx="0.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

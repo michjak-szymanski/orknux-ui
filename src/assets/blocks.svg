@@ -1,0 +1,6 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="blocks">
+<path d="M6.667 14.667 V4.667 a0.667 0.667 0 0 0 -0.667 -0.667 H2.667 a1.333 1.333 0 0 0 -1.333 1.333 v8 a1.333 1.333 0 0 0 1.333 1.333 h8 a1.333 1.333 0 0 0 1.333 -1.333 v-3.333 a0.667 0.667 0 0 0 -0.667 -0.667 H1.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="9.333" y="1.333" width="5.333" height="5.333" rx="0.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

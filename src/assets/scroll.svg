@@ -1,0 +1,6 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="scroll">
+<path d="M12.667 11.333 V3.333 a1.333 1.333 0 0 0 -1.333 -1.333 H2.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M5.333 14 h8 a1.333 1.333 0 0 0 1.333 -1.333 v-0.667 a0.667 0.667 0 0 0 -0.667 -0.667 H7.333 a0.667 0.667 0 0 0 -0.667 0.667 v0.667 a1.333 1.333 0 1 1 -2.667 0 V3.333 a1.333 1.333 0 1 0 -2.667 0 v1.333 a0.667 0.667 0 0 0 0.667 0.667 h2" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

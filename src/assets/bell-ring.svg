@@ -1,0 +1,8 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="bell-ring">
+<path d="M6.845 14 a1.333 1.333 0 0 0 2.309 0" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M14.667 5.333 c0 -1.533 -0.533 -2.867 -1.333 -4" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M2.175 10.217 A0.667 0.667 0 0 0 2.667 11.333 h10.667 a0.667 0.667 0 0 0 0.493 -1.115 C12.94 9.304 12 8.333 12 5.333 A4 4 0 0 0 4 5.333 c0 2.999 -0.941 3.971 -1.825 4.884" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M2.667 1.333 C1.867 2.467 1.333 3.8 1.333 5.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

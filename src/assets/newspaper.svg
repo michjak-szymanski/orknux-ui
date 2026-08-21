@@ -1,0 +1,8 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="newspaper">
+<path d="M10 12 h-3.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M12 9.333 h-5.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M2.667 14.667 h10.667 a1.333 1.333 0 0 0 1.333 -1.333 V2.667 a1.333 1.333 0 0 0 -1.333 -1.333 H5.333 a1.333 1.333 0 0 0 -1.333 1.333 v10.667 a1.333 1.333 0 0 1 -2.667 0 v-6 a1.333 1.333 0 0 1 1.333 -1.333 h1.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="6.667" y="4" width="5.333" height="2.667" rx="0.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

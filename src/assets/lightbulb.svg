@@ -1,0 +1,7 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="lightbulb">
+<path d="M10 9.333 c0.133 -0.667 0.467 -1.133 1 -1.667 0.667 -0.6 1 -1.467 1 -2.333 A4 4 0 0 0 4 5.333 c0 0.667 0.133 1.467 1 2.333 0.467 0.467 0.867 1 1 1.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M6 12 h4" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M6.667 14.667 h2.667" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

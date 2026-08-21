@@ -1,0 +1,7 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="map-pinned">
+<path d="M12 5.333 c0 2.409 -2.579 4.953 -3.595 5.863 a0.667 0.667 0 0 1 -0.809 0 C6.58 10.286 4 7.742 4 5.333 a4 4 0 0 1 8 0" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="8" cy="5.333" r="1.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M5.809 9.333 h-2.473 a0.667 0.667 0 0 0 -0.632 0.455 l-1.336 4 A0.667 0.667 0 0 0 2 14.667 h12 a0.667 0.667 0 0 0 0.632 -0.877 l-1.333 -4 a0.667 0.667 0 0 0 -0.633 -0.456 h-2.475" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

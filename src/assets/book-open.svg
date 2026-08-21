@@ -1,0 +1,6 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="book-open">
+<path d="M8 4.667 v9.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M2 12 a0.667 0.667 0 0 1 -0.667 -0.667 V2.667 a0.667 0.667 0 0 1 0.667 -0.667 h3.333 a2.667 2.667 0 0 1 2.667 2.667 2.667 2.667 0 0 1 2.667 -2.667 h3.333 a0.667 0.667 0 0 1 0.667 0.667 v8.667 a0.667 0.667 0 0 1 -0.667 0.667 h-4 a2 2 0 0 0 -2 2 2 2 0 0 0 -2 -2 z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

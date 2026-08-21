@@ -1,0 +1,8 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="car">
+<path d="M12.667 11.333 h1.333 c0.4 0 0.667 -0.267 0.667 -0.667 v-2 c0 -0.6 -0.467 -1.133 -1 -1.267 C12.467 7.067 10.667 6.667 10.667 6.667 s-0.867 -0.933 -1.467 -1.533 c-0.333 -0.267 -0.733 -0.467 -1.2 -0.467 H3.333 c-0.4 0 -0.733 0.267 -0.933 0.6 l-0.933 1.933 A2.467 2.467 0 0 0 1.333 8 v2.667 c0 0.4 0.267 0.667 0.667 0.667 h1.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="4.667" cy="11.333" r="1.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M6 11.333 h4" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="11.333" cy="11.333" r="1.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

@@ -1,0 +1,16 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="boxes">
+<path d="M1.98 8.613 A1.333 1.333 0 0 0 1.333 9.753 v2.16 a1.333 1.333 0 0 0 0.647 1.14 l2 1.2 a1.333 1.333 0 0 0 1.373 0 L8 12.667 v-3.667 l-3.333 -2 -2.687 1.613 Z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m4.667 11 -3.16 -1.9" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m4.667 11 3.333 -2" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M4.667 11 v3.447" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M8 9 V12.667 l2.647 1.587 a1.333 1.333 0 0 0 1.373 0 l2 -1.2 a1.333 1.333 0 0 0 0.647 -1.14 v-2.16 a1.333 1.333 0 0 0 -0.647 -1.14 L11.333 7 l-3.333 2 Z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m11.333 11 -3.333 -2" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m11.333 11 3.16 -1.9" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M11.333 11 v3.447" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M5.313 2.947 A1.333 1.333 0 0 0 4.667 4.087 v2.913 l3.333 2 3.333 -2 V4.087 a1.333 1.333 0 0 0 -0.647 -1.14 l-2 -1.2 a1.333 1.333 0 0 0 -1.373 0 l-2 1.2 Z" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M8 5.333 4.84 3.433" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m8 5.333 3.16 -1.9" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M8 9 V5.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

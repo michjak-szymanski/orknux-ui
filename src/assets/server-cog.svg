@@ -1,0 +1,16 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="server-cog">
+<path d="m7.235 9.848 -0.255 0.615" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M8.765 9.848 a2 2 0 1 0 -1.531 -3.696 l-0.255 -0.615" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m8.765 6.152 0.255 -0.615" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m9.02 10.464 -0.255 -0.616 a2 2 0 1 1 -1.531 -3.696" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m9.848 7.235 0.615 -0.255" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m9.848 8.765 0.615 0.255" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M3 6.667 H2.667 a1.333 1.333 0 0 1 -1.333 -1.333 V2.667 a1.333 1.333 0 0 1 1.333 -1.333 h10.667 a1.333 1.333 0 0 1 1.333 1.333 v2.667 a1.333 1.333 0 0 1 -1.333 1.333 h-0.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M3 9.333 H2.667 a1.333 1.333 0 0 0 -1.333 1.333 v2.667 a1.333 1.333 0 0 0 1.333 1.333 h10.667 a1.333 1.333 0 0 0 1.333 -1.333 v-2.667 a1.333 1.333 0 0 0 -1.333 -1.333 h-0.333" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M4 12 h0.007" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M4 4 h0.007" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m6.152 7.235 -0.615 -0.255" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="m6.152 8.765 -0.615 0.255" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>
