@@ -10,6 +10,7 @@ import {
 } from '../api/models';
 import type { DiscoveredModel, Model, ModelKind, ModelProvider } from '../api/models';
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
+import { FieldHint } from './FieldHint';
 import styles from './Dialog.module.css';
 
 export interface ModelDialogProps {
@@ -281,19 +282,21 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
           {audio ? (
             <>
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="model-api">
-                  Provider
-                </label>
+                <span className={styles.labelWithHint}>
+                  <label className={styles.label} htmlFor="model-api">
+                    Provider
+                  </label>
+                  <FieldHint label="Provider">
+                    The shape OpenAI and the servers that imitate it speak: a URL that answers
+                    <code>{kind === 'SPEECH' ? ' /audio/speech' : ' /audio/transcriptions'}</code>.
+                  </FieldHint>
+                </span>
                 <div className={styles.inputWrapper}>
                   <select id="model-api" className={`${styles.input} ${styles.select}`} value="OPENAI" disabled>
                     <option value="OPENAI">OpenAI API</option>
                   </select>
                   <img src={chevronDown12Icon} alt="" width={12} height={12} />
                 </div>
-                <p className={styles.fieldNote}>
-                  The shape OpenAI and the servers that imitate it speak: a URL that answers
-                  <code>{kind === 'SPEECH' ? ' /audio/speech' : ' /audio/transcriptions'}</code>.
-                </p>
               </div>
 
               <div className={styles.field}>
@@ -315,9 +318,14 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
               </div>
 
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="model-key">
-                  API Key
-                </label>
+                <span className={styles.labelWithHint}>
+                  <label className={styles.label} htmlFor="model-key">
+                    API Key
+                  </label>
+                  <FieldHint label="API Key">
+                    Left empty for a server on your own network that asks for none.
+                  </FieldHint>
+                </span>
                 <div className={styles.inputWrapper}>
                   <input
                     id="model-key"
@@ -330,9 +338,6 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
                     onChange={(event) => setApiKey(event.target.value)}
                   />
                 </div>
-                <p className={styles.fieldNote}>
-                  Left empty for a server on your own network that asks for none.
-                </p>
               </div>
             </>
           ) : (
@@ -380,9 +385,28 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="model-id">
-              Model ID
-            </label>
+            <span className={styles.labelWithHint}>
+              <label className={styles.label} htmlFor="model-id">
+                Model ID
+              </label>
+              {/*
+                What to type, which differs by what is being added. It was two
+                paragraphs under the field; it is the same two sentences, behind
+                the control the rest of the product asks with.
+              */}
+              {kind === 'TRANSCRIPTION' && (
+                <FieldHint label="Model ID">
+                  Whatever your server calls the model — <code>whisper-1</code> is accepted by most of
+                  them, and faster-whisper takes names like <code>Systran/faster-whisper-small</code>.
+                </FieldHint>
+              )}
+              {kind === 'SPEECH' && (
+                <FieldHint label="Model ID">
+                  Whatever your server calls the model — <code>tts-1</code> for OpenAI, and a local
+                  reader usually takes the name of the voice pack it loaded.
+                </FieldHint>
+              )}
+            </span>
             <div className={styles.inputWrapper}>
               <input
                 id="model-id"
@@ -402,18 +426,6 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
               rather than instead of it: a model the provider has not listed yet
               still has to be addable by hand.
             */}
-            {kind === 'TRANSCRIPTION' && (
-              <p className={styles.fieldNote}>
-                Whatever your server calls the model — <code>whisper-1</code> is accepted by most of
-                them, and faster-whisper takes names like <code>Systran/faster-whisper-small</code>.
-              </p>
-            )}
-            {kind === 'SPEECH' && (
-              <p className={styles.fieldNote}>
-                Whatever your server calls the model — <code>tts-1</code> for OpenAI, and a local
-                reader usually takes the name of the voice pack it loaded.
-              </p>
-            )}
             {asking && <p className={styles.fieldNote}>Asking the provider what it offers…</p>}
             {offerError !== null && <p className={styles.fieldNote}>{offerError}</p>}
             {offered !== null && offered.length === 0 && (
@@ -449,9 +461,15 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
           */}
           {kind === 'SPEECH' && (
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="model-voice">
-                Voice
-              </label>
+              <span className={styles.labelWithHint}>
+                <label className={styles.label} htmlFor="model-voice">
+                  Voice
+                </label>
+                <FieldHint label="Voice">
+                  Left empty sends no voice at all, which is what a server with a single built-in one
+                  wants. OpenAI requires one — <code>alloy</code>, <code>nova</code> and the rest.
+                </FieldHint>
+              </span>
               <div className={styles.inputWrapper}>
                 <input
                   id="model-voice"
@@ -463,10 +481,6 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
                   onChange={(event) => setVoice(event.target.value)}
                 />
               </div>
-              <p className={styles.fieldNote}>
-                Left empty sends no voice at all, which is what a server with a single built-in one
-                wants. OpenAI requires one — <code>alloy</code>, <code>nova</code> and the rest.
-              </p>
             </div>
           )}
 

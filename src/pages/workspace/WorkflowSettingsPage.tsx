@@ -8,6 +8,7 @@ import type { WorkspaceWorkflow } from '../../api/workflows';
 import { AppShell } from '../../components/AppShell';
 import { Loader } from '../../components/Loader';
 import { PublicationHistory } from '../../components/PublicationHistory';
+import { FieldHint } from '../../components/FieldHint';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { WorkflowConfirmDialog } from '../../components/WorkflowConfirmDialog';
 import { shellUser } from '../../session/user';
@@ -121,9 +122,24 @@ export function WorkflowSettingsPage({ session, onSignOut }: WorkflowSettingsPag
             <h2 className={styles.sectionHeading}>General</h2>
 
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="workflow-name">
-                Workflow Name
-              </label>
+              <span className={styles.labelWithHint}>
+                <label className={styles.label} htmlFor="workflow-name">
+                  Workflow Name
+                </label>
+                {/*
+                  Behind the (?), like every other consequence in the product.
+                  It was printed here on the argument that a consequence read
+                  afterwards has already happened - which is a fair argument and
+                  is not the one this product settled on: the rules file puts a
+                  consequence worth knowing beforehand behind the (?) beside the
+                  thing it is about, and a screen keeping its own answer is the
+                  inconsistency the whole convention exists to end.
+                */}
+                <FieldHint label="Workflow Name">
+                  The definition is shared, so renaming it affects every workspace using this
+                  workflow.
+                </FieldHint>
+              </span>
               <div className={styles.inputWrapper}>
                 <input
                   id="workflow-name"
@@ -135,15 +151,6 @@ export function WorkflowSettingsPage({ session, onSignOut }: WorkflowSettingsPag
                   required
                 />
               </div>
-              {/*
-                Not behind the (?). Somebody typing in this box believes they
-                are renaming their own copy; that they are renaming everyone's
-                is a consequence of the edit, and a consequence read afterwards
-                is one that has already happened.
-              */}
-              <p className={styles.hint}>
-                The definition is shared, so renaming it affects every workspace using this workflow.
-              </p>
             </div>
 
             <div className={styles.field}>

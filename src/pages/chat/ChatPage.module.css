@@ -492,15 +492,6 @@
   width: 100%;
 }
 
-/* The copy button only appears once the message is pointed at. */
-.userRow .rowAction {
-  visibility: hidden;
-}
-
-.userRow:hover .rowAction {
-  visibility: visible;
-}
-
 /* Holds the bubble and, on a carried turn, the name above it. */
 .userBody {
   display: flex;
@@ -730,14 +721,19 @@
 
 /*
  * Copy, and whatever joins it. Out of the way until the pointer is on the
- * answer it belongs to: it is not part of what the model said, and a row of
+ * message it belongs to: it is not part of what was said, and a row of
  * controls under every message competes with the reading.
  *
- * Hidden with opacity rather than display, so the answers do not shift as the
+ * Hidden with opacity rather than display, so the messages do not shift as the
  * pointer moves down them. Keyboard users get it from :focus-within, which
  * hover alone would never give them.
+ *
+ * One class for both voices. A sent message hid its copy button with
+ * `visibility` and revealed it on :hover alone, an answer faded its row in on
+ * :hover or :focus-within - so the same control appeared two different ways
+ * depending on who had spoken, and a keyboard could reach only one of them.
  */
-.assistantActions {
+.rowActions {
   display: flex;
   align-items: center;
   gap: var(--space-8);
@@ -745,13 +741,15 @@
   transition: opacity 120ms ease;
 }
 
-.assistantRow:hover .assistantActions,
-.assistantRow:focus-within .assistantActions {
+.userRow:hover .rowActions,
+.userRow:focus-within .rowActions,
+.assistantRow:hover .rowActions,
+.assistantRow:focus-within .rowActions {
   opacity: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .assistantActions {
+  .rowActions {
     transition: none;
   }
 }
@@ -1335,4 +1333,11 @@ button.attachmentName {
 
 .searchScope input {
   accent-color: var(--color-accent-brand);
+}
+
+/* A status line and the (?) beside it. */
+.labelWithHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
 }

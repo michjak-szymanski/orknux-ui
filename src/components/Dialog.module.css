@@ -96,6 +96,18 @@
   border-color: var(--color-danger-solid);
 }
 
+/*
+ * A checkbox and the (?) that explains it.
+ *
+ * The (?) stands outside the <label>, because it is a button and a button inside
+ * a label ticks the box on its way to opening its note.
+ */
+.checkboxWithHint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
 .checkboxField {
   display: flex;
   align-items: flex-start;
@@ -739,4 +751,48 @@ select.input {
   border-bottom: 0;
   border-left: 0;
   border-radius: 0;
+}
+
+/*
+ * The panel's heading stays where it is while the form scrolls under it.
+ *
+ * A modal is closed by Escape, by its backdrop and by the Cancel beside its
+ * Save, and all three are one gesture away. A panel is opened with `show()`
+ * rather than `showModal()` - the graph beside it has to stay usable - so it has
+ * no backdrop and Escape does not reach it, and the only way out was the Cancel
+ * at the bottom of a form that can be three screens long. The way out has to be
+ * where people look for one, which is the top-right corner, and it is no use
+ * there if it scrolls away with the second field.
+ *
+ * The negative margins put the heading's background across the full width of the
+ * panel, so what scrolls under it is covered rather than showing through the
+ * padding either side.
+ */
+.dialogPanel .header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: calc(var(--space-24) * -1) calc(var(--space-24) * -1) 0;
+  padding: var(--space-24) var(--space-24) var(--space-12);
+  background: var(--color-surface);
+}
+
+/*
+ * The × itself: the same quiet glyph the run page's node panel closes with,
+ * rather than a second idea about what a close looks like.
+ */
+.panelClose {
+  flex: none;
+  padding: 0 var(--space-4);
+  background: none;
+  border: 0;
+  font-size: var(--text-md);
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.panelClose:hover,
+.panelClose:focus-visible {
+  color: var(--color-text-primary);
 }

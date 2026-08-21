@@ -4,12 +4,12 @@ import type { PageOf } from '../../api/client';
 import { connectionTypeLabel, fetchConnections } from '../../api/integrations';
 import type { Connection } from '../../api/integrations';
 import type { SessionUser } from '../../api/session';
-import infoIcon from '../../assets/info.svg';
 import plusIcon from '../../assets/plus.svg';
 import settingsIcon from '../../assets/settings.svg';
 import { AppShell } from '../../components/AppShell';
 import { ConnectionDialog } from '../../components/ConnectionDialog';
 import { ConnectionIcon } from '../../components/ConnectionIcon';
+import { FieldHint } from '../../components/FieldHint';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { Loader } from '../../components/Loader';
 import { Pagination } from '../../components/Pagination';
@@ -57,7 +57,21 @@ export function AdminIntegrationsPage({ session, onSignOut }: AdminIntegrationsP
     >
       <header className={styles.titleBar}>
         <div className={styles.titleBlock}>
-          <h1 className={styles.title}>Integrations</h1>
+          <h1 className={styles.title}>
+            <span className={styles.titleWithHint}>
+              Integrations
+              {/*
+                What was a footer under the table, carrying the same information
+                behind the same kind of control as every other explanation in
+                the product. Two icon conventions for one job is the
+                inconsistency this is here to end.
+              */}
+              <FieldHint label="Integrations">
+                Default connections are automatically provisioned when a new workspace is created.
+                Workspaces can override credentials in their own integration settings.
+              </FieldHint>
+            </span>
+          </h1>
           <p className={styles.subtitle}>Define default connections that are automatically assigned to new workspaces</p>
         </div>
         <button type="button" className={styles.addConnection} onClick={() => setDialog(true)}>
@@ -110,12 +124,6 @@ export function AdminIntegrationsPage({ session, onSignOut }: AdminIntegrationsP
           label="default connections"
         />
       </section>
-
-      <p className={styles.disclaimer}>
-        <img src={infoIcon} alt="" width={14} height={14} />
-        Default connections are automatically provisioned when a new workspace is created. Workspaces can override credentials in
-        their own integration settings.
-      </p>
 
       <ConnectionDialog
         open={dialog}

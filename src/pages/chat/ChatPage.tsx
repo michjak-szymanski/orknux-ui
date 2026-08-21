@@ -61,6 +61,7 @@ import { setSidebarCollapsed, useSidebarCollapsed } from '../../session/sidebar'
 import { useInstallation } from '../../session/installation';
 import { shellUser } from '../../session/user';
 import { lastWorkspaceId } from '../../session/lastWorkspace';
+import { FieldHint } from '../../components/FieldHint';
 import styles from './ChatPage.module.css';
 
 export interface ChatPageProps {
@@ -1071,9 +1072,17 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
         <div className={styles.empty}>
           {errorBanner}
           <p className={styles.emptyTitle}>No chat open</p>
+          {/*
+            The way out stays in the open; what a chat *is* goes behind the (?).
+          */}
           <p className={styles.emptyNote}>
-            Start one with <strong>+ New</strong>. Each chat is a conversation of its own, kept the same
-            way a workflow run keeps the thread its agents share.
+            <span className={styles.labelWithHint}>
+              Start one with <strong>+ New</strong>.
+              <FieldHint label="No chat open">
+                Each chat is a conversation of its own, kept the same way a workflow run keeps the
+                thread its agents share.
+              </FieldHint>
+            </span>
           </p>
         </div>
       ) : (
@@ -1239,15 +1248,6 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                 <CallLine actor={message.actor} content={message.content} />
               ) : message.role === 'user' ? (
                 <div className={styles.userRow}>
-                  <button
-                    type="button"
-                    className={styles.rowAction}
-                    onClick={() => copy(message.content, index)}
-                    title="Copy"
-                    aria-label="Copy this message"
-                  >
-                    <img src={copyIcon} alt="" width={14} height={14} />
-                  </button>
                   <div className={styles.userBody}>
                     {/*
                       A carried turn says who put it. It may not have been a
@@ -1256,6 +1256,24 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                     */}
                     {message.actor !== null && <span className={styles.saidBy}>{message.actor}</span>}
                     <div className={styles.userBubble}>{message.content}</div>
+                    {/*
+                      Under the bubble, inside the body, so it lines up with the
+                      bubble's own edge rather than the column's. Outside the
+                      body it was drawn in the gutter to the left of a
+                      right-aligned message, which is the one place it could sit
+                      and not look like it belonged to anything.
+                    */}
+                    <div className={styles.rowActions}>
+                      <button
+                        type="button"
+                        className={styles.rowAction}
+                        onClick={() => copy(message.content, index)}
+                        title="Copy"
+                        aria-label="Copy this message"
+                      >
+                        <img src={copyIcon} alt="" width={14} height={14} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -1300,7 +1318,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                     )}
                     {/* Models write markdown; showing the source shows the asterisks. */}
                     <Markdown>{message.content}</Markdown>
-                    <div className={styles.assistantActions}>
+                    <div className={styles.rowActions}>
                       <button
                         type="button"
                         className={styles.rowAction}

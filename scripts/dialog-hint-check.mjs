@@ -8,8 +8,17 @@
  * re-homed under a different class still fails.
  *
  * For every sentence deliberately left printed: it is still on screen with
- * nothing asked for, because a unit, an empty state and a consequence are not
- * explanations and a hover is the wrong place for them.
+ * nothing asked for, because a unit and an empty state are not explanations and
+ * a hover is the wrong place for them.
+ *
+ * A consequence used to be on that list and no longer is. Three sentences here
+ * were written down as staying because somebody has to read them before they
+ * act - what a stored password means, what an empty password box means, what
+ * moving an issue costs - and the owner reviewing 0.9.0 rejected exactly that
+ * argument on the same shape elsewhere. The rules file says it outright now: a
+ * consequence worth knowing before granting something belongs in the (?) beside
+ * it. So those three moved, and this file follows them rather than pinning the
+ * old answer in place. What is left in `stayed` is units and readings of state.
  */
 import { BASE, WORKSPACE, open, record, drawn, finish } from './suite/harness.mjs';
 
@@ -148,8 +157,8 @@ await moved(
 // The password box only exists once there is a username to go with it.
 await page.fill('#workspace-connection-username', 'postmaster');
 await page.waitForTimeout(400);
-await stayed(
-  'what a stored password means',
+await moved(
+  'Password',
   'Stored encrypted, and never shown again in the list. Many providers want an app password here rather than the account',
 );
 
@@ -180,8 +189,8 @@ await moved(
   'Proxy host',
   'A host name, without a scheme. A proxy is spoken to over plain HTTP whatever the request going through it is.',
 );
-await stayed(
-  'what an empty password box means',
+await moved(
+  'Proxy password',
   'Stored encrypted and never shown again. Leaving this empty keeps whatever is already stored.',
 );
 
@@ -224,8 +233,8 @@ if (first === undefined) {
     } else {
       await mover.click();
       await page.waitForTimeout(800);
-      await stayed(
-        'what moving an issue costs',
+      await moved(
+        'Move to',
         'Its comments, labels, links, observers and files come with it.',
       );
     }

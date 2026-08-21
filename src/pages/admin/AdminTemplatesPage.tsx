@@ -4,11 +4,11 @@ import { Link } from 'react-router-dom';
 import type { SessionUser } from '../../api/session';
 import type { ComponentTemplate } from '../../api/templates';
 import { contentsSummary, fetchComponentTemplates } from '../../api/templates';
-import infoIcon from '../../assets/info.svg';
 import plusIcon from '../../assets/plus.svg';
 import settingsIcon from '../../assets/settings.svg';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { AppShell } from '../../components/AppShell';
+import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { shellUser } from '../../session/user';
 import styles from './AdminTemplatesPage.module.css';
@@ -66,7 +66,23 @@ export function AdminTemplatesPage({ session, onSignOut }: AdminTemplatesPagePro
     >
       <header className={styles.titleBar}>
         <div className={styles.titleBlock}>
-          <h1 className={styles.title}>Templates</h1>
+          <h1 className={styles.title}>
+            <span className={styles.titleWithHint}>
+              Templates
+              {/*
+                Was the footer under the table. An explanation gets one
+                affordance across the product, and this is it.
+              */}
+              <FieldHint label="Templates">
+                A template holds a copy of the components as they were when it was published, and
+                follows nothing: editing the function one was made from does not change the
+                template, and deleting a template does not touch what it has already created in a
+                workspace. Replacing its file is how one is brought up to date. Nothing secret is
+                ever inside — a variable a function is handed travels as a name, and the workspace
+                it lands in supplies its own value.
+              </FieldHint>
+            </span>
+          </h1>
           <p className={styles.subtitle}>
             Components published for the whole installation. Any workspace can take one from Use
             template on its own Functions, Objects, Conditions, Tools or Skills page, which creates
@@ -143,14 +159,6 @@ export function AdminTemplatesPage({ session, onSignOut }: AdminTemplatesPagePro
         ))}
       </section>
 
-      <p className={styles.disclaimer}>
-        <img src={infoIcon} alt="" width={14} height={14} />
-        A template holds a copy of the components as they were when it was published, and follows
-        nothing: editing the function one was made from does not change the template, and deleting a
-        template does not touch what it has already created in a workspace. Replacing its file is how
-        one is brought up to date. Nothing secret is ever inside — a variable a function is handed
-        travels as a name, and the workspace it lands in supplies its own value.
-      </p>
     </AppShell>
   );
 }

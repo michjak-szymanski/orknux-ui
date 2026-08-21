@@ -458,7 +458,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             happen.
           */}
           {workspace?.quickChatModelId != null && (
-            <>
+            <div className={styles.checkRowWithHint}>
               <label className={styles.checkRow}>
                 <input
                   type="checkbox"
@@ -468,18 +468,22 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                 <span>Let it make changes</span>
               </label>
               {/*
-                Not behind the (?). This is what ticking the box does, and the
-                run it starts is a real one - a consequence somebody has to have
-                read before they act, not an explanation they may go looking for
-                afterwards.
+                Beside the box rather than inside the label: the (?) is a button,
+                and a button inside a <label> would tick the box on the way to
+                opening the note.
+
+                The consequence of granting this is exactly what the rules put
+                behind the (?) - the field above it has one, and a screen where
+                one explanation hides and the next sits in the open is worse
+                than either convention on its own.
               */}
-              <p className={styles.fieldNote}>
+              <FieldHint label="Let it make changes">
                 Off, it can only look things up. On, it can act on this workspace when asked: start a run,
                 repeat one, and turn a workflow or an agent on or off. Those are real — a run that messaged
                 somebody messages them again — and the panel opens over whatever somebody happens to be
                 reading. It cannot delete anything either way.
-              </p>
-            </>
+              </FieldHint>
+            </div>
           )}
         </div>
       </section>

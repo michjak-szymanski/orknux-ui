@@ -246,6 +246,14 @@ export function AdminTemplatePage({ session, onSignOut }: AdminTemplatePageProps
                   The JSON an Export control downloads. It is read before anything is saved, so a
                   file this installation cannot read is refused here rather than at the button
                   somebody presses later.
+                  {!adding && (
+                    <>
+                      {' '}
+                      Uploading one replaces what this template holds. Workspaces that already used
+                      it keep what they took: a template is a copy, and this changes what the next
+                      one gets.
+                    </>
+                  )}
                 </FieldHint>
               </span>
             </h2>
@@ -325,18 +333,6 @@ export function AdminTemplatePage({ session, onSignOut }: AdminTemplatePageProps
                 )}
               </div>
               {fileName !== '' && <p className={styles.fileName}>{fileName}</p>}
-              {/*
-                What uploading does to a template that already exists, which is
-                a consequence and not an explanation: it stays on screen. What
-                the file has to be is behind the (?) on the heading.
-              */}
-              {!adding && (
-                <p className={styles.fieldNote}>
-                  Uploading one replaces what this template holds. Workspaces that already used it
-                  keep what they took: a template is a copy, and this changes what the next one
-                  gets.
-                </p>
-              )}
             </div>
           </section>
 

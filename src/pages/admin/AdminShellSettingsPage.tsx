@@ -273,20 +273,32 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
               person can tell those apart.
             */}
             {shell !== null && shell.hostKey !== null && (
-              <label className={styles.checkboxField}>
-                <input
-                  type="checkbox"
-                  checked={forgetHostKey}
-                  onChange={(event) => setForgetHostKey(event.target.checked)}
-                />
-                <span>
-                  Forget the host key
-                  <span className={styles.checkboxHint}>
-                    {shell.hostKey} - the next connection will trust whatever answers and record
-                    that instead. Tick this after rebuilding the machine.
+              <span className={styles.checkboxWithHint}>
+                <label className={styles.checkboxField}>
+                  <input
+                    type="checkbox"
+                    checked={forgetHostKey}
+                    onChange={(event) => setForgetHostKey(event.target.checked)}
+                  />
+                  <span>
+                    Forget the host key
+                    {/*
+                      The key on record stays in the open: it is the state of the
+                      machine being looked at, not an explanation of the box.
+                    */}
+                    <span className={styles.checkboxHint}>{shell.hostKey}</span>
                   </span>
-                </span>
-              </label>
+                </label>
+                {/*
+                  What ticking it does, behind the (?) - and beside the box
+                  rather than inside its label, since the (?) is a button and a
+                  button inside a <label> ticks the box on its way to opening.
+                */}
+                <FieldHint label="Forget the host key">
+                  The next connection will trust whatever answers and record that instead. Tick this
+                  after rebuilding the machine.
+                </FieldHint>
+              </span>
             )}
           </section>
 
@@ -369,25 +381,25 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
             </div>
 
             {shell?.privateKeySet === true && (
-              <label className={styles.checkboxField}>
-                <input
-                  type="checkbox"
-                  checked={clearKey}
-                  onChange={(event) => {
-                    setClearKey(event.target.checked);
-                    if (event.target.checked) {
-                      setPrivateKey('');
-                      setPassphrase('');
-                    }
-                  }}
-                />
-                <span>
-                  Remove the stored key
-                  <span className={styles.checkboxHint}>
-                    Nothing can connect to this machine until another is pasted in
-                  </span>
-                </span>
-              </label>
+              <span className={styles.checkboxWithHint}>
+                <label className={styles.checkboxField}>
+                  <input
+                    type="checkbox"
+                    checked={clearKey}
+                    onChange={(event) => {
+                      setClearKey(event.target.checked);
+                      if (event.target.checked) {
+                        setPrivateKey('');
+                        setPassphrase('');
+                      }
+                    }}
+                  />
+                  <span>Remove the stored key</span>
+                </label>
+                <FieldHint label="Remove the stored key">
+                  Nothing can connect to this machine until another is pasted in
+                </FieldHint>
+              </span>
             )}
           </section>
 

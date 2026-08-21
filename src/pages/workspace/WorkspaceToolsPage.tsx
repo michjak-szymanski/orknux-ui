@@ -19,6 +19,7 @@ import {
 } from '../../components/ComponentTransfer';
 import { Loader } from '../../components/Loader';
 import { NameDialog } from '../../components/NameDialog';
+import { FieldHint } from '../../components/FieldHint';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './CatalogueTable.module.css';
@@ -100,7 +101,14 @@ export function WorkspaceToolsPage({ session, onSignOut }: WorkspaceToolsPagePro
 
         {tools === null && error === null && <p className={styles.notice}><Loader /></p>}
         {tools?.content.length === 0 && (
-          <p className={styles.notice}>No tools yet. A tool is JavaScript an agent may call while it runs.</p>
+          <p className={styles.notice}>
+            <span className={styles.labelWithHint}>
+              No tools yet.
+              <FieldHint label="No tools yet">
+                A tool is JavaScript an agent may call while it runs.
+              </FieldHint>
+            </span>
+          </p>
         )}
 
         {tools?.content.map((tool) => (

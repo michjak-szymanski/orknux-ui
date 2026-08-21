@@ -4,6 +4,7 @@ import type { FormEvent } from 'react';
 import { createConnection, deleteConnection, updateConnection } from '../api/integrations';
 import type { Connection, ConnectionType } from '../api/integrations';
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
+import { FieldHint } from './FieldHint';
 import styles from './Dialog.module.css';
 
 export interface ConnectionDialogProps {
@@ -183,20 +184,24 @@ export function ConnectionDialog({ open, onClose, onSaved }: ConnectionDialogPro
             </div>
           </div>
           {editing === null && (
-            <label className={styles.checkboxField}>
-              <input
-                type="checkbox"
-                name="addToExistingWorkspaces"
-                checked={addToExistingWorkspaces}
-                onChange={(event) => setAddToExistingWorkspaces(event.target.checked)}
-              />
-              <span>
-                Also add to existing workspaces
-                <span className={styles.checkboxHint}>
-                  Otherwise only workspaces created from now on receive it.
-                </span>
-              </span>
-            </label>
+            <span className={styles.checkboxWithHint}>
+              <label className={styles.checkboxField}>
+                <input
+                  type="checkbox"
+                  name="addToExistingWorkspaces"
+                  checked={addToExistingWorkspaces}
+                  onChange={(event) => setAddToExistingWorkspaces(event.target.checked)}
+                />
+                <span>Also add to existing workspaces</span>
+              </label>
+              {/*
+                Beside the box, not inside its label: the (?) is a button, and a
+                button inside a <label> would tick the box on its way to opening.
+              */}
+              <FieldHint label="Also add to existing workspaces">
+                Otherwise only workspaces created from now on receive it.
+              </FieldHint>
+            </span>
           )}
         </div>
 

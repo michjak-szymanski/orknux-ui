@@ -5,6 +5,7 @@ import { setUserEmail, setUserEmailNotifications } from '../../api/users';
 import moonIcon from '../../assets/moon.svg';
 import sunIcon from '../../assets/sun.svg';
 import { AppShell } from '../../components/AppShell';
+import { FieldHint } from '../../components/FieldHint';
 import { applyTheme, currentTheme, rememberTheme } from '../../session/theme';
 import type { Theme } from '../../session/theme';
 import { shellUser } from '../../session/user';
@@ -219,9 +220,15 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
             <h2 className={styles.sectionTitle}>Profile</h2>
 
             <div className={styles.setting}>
-              <label className={styles.settingLabel} htmlFor="profile-email">
-                Email Address
-              </label>
+              <span className={styles.labelWithHint}>
+                <label className={styles.settingLabel} htmlFor="profile-email">
+                  Email Address
+                </label>
+                <FieldHint label="Email Address">
+                  Taken from your directory entry to begin with, and refreshed from it each time you
+                  sign in until you set one here. Emptying it hands it back.
+                </FieldHint>
+              </span>
               <div className={styles.row}>
                 <input
                   id="profile-email"
@@ -245,10 +252,6 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                   {savingEmail ? 'Saving…' : 'Save'}
                 </button>
               </div>
-              <p className={styles.settingNote}>
-                Taken from your directory entry to begin with, and refreshed from it each time you
-                sign in until you set one here. Emptying it hands it back.
-              </p>
               {emailSaid !== null && <p className={styles.done}>{emailSaid}</p>}
               {emailError !== null && (
                 <p className={styles.error} role="alert">
@@ -262,8 +265,17 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
             <h2 className={styles.sectionTitle}>Notifications</h2>
 
             <div className={styles.setting}>
-              <span className={styles.settingLabel} id="issue-email">
-                Issue Email
+              <span className={styles.labelWithHint}>
+                <span className={styles.settingLabel} id="issue-email">
+                  Issue Email
+                </span>
+                <FieldHint label="Issue Email">
+                  Sends you what the bell already shows - an issue you filed, hold or observe being
+                  opened, assigned, commented on or closed, and any comment with your name in it. It
+                  changes nothing about what you hear, only where. Mail goes to the address above, so
+                  without one there is nothing to send; an installation whose administrator has not
+                  configured a mail server sends nothing either way.
+                </FieldHint>
               </span>
               <div className={styles.options} role="radiogroup" aria-labelledby="issue-email">
                 <button
@@ -287,13 +299,6 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                   Off
                 </button>
               </div>
-              <p className={styles.settingNote}>
-                Sends you what the bell already shows - an issue you filed, hold or observe being
-                opened, assigned, commented on or closed, and any comment with your name in it. It
-                changes nothing about what you hear, only where. Mail goes to the address above, so
-                without one there is nothing to send; an installation whose administrator has not
-                configured a mail server sends nothing either way.
-              </p>
               {notifyError !== null && (
                 <p className={styles.error} role="alert">
                   {notifyError}
@@ -302,12 +307,30 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
             </div>
           </section>
 
+          {/*
+            Every setting on this page said what it was for in a paragraph under
+            its control, which is the convention the rest of the product moved
+            away from - so each of those paragraphs is now behind the (?) beside
+            its label.
+
+            What stayed is what is only true while somebody is pressing keys: the
+            combination the recorder just turned down, and the line telling them
+            what to do next. Neither explains the setting; both are the state of
+            the control at that moment, and a note nobody can see while it is
+            happening would be no use at all.
+          */}
           <section className={styles.card}>
             <h2 className={styles.sectionTitle}>Appearance</h2>
 
             <div className={styles.setting}>
-              <span className={styles.settingLabel} id="interface-theme">
-                Interface Theme
+              <span className={styles.labelWithHint}>
+                <span className={styles.settingLabel} id="interface-theme">
+                  Interface Theme
+                </span>
+                <FieldHint label="Interface Theme">
+                  Kept in this browser, so it applies before the first paint rather than after a
+                  round trip.
+                </FieldHint>
               </span>
               <div className={styles.options} role="radiogroup" aria-labelledby="interface-theme">
                 <button
@@ -331,15 +354,17 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                   Light Mode
                 </button>
               </div>
-              <p className={styles.settingNote}>
-                Kept in this browser, so it applies before the first paint rather than after a
-                round trip.
-              </p>
             </div>
 
             <div className={styles.setting}>
-              <span className={styles.settingLabel} id="palette-shortcut">
-                Go To Shortcut
+              <span className={styles.labelWithHint}>
+                <span className={styles.settingLabel} id="palette-shortcut">
+                  Go To Shortcut
+                </span>
+                <FieldHint label="Go To Shortcut">
+                  Opens the box in the top bar from anywhere. Yours to choose: which keys are free
+                  depends on your browser and your machine, not on this application.
+                </FieldHint>
               </span>
               <div className={styles.options}>
                 <button
@@ -362,26 +387,29 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                   </button>
                 )}
               </div>
-              <p className={styles.settingNote}>
-                {refused !== null && recording === 'palette' ? (
-                  <>
+              {recording === 'palette' && (
+                <p className={styles.settingNote}>
+                  {refused !== null ? (
+                    <>
                     <strong>{refused}</strong> would fire while typing. Hold Ctrl, Alt, Shift or Cmd
                     with it \u2014 or use a function key.
-                  </>
-                ) : recording === 'palette' ? (
-                  <>Press the combination you want. Escape leaves it as it is.</>
-                ) : (
-                  <>
-                    Opens the box in the top bar from anywhere. Yours to choose: which keys are free
-                    depends on your browser and your machine, not on this application.
-                  </>
-                )}
-              </p>
+                    </>
+                  ) : (
+                    <>Press the combination you want. Escape leaves it as it is.</>
+                  )}
+                </p>
+              )}
             </div>
 
             <div className={styles.setting}>
-              <span className={styles.settingLabel} id="save-shortcut">
-                Save Shortcut
+              <span className={styles.labelWithHint}>
+                <span className={styles.settingLabel} id="save-shortcut">
+                  Save Shortcut
+                </span>
+                <FieldHint label="Save Shortcut">
+                  Saves whatever editor you are in, and stops the browser offering to save the page
+                  instead. The function editor shows this key beside its details.
+                </FieldHint>
               </span>
               <div className={styles.options}>
                 <button
@@ -404,26 +432,30 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                   </button>
                 )}
               </div>
-              <p className={styles.settingNote}>
-                {refused !== null && recording === 'save' ? (
-                  <>
+              {recording === 'save' && (
+                <p className={styles.settingNote}>
+                  {refused !== null ? (
+                    <>
                     <strong>{refused}</strong> would fire while typing. Hold Ctrl, Alt, Shift or Cmd
                     with it \u2014 or use a function key.
-                  </>
-                ) : recording === 'save' ? (
-                  <>Press the combination you want. Escape leaves it as it is.</>
-                ) : (
-                  <>
-                    Saves whatever editor you are in, and stops the browser offering to save the page
-                    instead. The function editor shows this key beside its details.
-                  </>
-                )}
-              </p>
+                    </>
+                  ) : (
+                    <>Press the combination you want. Escape leaves it as it is.</>
+                  )}
+                </p>
+              )}
             </div>
 
             <div className={styles.setting}>
-              <span className={styles.settingLabel} id="format-shortcut">
-                Format Shortcut
+              <span className={styles.labelWithHint}>
+                <span className={styles.settingLabel} id="format-shortcut">
+                  Format Shortcut
+                </span>
+                <FieldHint label="Format Shortcut">
+                  Lays out the code in the function editor, with the same language service that
+                  completes and checks it. Prevented from reaching the browser, which has its own
+                  ideas about this one.
+                </FieldHint>
               </span>
               <div className={styles.options}>
                 <button
@@ -446,27 +478,30 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                   </button>
                 )}
               </div>
-              <p className={styles.settingNote}>
-                {refused !== null && recording === 'format' ? (
-                  <>
+              {recording === 'format' && (
+                <p className={styles.settingNote}>
+                  {refused !== null ? (
+                    <>
                     <strong>{refused}</strong> would fire while typing. Hold Ctrl, Alt, Shift or Cmd
                     with it — or use a function key.
-                  </>
-                ) : recording === 'format' ? (
-                  <>Press the combination you want. Escape leaves it as it is.</>
-                ) : (
-                  <>
-                    Lays out the code in the function editor, with the same language service that
-                    completes and checks it. Prevented from reaching the browser, which has its own
-                    ideas about this one.
-                  </>
-                )}
-              </p>
+                    </>
+                  ) : (
+                    <>Press the combination you want. Escape leaves it as it is.</>
+                  )}
+                </p>
+              )}
             </div>
 
             <div className={styles.setting}>
-              <span className={styles.settingLabel} id="turn-shortcut">
-                Turn Node Shortcut
+              <span className={styles.labelWithHint}>
+                <span className={styles.settingLabel} id="turn-shortcut">
+                  Turn Node Shortcut
+                </span>
+                <FieldHint label="Turn Node Shortcut">
+                  Turns the selected node on the workflow canvas, so a graph can run down the screen
+                  instead of off the side of it. A bare letter is allowed here, unlike the others:
+                  this one is only heard on the canvas, never while typing.
+                </FieldHint>
               </span>
               <div className={styles.options}>
                 <button
@@ -485,22 +520,21 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                   </button>
                 )}
               </div>
-              <p className={styles.settingNote}>
-                {recording === 'turn' ? (
-                  <>Press the combination you want. Escape leaves it as it is.</>
-                ) : (
-                  <>
-                    Turns the selected node on the workflow canvas, so a graph can run down the screen
-                    instead of off the side of it. A bare letter is allowed here, unlike the others:
-                    this one is only heard on the canvas, never while typing.
-                  </>
-                )}
-              </p>
+              {recording === 'turn' && (
+                <p className={styles.settingNote}>Press the combination you want. Escape leaves it as it is.</p>
+              )}
             </div>
 
             <div className={styles.setting}>
-              <span className={styles.settingLabel} id="add-shortcut">
-                Add Node Shortcut
+              <span className={styles.labelWithHint}>
+                <span className={styles.settingLabel} id="add-shortcut">
+                  Add Node Shortcut
+                </span>
+                <FieldHint label="Add Node Shortcut">
+                  Opens the workflow editor's Add menu and puts the first kind of node under the
+                  keyboard, so a graph can be built without reaching for the toolbar. A bare letter
+                  is allowed here for the same reason it is above: only the canvas hears it.
+                </FieldHint>
               </span>
               <div className={styles.options}>
                 <button
@@ -519,22 +553,19 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                   </button>
                 )}
               </div>
-              <p className={styles.settingNote}>
-                {recording === 'add' ? (
-                  <>Press the combination you want. Escape leaves it as it is.</>
-                ) : (
-                  <>
-                    Opens the workflow editor's Add menu and puts the first kind of node under the
-                    keyboard, so a graph can be built without reaching for the toolbar. A bare letter
-                    is allowed here for the same reason it is above: only the canvas hears it.
-                  </>
-                )}
-              </p>
+              {recording === 'add' && (
+                <p className={styles.settingNote}>Press the combination you want. Escape leaves it as it is.</p>
+              )}
             </div>
 
             <div className={styles.setting}>
-              <span className={styles.settingLabel} id="undo-shortcut">
-                Undo Shortcut
+              <span className={styles.labelWithHint}>
+                <span className={styles.settingLabel} id="undo-shortcut">
+                  Undo Shortcut
+                </span>
+                <FieldHint label="Undo Shortcut">
+                  Steps back through what you have drawn on the workflow canvas. Ignored while a caret is in a text box, where the browser&apos;s own undo is the right one.
+                </FieldHint>
               </span>
               <div className={styles.options}>
                 <button
@@ -553,18 +584,19 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                   </button>
                 )}
               </div>
-              <p className={styles.settingNote}>
-                {recording === 'undo' ? (
-                  <>Press the combination you want. Escape leaves it as it is.</>
-                ) : (
-                  <>Steps back through what you have drawn on the workflow canvas. Ignored while a caret is in a text box, where the browser&apos;s own undo is the right one.</>
-                )}
-              </p>
+              {recording === 'undo' && (
+                <p className={styles.settingNote}>Press the combination you want. Escape leaves it as it is.</p>
+              )}
             </div>
 
             <div className={styles.setting}>
-              <span className={styles.settingLabel} id="redo-shortcut">
-                Redo Shortcut
+              <span className={styles.labelWithHint}>
+                <span className={styles.settingLabel} id="redo-shortcut">
+                  Redo Shortcut
+                </span>
+                <FieldHint label="Redo Shortcut">
+                  Steps forward again. Ctrl+Y is heard as well, whatever is chosen here, because it is the other habit people arrive with.
+                </FieldHint>
               </span>
               <div className={styles.options}>
                 <button
@@ -583,18 +615,21 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                   </button>
                 )}
               </div>
-              <p className={styles.settingNote}>
-                {recording === 'redo' ? (
-                  <>Press the combination you want. Escape leaves it as it is.</>
-                ) : (
-                  <>Steps forward again. Ctrl+Y is heard as well, whatever is chosen here, because it is the other habit people arrive with.</>
-                )}
-              </p>
+              {recording === 'redo' && (
+                <p className={styles.settingNote}>Press the combination you want. Escape leaves it as it is.</p>
+              )}
             </div>
 
             <div className={styles.setting}>
-              <span className={styles.settingLabel} id="duplicate-shortcut">
-                Duplicate Node Shortcut
+              <span className={styles.labelWithHint}>
+                <span className={styles.settingLabel} id="duplicate-shortcut">
+                  Duplicate Node Shortcut
+                </span>
+                <FieldHint label="Duplicate Node Shortcut">
+                  Puts a second copy of the selected node on the workflow canvas, pointed at the same
+                  action, trigger or agent and wired to nothing. The browser&apos;s own meaning for the
+                  usual choice is a bookmark, which the editor takes instead.
+                </FieldHint>
               </span>
               <div className={styles.options}>
                 <button
@@ -617,17 +652,9 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                   </button>
                 )}
               </div>
-              <p className={styles.settingNote}>
-                {recording === 'duplicate' ? (
-                  <>Press the combination you want. Escape leaves it as it is.</>
-                ) : (
-                  <>
-                    Puts a second copy of the selected node on the workflow canvas, pointed at the same
-                    action, trigger or agent and wired to nothing. The browser&apos;s own meaning for the
-                    usual choice is a bookmark, which the editor takes instead.
-                  </>
-                )}
-              </p>
+              {recording === 'duplicate' && (
+                <p className={styles.settingNote}>Press the combination you want. Escape leaves it as it is.</p>
+              )}
             </div>
           </section>
         </div>

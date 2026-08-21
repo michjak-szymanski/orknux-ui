@@ -4,13 +4,13 @@ import { Link } from 'react-router-dom';
 import { checkShell, fetchShells, setShellEnabled, shellStatusLabel } from '../../api/shell';
 import type { Shell, ShellStatus } from '../../api/shell';
 import type { SessionUser } from '../../api/session';
-import infoIcon from '../../assets/info.svg';
 import plusIcon from '../../assets/plus.svg';
 import settingsIcon from '../../assets/settings.svg';
 import toggleOffIcon from '../../assets/toggle-off.svg';
 import toggleOnIcon from '../../assets/toggle-on.svg';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { AppShell } from '../../components/AppShell';
+import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { shellUser } from '../../session/user';
 import styles from './AdminShellPage.module.css';
@@ -107,7 +107,24 @@ export function AdminShellPage({ session, onSignOut }: AdminShellPageProps) {
     >
       <header className={styles.titleBar}>
         <div className={styles.titleBlock}>
-          <h1 className={styles.title}>Shell</h1>
+          <h1 className={styles.title}>
+            <span className={styles.titleWithHint}>
+              Shell
+              {/*
+                Was the footer under the table, and the ⓘ beside it was a second
+                convention for the job the (?) already does.
+              */}
+              <FieldHint label="Shell">
+                What contains a shell is the machine on the other end and the account you named on
+                it - there is no list of forbidden commands here, because reading a shell command
+                and saying what it will do is not something that can be done reliably, and a list
+                that is nearly right would only tell you that you are protected when you are not.
+                Point these at virtual machines or containers you are willing to lose. Keys are
+                stored encrypted and are never shown again, and every command an agent runs is
+                written down under its own name in the audit log.
+              </FieldHint>
+            </span>
+          </h1>
           <p className={styles.subtitle}>
             Machines this installation can run commands on, over SSH. An agent given the shells asks
             for one of these, works in a directory of its own on it, and everything it runs is in
@@ -233,15 +250,6 @@ export function AdminShellPage({ session, onSignOut }: AdminShellPageProps) {
         ))}
       </section>
 
-      <p className={styles.disclaimer}>
-        <img src={infoIcon} alt="" width={14} height={14} />
-        What contains a shell is the machine on the other end and the account you named on it -
-        there is no list of forbidden commands here, because reading a shell command and saying what
-        it will do is not something that can be done reliably, and a list that is nearly right would
-        only tell you that you are protected when you are not. Point these at virtual machines or
-        containers you are willing to lose. Keys are stored encrypted and are never shown again, and
-        every command an agent runs is written down under its own name in the audit log.
-      </p>
     </AppShell>
   );
 }

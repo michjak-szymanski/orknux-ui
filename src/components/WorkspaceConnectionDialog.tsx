@@ -330,9 +330,15 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
 
               {smtpUsername.trim() !== '' && (
                 <div className={styles.field}>
-                  <label className={styles.label} htmlFor="workspace-connection-password">
-                    Password
-                  </label>
+                  <span className={styles.labelWithHint}>
+                    <label className={styles.label} htmlFor="workspace-connection-password">
+                      Password
+                    </label>
+                    <FieldHint label="Password">
+                      Stored encrypted, and never shown again in the list. Many providers want an app
+                      password here rather than the account&apos;s own.
+                    </FieldHint>
+                  </span>
                   <div className={styles.inputWrapper}>
                     <input
                       id="workspace-connection-password"
@@ -349,17 +355,6 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
                       label="password"
                     />
                   </div>
-                  {/*
-                    Printed rather than behind the (?): both halves are things to
-                    know before typing, not afterwards. That it is never shown
-                    again is why somebody keeps their own copy, and an account
-                    password typed where an app password was wanted is refused by
-                    the provider without saying which of the two it wanted.
-                  */}
-                  <p className={styles.fieldHint}>
-                    Stored encrypted, and never shown again in the list. Many providers want an app
-                    password here rather than the account&apos;s own.
-                  </p>
                 </div>
               )}
             </>

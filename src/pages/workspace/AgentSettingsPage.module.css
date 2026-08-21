@@ -328,3 +328,10 @@ select.input {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* A label and the (?) that explains it. */
+.labelWithHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+}

@@ -252,16 +252,9 @@
   color: var(--color-text-primary);
 }
 
-.emptyBody {
-  max-width: 68ch;
-  margin: 0;
-  font-size: var(--text-md);
-  line-height: 1.6;
-  color: var(--color-text-secondary);
-}
-
-.emptyBody strong {
-  font-family: var(--font-mono);
-  font-weight: 500;
-  color: var(--color-text-primary);
+/* The status line and the (?) that explains what an empty list means here. */
+.labelWithHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
 }

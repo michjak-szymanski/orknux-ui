@@ -194,3 +194,16 @@
 .noticeError {
   color: var(--color-danger);
 }
+
+/*
+ * A status line and the (?) beside it.
+ *
+ * An empty catalogue says what is true now in the open and puts what the thing
+ * *is* behind the control, which is the same split every field on a settings
+ * page makes.
+ */
+.labelWithHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+}

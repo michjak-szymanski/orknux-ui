@@ -18,6 +18,7 @@ import {
 } from '../../components/ComponentTransfer';
 import { Loader } from '../../components/Loader';
 import { NameDialog } from '../../components/NameDialog';
+import { FieldHint } from '../../components/FieldHint';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './CatalogueTable.module.css';
@@ -98,8 +99,18 @@ export function WorkspaceObjectsPage({ session, onSignOut }: WorkspaceObjectsPag
         {objects === null && error === null && <p className={styles.notice}><Loader /></p>}
         {objects?.content.length === 0 && (
           <p className={styles.notice}>
-            No objects yet. An object names a shape — what a trigger emits, or what a function takes —
-            so a mapping can be offered instead of typed blind.
+            {/*
+              The status stays; what an object is goes behind the (?) beside it.
+              Somebody who has read it once is looking at this page for the count,
+              not for the definition.
+            */}
+            <span className={styles.labelWithHint}>
+              No objects yet.
+              <FieldHint label="No objects yet">
+                An object names a shape — what a trigger emits, or what a function takes — so a
+                mapping can be offered instead of typed blind.
+              </FieldHint>
+            </span>
           </p>
         )}
 

@@ -186,6 +186,13 @@
 }
 
 
+/* The box, and the (?) that stands beside it rather than inside its label. */
+.checkboxWithHint {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-6);
+}
+
 .checkboxField {
   display: flex;
   align-items: flex-start;

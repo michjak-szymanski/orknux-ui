@@ -205,14 +205,21 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
 
             <div className={styles.setting}>
               <div className={styles.settingText}>
-                <p className={styles.settingLabel}>Scraping without signing in</p>
-                <p className={styles.settingNote}>
-                  On publishes <code>/actuator/prometheus</code> to anybody who can reach this
-                  server’s port: how many workspaces exist, how often workflows run and how often
-                  they fail. Turn it on only where the scrape crosses a network the scraper alone is
-                  on. A Prometheus that can send an Authorization header should carry an API token
-                  instead and leave this off.
-                </p>
+                <span className={styles.labelWithHint}>
+                  <p className={styles.settingLabel}>Scraping without signing in</p>
+                  {/*
+                    What turning this on exposes is exactly the sort of
+                    consequence the rules put behind the (?): read once by
+                    somebody deciding, and in the way of everybody else.
+                  */}
+                  <FieldHint label="Scraping without signing in">
+                    On publishes <code>/actuator/prometheus</code> to anybody who can reach this
+                    server’s port: how many workspaces exist, how often workflows run and how often
+                    they fail. Turn it on only where the scrape crosses a network the scraper alone is
+                    on. A Prometheus that can send an Authorization header should carry an API token
+                    instead and leave this off.
+                  </FieldHint>
+                </span>
               </div>
               <button
                 type="button"
@@ -272,14 +279,16 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
 
             <div className={styles.setting}>
               <div className={styles.settingText}>
-                <p className={styles.settingLabel}>How long versions are kept</p>
-                <p className={styles.settingNote}>
-                  Every save of a function, tool, skill or agent keeps what it was before, and every
-                  publication of a workflow is kept as a version of it. A version is a whole copy —
-                  the code, the parameters, the prompt — so this is what decides how much disk the
-                  history takes. Counted from when a version stopped being current, not from when it
-                  was written. A workflow’s live publication is never swept, however old it is.
-                </p>
+                <span className={styles.labelWithHint}>
+                  <p className={styles.settingLabel}>How long versions are kept</p>
+                  <FieldHint label="How long versions are kept">
+                    Every save of a function, tool, skill or agent keeps what it was before, and every
+                    publication of a workflow is kept as a version of it. A version is a whole copy —
+                    the code, the parameters, the prompt — so this is what decides how much disk the
+                    history takes. Counted from when a version stopped being current, not from when it
+                    was written. A workflow’s live publication is never swept, however old it is.
+                  </FieldHint>
+                </span>
               </div>
               <div className={styles.retention}>
                 <input

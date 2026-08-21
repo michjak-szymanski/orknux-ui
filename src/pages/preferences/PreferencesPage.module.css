@@ -115,6 +115,17 @@
   color: var(--color-text-primary);
 }
 
+/* A label and the (?) that explains it, side by side. */
+.labelWithHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+/*
+ * What is left of the note under a setting: only what is true while the keys
+ * are being recorded. What the shortcut is *for* moved behind the (?).
+ */
 .settingNote {
   margin: 0;
   font-size: var(--text-sm);

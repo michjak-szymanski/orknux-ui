@@ -237,9 +237,15 @@ export function ProxyRuleDialog({ open, onClose, onSaved }: ProxyRuleDialogProps
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="proxy-rule-password">
-              Proxy password
-            </label>
+            <span className={styles.labelWithHint}>
+              <label className={styles.label} htmlFor="proxy-rule-password">
+                Proxy password
+              </label>
+              <FieldHint label="Proxy password">
+                Stored encrypted and never shown again. Leaving this empty keeps whatever is already
+                stored.
+              </FieldHint>
+            </span>
             <div className={styles.inputWrapper}>
               <input
                 id="proxy-rule-password"
@@ -256,33 +262,29 @@ export function ProxyRuleDialog({ open, onClose, onSaved }: ProxyRuleDialogProps
                 disabled={clearPassword}
               />
             </div>
-            {/*
-              Printed rather than behind the (?). The first sentence is a
-              consequence - there is no reading it back, so a password not kept
-              elsewhere is gone - and the second is what an empty box means here,
-              which is the difference between keeping a password and clearing it.
-            */}
-            <p className={styles.fieldHint}>
-              Stored encrypted and never shown again. Leaving this empty keeps whatever is already
-              stored.
-            </p>
           </div>
 
           {editing?.passwordSet === true && (
-            <label className={styles.checkboxField}>
-              <input
-                type="checkbox"
-                checked={clearPassword}
-                onChange={(event) => {
-                  setClearPassword(event.target.checked);
-                  if (event.target.checked) setPassword('');
-                }}
-              />
-              <span>
-                Remove the stored password
-                <span className={styles.checkboxHint}>The proxy will be called without one</span>
-              </span>
-            </label>
+            <span className={styles.checkboxWithHint}>
+              <label className={styles.checkboxField}>
+                <input
+                  type="checkbox"
+                  checked={clearPassword}
+                  onChange={(event) => {
+                    setClearPassword(event.target.checked);
+                    if (event.target.checked) setPassword('');
+                  }}
+                />
+                <span>Remove the stored password</span>
+              </label>
+              {/*
+                Beside the box, not inside its label: the (?) is a button, and a
+                button inside a <label> would tick the box on its way to opening.
+              */}
+              <FieldHint label="Remove the stored password">
+                The proxy will be called without one
+              </FieldHint>
+            </span>
           )}
         </div>
 

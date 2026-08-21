@@ -169,12 +169,21 @@ export function WorkspacePluginsPage({ session, onSignOut }: WorkspacePluginsPag
         */}
         {!loading && error === null && plugins !== null && plugins.length > 0 && asksForNothing(plugins) && (
           <p className={styles.notice}>
-            None of the plugins loaded into this installation ask for anything, so there is nothing for
-            this workspace to set. A plugin declares what it has to be told and only what it declares can
-            be answered here
-            {session.admin
-              ? ' — the template on the admin plugins page shows how a plugin declares a parameter.'
-              : '.'}
+            <span className={styles.labelWithHint}>
+              None of the plugins loaded into this installation ask for anything, so there is nothing
+              for this workspace to set.
+              {/*
+                Why the list is empty is the status and stays. How a plugin comes
+                to have anything here at all is teaching, and goes behind the (?).
+              */}
+              <FieldHint label="Nothing to set">
+                A plugin declares what it has to be told and only what it declares can be answered
+                here
+                {session.admin
+                  ? ' — the template on the admin plugins page shows how a plugin declares a parameter.'
+                  : '.'}
+              </FieldHint>
+            </span>
           </p>
         )}
 

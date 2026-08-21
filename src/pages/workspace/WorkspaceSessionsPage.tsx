@@ -10,6 +10,7 @@ import searchIcon from '../../assets/search.svg';
 import { AppShell } from '../../components/AppShell';
 import { CompactPagination } from '../../components/CompactPagination';
 import { Loader } from '../../components/Loader';
+import { FieldHint } from '../../components/FieldHint';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceSessionsPage.module.css';
@@ -164,24 +165,36 @@ export function WorkspaceSessionsPage({ session, onSignOut }: WorkspaceSessionsP
         )}
 
         {/*
-          Nothing here is the ordinary state of a workspace nobody has given a
-          key to yet, so the empty list says what one is and how one appears -
-          "no sessions found" would leave somebody looking for the button that
-          makes one, and there isn't one.
+          An empty list split the way the rules split one.
+
+          "No sessions yet." is the state of the thing being looked at and stays
+          in the open. What a session *is* and how one appears is teaching - it
+          is behind the (?) beside that line, because a workspace that has had
+          sessions for a year still draws this page and nobody needs the
+          definition again.
+
+          The (?) is beside the status line because there is no field here to put
+          it beside. It is not dropped: this is a list nobody can create a row
+          in, so the note is the only thing on the page that says how a row ever
+          appears, and losing it would leave somebody in front of an empty table
+          with nowhere to go.
         */}
         {!loading && error === null && sessions?.content.length === 0 && (
           <div className={styles.empty}>
             {debouncedSearch.trim() === '' ? (
-              <>
-                <p className={styles.emptyTitle}>No sessions yet.</p>
-                <p className={styles.emptyBody}>
-                  A session is one running conversation — what was put to an agent, what it answered, the
-                  tools it called on the way — kept apart from any single run. Nobody creates one here. One
-                  appears the first time an agent node with a <strong>sessionKey</strong> runs, and every
-                  later node that computes the same key writes into the same conversation. Give an agent
-                  node a key in the workflow editor and run it, and it will be on this list.
-                </p>
-              </>
+              <p className={styles.emptyTitle}>
+                <span className={styles.labelWithHint}>
+                  No sessions yet.
+                  <FieldHint label="No sessions yet">
+                    A session is one running conversation — what was put to an agent, what it
+                    answered, the tools it called on the way — kept apart from any single run.
+                    Nobody creates one here. One appears the first time an agent node with a{' '}
+                    <strong>sessionKey</strong> runs, and every later node that computes the same key
+                    writes into the same conversation. Give an agent node a key in the workflow
+                    editor and run it, and it will be on this list.
+                  </FieldHint>
+                </span>
+              </p>
             ) : (
               <p className={styles.emptyTitle}>No session's key or prefix matches that.</p>
             )}

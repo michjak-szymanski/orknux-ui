@@ -111,9 +111,16 @@ const pages = [
   {
     name: 'workflow settings',
     path: workflow,
-    hints: 0,
-    gone: [],
-    kept: ['renaming it affects every workspace'],
+    hints: 1,
+    /*
+     * This was `kept`, on the argument that a consequence read after the fact
+     * has already happened. The rules file settled the other way - a consequence
+     * worth knowing beforehand goes behind the (?) beside the thing it is about
+     * - and the owner rejected the same argument on the quick-chat switch, so
+     * this sentence moved with the rest of them.
+     */
+    gone: ['renaming it affects every workspace'],
+    kept: [],
   },
   {
     name: 'trigger settings',

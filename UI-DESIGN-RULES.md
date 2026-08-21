@@ -31,11 +31,11 @@ you add a field with an explanation to a converted screen, it gets a `(?)`.
 
 **What still belongs in the open:**
 
-- A sentence that is part of the field's *label*, not an explanation of it.
+- A sentence that is part of the field's *label*, not an explanation of it — a
+  unit, a radio option's own description.
 - An error, a warning, or the result of something the reader just did.
-- The state of the thing being looked at — "Nothing yet. The next save will
-  keep what this says now" is a status, not an explanation, and stays visible.
-- A footer that describes the whole page rather than one field.
+- The state of the thing being looked at. "Nothing yet." is a status, and stays
+  visible.
 
 **What does not:** anything that begins "This is…", anything explaining what a
 setting means, what it costs, or what it lets somebody do. In particular, a
@@ -43,9 +43,43 @@ consequence worth knowing before granting a permission belongs in the `(?)`
 beside that permission — not in a paragraph the reader has already scrolled
 past.
 
+**A page footer is not an exception.** This file used to exempt "a footer that
+describes the whole page rather than one field", and five pages carried their
+explanation in one — an ⓘ with a paragraph beside it, under the table. That is
+already a hint-shaped affordance: an icon you read prose next to, doing the job
+the `(?)` does, in a second picture. Two conventions for one job on one product
+is the disagreement this whole section exists to end, and the one that goes is
+the one that cannot hover, pin or close. A footer that *explains* the page
+becomes a `(?)` beside the page heading. A footer stating a fact about the
+current state — a count, a warning about something happening now — stays.
+
+**How short a status is.** A status says the state and does not teach. The test
+that decides the arguable ones: *if the sentence would still be true and worth
+saying when the thing is full, it is not a status.* "Nothing yet" stops being
+true the moment there is a row; "the next save will keep what this says now" is
+true either way, so it is the mechanism and belongs behind the `(?)` beside it.
+Saying both is saying it twice, most visibly on a panel somebody just converted
+properly. The corollary is the mistake this invites: **do not delete the
+elaboration, move it.** If the `(?)` does not already say what the trimmed
+sentence said, it must afterwards — something said only in a status line and
+then trimmed away is a thing the product no longer says anywhere.
+
+**An empty state usually splits.** One line saying what is true now, and the
+teaching behind the `(?)` beside it. The sessions list read "No sessions yet."
+and then a paragraph on what a session is and how one comes to exist: the first
+is the state and stays, the second is an explanation and moved. Where there is
+no field to put the `(?)` beside, it goes beside the status line. Do not drop
+the explanation while splitting — for a list nobody can create a row in, it is
+the only thing on the page that says how a row ever appears, and without it
+somebody is left in front of an empty table with nowhere to go. An empty state
+whose second half really is state — "No proxy rules yet. Every request goes out
+the way this host does." — is one sentence's worth of status and stays as it is.
+
 **Where to put it.** Beside the thing being granted or configured, not beside
 the section heading, when those differ. A `(?)` on a heading explains the
-group; a `(?)` on a row explains the row.
+group; a `(?)` on a row explains the row. The `(?)` is a `<button>`, so on a
+checkbox it stands *beside* the `<label>` and never inside it — inside, pressing
+it ticks the box on the way to opening the note.
 
 ## How wide a page is: the column, and nothing narrower
 
@@ -82,6 +116,18 @@ than either answer applied everywhere.
 and `hint-placement-check.mjs` drive the real pages and assert the prose is gone
 and the `(?)` is there. A screen converted without a check is a screen that
 un-converts itself the next time somebody adds a field.
+
+Those four each watch a screen somebody has already converted, which is why they
+could not stop the same report arriving three times in twenty minutes about
+screens nobody had looked at. `scripts/hint-prose-check.mjs` goes the other way:
+it reads every `.tsx` in `src/`, finds every block of prose the interface prints
+in the open — by the paint rather than by the class name, so renaming the class
+does not hide it — and fails on any that is neither behind a `(?)` nor written
+down in that file with which of the exceptions above it is and why. It looks for
+the ⓘ by name as well. Its browser half walks every fixed address in
+`navigation.ts` and reads what a real field actually prints under a real
+control. A new paragraph under a new field is a failing check the day it is
+written.
 
 `scripts/admin-width-check.mjs` holds the width rule, and does it from the
 source rather than from a browser: it walks the admin paths in `navigation.ts`,

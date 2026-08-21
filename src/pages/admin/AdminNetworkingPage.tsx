@@ -9,7 +9,6 @@ import {
 } from '../../api/networking';
 import type { ProxyRoute, ProxyRule } from '../../api/networking';
 import type { SessionUser } from '../../api/session';
-import infoIcon from '../../assets/info.svg';
 import plusIcon from '../../assets/plus.svg';
 import settingsIcon from '../../assets/settings.svg';
 import toggleOffIcon from '../../assets/toggle-off.svg';
@@ -119,7 +118,24 @@ export function AdminNetworkingPage({ session, onSignOut }: AdminNetworkingPageP
     >
       <header className={styles.titleBar}>
         <div className={styles.titleBlock}>
-          <h1 className={styles.title}>Networking</h1>
+          <h1 className={styles.title}>
+            <span className={styles.titleWithHint}>
+              Networking
+              {/*
+                Was the footer under the table. Same words, behind the one
+                affordance this product uses for an explanation.
+              */}
+              <FieldHint label="Networking">
+                These rules apply to every outbound request this installation makes - connection
+                checks, MCP servers, model providers and the token grants they need, Slack, the
+                identity provider an OIDC installation signs in against, and anything a workflow
+                calls. Mail is included: a rule is matched against <code>smtp://host:port</code>,
+                and the proxy has to allow a <code>CONNECT</code> to that port for it to work.
+                Directory sign-in over LDAP is not - it is not HTTP, and no rule here can carry it.
+                Passwords are stored encrypted and are never shown again.
+              </FieldHint>
+            </span>
+          </h1>
           <p className={styles.subtitle}>
             How this installation reaches the outside. A rule sends the requests it matches through
             a proxy; everything else goes out directly.
@@ -300,17 +316,6 @@ export function AdminNetworkingPage({ session, onSignOut }: AdminNetworkingPageP
           </div>
         )}
       </section>
-
-      <p className={styles.disclaimer}>
-        <img src={infoIcon} alt="" width={14} height={14} />
-        These rules apply to every outbound request this installation makes - connection checks,
-        MCP servers, model providers and the token grants they need, Slack, the identity provider
-        an OIDC installation signs in against, and anything a workflow calls. Mail is included: a
-        rule is matched against <code>smtp://host:port</code>, and the proxy has to allow a{' '}
-        <code>CONNECT</code> to that port for it to work. Directory sign-in over LDAP is not - it
-        is not HTTP, and no rule here can carry it. Passwords are stored encrypted and are never
-        shown again.
-      </p>
 
       <ProxyRuleDialog
         open={dialog}

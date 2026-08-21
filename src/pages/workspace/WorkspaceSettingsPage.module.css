@@ -156,6 +156,13 @@ select.input {
   cursor: pointer;
 }
 
+/* The box and the (?) that explains it, on one line. */
+.checkRowWithHint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
 .checkRow input {
   accent-color: var(--color-accent-brand);
 }

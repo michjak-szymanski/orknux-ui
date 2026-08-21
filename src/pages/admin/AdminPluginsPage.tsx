@@ -14,12 +14,12 @@ import type { SessionUser } from '../../api/session';
 import { timeAgo } from '../../api/tools';
 import downloadIcon from '../../assets/download.svg';
 import fileCodeIcon from '../../assets/file-code.svg';
-import infoIcon from '../../assets/info.svg';
 import plusIcon from '../../assets/plus.svg';
 import puzzleIcon from '../../assets/puzzle.svg';
 import trashIcon from '../../assets/trash-2.svg';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { AppShell } from '../../components/AppShell';
+import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { shellUser } from '../../session/user';
 import styles from './AdminPluginsPage.module.css';
@@ -174,7 +174,21 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
     >
       <header className={styles.titleBar}>
         <div className={styles.titleBlock}>
-          <h1 className={styles.title}>Plugins</h1>
+          <h1 className={styles.title}>
+            <span className={styles.titleWithHint}>
+              Plugins
+              {/*
+                Was the footer under the list. The same words, behind the (?)
+                every other explanation in the product is behind.
+              */}
+              <FieldHint label="Plugins">
+                A plugin&apos;s functions are available in every workspace, and run out of the
+                plugin&apos;s own text in its own sandbox. What a plugin needs to be told is set per
+                workspace, on that workspace&apos;s Plugins page. Loading a file with a name already
+                in the list replaces it.
+              </FieldHint>
+            </span>
+          </h1>
           <p className={styles.subtitle}>
             JavaScript plugins loaded into this installation.{' '}
             {/*
@@ -369,12 +383,6 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
         ))}
       </section>
 
-      <p className={styles.disclaimer}>
-        <img src={infoIcon} alt="" width={14} height={14} />
-        A plugin's functions are available in every workspace, and run out of the plugin's own text
-        in its own sandbox. What a plugin needs to be told is set per workspace, on that workspace's
-        Plugins page. Loading a file with a name already in the list replaces it.
-      </p>
     </AppShell>
   );
 }

@@ -5,6 +5,7 @@ import { moveIssue } from '../api/issues';
 import type { Issue } from '../api/issues';
 import { fetchWorkspaces } from '../api/workspaces';
 import type { Workspace } from '../api/workspaces';
+import { FieldHint } from './FieldHint';
 import styles from './Dialog.module.css';
 
 /**
@@ -53,6 +54,16 @@ export function MoveIssueDialog({ issue, onClose, onMoved }: MoveIssueDialogProp
       setSubmitting(false);
       setChosen('');
       dialog.showModal();
+      /*
+       * And on the field, not on the first thing in the dialog.
+       *
+       * `showModal()` focuses whatever is focusable first, which since the (?)
+       * moved up beside the label is the (?). Focus is the keyboard's hover, so
+       * the dialog opened with its own note already showing - a note nobody had
+       * asked for, over the field it is about. React's `autoFocus` is not
+       * enough on its own: it focuses on mount, and `showModal()` runs after.
+       */
+      dialog.querySelector('select')?.focus();
     } else if (issue === null && dialog.open) {
       dialog.close();
     }
@@ -110,9 +121,18 @@ export function MoveIssueDialog({ issue, onClose, onMoved }: MoveIssueDialogProp
 
         <div className={styles.fields}>
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="move-issue-workspace">
-              Move to
-            </label>
+            <span className={styles.labelWithHint}>
+              <label className={styles.label} htmlFor="move-issue-workspace">
+                Move to
+              </label>
+              <FieldHint label="Move to">
+                Its comments, labels, links, observers and files come with it. It is given a number
+                that is free where it lands, so <strong>#{issue?.number}</strong> stops being this
+                issue: the address people have been using will not find it, and references written
+                as #{issue?.number} elsewhere will point at whatever holds that number here. The
+                move is written into the issue and into both workspaces&apos; activity.
+              </FieldHint>
+            </span>
             {/*
               In a wrapper with a chevron beside it, like every other select in
               a dialog. It had neither: `.input` draws no box of its own — the
@@ -136,18 +156,6 @@ export function MoveIssueDialog({ issue, onClose, onMoved }: MoveIssueDialogProp
               </select>
               <img src={chevronDown12Icon} alt="" width={12} height={12} />
             </div>
-            {/*
-              Printed rather than behind a (?): this is what moving does, and
-              renumbering an issue breaks every address anybody has written down.
-              A consequence has to be read before the button is pressed, not
-              found by somebody who thought to hover first.
-            */}
-            <p className={styles.fieldHint}>
-              Its comments, labels, links, observers and files come with it. It is given a number that is free where it
-              lands, so <strong>#{issue?.number}</strong> stops being this issue: the address people have been using
-              will not find it, and references written as #{issue?.number} elsewhere will point at whatever holds that
-              number here. The move is written into the issue and into both workspaces&apos; activity.
-            </p>
           </div>
         </div>
 

@@ -280,22 +280,10 @@
   color: var(--color-danger);
 }
 
-/* ---- Footer note ---- */
-
-.disclaimer {
-  display: flex;
-  align-items: flex-start;
+.titleWithHint {
+  display: inline-flex;
+  align-items: center;
   gap: var(--space-8);
-  width: 100%;
-  margin: 0;
-  font-size: var(--text-md);
-  line-height: 1.5;
-  color: var(--color-text-muted);
-}
-
-.disclaimer img {
-  flex-shrink: 0;
-  margin-top: 3px;
 }
 
 /*

@@ -379,3 +379,10 @@
   line-height: 16px;
   color: var(--color-text-muted);
 }
+
+/* A status line and the (?) beside it. */
+.labelWithHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+}
