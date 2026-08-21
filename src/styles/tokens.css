@@ -29,6 +29,17 @@
   --color-border: #27272a;
 
   /*
+   * What a surface becomes under the pointer.
+   *
+   * Its own token because there was not one, and the absence is what produced
+   * sixteen stylesheets each inventing a hover for the same button - a border
+   * lift here, a background lift there, the brand green in three places. A
+   * lift of one step on the surface ramp: far enough to see without asking
+   * whether it moved, near enough that a row of them is not a row of lights.
+   */
+  --color-surface-hover: #27272a;
+
+  /*
    * Code, coloured the way the editor colours it.
    *
    * The same five values the Monaco theme defines, as tokens, so a snippet in
@@ -186,6 +197,9 @@
   --color-scrollbar: #c4c4c8;
   --color-scrollbar-hover: #a1a1aa;
   --color-border: #e4e4e7;
+
+  /* The same one step, downwards, because the ramp is inverted here. */
+  --color-surface-hover: #e4e4e7;
 
   /* Code: the editor's light rules, which are darker so they hold on white. */
   --code-comment: #71717a;

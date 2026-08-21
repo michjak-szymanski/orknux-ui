@@ -135,3 +135,38 @@ follows each through `routes.tsx` to the file that draws it, and fails on a
 `max-width` anywhere in the top level of a page. A new admin page is covered the
 moment it is registered, whether or not there is anything in the database to
 draw on it.
+
+## A control that appears on many pages lives in one stylesheet
+
+**If the same control is drawn on more than about three screens, its rule
+belongs in one file the others compose from — not copied into each page's own
+module.**
+
+**Why.** `.rowAction`, the small square at the end of a row, existed sixteen
+times in sixteen stylesheets. The base rule was byte-identical in twelve of
+them; the `:hover` had drifted into five different answers, three of which were
+no hover at all. On one row that drew as two buttons ignoring the pointer beside
+a third turning green.
+
+Copies do not drift because somebody decides they should. They drift because the
+next person edits the file in front of them, and no file in front of them is the
+button. Put one there.
+
+**A missing token is the same fault one level down.** There was no
+`--color-surface-hover`, so sixteen authors each invented what hovering looks
+like. If two screens need the same colour for the same reason, it is a token.
+
+## A change nobody can see is not a change
+
+**Assert how far, not whether.** A check that reads a computed value and asserts
+it differs will pass on a difference no eye can find.
+
+The first fix for the row squares lifted the border from `#27272a` to `#71717a`
+and nothing else. Every assertion passed — the value had moved — and it was
+reported as still not working, because 1px of slightly lighter grey on a 32px
+square is invisible. The check now asks for a minimum distance per channel, and
+measures the fill as well as the edge.
+
+**And look at it.** The thing that settled it was a screenshot of the two states
+side by side, not a number. Measuring is how a change is kept; looking is how it
+is judged.

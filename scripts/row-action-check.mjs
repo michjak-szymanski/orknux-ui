@@ -80,8 +80,30 @@ record(
 
 const { browser, context, page } = await open({ viewport: { width: 1440, height: 1000 } });
 
-const borderOf = async (button) =>
-  page.evaluate((el) => getComputedStyle(el).borderColor, await button.elementHandle());
+/**
+ * How far apart two painted colours are, per channel.
+ *
+ * Inequality is not the test. The first fix here lifted only the border, from
+ * #27272a to #71717a, and every assertion passed because the value had moved -
+ * then it was reported as still not working, and a screenshot settled it: 1px
+ * of slightly lighter grey on a 32px square is a change a stylesheet can prove
+ * and an eye cannot find. So the check asks how far, not whether.
+ */
+const APART = 8;
+
+const distance = (one, two) => {
+  const nums = (colour) => (colour.match(/\d+/g) ?? []).slice(0, 3).map(Number);
+  const [a, b] = [nums(one), nums(two)];
+  if (a.length < 3 || b.length < 3) return 0;
+  return Math.max(...a.map((channel, i) => Math.abs(channel - b[i])));
+};
+
+/** What the square is painted with: its fill and its edge, both. */
+const paintOf = async (button) =>
+  page.evaluate((el) => {
+    const style = getComputedStyle(el);
+    return { background: style.backgroundColor, border: style.borderColor };
+  }, await button.elementHandle());
 
 async function rowOf(path, what) {
   await page.goto(`${BASE}${path}`, { waitUntil: 'domcontentloaded' });
@@ -117,16 +139,26 @@ async function rowOf(path, what) {
     const button = buttons.nth(i);
     await page.mouse.move(4, 4);
     await page.waitForTimeout(150);
-    const before = await borderOf(button);
+    const before = await paintOf(button);
     await button.hover();
     await page.waitForTimeout(200);
-    const after = await borderOf(button);
+    const after = await paintOf(button);
     const label = await button.getAttribute('aria-label');
-    record(before !== after, `${what}: "${label}" answers the pointer (${before} -> ${after})`);
-    answers.push(after);
+
+    const fill = distance(before.background, after.background);
+    const edge = distance(before.border, after.border);
+    record(
+      fill >= APART,
+      `${what}: "${label}" fills differently under the pointer - ${before.background} -> ${after.background}, ${fill} apart, wanted ${APART}`,
+    );
+    record(
+      edge >= APART,
+      `${what}: "${label}" edges differently under the pointer - ${before.border} -> ${after.border}, ${edge} apart, wanted ${APART}`,
+    );
+    answers.push(`${after.background} / ${after.border}`);
   }
   const alike = answers.every((colour) => colour === answers[0]);
-  record(alike, `${what}: the row answers in one colour${alike ? ` (${answers[0]})` : ` - ${answers.join(' / ')}`}`);
+  record(alike, `${what}: the row answers alike${alike ? ` (${answers[0]})` : ` - ${answers.join(' | ')}`}`);
 }
 
 await rowOf(`/workspace/${WORKSPACE}/functions`, 'functions');

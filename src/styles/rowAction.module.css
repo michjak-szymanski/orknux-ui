@@ -37,7 +37,18 @@
   cursor: pointer;
 }
 
+/*
+ * Both, and the background is the half that is actually seen.
+ *
+ * The border alone was the first answer here, chosen because it was what most
+ * of the sixteen copies did and because it works whatever the base is. It was
+ * reported as still not working, and the picture settled it: 1px going from
+ * #27272a to #71717a on a 32px square is a change a stylesheet can prove and an
+ * eye cannot find. Measuring that the value moved is not the same as looking at
+ * it.
+ */
 .rowAction:hover {
+  background: var(--color-surface-hover);
   border-color: var(--color-text-muted);
 }
 
@@ -48,5 +59,6 @@
 }
 
 .rowAction:disabled:hover {
+  background: var(--color-surface-raised);
   border-color: var(--color-border);
 }
