@@ -149,6 +149,24 @@ export const TESTS = [
     needs: ['session'],
   },
   {
+    name: 'hint-prose-check',
+    what: 'every block of prose still in the open, and the written reason for each one',
+    needs: ['workspace'],
+    /*
+     * The one in this group that is not about a screen somebody already
+     * converted. The other six each drive a page whose prose was moved and
+     * assert it stayed moved; none of them can say anything about the page
+     * nobody has looked at, which is where three reports in twenty minutes came
+     * from. This starts from the whole of `src/` and fails on anything left in
+     * the open that is not written down with a reason.
+     *
+     * Its source half needs nothing at all - no browser, no server, no database
+     * - and `ORKNUX_SOURCE_ONLY=1` runs that half alone in about a second. The
+     * workspace is only for the browser half, which walks every fixed address
+     * in `navigation.ts`.
+     */
+  },
+  {
     name: 'revision-retention-check',
     what: 'how long component history is kept: typed, saved, reloaded, and zero refused',
     needs: ['session'],
@@ -208,7 +226,7 @@ export const TESTS = [
      * In, and for two reasons that were both about the check.
      *
      * It waited for a link reading "Open definition", and 2df9a15 made every
-     * one of those a link mark - the words moved into the title and the
+     * one of those a mark - the words moved into the title and the
      * aria-label. So it spent thirty seconds waiting for text nothing draws and
      * then reported a missing link on a form that has one. It asks for the
      * accessible name now, which is what the convention actually promises, and
@@ -265,7 +283,7 @@ export const TESTS = [
   },
   {
     name: 'param-panel-check',
-    what: "the function editor's details panel: the row, the notch colour, the link mark",
+    what: "the function editor's details panel: the row, the notch colour, the mark",
     needs: ['workspace'],
   },
   {

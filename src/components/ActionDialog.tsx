@@ -39,7 +39,7 @@ import { ConditionDialog } from './ConditionDialog';
 import { DefinitionPicker } from './DefinitionPicker';
 import { FieldHint } from './FieldHint';
 import { IconField } from './IconField';
-import { LinkIcon } from './LinkIcon';
+import { OpenDefinitionIcon } from './OpenDefinitionIcon';
 import styles from './Dialog.module.css';
 
 export interface ActionDialogProps {
@@ -485,7 +485,7 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                       title="Opens the connection in a new tab"
                       aria-label="Open the connection's definition"
                     >
-                      <LinkIcon />
+                      <OpenDefinitionIcon />
                     </Link>
                   )}
                 </span>
@@ -611,7 +611,7 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                       title="Opens the mail server's connection in a new tab"
                       aria-label="Open the mail server's definition"
                     >
-                      <LinkIcon />
+                      <OpenDefinitionIcon />
                     </Link>
                   )}
                 </span>
@@ -801,7 +801,7 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                       title="Opens the function in a new tab"
                       aria-label="Open the function's definition"
                     >
-                      <LinkIcon />
+                      <OpenDefinitionIcon />
                     </Link>
                   )}
                 </span>
@@ -920,7 +920,7 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                     title="Opens the condition in a new tab"
                     aria-label="Open the condition's definition"
                   >
-                    <LinkIcon />
+                    <OpenDefinitionIcon />
                   </Link>
                 )}
               </span>

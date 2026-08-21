@@ -116,7 +116,7 @@ await page.waitForTimeout(300);
  * Found by its name and not by its words.
  *
  * It was written as `hasText: 'Open definition'`, which was the label until
- * 2df9a15 made every one of these a link mark: the arrow and the two words went,
+ * 2df9a15 made every one of these a mark: the arrow and the two words went,
  * and "Open definition" lives on in the title and the aria-label, which is what
  * a pointer and a screen reader get. The check went on waiting thirty seconds
  * for text nothing draws and reported a missing link on a form that has one -
@@ -143,7 +143,7 @@ const words = (await jump.first().innerText()).trim();
 const titled = await jump.first().getAttribute('title');
 check(
   words === '' && (titled ?? '') !== '',
-  `drawn as the link mark, named by its title ("${titled}")`,
+  `drawn as the mark alone, named by its title ("${titled}")`,
   `expected a mark with a title, got text ${JSON.stringify(words)} and title ${JSON.stringify(titled)}`,
 );
 

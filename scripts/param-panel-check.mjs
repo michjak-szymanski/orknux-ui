@@ -11,7 +11,7 @@
  * breaking the outline. Checked by measuring, not by eye: the label's paint and
  * the select's paint have to be the same colour.
  *
- * Three: "Open definition ↗" is a link mark now, and a mark with no words has to
+ * Three: "Open definition ↗" is a mark now, and a mark with no words has to
  * carry its name some other way.
  */
 import { BASE, WORKSPACE, open, record, finish } from './suite/harness.mjs';
@@ -102,7 +102,7 @@ await page.evaluate(() => {
 await page.waitForTimeout(300);
 const lightOk = await notchMatches('light');
 
-/** The link mark: no words, but still a name and a tooltip. */
+/** The mark: no words, but still a name and a tooltip. */
 const jump = page.getByRole('link', { name: /^Open definition of/ }).first();
 const named = await jump.getAttribute('aria-label');
 const titled = await jump.getAttribute('title');

@@ -4,7 +4,7 @@
  * The action editor names a connection, a mail server, a function and a
  * condition, and until now said nothing about any of them beyond the name. This
  * opens Create Action, works through the four subtypes that ask, and checks the
- * link mark appears only once something is chosen, points where the route says
+ * mark appears only once something is chosen, points where the route says
  * it should, and opens a tab of its own with the half-filled form left alone.
  */
 import { BASE, WORKSPACE, open, record, shot, finish } from './suite/harness.mjs';
@@ -192,7 +192,7 @@ record((await jumps.count()) === 1, 'one way out on screen, beside the field tha
 
 // The mark and nothing else: the words live in the title and the label.
 const words = (await jumpFor("Open the condition's definition").innerText()).trim();
-record(words === '', 'drawn as the link mark, with no words beside it');
+record(words === '', 'drawn as the mark alone, with no words beside it');
 const title = await jumpFor("Open the condition's definition").getAttribute('title');
 const rel = await jumpFor("Open the condition's definition").getAttribute('rel');
 record(title !== null && title !== '' && rel === 'noreferrer', `title and rel are set (${title} / ${rel})`);
