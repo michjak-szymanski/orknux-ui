@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import type { PageOf } from '../../api/client';
 import type { SessionUser } from '../../api/session';
@@ -8,7 +8,8 @@ import { timeAgo } from '../../api/functions';
 import { fetchWorkspaces } from '../../api/workspaces';
 import type { Workspace } from '../../api/workspaces';
 import { fetchWorkspaceWorkflows, setWorkflowEnabled } from '../../api/workflows';
-import type { WorkspaceWorkflow } from '../../api/workflows';
+import type { WorkflowOrder, WorkspaceWorkflow } from '../../api/workflows';
+import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import settingsIcon from '../../assets/settings-14.svg';
 import toggleOffIcon from '../../assets/toggle-off.svg';
 import toggleOnIcon from '../../assets/toggle-on.svg';
@@ -56,7 +57,44 @@ export interface WorkspaceWorkflowsPageProps {
   onSignOut?: () => void;
 }
 
-const PAGE_SIZE = 4;
+/**
+ * How many rows a page holds, and what else it may be set to.
+ *
+ * The same four the issue list offers, for the same reason: it says how much of
+ * a screen somebody has, not what they are looking at. Remembered per person
+ * rather than per workspace, and under a key of this list's own - somebody who
+ * reads workflows four at a time and issues fifty at a time is not being
+ * inconsistent.
+ *
+ * Ten rather than the four this used to hold. Four was not a choice anybody had
+ * made, and it is not one of the sizes on offer - a control that opens showing a
+ * number it cannot be set back to is a control that looks broken.
+ */
+const PAGE_SIZES = [10, 25, 50, 100];
+const DEFAULT_PAGE_SIZE = 10;
+const PAGE_SIZE_KEY = 'orknux.workflows.page-size';
+
+/**
+ * What the list can be ordered by, in the words this page already uses.
+ *
+ * Three, and they are the three questions asked of this screen: what is it
+ * called, when did it last do anything, and is it switched on. Next Run is a
+ * column here and is deliberately not on this list - it is not stored anywhere,
+ * it is the soonest of however many cron expressions the workflow's triggers
+ * carry, worked out one workflow at a time, and a database cannot order by
+ * something it has never seen.
+ *
+ * Asked of the server, like the issue list's, because the page holds ten rows
+ * of however many the workspace has: sorting ten of them orders the page rather
+ * than the list, which looks like it worked until the row somebody wanted turns
+ * out to be on page two.
+ */
+const ORDERS: { label: string; order: WorkflowOrder }[] = [
+  { label: 'Name', order: 'NAME' },
+  { label: 'Last run', order: 'LAST_RUN' },
+  { label: 'Switched on', order: 'ENABLED' },
+];
+
 const WORKSPACE_LIST_SIZE = 100;
 
 export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflowsPageProps) {
@@ -72,7 +110,49 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
   const [running, setRunning] = useState<string | null>(null);
 
   /*
-   * Which workspace the page number belongs to.
+   * The order lives in the address, like the issue list's.
+   *
+   * "the ones nobody has run" is a link if it is in the URL and a sentence of
+   * instructions if it is not, and a refresh or a restored tab comes back to
+   * the list somebody was reading rather than to the top of the alphabet.
+   *
+   * Ascending unless the address says otherwise, which is the opposite of the
+   * issue list's default and right for the same reason: a column of names is
+   * read A to Z, and a column of issue numbers is read newest first. The arrow
+   * says which it is, so neither needs explaining.
+   */
+  const [params, setParams] = useSearchParams();
+  const order = (params.get('order') as WorkflowOrder | null) ?? 'NAME';
+  const ascending = params.get('dir') !== 'desc';
+
+  /** Writes the order back into the address, replacing rather than pushing. */
+  function sortBy(changes: Record<string, string | null>) {
+    setParams(
+      (held) => {
+        const next = new URLSearchParams(held);
+        for (const [key, value] of Object.entries(changes)) {
+          if (value === null) next.delete(key);
+          else next.set(key, value);
+        }
+        return next;
+      },
+      { replace: true },
+    );
+  }
+
+  /**
+   * How many rows at a time, remembered for whoever is reading.
+   *
+   * Not in the address: it is a fact about the screen somebody is at, so a link
+   * they send should not force their choice on the person who opens it.
+   */
+  const [pageSize, setPageSize] = useState(() => {
+    const held = Number(window.localStorage.getItem(PAGE_SIZE_KEY));
+    return PAGE_SIZES.includes(held) ? held : DEFAULT_PAGE_SIZE;
+  });
+
+  /*
+   * Which list the page number belongs to.
    *
    * The switcher in the corner changes the workspace without leaving this
    * screen: the route is the same one, so this component is never built again
@@ -84,10 +164,17 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
    * right, because every auto-refresh asked for the same page that is not
    * there. Reset while rendering rather than in an effect, so the fetch below is
    * made with the page it is going to end up on instead of asking twice.
+   *
+   * The order and the size are in here for the same reason rather than a
+   * different one. Page two of a list means a different ten rows once the order
+   * changes and may not exist at all once the size grows, so both have to put
+   * the reader back at the start - and both have to do it before the fetch, or
+   * the screen asks twice and shows the wrong answer in between.
    */
-  const [pagedFor, setPagedFor] = useState(workspaceId);
-  if (pagedFor !== workspaceId) {
-    setPagedFor(workspaceId);
+  const listShape = `${workspaceId}|${order}|${ascending}|${pageSize}`;
+  const [pagedFor, setPagedFor] = useState(listShape);
+  if (pagedFor !== listShape) {
+    setPagedFor(listShape);
     setPage(1);
   }
 
@@ -114,7 +201,7 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
     const mine = ++newest.current;
     setLoading(true);
     setError(null);
-    fetchWorkspaceWorkflows(workspaceId, page - 1, PAGE_SIZE)
+    fetchWorkspaceWorkflows(workspaceId, page - 1, pageSize, order, ascending)
       .then((result) => {
         if (mine !== newest.current) return;
         /*
@@ -137,7 +224,7 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
         setError(cause instanceof Error ? cause.message : 'Could not load workflows.');
         setLoading(false);
       });
-  }, [workspaceId, page]);
+  }, [workspaceId, page, pageSize, order, ascending]);
 
   useEffect(load, [load]);
 
@@ -188,6 +275,51 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
             Create Workflow
           </button>
         </header>
+
+        {/*
+          The order, in the place and the words the issue list put it: a row of
+          its own between the heading and the rows it orders, a select naming
+          the field and a single button for the direction. The other half of
+          what was asked for - how many rows at a time - is in the footer, on
+          the line that says "showing 1-10 of 11", because that is the sentence
+          it changes.
+        */}
+        <div className={styles.filters}>
+          <div className={styles.sortRow}>
+            <label className={styles.sortLabel} htmlFor="workflow-order">
+              Sort
+            </label>
+            <span className={styles.selectWrapper}>
+              <select
+                id="workflow-order"
+                className={styles.sortSelect}
+                value={order}
+                onChange={(event) => sortBy({ order: event.target.value })}
+              >
+                {ORDERS.map((one) => (
+                  <option key={one.order} value={one.order}>
+                    {one.label}
+                  </option>
+                ))}
+              </select>
+              <img src={chevronDown12Icon} alt="" width={12} height={12} />
+            </span>
+            {/*
+              One button rather than two options, because a direction has two
+              states and a control with two states is a switch. The arrow says
+              which way it is now, not which way pressing it would go.
+            */}
+            <button
+              type="button"
+              className={styles.sortDirection}
+              onClick={() => sortBy({ dir: ascending ? 'desc' : 'asc' })}
+              title={ascending ? 'Ascending - press for descending' : 'Descending - press for ascending'}
+              aria-label={ascending ? 'Sorted ascending' : 'Sorted descending'}
+            >
+              {ascending ? '↑' : '↓'}
+            </button>
+          </div>
+        </div>
 
         <div className={styles.table}>
           <div className={styles.tableHeader}>
@@ -300,10 +432,17 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
 
           <CompactPagination
             page={page}
-            pageSize={PAGE_SIZE}
+            pageSize={pageSize}
             totalItems={workflows?.totalElements ?? 0}
             unit="templates"
             onPageChange={setPage}
+            pageSizes={PAGE_SIZES}
+            onPageSizeChange={(chosen) => {
+              setPageSize(chosen);
+              window.localStorage.setItem(PAGE_SIZE_KEY, String(chosen));
+              // Which page somebody is on means something else at another size;
+              // the guard above the fetch puts them back on the first.
+            }}
           />
         </div>
       </section>

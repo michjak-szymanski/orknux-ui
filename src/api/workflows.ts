@@ -22,13 +22,34 @@ export interface WorkspaceWorkflow {
   nextRun: string | null;
 }
 
+/**
+ * What a list of workflows is ordered by, in the words the server uses.
+ *
+ * Asked of the server rather than sorted here, for the same reason the issue
+ * list asks: a page holds ten rows of however many the workspace has, and
+ * sorting ten of them orders the page instead of the list.
+ */
+export type WorkflowOrder = 'NAME' | 'LAST_RUN' | 'ENABLED';
+
 const WORKFLOW_FIELDS =
   'id workflowId name description enabled nextRun ' +
   'lastRun { executionId status startedAt durationSeconds }';
 
 const WORKSPACE_WORKFLOWS_QUERY = `
-  query WorkspaceWorkflows($workspaceId: ID!, $page: Int!, $size: Int!) {
-    workspaceWorkflows(workspaceId: $workspaceId, page: $page, size: $size) {
+  query WorkspaceWorkflows(
+    $workspaceId: ID!
+    $page: Int!
+    $size: Int!
+    $order: WorkflowOrder
+    $ascending: Boolean
+  ) {
+    workspaceWorkflows(
+      workspaceId: $workspaceId
+      page: $page
+      size: $size
+      order: $order
+      ascending: $ascending
+    ) {
       content { ${WORKFLOW_FIELDS} }
       page
       size
@@ -70,16 +91,26 @@ const REMOVE_WORKFLOW_MUTATION = `
   }
 `;
 
-/** `page` is 0-based, matching the server. */
+/**
+ * `page` is 0-based, matching the server.
+ *
+ * `order` and `ascending` are left off by the callers that only want a list to
+ * pick from; the server then answers by name, ascending, which is what this has
+ * always done.
+ */
 export async function fetchWorkspaceWorkflows(
   workspaceId: string,
   page: number,
   size: number,
+  order?: WorkflowOrder,
+  ascending?: boolean,
 ): Promise<PageOf<WorkspaceWorkflow>> {
   const data = await graphql<{ workspaceWorkflows: PageOf<WorkspaceWorkflow> }>(WORKSPACE_WORKFLOWS_QUERY, {
     workspaceId,
     page,
     size,
+    order: order ?? null,
+    ascending: ascending ?? null,
   });
   return data.workspaceWorkflows;
 }

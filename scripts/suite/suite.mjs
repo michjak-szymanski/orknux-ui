@@ -167,6 +167,16 @@ export const TESTS = [
     needs: ['workspace'],
   },
   {
+    name: 'leave-guard-check',
+    what: 'the function editor asks before unsaved work is walked away from, and only then',
+    needs: ['workspace'],
+    /*
+     * Builds and deletes a scratch function of its own, so no function anybody
+     * else's check reads is edited by running this - and sweeps the ones an
+     * earlier run was killed before deleting.
+     */
+  },
+  {
     name: 'split-check',
     what: "the function editor's split drags, survives a reload, and remeasures Monaco",
     needs: ['workspace'],
@@ -201,6 +211,29 @@ export const TESTS = [
     name: 'delete-issue-check',
     what: 'the trash asks before it deletes, and the issue is really gone after',
     needs: ['workspace'],
+  },
+  {
+    name: 'workflow-list-check',
+    what: 'the workflow list shows X at a time and orders the whole list, not the page',
+    needs: ['workspace'],
+    /*
+     * It tops the workspace up to twelve workflows of its own and removes them
+     * again, so the only thing it wants from the fixture is runs: two workflows
+     * that have run, so that "by last run" has something to put in order and a
+     * never-run row to keep last. The seed runs two, so this is in.
+     */
+  },
+  {
+    name: 'catalogue-failure-check',
+    what: 'a catalogue that failed to load says so, where an empty one says it is empty',
+    needs: ['workspace'],
+    /*
+     * Issue 139. Runs anywhere there is a workspace with an agent in it - the
+     * seed makes two - because it does not need the catalogues to hold
+     * anything: it answers the three queries itself, once with an empty list
+     * and once with an error, and reads what the page says about each. Nothing
+     * about it is particular to one database, so it is in CI.
+     */
   },
 
   // --- connections and transfer ---------------------------------------------
