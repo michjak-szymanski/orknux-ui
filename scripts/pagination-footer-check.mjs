@@ -33,6 +33,33 @@
  * the heading too. Three deliberately differ - Executions lists runs, the audit
  * log lists entries, a session lists lines - and those are written down with
  * why, because an unexplained mismatch is exactly what this is looking for.
+ *
+ * ---------------------------------------------------------------------------
+ * And the row above the list, as of issue #174
+ *
+ * The same wrong noun came back at the other end of the same table: the first
+ * column of the workflow list was headed "Template name". The footer half above
+ * could not have caught it - it reads `<CompactPagination>` call sites, and a
+ * column heading is not one.
+ *
+ * Only half of what is done for footers can honestly be done for headings. The
+ * source half cannot: a footer's noun is a prop on one shared component, so it
+ * can be read out of any file and compared against a table, while a heading row
+ * is hand-written JSX in twenty-four pages with no shared component, no prop,
+ * and nothing to compare a parse against. What *can* be done is the browser
+ * half, and it costs nothing extra: this check already opens every routed list
+ * and already knows what each one's rows are called, so it reads the heading
+ * row off the same page it reads the footer off.
+ *
+ * Two assertions, and the difference between them matters. The first is the
+ * spelled-out one, the same as `unit === 'templates'` above: "template" is
+ * another page's noun and may not head a column on any of these lists. The
+ * second is the discipline that keeps it true after today - each list's first
+ * column heading is written down in the table below, so renaming one is a
+ * failure until somebody says what it is now. That is deliberately not "the
+ * heading must be the list's noun": the audit log's first column is Action and
+ * its rows are entries, and both are right.
+ * ---------------------------------------------------------------------------
  */
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -49,17 +76,23 @@ const { browser, page } = await open({ viewport: { width: 1440, height: 1000 } }
  * the page draws above the list, so a page renamed without its footer is a
  * failure rather than a thing nobody looks at. `why` is only set where the noun
  * is deliberately not the heading.
+ *
+ * `column` is the first column's heading, for the half added by #174. `null`
+ * means the list draws no heading row at all - the issue list is cards rather
+ * than a table - and is a decision written down rather than a page that quietly
+ * stopped being covered.
  */
 const LISTS = [
-  { file: 'WorkspaceWorkflowsPage.tsx', path: '', title: 'Workflows', unit: 'workflows' },
+  { file: 'WorkspaceWorkflowsPage.tsx', path: '', title: 'Workflows', unit: 'workflows', column: 'Workflow' },
   {
     file: 'ExecutionsPage.tsx',
     path: '/executions',
     title: 'Executions',
     unit: 'runs',
+    column: 'Run',
     why: 'the page calls an execution a run everywhere else on it',
   },
-  { file: 'WorkspaceTriggersPage.tsx', path: '/triggers', title: 'Triggers', unit: 'triggers' },
+  { file: 'WorkspaceTriggersPage.tsx', path: '/triggers', title: 'Triggers', unit: 'triggers', column: 'Name' },
   {
     file: 'WorkspaceTriggersPage.tsx',
     path: null,
@@ -67,19 +100,27 @@ const LISTS = [
     unit: 'firings',
     why: 'the second footer on the triggers page, under one trigger’s history',
   },
-  { file: 'WorkspaceActionsPage.tsx', path: '/actions', title: 'Actions', unit: 'actions' },
-  { file: 'WorkspaceConditionsPage.tsx', path: '/conditions', title: 'Conditions', unit: 'conditions' },
-  { file: 'WorkspaceIssuesPage.tsx', path: '/issues', title: 'Issues', unit: 'issues' },
-  { file: 'WorkspaceFunctionsPage.tsx', path: '/functions', title: 'Functions', unit: 'functions' },
-  { file: 'AgentsPage.tsx', path: '/agents', title: 'Agents', unit: 'agents' },
-  { file: 'WorkspaceObjectsPage.tsx', path: '/objects', title: 'Objects', unit: 'objects' },
-  { file: 'WorkspaceToolsPage.tsx', path: '/tools', title: 'Tools', unit: 'tools' },
-  { file: 'WorkspaceSessionsPage.tsx', path: '/sessions', title: 'Sessions', unit: 'sessions' },
+  { file: 'WorkspaceActionsPage.tsx', path: '/actions', title: 'Actions', unit: 'actions', column: 'Name' },
+  { file: 'WorkspaceConditionsPage.tsx', path: '/conditions', title: 'Conditions', unit: 'conditions', column: 'Name' },
+  {
+    file: 'WorkspaceIssuesPage.tsx',
+    path: '/issues',
+    title: 'Issues',
+    unit: 'issues',
+    column: null,
+    why: 'the issue list draws rows without a heading row over them',
+  },
+  { file: 'WorkspaceFunctionsPage.tsx', path: '/functions', title: 'Functions', unit: 'functions', column: 'Name' },
+  { file: 'AgentsPage.tsx', path: '/agents', title: 'Agents', unit: 'agents', column: 'Agent' },
+  { file: 'WorkspaceObjectsPage.tsx', path: '/objects', title: 'Objects', unit: 'objects', column: 'Name' },
+  { file: 'WorkspaceToolsPage.tsx', path: '/tools', title: 'Tools', unit: 'tools', column: 'Name' },
+  { file: 'WorkspaceSessionsPage.tsx', path: '/sessions', title: 'Sessions', unit: 'sessions', column: 'Session' },
   {
     file: 'WorkspaceAuditPage.tsx',
     path: '/audit',
     title: 'Audit Log',
     unit: 'entries',
+    column: 'Action',
     why: 'a row of an audit log is an entry, and "audit logs" would be the log itself',
   },
   {
@@ -185,8 +226,26 @@ async function footer() {
   };
 }
 
+/**
+ * The heading row over the list, cell by cell. Null when the page draws none.
+ *
+ * Found by class rather than by `<th>` because none of these are tables: every
+ * one of them is a flex row carrying `styles.tableHeader`, which after the CSS
+ * modules build is a class *containing* that word. The first such row on the
+ * page, because the two pages here with a second table - triggers, sessions -
+ * draw the list this entry is about first.
+ */
+async function columns() {
+  return page.evaluate(() => {
+    const row = document.querySelector('[class*="tableHeader"]');
+    return row === null ? null : [...row.children].map((one) => one.textContent.trim());
+  });
+}
+
 /** How many of the routed lists were read off a footer with rows behind it. */
 let read = 0;
+/** And how many were read off a heading row. */
+let headed = 0;
 
 let failed = false;
 try {
@@ -198,6 +257,38 @@ try {
 
     const heading = (await page.locator('h1').first().innerText().catch(() => '')).trim();
     record(heading === list.title, `${list.path || '/'} is the ${list.title} page (its heading says "${heading}")`);
+
+    /*
+     * The row over the list, which is where #174 found the same wrong noun the
+     * footer half was written for. Read before the footer because a page whose
+     * columns are wrong is worth saying so about even if its list is empty.
+     */
+    const heads = await columns();
+    if (list.column === null) {
+      record(
+        heads === null,
+        `${list.title} draws no heading row over its rows${list.why === undefined ? '' : ` (${list.why})`}` +
+          `${heads === null ? '' : ` - but it drew one: ${heads.join(' | ')}`}`,
+      );
+    } else if (record(heads !== null, `${list.title} draws a heading row over its rows`)) {
+      headed += 1;
+      record(
+        heads[0] === list.column,
+        `${list.title}: its first column is headed "${list.column}" - it says "${heads[0]}"`,
+      );
+      /*
+       * The word this whole check was written for, at the other end of the
+       * table. A template is a published copy of a component and lives on the
+       * Templates page under Admin; no column of any of these lists is one.
+       */
+      const templated = heads.filter((one) => /template/i.test(one));
+      record(
+        templated.length === 0,
+        templated.length === 0
+          ? `${list.title}: and no column is headed with another page's noun (${heads.join(' | ')})`
+          : `${list.title}: a column is headed "${templated.join('", "')}" over rows that are ${list.unit}`,
+      );
+    }
 
     const said = await footer();
 
@@ -284,6 +375,19 @@ try {
    */
   const routed = LISTS.filter((one) => one.path !== null).length;
   record(read >= routed - 2, `enough lists had rows to read a footer off (${read} of ${routed})`);
+
+  /*
+   * The same guard for the half added by #174, and a stricter one: a heading
+   * row is drawn whether or not the list under it has anything in it, so every
+   * list the table says has one must have produced one. Without this the
+   * column assertions are inside the same loop an unreachable workspace walks
+   * straight through.
+   */
+  const withColumns = LISTS.filter((one) => one.path !== null && one.column !== null).length;
+  record(
+    headed === withColumns,
+    `every list that has a heading row drew one (${headed} of ${withColumns})`,
+  );
 
   await page.screenshot({ path: shot('pagination-footer-check.png'), fullPage: false });
 } catch (cause) {

@@ -10,6 +10,14 @@
   overflow: clip;
 }
 
+/*
+ * The heading and everything that acts on this list, on one line.
+ *
+ * Sort used to be on a row of its own below this. It is here now, first of the
+ * controls, so the row reads left to right as: what this is, how it is ordered,
+ * and what can be done to it - ending on the primary action, where every other
+ * list ends.
+ */
 .header {
   display: flex;
   align-items: center;
@@ -21,8 +29,13 @@
   flex: 1 0 0;
 }
 
+/*
+ * `0 1 auto` rather than `1 0 0`: the spacer above is what pushes the controls
+ * right, and a title that also grew took half the slack for one word while
+ * refusing to give any of it back when the row ran out of room.
+ */
 .title {
-  flex: 1 0 0;
+  flex: 0 1 auto;
   min-width: 0;
   margin: 0;
   font-weight: 600;
@@ -50,20 +63,16 @@
 /* ---- Sorting ---- */
 
 /*
- * Where the order control goes: to the right of the card, on a line of its own
- * between the heading and the rows it orders.
+ * There is nothing here any more, and that is the fix.
  *
- * The control itself is `SortControl`, shared with the issue list. This used to
- * hold a copy of its sixty lines with a note saying that a third list would be
- * the moment to make it a component; the copy is gone and only the placing is
- * left, which is the part the two lists really do differ on - the issue list
- * puts it at the end of a row of filters, and this has no other filters.
+ * `.filters` was a flex row holding one thing: `SortControl`, pushed to the
+ * right on a line between the heading and the table. The control is shared with
+ * the issue list, which does keep it on a filter row - but that row also holds
+ * the status tabs and the search box, so the sort control there is the last of
+ * several. Here it was the only one, and a lone control on an otherwise empty
+ * line has nothing to be read as part of. It is in `.header` now, and the
+ * placing is the only thing these two lists ever differed on.
  */
-.filters {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-}
 
 /* ---- Table ---- */
 

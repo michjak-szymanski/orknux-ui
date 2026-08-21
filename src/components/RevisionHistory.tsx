@@ -11,6 +11,7 @@ import type {
   ComponentRevisionKind,
 } from '../api/revisions';
 import { timeAgo } from '../api/tools';
+import { FieldHint } from './FieldHint';
 import { Loader } from './Loader';
 import styles from './RevisionHistory.module.css';
 
@@ -107,11 +108,28 @@ export function RevisionHistory({ kind, componentId, currentName, onRestored }: 
 
   return (
     <section className={styles.history} aria-label="History">
-      <h2 className={styles.heading}>History</h2>
-      <p className={styles.note}>
-        Every save keeps what this was before it. How long they are kept is an administrator’s
-        setting.
-      </p>
+      {/*
+        What this panel is, behind the (?) rather than under the heading.
+
+        `UI-DESIGN-RULES.md`: an explanation goes behind a question mark beside
+        the thing it explains, and this was a paragraph of it under a heading -
+        printed to everybody who opened an editor, for the one reader who ever
+        wondered where old versions go. On the heading rather than on a row,
+        because it explains the whole panel.
+
+        The sentence below it stayed where it is on purpose. "Nothing yet…" is
+        the state of the thing being looked at, which the same file lists among
+        what still belongs in the open.
+      */}
+      <h2 className={styles.heading}>
+        <span className={styles.headingWithHint}>
+          History
+          <FieldHint label="History">
+            Every save keeps what this was before it. How long they are kept is an administrator’s
+            setting.
+          </FieldHint>
+        </span>
+      </h2>
 
       {error !== null && (
         <p className={styles.error} role="alert">

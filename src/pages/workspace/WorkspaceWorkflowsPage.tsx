@@ -266,27 +266,24 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
         <header className={styles.header}>
           <h1 className={styles.title}>Workflows</h1>
           <span className={styles.headerSpacer} />
-          {/* A workflow's status changes as runs finish, without this page asking. */}
-          <AutoRefresh onRefresh={load} />
-          <ImportComponentsButton workspaceId={workspaceId} onImported={load} />
-          <UseTemplateButton workspaceId={workspaceId} kind="WORKFLOW" onImported={load} />
-          <button type="button" className={styles.createWorkflow} onClick={() => setCreating(true)}>
-            <span aria-hidden="true">+</span>
-            Create Workflow
-          </button>
-        </header>
-
-        {/*
-          The order, in the place and the words the issue list put it: a row of
-          its own between the heading and the rows it orders, a select naming
-          the field and a single button for the direction. It is now literally
-          the issue list's control rather than a copy of it. The other half of
-          what was asked for - how many rows at a time - is in the footer, on
-          the line that says "showing 1-10 of 11", because that is the sentence
-          it changes.
-        */}
-        <div className={styles.filters}>
           {/*
+            The order, on the header row with everything else that acts on this
+            list.
+
+            It had a row of its own between the heading and the table, which is
+            where the issue list keeps it - but the issue list's row also holds
+            status tabs and a search box, and this one held nothing else. A
+            control alone on a line reads as belonging to the table under it
+            rather than to the page, and costs a row of vertical space to say
+            so; the owner's report of "two controls floating under the title"
+            is that row, seen without noticing its own small grey label.
+
+            First of the controls rather than last, so that + Create Workflow
+            stays at the end of the row where the primary action is on every
+            other list. The other half of what #145 asked for - how many rows
+            at a time - is still in the footer, on the line that says
+            "showing 1-10 of 11", because that is the sentence it changes.
+
             Ascending unless the address says otherwise - read above, not here,
             because the issue list's default is the other way round and the
             control is the same control.
@@ -299,11 +296,29 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
             ascending={ascending}
             onDirectionChange={(wanted) => sortBy({ dir: wanted ? 'asc' : 'desc' })}
           />
-        </div>
+          {/* A workflow's status changes as runs finish, without this page asking. */}
+          <AutoRefresh onRefresh={load} />
+          <ImportComponentsButton workspaceId={workspaceId} onImported={load} />
+          <UseTemplateButton workspaceId={workspaceId} kind="WORKFLOW" onImported={load} />
+          <button type="button" className={styles.createWorkflow} onClick={() => setCreating(true)}>
+            <span aria-hidden="true">+</span>
+            Create Workflow
+          </button>
+        </header>
 
         <div className={styles.table}>
           <div className={styles.tableHeader}>
-            <span className={styles.colGrow}>Template name</span>
+            {/*
+              "Workflow", because that is what the rows are.
+
+              It said "Template name" on a list of workflows - the same wrong
+              noun the footer under it carried until 788b694, and wrong for the
+              same reason: a template is a published copy of a component, kept
+              on the Templates page under Admin and reached from this page's
+              own Use template button. The column headed with another screen's
+              noun, above rows linking into the workflow editor.
+            */}
+            <span className={styles.colGrow}>Workflow</span>
             <span className={styles.colGrow}>Description</span>
             <span className={styles.colLastRun}>Last Run</span>
             <span className={styles.colLastRun}>Next Run</span>

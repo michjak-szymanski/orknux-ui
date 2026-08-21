@@ -142,6 +142,18 @@ export const TESTS = [
     what: "a tool's versions and a workflow's publications: browsed, read, restored",
     needs: ['workspace'],
   },
+  {
+    name: 'history-hint-check',
+    what: "the History panel's explanation behind its (?), and its status still in the open",
+    needs: ['workspace'],
+    /*
+     * Builds a tool and an agent of its own and takes both away, because the
+     * half that would go unnoticed needs a component with no history: the
+     * panel's "Nothing yet…" is a status rather than an explanation and stays
+     * printed, and a check that only asked for the absence of prose would pass
+     * a panel that had deleted it.
+     */
+  },
 
   // --- pages that are pages -------------------------------------------------
   {
@@ -236,6 +248,20 @@ export const TESTS = [
      */
   },
   {
+    name: 'leave-guard-load-check',
+    what: 'all four editors are clean the moment they have loaded, before anything is touched',
+    needs: ['workspace'],
+    /*
+     * Issue #175. The two checks above assert the untouched case and both
+     * passed while the function and tool editors were rewriting the code column
+     * on load - because the components they build agree with their own details
+     * panel, and nothing anybody actually stores does. So this one builds
+     * components that do not: a function with two externals and a hand-written
+     * parameter list, a tool whose parameter names an object. Built and deleted
+     * over GraphQL, and swept when an earlier run was killed before deleting.
+     */
+  },
+  {
     name: 'split-check',
     what: "the function editor's split drags, survives a reload, and remeasures Monaco",
     needs: ['workspace'],
@@ -306,6 +332,18 @@ export const TESTS = [
      */
   },
   {
+    name: 'workflow-header-check',
+    what: 'the workflow list orders and acts on one header row, and its columns name workflows',
+    needs: ['workspace'],
+    /*
+     * Issue #174, and the assertion at its centre is a measurement rather than
+     * a photograph: the sort control and the four buttons beside it have to
+     * share a row, which is their vertical centres inside two pixels of each
+     * other. Wants only workflows the workspace already has - two of them, so
+     * that reversing the order has something to reverse.
+     */
+  },
+  {
     name: 'removed-workflow-check',
     what: 'a run of a removed workflow can be filtered to, and its workflow is named rather than linked',
     needs: ['workspace'],
@@ -326,7 +364,7 @@ export const TESTS = [
   },
   {
     name: 'pagination-footer-check',
-    what: 'every paginated list names its own rows in the footer, and counts the list not the page',
+    what: 'every paginated list names its own rows, in the footer and in the row of columns over it',
     needs: ['workspace'],
     /*
      * Wants nothing built for it. Every list it opens is one the workspace
@@ -382,6 +420,18 @@ export const TESTS = [
     name: 'slack-connection-check',
     what: 'one Slack connection type, made through the dialog and finished on its page',
     needs: ['workspace'],
+  },
+  {
+    name: 'connection-share-check',
+    what: 'the connection page offers no Share card and no "Export as default"',
+    needs: ['workspace'],
+    /*
+     * A negative, so it is worth saying what stops it passing for free. It
+     * signs in as an administrator and asserts that it did - the card was
+     * behind `session.admin`, so an ordinary member would find it missing
+     * either way - waits for the form to draw, and checks the Danger Zone
+     * below it is still there. It makes its own connection and removes it.
+     */
   },
   {
     name: 'import-leave-out-check',

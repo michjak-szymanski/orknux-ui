@@ -23,6 +23,19 @@
   color: var(--color-text-primary);
 }
 
+/*
+ * The heading and the (?) that explains the panel, kept on one line so the
+ * question mark belongs to "History" rather than to the first row under it.
+ * Same shape as the settings pages' `.headingWithHint`; written here rather
+ * than borrowed because this stylesheet is what makes the panel look the same
+ * in all four frames it stands in.
+ */
+.headingWithHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
 .note,
 .empty,
 .undo {
