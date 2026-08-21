@@ -17,6 +17,8 @@ import fileTextIcon from '../../assets/file-text.svg';
 import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
 import { Loader } from '../../components/Loader';
+import { UnsavedWorkDialog } from '../../components/UnsavedWorkDialog';
+import { useLeaveGuard } from '../../components/leaveGuard';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import { highlightMarkdown } from './highlightMarkdown';
@@ -127,8 +129,19 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
     }
   }
 
-  async function handleSave() {
-    if (skill === null || saving) return;
+  /**
+   * Stores what is on screen, and says whether it landed.
+   *
+   * The answer is for `Save & Leave` in the dialog below, the same as the other
+   * three editors of this shape: a name the workspace already has, a catalog
+   * that has been deleted underneath this tab - the server refuses those, and
+   * leaving on a refused save is precisely the loss the guard exists to stop.
+   *
+   * `apply` is what makes the baseline move: what came back is what the server
+   * now holds, so a save followed by a Back press asks nothing.
+   */
+  async function handleSave(): Promise<boolean> {
+    if (skill === null || saving) return false;
     setSaving(true);
     setSaveError(null);
     setSaved(false);
@@ -143,12 +156,60 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
       );
       setSaved(true);
       setStatus({ ok: true, message: 'Formatting valid' });
+      return true;
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : 'Could not save the skill.');
+      return false;
     } finally {
       setSaving(false);
     }
   }
+
+  /**
+   * There is work on this screen the server has not been told about.
+   *
+   * A value comparison against what was loaded, not the `saved` flag beside it:
+   * that flag can only say a key was pressed, and somebody who types a
+   * character and deletes it has changed nothing. Being asked to confirm losing
+   * nothing is how a prompt teaches people to click through prompts.
+   *
+   * Four fields, because a save sends four. The markdown is the one this issue
+   * was filed about and the one with the most to lose - a skill is prose, so
+   * there is more of it on screen than in any of the three editors that were
+   * guarded first - but the catalog is in here too: moving a skill to another
+   * folder is a change the server has not heard about, and it is lost on the
+   * way out exactly like the rest. Name and description are compared trimmed
+   * because that is how they are sent; the markdown is not, because whitespace
+   * in prose is the prose.
+   *
+   * `skill` is the baseline and it maintains itself: `apply` sets it on load and
+   * again from what a save stored. The Active badge deliberately does not go
+   * through `apply` - see `handleToggle` - so pressing it leaves the baseline's
+   * four fields alone rather than adopting the draft as saved.
+   *
+   * A skill is always one that exists, there being no create route to this
+   * page, so a null baseline means still loading and there is nothing to lose.
+   */
+  const unsaved = useMemo(() => {
+    if (skill === null) return false;
+    return (
+      name.trim() !== skill.name.trim() ||
+      description.trim() !== (skill.description ?? '').trim() ||
+      content !== skill.content ||
+      catalogId !== skill.catalogId
+    );
+  }, [skill, name, description, content, catalogId]);
+
+  /*
+   * The three ways out, and the question before any of them: a link, a Back
+   * press, a closed tab. Shared with the function, tool and object editors,
+   * because all four lose work the same way; see `useLeaveGuard`.
+   */
+  const guard = useLeaveGuard({
+    unsaved,
+    backTo: `/workspace/${workspaceId}/skills`,
+    save: handleSave,
+  });
 
   /**
    * Active/Inactive, pressed.
@@ -382,6 +443,19 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
           </div>
         </>
       )}
+
+      {/*
+        Outside the branch above, so it is the same dialog whichever state the
+        page is in - and so closing it never depends on what the page happens to
+        be showing behind it.
+      */}
+      <UnsavedWorkDialog
+        subject={guard.asking ? (skill?.name ?? 'This skill') : null}
+        creating={false}
+        onStay={guard.stay}
+        onLeave={guard.leave}
+        onSaveAndLeave={guard.saveAndLeave}
+      />
     </AppShell>
   );
 }

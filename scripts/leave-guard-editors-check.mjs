@@ -1,10 +1,12 @@
 /**
- * The object editor and the tool editor asking before unsaved work is walked
- * away from - the other two editors of the shape issue #138 was filed against.
+ * The object, tool and skill editors asking before unsaved work is walked away
+ * from - every editor of the shape issue #138 was filed against, bar the
+ * function.
  *
- * `leave-guard-check.mjs` measures the function editor. This measures the two
- * that were named in the same issue and got the guard afterwards, and it asks
- * both of them the same six questions in the same order:
+ * `leave-guard-check.mjs` measures the function editor. This measures the
+ * others - the object and the tool, named in #138 and given the guard
+ * afterwards, and the skill, which was never in that list until #159 noticed -
+ * and it asks all of them the same six questions in the same order:
  *
  *   dirty then leave   - asks, and the page is still there behind the question
  *   clean then leave   - says nothing; the editor was only read
@@ -27,12 +29,13 @@
  * see whether anything stops it. That is exactly the question the browser acts
  * on when the tab is closed.
  *
- * Neither editor has a create route, so there is no "being written" case here:
- * an object and a tool are both made elsewhere and this page only ever opens
- * one that exists. That is the whole of what differs from the function's check.
+ * None of the three has a create route, so there is no "being written" case
+ * here: an object, a tool and a skill are all made elsewhere and these pages
+ * only ever open one that exists. That is the whole of what differs from the
+ * function's check.
  *
- * The object and the tool are this check's own, made and deleted over GraphQL,
- * so nothing in the workspace is edited by running it.
+ * The object, the tool and the skill are this check's own, made and deleted
+ * over GraphQL, so nothing in the workspace is edited by running it.
  */
 import { BASE, WORKSPACE, open, record, finish } from './suite/harness.mjs';
 
@@ -53,6 +56,7 @@ const left = await graphql(
   `query($id: ID!) {
      workspaceTools(workspaceId: $id, page: 0, size: 100) { content { id name } }
      workspaceObjects(workspaceId: $id, page: 0, size: 100) { content { id name } }
+     workspaceSkills(workspaceId: $id, page: 0, size: 100) { content { id name } }
    }`,
   { id: WORKSPACE },
 );
@@ -63,6 +67,10 @@ for (const old of left.workspaceTools.content.filter((held) => held.name.startsW
 for (const old of left.workspaceObjects.content.filter((held) => held.name.startsWith(PREFIX))) {
   await graphql(`mutation($id: ID!) { deleteObject(id: $id) }`, { id: old.id }).catch(() => undefined);
   console.log(`swept object ${old.name} (#${old.id}) from an earlier run`);
+}
+for (const old of left.workspaceSkills.content.filter((held) => held.name.startsWith(PREFIX))) {
+  await graphql(`mutation($id: ID!) { deleteSkill(id: $id) }`, { id: old.id }).catch(() => undefined);
+  console.log(`swept skill ${old.name} (#${old.id}) from an earlier run`);
 }
 
 const TOOL_NAME = `${PREFIX}Tool${STAMP}`;
@@ -103,6 +111,25 @@ const madeObject = await graphql(
   },
 );
 console.log(`made object ${madeObject.createObject.name} (#${madeObject.createObject.id})`);
+
+const SKILL_NAME = `${PREFIX}Skill${STAMP}`;
+/*
+ * The frontmatter block first, because that is the part Validate reads and the
+ * part a save is refused over. Everything this check types goes after it, so a
+ * failure here is the guard's and never the format's.
+ */
+const madeSkill = await graphql(
+  `mutation($input: CreateSkillInput!) { createSkill(input: $input) { id name } }`,
+  {
+    input: {
+      workspaceId: WORKSPACE,
+      name: SKILL_NAME,
+      description: 'A skill this check made for itself.',
+      content: `---\nname: ${SKILL_NAME}\ndescription: A skill this check made for itself.\n---\n\nWhat to do, in prose.\n`,
+    },
+  },
+);
+console.log(`made skill ${madeSkill.createSkill.name} (#${madeSkill.createSkill.id})`);
 
 /* -------------------------------------------------------------- the rulers */
 
@@ -305,12 +332,52 @@ await drill({
   },
 });
 
+/* ------------------------------------------------------------ the skill editor */
+
+const skillId = madeSkill.createSkill.id;
+await drill({
+  label: 'skill:',
+  where: `${BASE}/workspace/${WORKSPACE}/skills/${skillId}`,
+  list: `/workspace/${WORKSPACE}/skills`,
+  /*
+   * The catalogs arrive after the skill does and fill the folder picker, and
+   * until they have, "nothing has changed yet" is a claim about a form that is
+   * still being filled in.
+   */
+  settle: async () => {
+    await page.waitForSelector('textarea[aria-label="Skill definition"]', { timeout: 30_000 });
+    await page.waitForTimeout(1500);
+  },
+  /*
+   * At the end of the markdown, which is where a skill's work is: it is prose,
+   * and somebody writing one is typing paragraphs rather than editing a field.
+   * After the frontmatter on purpose - see the fixture above.
+   */
+  edit: async (what) => {
+    const area = page.locator('textarea[aria-label="Skill definition"]');
+    await area.fill(`${await area.inputValue()}${what}`);
+    await page.waitForTimeout(700);
+  },
+  undo: async (what) => {
+    const area = page.locator('textarea[aria-label="Skill definition"]');
+    const held = await area.inputValue();
+    await area.fill(held.slice(0, held.length - what.length));
+    await page.waitForTimeout(900);
+  },
+  onScreen: () => page.locator('textarea[aria-label="Skill definition"]').inputValue(),
+  stored: async () => {
+    const read = await graphql(`query($id: ID!) { skill(id: $id) { content } }`, { id: skillId });
+    return read.skill.content;
+  },
+});
+
 /* ------------------------------------------------------------------- tidy up */
 
 const mine = await graphql(
   `query($id: ID!) {
      workspaceTools(workspaceId: $id, page: 0, size: 100) { content { id name } }
      workspaceObjects(workspaceId: $id, page: 0, size: 100) { content { id name } }
+     workspaceSkills(workspaceId: $id, page: 0, size: 100) { content { id name } }
    }`,
   { id: WORKSPACE },
 );
@@ -322,6 +389,11 @@ for (const held of mine.workspaceTools.content.filter((one) => one.name.startsWi
 for (const held of mine.workspaceObjects.content.filter((one) => one.name.startsWith(PREFIX))) {
   await graphql(`mutation($id: ID!) { deleteObject(id: $id) }`, { id: held.id }).catch((cause) => {
     console.log(`could not delete object ${held.name} (#${held.id}): ${cause.message}`);
+  });
+}
+for (const held of mine.workspaceSkills.content.filter((one) => one.name.startsWith(PREFIX))) {
+  await graphql(`mutation($id: ID!) { deleteSkill(id: $id) }`, { id: held.id }).catch((cause) => {
+    console.log(`could not delete skill ${held.name} (#${held.id}): ${cause.message}`);
   });
 }
 
