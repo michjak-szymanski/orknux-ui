@@ -21,11 +21,49 @@ export const NODE_ICONS: Record<string, string> = Object.fromEntries(
  * Icons that are part of the furniture rather than something to label a node
  * with. A chevron says nothing about what a node does, and offering one only
  * makes the useful ones harder to find.
+ *
+ * **Every alternative ends at a word boundary**, and that is the whole point of
+ * how this is written. It used to be a bare prefix match, which hid anything
+ * merely *starting* with one of these words - so `plus-circle`, `search-code`,
+ * `save-all`, `sunrise`, `sunset`, `moon-star` and `pen-tool` would have
+ * vanished the day somebody added them, with nothing to say they had. An icon
+ * that silently fails to appear is worse than one nobody chose, because the
+ * next person adds it again.
+ *
+ * Two shapes, deliberately. A **family** takes everything below it: there is no
+ * chevron and no arrow worth labelling a node with, however it is qualified.
+ * A **one-off** matches only itself: `save` is furniture, `save-all` may not
+ * be, and the difference is not something a prefix can know.
  */
-const CHROME = /^(chevron|panel-|arrow-|toggle-|trash|x-circle|check-circle|log-out|door-open|sun|moon|copy|pen|pencil|plus|search|settings-14|orknux-mark|undo|redo|save|play)/;
+const CHROME_FAMILIES = /^(?:chevron|panel|arrow|toggle|trash)(?:$|-)/;
+
+/**
+ * Furniture that is exactly these names and nothing below them.
+ *
+ * `play`, `save`, `search`, `plus` and `copy` are deliberately **absent**: each
+ * is a reasonable thing to call a node - a run, a persist, a lookup, an add, a
+ * duplicate - and hiding them cost more than the tidiness gained. They were
+ * hidden by the old prefix rule rather than by anybody deciding they should be.
+ */
+const CHROME_EXACT = new Set([
+  'x-circle',
+  'check-circle',
+  'log-out',
+  'door-open',
+  'sun',
+  'moon',
+  'pen',
+  'pencil',
+  'settings-14',
+  'orknux-mark',
+  'undo',
+  'redo',
+]);
+
+const isChrome = (name: string): boolean => CHROME_FAMILIES.test(name) || CHROME_EXACT.has(name);
 
 const BROWSABLE = Object.keys(NODE_ICONS)
-  .filter((name) => !CHROME.test(name))
+  .filter((name) => !isChrome(name))
   .sort();
 
 export interface IconPickerProps {
