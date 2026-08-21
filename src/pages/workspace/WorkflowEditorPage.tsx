@@ -15,7 +15,6 @@ import {
   Handle,
   MiniMap,
   NodeResizer,
-  NodeToolbar,
   Position,
   ReactFlow,
   ReactFlowProvider,
@@ -1243,16 +1242,34 @@ function GraphNodeView({ data, selected }: NodeProps) {
         It has always been on the node - R does it, and there is a button in the
         details panel - but both are somewhere else: one has to be known about,
         the other is three reaches away behind the panel. The thing being judged
-        is the node on the canvas, so the control sits above it, on the selected
-        one only, the way the resize handles do.
+        is the node on the canvas, so the control is on the node.
+
+        In its top-right corner rather than on a bar above it. The bar was as
+        wide as the node and stood off its top edge, which on a graph of any
+        density is over the line coming into the node above - so selecting a
+        node covered part of the picture the selection was made to look at. A
+        corner covers nothing, and it is the corner every application puts the
+        control that acts on the thing you are looking at.
+
+        Inside the node, clear of both things that could be under it: the meta
+        row keeps room on its right so an agent's lit dot is never behind this,
+        and the inset leaves the resizer's corner control its own square. The
+        node is dragged by its body, so `nodrag` is what keeps a press here from
+        being a drag of the node instead of a turn.
       */}
-      {turn !== null && (
-        <NodeToolbar isVisible={selected} position={Position.Top} offset={8}>
-          <button type="button" className={styles.turnNode} onClick={turn} title={`Turn the node (R) — ${facingName}`}>
-            <img src={refreshIcon} alt="" aria-hidden="true" />
-            Turn
-          </button>
-        </NodeToolbar>
+      {turn !== null && selected && (
+        <button
+          type="button"
+          className={`${styles.turnNode} nodrag nopan`}
+          onClick={(event) => {
+            event.stopPropagation();
+            turn();
+          }}
+          title={`Turn the node (R) — ${facingName}`}
+          aria-label={`Turn the node (R) — ${facingName}`}
+        >
+          <img src={refreshIcon} alt="" aria-hidden="true" />
+        </button>
       )}
       {/*
         A condition's two ways out have to be spaced along whichever edge they

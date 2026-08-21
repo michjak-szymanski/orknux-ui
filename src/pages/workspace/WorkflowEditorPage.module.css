@@ -419,6 +419,12 @@
   display: flex;
   align-items: center;
   gap: var(--space-8);
+  /*
+   * Room at the right end for the turn control, which is drawn in the node's
+   * corner over this row. Kept whether the node is selected or not, so that
+   * selecting one does not shuffle the row underneath the control that appears.
+   */
+  padding-right: 22px;
 }
 
 /* Whatever else the row holds, the dot stays at the far end. */
@@ -1279,20 +1285,31 @@ select.input {
 /*
  * Turning, on the node being turned.
  *
- * Sits above the selected node beside the resize handles, so the gesture is
- * where the judgement is - the panel button and R still do the same thing, but
- * neither is in view when somebody is looking at the shape of a graph.
+ * In the selected node's top-right corner, which is where a control that acts
+ * on what you are looking at is looked for. It used to be a labelled button on
+ * a bar above the node, about as wide as the node itself and standing off its
+ * top edge - so selecting a node put a grey slab over whatever was above it,
+ * which on a graph of any density is the line coming in from the node before.
+ *
+ * The inset is what keeps it off the resizer's corner control, and `.metaRow`
+ * keeps a matching gap on its right so an agent's lit dot never ends up behind
+ * it. Above the node's own content, because the name can wrap up to it.
  */
 .turnNode {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
   display: inline-flex;
   align-items: center;
-  gap: var(--space-6);
-  padding: var(--space-4) var(--space-10);
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-surface-raised);
   color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
   line-height: 1;
   cursor: pointer;
 }
