@@ -9,7 +9,6 @@ import { fetchWorkspaces } from '../../api/workspaces';
 import type { Workspace } from '../../api/workspaces';
 import { fetchWorkspaceWorkflows, setWorkflowEnabled } from '../../api/workflows';
 import type { WorkflowOrder, WorkspaceWorkflow } from '../../api/workflows';
-import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import settingsIcon from '../../assets/settings-14.svg';
 import toggleOffIcon from '../../assets/toggle-off.svg';
 import toggleOnIcon from '../../assets/toggle-on.svg';
@@ -24,6 +23,7 @@ import {
 } from '../../components/ComponentTransfer';
 import { CreateWorkflowDialog } from '../../components/CreateWorkflowDialog';
 import { Loader } from '../../components/Loader';
+import { SortControl } from '../../components/SortControl';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { WorkflowConfirmDialog } from '../../components/WorkflowConfirmDialog';
 import { shellUser } from '../../session/user';
@@ -279,46 +279,26 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
         {/*
           The order, in the place and the words the issue list put it: a row of
           its own between the heading and the rows it orders, a select naming
-          the field and a single button for the direction. The other half of
+          the field and a single button for the direction. It is now literally
+          the issue list's control rather than a copy of it. The other half of
           what was asked for - how many rows at a time - is in the footer, on
           the line that says "showing 1-10 of 11", because that is the sentence
           it changes.
         */}
         <div className={styles.filters}>
-          <div className={styles.sortRow}>
-            <label className={styles.sortLabel} htmlFor="workflow-order">
-              Sort
-            </label>
-            <span className={styles.selectWrapper}>
-              <select
-                id="workflow-order"
-                className={styles.sortSelect}
-                value={order}
-                onChange={(event) => sortBy({ order: event.target.value })}
-              >
-                {ORDERS.map((one) => (
-                  <option key={one.order} value={one.order}>
-                    {one.label}
-                  </option>
-                ))}
-              </select>
-              <img src={chevronDown12Icon} alt="" width={12} height={12} />
-            </span>
-            {/*
-              One button rather than two options, because a direction has two
-              states and a control with two states is a switch. The arrow says
-              which way it is now, not which way pressing it would go.
-            */}
-            <button
-              type="button"
-              className={styles.sortDirection}
-              onClick={() => sortBy({ dir: ascending ? 'desc' : 'asc' })}
-              title={ascending ? 'Ascending - press for descending' : 'Descending - press for ascending'}
-              aria-label={ascending ? 'Sorted ascending' : 'Sorted descending'}
-            >
-              {ascending ? '↑' : '↓'}
-            </button>
-          </div>
+          {/*
+            Ascending unless the address says otherwise - read above, not here,
+            because the issue list's default is the other way round and the
+            control is the same control.
+          */}
+          <SortControl
+            id="workflow-order"
+            options={ORDERS}
+            order={order}
+            onOrderChange={(wanted) => sortBy({ order: wanted })}
+            ascending={ascending}
+            onDirectionChange={(wanted) => sortBy({ dir: wanted ? 'asc' : 'desc' })}
+          />
         </div>
 
         <div className={styles.table}>

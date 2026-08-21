@@ -6,12 +6,12 @@ import type { Issue, IssueOrder, IssuePage, IssueStatus } from '../../api/issues
 import type { SessionUser } from '../../api/session';
 import { timeAgo } from '../../api/tools';
 import { initialsOf } from '../../api/users';
-import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import plusIcon from '../../assets/plus.svg';
 import searchIcon from '../../assets/search.svg';
 import { AppShell } from '../../components/AppShell';
 import { CompactPagination } from '../../components/CompactPagination';
 import { Loader } from '../../components/Loader';
+import { SortControl } from '../../components/SortControl';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceIssuesPage.module.css';
@@ -326,41 +326,21 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
             />
           </div>
 
-          <div className={styles.sortRow}>
-            <label className={styles.sortLabel} htmlFor="issue-order">
-              Sort
-            </label>
-            <span className={styles.selectWrapper}>
-              <select
-                id="issue-order"
-                className={styles.sortSelect}
-                value={order}
-                onChange={(event) => filterBy({ order: event.target.value })}
-              >
-                {ORDERS.map((one) => (
-                  <option key={one.order} value={one.order}>
-                    {one.label}
-                  </option>
-                ))}
-              </select>
-              <img src={chevronDown12Icon} alt="" width={12} height={12} />
-            </span>
-            {/*
-              One button rather than two options, because a direction has two
-              states and a control with two states is a switch. The arrow says
-              which way it is now, not which way pressing it would go.
-            */}
-            <button
-              type="button"
-              className={styles.sortDirection}
-              onClick={() => filterBy({ dir: ascending ? 'desc' : 'asc' })}
-              title={ascending ? 'Ascending - press for descending' : 'Descending - press for ascending'}
-              aria-label={ascending ? 'Sorted ascending' : 'Sorted descending'}
-            >
-              {ascending ? '↑' : '↓'}
-            </button>
-
-          </div>
+          {/*
+            The orders and the direction are this list's; the control that
+            draws them is shared with the workflow list. Descending unless the
+            address says otherwise - `dir` absent means newest first here, and
+            the opposite on a list of names, which is why the default is read
+            above rather than left to the control.
+          */}
+          <SortControl
+            id="issue-order"
+            options={ORDERS}
+            order={order}
+            onOrderChange={(wanted) => filterBy({ order: wanted })}
+            ascending={ascending}
+            onDirectionChange={(wanted) => filterBy({ dir: wanted ? 'asc' : 'desc' })}
+          />
         </div>
 
         {labels.length > 0 && (

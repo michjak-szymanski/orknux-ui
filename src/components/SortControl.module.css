@@ -1,0 +1,74 @@
+/*
+ * The order control, on a line of its own between a heading and the rows it
+ * orders.
+ *
+ * Lifted unchanged from the issue list and its copy in the workflow list,
+ * which held the same rules to the declaration. Nothing here says where the
+ * row goes - `flex: none` so a filter bar can put it beside a search box
+ * without it stretching, and the surrounding gap is the page's to set.
+ */
+.sortRow {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.sortLabel {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+/*
+ * The chevron the browser no longer draws, drawn by us — the same wrapper and
+ * the same 12px icon every other select in the app uses.
+ */
+.selectWrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.selectWrapper > img {
+  position: absolute;
+  right: var(--space-8);
+  pointer-events: none;
+}
+
+.sortSelect {
+  padding: var(--space-6) var(--space-24) var(--space-6) var(--space-8);
+  /*
+   * `--color-bg`, not `--color-background`, which is not a token: it resolved
+   * to nothing, and a transparent select opens a white menu on a dark page,
+   * since the popup takes its colour from the control.
+   */
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.sortDirection {
+  width: 30px;
+  padding: var(--space-6) 0;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  text-align: center;
+  cursor: pointer;
+}
+
+.sortDirection:hover,
+.sortSelect:hover {
+  border-color: var(--color-text-muted);
+}
