@@ -134,11 +134,16 @@ const measured = settled && keptUp;
 await page.locator('.view-lines').click();
 await page.keyboard.press('Control+A');
 /*
- * Inserted in one go rather than typed key by key. The page holds the code in
- * React state and writes it back when the two disagree, and a hundred keystrokes
- * in a few milliseconds outruns that - the editor gets reset to a value from two
- * renders ago mid-word. A person cannot type fast enough to see it; Playwright
- * can, and what is being measured here is not that.
+ * Inserted in one go rather than typed key by key. Two hundred and fifty-three
+ * characters at any speed a person types at is most of a minute spent reaching
+ * a measurement about a caret, and one insertion is one input event.
+ *
+ * It used to say that typing them would reset the editor to a value from two
+ * renders ago mid-word, and that a person could not type fast enough to see it.
+ * The first was true - issue #198 - and the second was not: the owner saw it at
+ * ordinary typing speed, and what it cost was the text rather than the caret.
+ * It is fixed, and typing fast is measured character for character in
+ * `typing-race-check.mjs`.
  *
  * Short words, because the editor wraps: one long token would be carried whole
  * to the next row and leave the row being clicked in nearly empty.

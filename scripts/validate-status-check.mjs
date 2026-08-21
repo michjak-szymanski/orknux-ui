@@ -221,14 +221,21 @@ async function drill({ label, where, settle, pass, fail, subject }) {
  * Put this code in whichever column is on screen, and do not go on until it is
  * there.
  *
- * `insertText` rather than `type`, and then read back. Typed key by key the
+ * `insertText` rather than `type`, and then read back. One insertion is one
+ * input event, and what is under test here is what a Validate status says, not
+ * what the editor does with keys.
+ *
+ * That is not the reason this line used to give. Typed key by key the
  * characters came out shuffled - "';n 'o' retu) 4154262ion1787" - because
- * `CodeEditor` writes the model back from its `value` prop whenever the two
- * differ, and a render landing between two keystrokes carries a value one
- * character behind the model, so the caret goes home mid-word. That is the
- * editor's own race and not this check's business; one insertion is one input
- * event and does not have it. Read back rather than slept on either: the wait
- * that is long enough today is the flake next month.
+ * `CodeEditor` wrote the model back from its `value` prop whenever the two
+ * differed, and a render landing between two keystrokes carries a value one
+ * character behind the model, so the caret went home mid-word. All of that was
+ * true. Calling it "the editor's own race and not this check's business" is how
+ * it survived: every check that drives this editor stepped around it rather
+ * than failing on it, and the owner met it instead. Issue #198 fixed it, and
+ * `typing-race-check.mjs` now types at 15ms a key and compares the whole
+ * string. Read back rather than slept on either: the wait that is long enough
+ * today is the flake next month.
  *
  * One line, so there is no auto-indent to race. Monaco closes the brace itself,
  * which is why none of these write one.
