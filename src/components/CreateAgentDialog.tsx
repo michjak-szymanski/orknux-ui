@@ -5,6 +5,7 @@ import { createAgent } from '../api/agents';
 import type { Agent } from '../api/agents';
 import { AgentForm } from './AgentForm';
 import type { AgentFormStyles } from './AgentForm';
+import { PanelClose, panelEscape } from './PanelClose';
 import styles from './Dialog.module.css';
 
 export interface CreateAgentDialogProps {
@@ -101,11 +102,12 @@ export function CreateAgentDialog({ open, workspaceId, agent = null, onClose, on
   }
 
   return (
-    <dialog ref={dialogRef} className={`${styles.dialog} ${styles.dialogWide} ${placement === 'panel' ? styles.dialogPanel : ''}`} onCancel={onClose} onClose={onClose}>
+    <dialog ref={dialogRef} className={`${styles.dialog} ${styles.dialogWide} ${placement === 'panel' ? styles.dialogPanel : ''}`} onCancel={onClose} onClose={onClose} onKeyDown={panelEscape(placement, onClose)}>
       {agent !== null ? (
         <div className={styles.body}>
           <header className={styles.header}>
             <h2 className={styles.title}>Agent Settings</h2>
+            {placement === 'panel' && <PanelClose onClose={onClose} />}
           </header>
 
           {/*
@@ -129,6 +131,7 @@ export function CreateAgentDialog({ open, workspaceId, agent = null, onClose, on
         <form className={styles.body} onSubmit={handleSubmit}>
           <header className={styles.header}>
             <h2 className={styles.title}>Create agent</h2>
+            {placement === 'panel' && <PanelClose onClose={onClose} />}
           </header>
 
           <div className={styles.fields}>

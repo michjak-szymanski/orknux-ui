@@ -728,7 +728,21 @@ select.input {
  */
 .dialogPanel {
   position: fixed;
-  top: 56px;
+  /*
+   * Below the editor's toolbar, not behind it.
+   *
+   * It started at 56px, which is above both the shell's top bar and the
+   * editor's own toolbar under it - and the toolbar is painted over the panel,
+   * so the top forty-eight pixels of every panel were behind it. That is where
+   * the heading is, and now the × as well: measured, the title sat at y=80 and
+   * the toolbar covered 64 to 104, so a press on either landed on the toolbar.
+   *
+   * A panel is only ever opened in the workflow editor, which is why these two
+   * numbers can be added up here: 64 for the bar across the top of the shell,
+   * 40 for the editor's toolbar. Raising the panel above the toolbar instead
+   * would have covered Save, Publish and Run, which is the wrong half to hide.
+   */
+  top: 104px;
   bottom: 0;
   left: 0;
   width: min(34vw, 520px);

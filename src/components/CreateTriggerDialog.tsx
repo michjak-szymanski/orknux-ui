@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import type { Trigger } from '../api/triggers';
 import { TriggerForm } from './TriggerForm';
 import type { TriggerFormStyles } from './TriggerForm';
+import { PanelClose, panelEscape } from './PanelClose';
 import styles from './Dialog.module.css';
 
 export interface CreateTriggerDialogProps {
@@ -80,10 +81,12 @@ export function CreateTriggerDialog({ open, workspaceId, trigger = null, onClose
       className={`${styles.dialog} ${styles.dialogWide} ${styles.dialogWider} ${placement === 'panel' ? styles.dialogPanel : ''}`}
       onCancel={onClose}
       onClose={onClose}
+      onKeyDown={panelEscape(placement, onClose)}
     >
       <div className={styles.body}>
         <header className={styles.header}>
           <h2 className={styles.title}>{trigger === null ? 'Create Trigger' : 'Trigger Settings'}</h2>
+          {placement === 'panel' && <PanelClose onClose={onClose} />}
         </header>
 
         {open && (

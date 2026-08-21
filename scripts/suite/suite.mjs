@@ -30,16 +30,38 @@ export const TESTS = [
   },
   {
     name: 'bend-check',
-    what: "a line's bend handle moving the line exactly as far as it was dragged",
-    needs: ['workflow'],
-    ci: false,
+    what: "a line's points moving it exactly as far as they were dragged, bare and labelled",
+    needs: ['workspace'],
     /*
-     * Held back on the fixture, not on the behaviour. It selects a line and
-     * drags the bend handle that appears on it; the workflow the seed builds
-     * has lines, but not one this finds a handle on, so it waits thirty seconds
-     * for `Bend this line` and gives up. It passes against a workflow that has
-     * one. To let it in: give the seed a workflow with a line the check can
-     * select, or teach the check to make its own.
+     * It was held back on the fixture rather than on the behaviour: it took
+     * whichever line the seeded workflow had most of in the open, which was
+     * never reliably a line it could get a handle on. It builds its own graph
+     * now - two agents passing a field, two passing none - so it runs anywhere
+     * there is an agent to point four nodes at, and removes it afterwards.
+     *
+     * Both lines matter. Every line on the seeded workflow carries fields, so
+     * the labelled one was the only kind ever driven, and the bug that turned
+     * up was in the other direction: a labelled line would not take a second
+     * bend, because its label lay over the middle of it and answered the
+     * double-click that adds a point by taking its own point off. The whole
+     * battery now runs twice, once against each kind.
+     */
+  },
+  {
+    name: 'panel-close-check',
+    what: 'the × on the builder panel: where it is, that it stays there, and that Escape does it too',
+    needs: ['workflow'],
+    /*
+     * Open definition opens a component down the left of the editor, and the
+     * only way out was the Cancel at the foot of a form three screens long.
+     * A panel is not a modal - it is opened with `show()`, so it gets neither a
+     * backdrop nor an Escape from the browser - which is why both had to be
+     * built rather than turned on.
+     *
+     * The measurement that earns this a place: the panel is scrolled to its end
+     * and the × is measured again. A close control that scrolls away with the
+     * first field is the same bug spelled differently, and it is invisible in a
+     * screenshot of an unscrolled panel.
      */
   },
   {

@@ -40,6 +40,7 @@ import { DefinitionPicker } from './DefinitionPicker';
 import { FieldHint } from './FieldHint';
 import { IconField } from './IconField';
 import { OpenDefinitionIcon } from './OpenDefinitionIcon';
+import { PanelClose, panelEscape } from './PanelClose';
 import styles from './Dialog.module.css';
 
 export interface ActionDialogProps {
@@ -376,10 +377,12 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
       className={`${styles.dialog} ${styles.dialogWide} ${placement === 'panel' ? styles.dialogPanel : ''}`}
       onCancel={onClose}
       onClose={onClose}
+      onKeyDown={panelEscape(placement, onClose)}
     >
       <form className={styles.body} onSubmit={handleSubmit}>
         <header className={styles.header}>
           <h2 className={styles.title}>{editing ? 'Action Settings' : 'Create Action'}</h2>
+          {placement === 'panel' && <PanelClose onClose={onClose} />}
         </header>
 
         <p className={styles.dialogMessage}>Define a reusable action block for workflows.</p>

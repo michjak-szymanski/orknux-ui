@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import type { Condition } from '../api/conditions';
 import { ConditionForm } from './ConditionForm';
 import type { ConditionFormStyles } from './ConditionForm';
+import { PanelClose, panelEscape } from './PanelClose';
 import styles from './Dialog.module.css';
 
 export interface ConditionDialogProps {
@@ -105,10 +106,12 @@ export function ConditionDialog({
       className={`${styles.dialog} ${placement === 'panel' ? styles.dialogPanel : ''}`}
       onCancel={onClose}
       onClose={onClose}
+      onKeyDown={panelEscape(placement, onClose)}
     >
       <div className={styles.body}>
         <header className={styles.header}>
           <h2 className={styles.title}>{condition === null ? 'Create Condition' : 'Condition Settings'}</h2>
+          {placement === 'panel' && <PanelClose onClose={onClose} />}
         </header>
 
         <p className={styles.dialogMessage}>Define a reusable condition for workflow branching.</p>

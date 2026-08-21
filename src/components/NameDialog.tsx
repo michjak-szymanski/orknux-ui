@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 
+import { PanelClose, panelEscape } from './PanelClose';
 import styles from './Dialog.module.css';
 
 export interface NameDialogProps {
@@ -80,10 +81,11 @@ export function NameDialog({
   }
 
   return (
-    <dialog ref={dialogRef} className={`${styles.dialog} ${placement === 'panel' ? styles.dialogPanel : ''}`} onCancel={onClose} onClose={onClose}>
+    <dialog ref={dialogRef} className={`${styles.dialog} ${placement === 'panel' ? styles.dialogPanel : ''}`} onCancel={onClose} onClose={onClose} onKeyDown={panelEscape(placement, onClose)}>
       <form className={styles.body} onSubmit={handleSubmit}>
         <header className={styles.header}>
           <h2 className={styles.title}>{title}</h2>
+          {placement === 'panel' && <PanelClose onClose={onClose} />}
         </header>
 
         <p className={styles.dialogMessage}>{message}</p>
