@@ -200,6 +200,25 @@ export const TESTS = [
     // Builds and deletes a scratch tool of its own, so nothing else is edited.
   },
   {
+    name: 'active-badge-check',
+    what: 'pressing Active/Inactive keeps the draft on screen, on both editors that draw it',
+    needs: ['workspace'],
+    /*
+     * Issue #155. The badge sent `setEnabled` and put the whole answer through
+     * the same `apply()` the page loads with, so a draft in the code column was
+     * replaced by the stored copy the moment somebody pressed it. #138's leave
+     * guard is about navigating and does not fire here - correctly; a press is
+     * not a navigation.
+     *
+     * Measures the tool editor and the skill editor, which drew the same badge
+     * over the same shape of draft. It asks the tool editor whether it is still
+     * dirty afterwards and does not ask the skill editor, because the skill
+     * editor has no leave guard to ask - #138 never named it. Builds and deletes
+     * a scratch tool and a scratch skill of its own, and sweeps the ones an
+     * earlier run was killed before deleting.
+     */
+  },
+  {
     name: 'preferences-check',
     what: 'User Preferences reaches its own end and leaves room under it',
     needs: ['session'],

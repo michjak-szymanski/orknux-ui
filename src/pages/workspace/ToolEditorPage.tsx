@@ -440,10 +440,37 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
     save: handleSave,
   });
 
+  /**
+   * Active/Inactive, pressed.
+   *
+   * Only what the press actually changed is taken out of the answer. The
+   * mutation replies with the whole tool and this used to put that through
+   * `apply`, which is the function that fills the form on load - so the name,
+   * the description, the code and the parameter list were all replaced by the
+   * stored copy, and pressing the badge over a draft threw the draft away with
+   * no dialog and nothing to undo it with (issue #155). The server's answer to
+   * "set enabled" has no business rewriting the code column.
+   *
+   * The guard above is about *leaving* and cannot help here: a press is not a
+   * navigation. Which is also why the baseline is patched rather than replaced.
+   * `tool` is what `unsaved` compares against, and for the four things a tool is
+   * the stored copy has not moved - so a new object holding the same four values
+   * would change nothing anybody can see, and would only re-run the effect that
+   * rewrites the declaration over code somebody is in the middle of typing.
+   *
+   * `lastModifiedAt` and `lastModifiedBy` come across as well: turning a tool
+   * off is a change to the row, and the panel that says when it last changed
+   * should not go on naming the time before this one.
+   */
   async function handleToggle() {
     if (tool === null) return;
     try {
-      apply(await setToolEnabled(tool.id, !tool.enabled));
+      const { enabled, lastModifiedAt, lastModifiedBy } = await setToolEnabled(tool.id, !tool.enabled);
+      // The one pass the parameter sync is given to do nothing in, exactly as a
+      // save and an accepted suggestion give it: `tool` changing is what that
+      // effect watches, and there is no new parameter list here for it to write.
+      synced.current = false;
+      setTool((current) => (current === null ? current : { ...current, enabled, lastModifiedAt, lastModifiedBy }));
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : 'Could not change the tool.');
     }

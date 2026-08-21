@@ -150,10 +150,25 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
     }
   }
 
+  /**
+   * Active/Inactive, pressed.
+   *
+   * The same badge over the same shape of draft as the tool editor's, and it had
+   * the same hole (issue #155): the mutation answers with the whole skill, and
+   * putting that through `apply` - the function that fills the form on load -
+   * replaced the name, the description, the catalog and the markdown with the
+   * stored copy. Type a paragraph, press the badge, and the paragraph was gone.
+   *
+   * So only what the press changed is taken. `lastModifiedAt` and
+   * `lastModifiedBy` come across with it, because turning a skill off is a
+   * change to the row and the panel below should not go on naming the time
+   * before this one.
+   */
   async function handleToggle() {
     if (skill === null) return;
     try {
-      apply(await setSkillEnabled(skill.id, !skill.enabled));
+      const { enabled, lastModifiedAt, lastModifiedBy } = await setSkillEnabled(skill.id, !skill.enabled);
+      setSkill((current) => (current === null ? current : { ...current, enabled, lastModifiedAt, lastModifiedBy }));
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : 'Could not change the skill.');
     }
