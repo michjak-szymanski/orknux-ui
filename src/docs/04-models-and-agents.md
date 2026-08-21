@@ -331,8 +331,21 @@ reach](/screens/integrations.png)
 endpoints. A connection made in the admin section can be marked as the default
 for new workspaces; that setting lives on the connection's own page.
 
-A connection has a kind — **Slack**, **Email (SMTP)**, **GitHub**, **Jira** or a
-plain **Webhook** — and the kind decides what it asks for.
+A connection has a kind — **Slack**, **Email (SMTP)** or **HTTP endpoint** — and
+the kind decides what it asks for.
+
+**GitHub** and **Jira** used to be kinds of their own. Neither was ever
+implemented: nothing called a GitHub or a Jira API through a connection, so both
+were plain HTTP endpoints wearing a service's name, and configuring one gave you
+something that tested green and could not be used. They are gone, and the
+connections that were stored as one are HTTP endpoints now, with the same
+address, the same credential and the same headers.
+
+The **HTTP endpoint** kind was called **Webhook**. The word named the wrong end
+of the wire: a webhook is a path *this* installation exposes for somebody else
+to call, which is what a webhook *trigger* is, while a connection is a URL this
+installation sends a request to. Whether the far end calls what it is listening
+on a webhook is the far end's business and was never visible from here.
 
 **Slack** takes a bot token beginning `xoxb-`, and optionally an app-level token
 beginning `xapp-`. The second decides what the connection does: given one,

@@ -53,7 +53,7 @@ try {
 
   const made = await ask(
     `mutation ($ws: ID!, $name: String!) {
-       createWorkspaceConnection(input: { workspaceId: $ws, name: $name, type: WEBHOOK, url: "https://example.test" }) {
+       createWorkspaceConnection(input: { workspaceId: $ws, name: $name, type: HTTP, url: "https://example.test" }) {
          id
        }
      }`,

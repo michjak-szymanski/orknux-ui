@@ -1,7 +1,15 @@
 import { graphql } from './client';
 import type { PageOf } from './client';
 
-export type ConnectionType = 'SLACK' | 'GITHUB' | 'JIRA' | 'SMTP' | 'WEBHOOK';
+/**
+ * What a connection points at.
+ *
+ * HTTP is the generic outbound target: a URL this installation sends a request
+ * to. It was called WEBHOOK, which named the wrong end of the wire - a webhook
+ * is something this installation exposes and somebody else calls, which is what
+ * a webhook *trigger* is and now the only thing that word means here.
+ */
+export type ConnectionType = 'SLACK' | 'SMTP' | 'HTTP';
 /** How the session with a mail server is secured; the port follows from it. */
 export type MailSecurity = 'NONE' | 'STARTTLS' | 'TLS';
 export type AuthType = 'NONE' | 'API_KEY' | 'BEARER_TOKEN' | 'BASIC';
@@ -358,14 +366,10 @@ export function connectionTypeLabel(type: ConnectionType): string {
   switch (type) {
     case 'SLACK':
       return 'Slack';
-    case 'GITHUB':
-      return 'GitHub';
-    case 'JIRA':
-      return 'Jira';
     case 'SMTP':
       return 'Email (SMTP)';
-    case 'WEBHOOK':
-      return 'Webhook';
+    case 'HTTP':
+      return 'HTTP endpoint';
   }
 }
 

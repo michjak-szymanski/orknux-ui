@@ -188,12 +188,12 @@ try {
 
   // Hidden because Slack decides both of them, not because the page stopped
   // offering them: the kind that has a use for either still gets both.
-  await chooser.selectOption('WEBHOOK');
+  await chooser.selectOption('HTTP');
   await page.waitForTimeout(400);
-  record((await page.locator('#connection-auth').count()) === 1, 'a webhook is still offered an Auth Type');
+  record((await page.locator('#connection-auth').count()) === 1, 'an HTTP endpoint is still offered an Auth Type');
   record(
     (await page.locator('#connection-url-override').count()) === 1,
-    'and still offered its Webhook URL Override',
+    'and still offered its URL Override',
   );
   await chooser.selectOption('SLACK');
   await page.waitForTimeout(400);

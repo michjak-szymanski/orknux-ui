@@ -16,15 +16,13 @@ export interface WorkspaceConnectionDialogProps {
   onCreated: (connection: WorkspaceConnection) => void;
 }
 
-const TYPES: ConnectionType[] = ['SLACK', 'SMTP', 'GITHUB', 'JIRA', 'WEBHOOK'];
+const TYPES: ConnectionType[] = ['SLACK', 'SMTP', 'HTTP'];
 const AUTH_TYPES: AuthType[] = ['NONE', 'API_KEY', 'BEARER_TOKEN', 'BASIC'];
 
 const TYPE_LABELS: Record<ConnectionType, string> = {
   SLACK: 'Slack',
   SMTP: 'Email (SMTP)',
-  GITHUB: 'GitHub',
-  JIRA: 'Jira',
-  WEBHOOK: 'Webhook',
+  HTTP: 'HTTP endpoint',
 };
 
 /**

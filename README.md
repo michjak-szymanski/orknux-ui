@@ -81,7 +81,7 @@ sees everything, `bob` / `password` only the workspaces a role of his opens.
 We have five distinct kinds of pages
 - login page (for an admin or workspace access)
 - admin management page (where admin settings can be adjusted, including workspace listing, the roles that open a workspace, and the people this installation knows)
-- workspace management page (connections to Slack, GH, Jira, mail, etc, agent definitions, models, tools and skills)
+- workspace management page (connections to Slack, mail and HTTP endpoints, agent definitions, models, tools and skills)
 - workflow edit page (React Flow -> allows editing agentic workflows, and a workflow is built as a graph PER workspace)
 - chat, where a person talks to one of the workspace's models directly
 

@@ -17,25 +17,21 @@ export interface ConnectionDialogProps {
 /**
  * What can be created, which is what a connection can be used for.
  *
- * GitHub, Jira and Webhook are missing on purpose. Nothing sends through them and
- * nothing listens on them — so one could be created, tested, and then do nothing at
- * all, which is a worse answer than not offering it.
+ * HTTP is missing on purpose. An admin default carries a name, a type and a URL,
+ * and the whole point of a generic HTTP endpoint is that the URL is the workspace's
+ * own — so a default would be one shared address that no two workspaces want, while
+ * the workspace's own form offers the same type with somewhere to put the address.
  *
  * Email is offered because a mail action sends through one. A default carries the
  * host and nothing else, which is the part a company's relay has in common across
  * every workspace; the login and the from-address are each workspace's own.
- *
- * They stay in the type and in the labels, because a connection created while they
- * were offered still has to name itself properly in the list.
  */
 const TYPES: ConnectionType[] = ['SLACK', 'SMTP'];
 
 const TYPE_LABELS: Record<ConnectionType, string> = {
   SLACK: 'Slack',
-  GITHUB: 'GitHub',
-  JIRA: 'Jira',
   SMTP: 'Email (SMTP)',
-  WEBHOOK: 'Webhook',
+  HTTP: 'HTTP endpoint',
 };
 
 /** Add / Edit Default Connection, from the connection modals frame. */
