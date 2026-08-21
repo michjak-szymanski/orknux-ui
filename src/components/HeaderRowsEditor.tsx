@@ -1,61 +1,193 @@
+import type { Variable } from '../api/variables';
 import type { HttpHeader } from '../api/integrations';
 import plusIcon from '../assets/plus.svg';
 import trashIcon from '../assets/trash-2.svg';
+import { FieldHint } from './FieldHint';
+import { FieldPicker } from './FieldPicker';
+import type { FieldOption, FieldPickerLabels } from './FieldPicker';
 import styles from './HeaderRowsEditor.module.css';
 
+/**
+ * One row: a name, and where its value comes from.
+ *
+ * A superset of `HttpHeader`, so the callers that only ever hold a literal - the
+ * connection dialog, the MCP server pages - go on passing what they always
+ * passed. `variableId` is set on the rows that read one of the workspace's
+ * variables instead, and on those `value` is not the value: it is empty, and
+ * what the variable holds is never sent here at all.
+ */
+export interface HeaderRow {
+  name: string;
+  value: string;
+  /** Which of the workspace's variables holds the value, or null when it was typed. */
+  variableId?: string | null;
+  /** The name of that variable, for a row that arrived from the server. */
+  variableName?: string | null;
+}
+
 export interface HeaderRowsEditorProps {
-  headers: HttpHeader[];
-  onChange: (headers: HttpHeader[]) => void;
+  headers: HeaderRow[];
+  onChange: (headers: HeaderRow[]) => void;
   /** The dialogs use shorter rows than the settings pages. */
   compact?: boolean;
+  /** What the block is called, where "Custom Headers" is not what the form calls them. */
+  heading?: string;
+  /**
+   * The workspace's variables, which turns the source switch on.
+   *
+   * Left out, every row is a literal and the rows look exactly as they did
+   * before references existed. Passed, each row may name one of these instead of
+   * holding a value - which is the only way to put a bearer token on a request
+   * without typing the token into a column that is not encrypted and is shown
+   * back to whoever opens the form.
+   */
+  variables?: Variable[];
 }
 
 /** The "Custom Headers" block: a name/value pair per row, with add and remove. */
-export function HeaderRowsEditor({ headers, onChange, compact = false }: HeaderRowsEditorProps) {
-  function update(index: number, patch: Partial<HttpHeader>) {
+export function HeaderRowsEditor({
+  headers,
+  onChange,
+  compact = false,
+  heading = 'Custom Headers',
+  variables,
+}: HeaderRowsEditorProps) {
+  function update(index: number, patch: Partial<HeaderRow>) {
     onChange(headers.map((header, at) => (at === index ? { ...header, ...patch } : header)));
   }
 
+  const options: FieldOption[] = (variables ?? []).map((variable) => ({
+    groupKey: variable.catalogId,
+    groupName: variable.catalogName,
+    field: variable.name,
+    expression: variable.id,
+    type: variable.type.toLowerCase(),
+  }));
+
   return (
     <div className={styles.block}>
-      <p className={styles.heading}>Custom Headers</p>
+      <p className={styles.heading}>{heading}</p>
 
-      {headers.map((header, index) => (
-        // Rows have no identity of their own until they are saved.
-        // eslint-disable-next-line react/no-array-index-key
-        <div className={compact ? `${styles.row} ${styles.rowCompact}` : styles.row} key={index}>
-          <input
-            className={styles.input}
-            type="text"
-            placeholder="Header name"
-            aria-label={`Header ${index + 1} name`}
-            value={header.name}
-            onChange={(event) => update(index, { name: event.target.value })}
-          />
-          <input
-            className={styles.input}
-            type="text"
-            placeholder="Value"
-            aria-label={`Header ${index + 1} value`}
-            value={header.value}
-            onChange={(event) => update(index, { value: event.target.value })}
-          />
-          <button
-            type="button"
-            className={styles.remove}
-            onClick={() => onChange(headers.filter((_, at) => at !== index))}
-            aria-label={`Remove header ${index + 1}`}
-            title="Remove header"
-          >
-            <img src={trashIcon} alt="" width={16} height={16} />
-          </button>
-        </div>
-      ))}
+      {/*
+        Explained once, beside the block, rather than once under every row. The
+        words are the ones the plugin parameters use for the same switch: two
+        wordings for one idea is how the two come to mean different things.
+      */}
+      {variables !== undefined && (
+        <span className={styles.hintRow}>
+          <span className={styles.hintLead}>Source</span>
+          <FieldHint label={heading}>
+            <strong>Value</strong> is used exactly as written. <strong>Reference</strong> reads one of this
+            workspace&apos;s variables, and what that variable holds is never shown here.
+          </FieldHint>
+        </span>
+      )}
 
-      <button type="button" className={styles.add} onClick={() => onChange([...headers, { name: '', value: '' }])}>
+      {headers.map((header, index) => {
+        const reference = (header.variableId ?? '') !== '';
+        return (
+          // Rows have no identity of their own until they are saved.
+          // eslint-disable-next-line react/no-array-index-key
+          <div className={compact ? `${styles.row} ${styles.rowCompact}` : styles.row} key={index}>
+            <input
+              className={styles.input}
+              type="text"
+              placeholder="Header name"
+              aria-label={`Header ${index + 1} name`}
+              value={header.name}
+              onChange={(event) => update(index, { name: event.target.value })}
+            />
+
+            {variables !== undefined && (
+              <div className={styles.modeSwitch} role="group" aria-label={`Header ${index + 1} source`}>
+                {SOURCES.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className={
+                      (option === 'REFERENCE') === reference
+                        ? `${styles.modeOption} ${styles.modeOptionOn}`
+                        : styles.modeOption
+                    }
+                    aria-pressed={(option === 'REFERENCE') === reference}
+                    /*
+                     * Switching clears the other side rather than keeping it
+                     * warm. A row that held both would be a row nobody could
+                     * say what it sends, and the server refuses one anyway.
+                     */
+                    onClick={() =>
+                      update(index, option === 'REFERENCE' ? { value: '', variableId: '' } : { variableId: null })
+                    }
+                  >
+                    {option === 'VALUE' ? 'Value' : 'Reference'}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {reference ? (
+              <div className={styles.reference}>
+                <FieldPicker
+                  options={options}
+                  value={header.variableId ?? ''}
+                  label={`Header ${index + 1} variable`}
+                  labels={VARIABLE_LABELS}
+                  onChange={(option) => update(index, { variableId: option.expression, value: '' })}
+                />
+              </div>
+            ) : (
+              <input
+                className={styles.input}
+                type="text"
+                placeholder="Value"
+                aria-label={`Header ${index + 1} value`}
+                value={header.value}
+                onChange={(event) => update(index, { value: event.target.value })}
+              />
+            )}
+
+            <button
+              type="button"
+              className={styles.remove}
+              onClick={() => onChange(headers.filter((_, at) => at !== index))}
+              aria-label={`Remove header ${index + 1}`}
+              title="Remove header"
+            >
+              <img src={trashIcon} alt="" width={16} height={16} />
+            </button>
+          </div>
+        );
+      })}
+
+      <button
+        type="button"
+        className={styles.add}
+        onClick={() => onChange([...headers, { name: '', value: '', variableId: null }])}
+      >
         <img src={plusIcon} alt="" width={16} height={16} />
         Add Header
       </button>
     </div>
   );
 }
+
+/** Typed in, or read from one of the workspace's variables. Two states, so a switch. */
+const SOURCES = ['VALUE', 'REFERENCE'] as const;
+
+/**
+ * What the picker says when it has nothing, and when what it holds is gone.
+ *
+ * "No longer in this workspace" rather than a blank, because a header pointing
+ * at a variable somebody deleted is a request that will fail, and the row is
+ * where that is worth knowing.
+ */
+const VARIABLE_LABELS: FieldPickerLabels = {
+  empty: 'This workspace holds no variables',
+  search: 'Search variables…',
+  none: 'Select a variable…',
+  noMatch: 'No variable matches',
+  gone: 'no longer in this workspace',
+};
+
+/** Re-exported so the literal-only callers keep the type they were written against. */
+export type { HttpHeader };

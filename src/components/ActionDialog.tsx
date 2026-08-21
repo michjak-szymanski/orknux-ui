@@ -15,6 +15,7 @@ import {
 } from '../api/actions';
 import type {
   Action,
+  ActionHeaderInput,
   ActionSubtype,
   ActionType,
   ArgumentMapping,
@@ -33,11 +34,15 @@ import {
 import type { WorkspaceFunction } from '../api/functions';
 import { fetchWorkspaceConnections } from '../api/integrations';
 import type { WorkspaceConnection } from '../api/integrations';
+import { fetchVariables } from '../api/variables';
+import type { Variable } from '../api/variables';
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
 import { CatalogueNote, useCatalogue } from './Catalogue';
 import { ConditionDialog } from './ConditionDialog';
 import { DefinitionPicker } from './DefinitionPicker';
 import { FieldHint } from './FieldHint';
+import { HeaderRowsEditor } from './HeaderRowsEditor';
+import type { HeaderRow } from './HeaderRowsEditor';
 import { IconField } from './IconField';
 import { OpenDefinitionIcon } from './OpenDefinitionIcon';
 import { PanelClose, panelEscape } from './PanelClose';
@@ -62,6 +67,50 @@ export interface ActionDialogProps {
 }
 
 const FUNCTION_PAGE_SIZE = 100;
+
+/**
+ * How many of the workspace's variables a header may be pointed at.
+ *
+ * The same number the plugins page asks for, and for the same reason: the picker
+ * searches what it was handed rather than the server, so a workspace holding
+ * more than this would have variables the search could not find.
+ */
+const VARIABLE_PAGE_SIZE = 500;
+
+/**
+ * The rows on their way to the server: named ones only, and one source each.
+ *
+ * A row with no name is what Add leaves behind when somebody changes their mind,
+ * and every other row builder here drops those on save too. The source is
+ * decided by whether a variable was chosen, so a row half-switched - Reference
+ * pressed, nothing picked yet - goes as the empty literal it looks like rather
+ * than as a reference to nothing, which the server would refuse.
+ */
+/**
+ * The stored headers as rows the editor can hold.
+ *
+ * A reference arrives with no value - that is the point of it - and the editor's
+ * inputs are controlled, so the empty string stands in for the value it does not
+ * have and will never be sent for a row that names a variable.
+ */
+function loadedRows(action: Action | null): HeaderRow[] {
+  return (action?.headerRows ?? []).map((header) => ({
+    name: header.name,
+    value: header.value ?? '',
+    variableId: header.variableId,
+    variableName: header.variableName,
+  }));
+}
+
+function sentRows(rows: HeaderRow[]): ActionHeaderInput[] {
+  return rows
+    .filter((row) => row.name.trim() !== '')
+    .map((row) =>
+      (row.variableId ?? '') === ''
+        ? { name: row.name.trim(), value: row.value }
+        : { name: row.name.trim(), variableId: row.variableId },
+    );
+}
 
 /*
  * The rows that make a definition instead of choosing one.
@@ -102,7 +151,27 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
   const [emailReplyTo, setEmailReplyTo] = useState('');
   const [url, setUrl] = useState('');
   const [method, setMethod] = useState('GET');
+  /**
+   * The headers as rows, which is the only way this form edits them.
+   *
+   * They used to be a JSON textarea, which put two problems on one control: a
+   * missing comma was an action that failed when it ran, and a bearer token had
+   * nowhere to go but into the text - unencrypted, in a column that is not a
+   * credential column, legible to anybody who can open the action. A row that
+   * names one of the workspace's variables is the answer to the second, and it
+   * only exists once the value is a field rather than a fragment of JSON.
+   */
+  const [headerRows, setHeaderRows] = useState<HeaderRow[]>([]);
+  /**
+   * The stored text, and whether anybody could read it as rows.
+   *
+   * False is an action whose headers are a blob - truncated, smart-quoted, half
+   * pasted. Taking the only editor away from one of those would leave somebody
+   * looking at a broken action with no way to mend it, so the textarea comes
+   * back for exactly that case and goes again as soon as the text parses.
+   */
   const [headers, setHeaders] = useState('');
+  const [headersReadable, setHeadersReadable] = useState(true);
   const [functionId, setFunctionId] = useState('');
   /**
    * What to call the function this action is about to bring into existence.
@@ -154,6 +223,8 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
       setUrl(action?.url ?? '');
       setMethod(action?.method ?? 'GET');
       setHeaders(action?.headers ?? '');
+      setHeaderRows(loadedRows(action));
+      setHeadersReadable(action?.headersReadable ?? true);
       setFunctionId(action?.functionId ?? '');
       setNewFunctionName(NEW_FUNCTION_NAME);
       setMappings(action?.mappings ?? []);
@@ -202,10 +273,23 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
     [open, workspaceId],
     { skip: idle },
   );
+  /*
+   * The fourth, and only for a request: a header value may name one of these
+   * instead of holding a token, and nothing else in this form can. Asked for
+   * when the subtype is one, so opening a Send Email costs no query for a list
+   * it would never offer.
+   */
+  const variableCatalogue = useCatalogue<Variable>(
+    'variables',
+    async () => (await fetchVariables(workspaceId, { size: VARIABLE_PAGE_SIZE })).content,
+    [open, workspaceId, subtype],
+    { skip: idle || subtype !== 'HTTP_REQUEST' },
+  );
 
   const connections: WorkspaceConnection[] = connectionCatalogue.items;
   const functions: WorkspaceFunction[] = functionCatalogue.items;
   const conditions: Condition[] = conditionCatalogue.items;
+  const variables: Variable[] = variableCatalogue.items;
 
   /**
    * The connections a mail may go through, which is the mail servers and nothing
@@ -336,7 +420,14 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
         emailReplyTo: subtype === 'SEND_EMAIL' ? emailReplyTo : null,
         url: subtype === 'HTTP_REQUEST' ? url.trim() : null,
         method: subtype === 'HTTP_REQUEST' ? method : null,
-        headers: subtype === 'HTTP_REQUEST' ? headers : null,
+        /*
+         * Rows when the form was editing rows, the text when it was editing
+         * text. Only one of the two is ever sent, so mending a blob by hand
+         * cannot be undone by a set of rows the form never showed, and saving
+         * rows cannot quietly restore a blob nobody meant to keep.
+         */
+        headers: subtype === 'HTTP_REQUEST' && !headersReadable ? headers : null,
+        headerRows: subtype === 'HTTP_REQUEST' && headersReadable ? sentRows(headerRows) : undefined,
         functionId: subtype === 'FUNCTION' ? chosen : null,
         mappings: subtype === 'FUNCTION' ? mappings : [],
         conditionExpression: subtype === 'INLINE_CONDITION' ? conditionExpression.trim() : null,
@@ -767,19 +858,49 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                 </div>
               </div>
 
+              {/*
+                Rows, with a source per row - the connection dialog's builder and
+                the plugin parameters' switch, which both already existed. The
+                textarea it replaces asked somebody to type JSON by hand and gave
+                a bearer token nowhere to live but in the clear.
+
+                Unless nobody can read what is stored. Then the text itself is
+                offered back, because the row editor cannot show a blob and an
+                action nobody can mend is worse than a textarea.
+              */}
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="action-headers">
-                  Headers
-                </label>
-                <div className={`${styles.inputWrapper} ${styles.inputWrapperTall}`}>
-                  <textarea
-                    id="action-headers"
-                    className={`${styles.input} ${styles.textarea} ${styles.inputMono}`}
-                    placeholder={'{ "Authorization": "Bearer …" }'}
-                    value={headers}
-                    onChange={(event) => setHeaders(event.target.value)}
+                {headersReadable ? (
+                  <HeaderRowsEditor
+                    headers={headerRows}
+                    onChange={setHeaderRows}
+                    heading="Headers"
+                    variables={variables}
+                    compact
                   />
-                </div>
+                ) : (
+                  <>
+                    <span className={styles.labelRow}>
+                      <label className={styles.label} htmlFor="action-headers">
+                        Headers
+                      </label>
+                      <FieldHint label="Headers">
+                        What is stored for this action is not readable as JSON, so it sends no headers at all -
+                        which is what it has been doing. Correct it here and it becomes rows the next time this
+                        opens; empty it and the action sends none on purpose.
+                      </FieldHint>
+                    </span>
+                    <div className={`${styles.inputWrapper} ${styles.inputWrapperTall}`}>
+                      <textarea
+                        id="action-headers"
+                        className={`${styles.input} ${styles.textarea} ${styles.inputMono}`}
+                        placeholder={'{ "Authorization": "Bearer …" }'}
+                        value={headers}
+                        onChange={(event) => setHeaders(event.target.value)}
+                      />
+                    </div>
+                  </>
+                )}
+                <CatalogueNote catalogue={variableCatalogue} className={styles.fieldHint} />
               </div>
             </>
           )}

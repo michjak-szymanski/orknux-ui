@@ -60,7 +60,17 @@ export interface Action {
   emailReplyTo: string | null;
   url: string | null;
   method: string | null;
+  /**
+   * The headers as the column holds them: the JSON array rows are written as,
+   * or the JSON object an action saved before rows existed still holds.
+   *
+   * Read only to show it back when nobody can read it as rows. A row that reads
+   * a variable holds the variable's id here and never what the variable holds.
+   */
   headers: string | null;
+  headerRows: ActionHeader[];
+  /** Whether `headers` could be read as rows. False is a blob to mend by hand. */
+  headersReadable: boolean;
   functionId: string | null;
   functionName: string | null;
   mappings: ArgumentMapping[];
@@ -76,11 +86,25 @@ export interface Action {
   outputParams: ActionParam[];
 }
 
+/**
+ * One header an HTTP request action sends, and where its value comes from.
+ *
+ * Exactly one of `value` and `variableId` is set. A reference carries the
+ * variable's name so a form can say which one it reads; what the variable holds
+ * never crosses, which is the whole reason for having references at all.
+ */
+export interface ActionHeader {
+  name: string;
+  value: string | null;
+  variableId: string | null;
+  variableName: string | null;
+}
+
 const ACTION_FIELDS = `
   id workspaceId name type subtype subtypeLabel
   connectionId connectionName connectionAction content target targetName
   emailTo emailCc emailSubject emailReplyTo
-  url method headers
+  url method headers headersReadable headerRows { name value variableId variableName }
   functionId functionName mappings { argument expression }
   conditionExpression conditionId conditionName timeoutSeconds retryIntervalSeconds durationSeconds
   icon
@@ -136,6 +160,13 @@ export async function fetchWorkspaceActions(workspaceId: string, page: number, s
   return data.workspaceActions;
 }
 
+/** One header row on the way to the server: a name, and one of a value and a variable. */
+export interface ActionHeaderInput {
+  name: string;
+  value?: string | null;
+  variableId?: string | null;
+}
+
 export interface ActionInput {
   name: string;
   subtype: ActionSubtype;
@@ -150,7 +181,9 @@ export interface ActionInput {
   emailReplyTo?: string | null;
   url?: string | null;
   method?: string | null;
+  /** Sent only where the stored headers could not be read as rows; otherwise `headerRows` is. */
   headers?: string | null;
+  headerRows?: ActionHeaderInput[];
   functionId?: string | null;
   mappings?: ArgumentMapping[];
   conditionExpression?: string | null;
