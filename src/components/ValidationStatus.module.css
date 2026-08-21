@@ -1,0 +1,58 @@
+/*
+ * The Validate status, beside the button it is about.
+ *
+ * Its own file rather than four copies in four page modules, because the whole
+ * point of it is that the four read alike. A page that wants to move it moves
+ * the component; it does not get to restyle the sentence.
+ */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  /*
+   * It sits in a row of buttons and must not stretch to their height's worth of
+   * box, nor push them apart when the sentence is long: the sentence wraps
+   * nowhere and is allowed to shrink, and the buttons keep their size.
+   */
+  align-self: center;
+  min-width: 0;
+}
+
+.dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+}
+
+/* Nothing has been validated yet, so the dot claims nothing. */
+.dotIdle {
+  background: var(--color-text-muted);
+}
+
+.dotOk {
+  background: var(--color-success-solid);
+}
+
+.dotBad {
+  background: var(--color-danger-solid);
+}
+
+.text {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  /*
+   * One line, and the end of a long parser complaint gives way rather than
+   * pushing Save off the row. The whole of it is still readable: the same text
+   * is the element's title, and a refusal is repeated by the page's own error.
+   */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 46ch;
+}
+
+.textBad {
+  composes: text;
+  color: var(--color-danger);
+}

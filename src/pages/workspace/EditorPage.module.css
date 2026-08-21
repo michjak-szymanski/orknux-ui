@@ -618,31 +618,15 @@
   border-top: 1px solid var(--color-border);
 }
 
-.statusLeft {
-  display: flex;
-  align-items: center;
-  gap: var(--space-8);
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-}
-
-.indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-full);
-}
-
-/* Nothing has been checked yet, so the dot claims nothing. */
-.indicatorIdle {
-  background: var(--color-text-muted);
-}
-
-.indicatorOk {
-  background: var(--color-success-solid);
-}
-
-.indicatorBad {
-  background: var(--color-danger-solid);
+/*
+ * The footer with only the caret left in it.
+ *
+ * The Validate status used to share this row and has gone up beside the button
+ * that sets it, so what is left stays at the end it has always been at rather
+ * than sliding to the other one because it is now alone.
+ */
+.editorFooterEnd {
+  justify-content: flex-end;
 }
 
 .caret {

@@ -28,8 +28,11 @@ import { CodeDiff } from '../../components/CodeDiff';
 import { CodeEditor } from '../../components/CodeEditor';
 import type { CodeEditorHandle } from '../../components/CodeEditor';
 import { Loader } from '../../components/Loader';
+import { OpenDefinitionIcon } from '../../components/OpenDefinitionIcon';
 import { RevisionHistory } from '../../components/RevisionHistory';
 import { UnsavedWorkDialog } from '../../components/UnsavedWorkDialog';
+import { ValidationStatus } from '../../components/ValidationStatus';
+import type { Validation } from '../../components/ValidationStatus';
 import { useLeaveGuard } from '../../components/leaveGuard';
 import { compile, declareObjects } from '../../components/monaco';
 import { objectTypes } from '../../components/objectTypes';
@@ -81,7 +84,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
    * no longer exists. Both are worse than showing nothing: an indicator is only
    * worth having if it can be wrong.
    */
-  const [status, setStatus] = useState<{ ok: boolean; message: string } | null>(null);
+  const [status, setStatus] = useState<Validation | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -313,6 +316,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
       setStatus({
         ok: true,
         message: moved ? 'The suggested change is saved, parameters and all.' : 'The suggested change is saved.',
+        whole: true,
       });
       settleOffer('I accepted the change and it is saved.');
     } catch (cause) {
@@ -341,7 +345,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
       const checked = await validateToolSource(workspaceId, emitted.javascript);
       setStatus(
         checked.valid
-          ? { ok: true, message: 'No errors' }
+          ? { ok: true, message: "the code compiles and the sandbox's parser accepts it" }
           : {
               ok: false,
               message:
@@ -351,7 +355,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
             },
       );
     } catch (cause) {
-      setStatus({ ok: false, message: cause instanceof Error ? cause.message : 'Could not validate.' });
+      setStatus({ ok: false, message: cause instanceof Error ? cause.message : 'Could not validate.', whole: true });
     }
   }
 
@@ -389,7 +393,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
         }),
       );
       setSaved(true);
-      setStatus({ ok: true, message: 'No errors' });
+      setStatus({ ok: true, message: "the code compiles and the sandbox's parser accepts it" });
       return true;
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : 'Could not save the tool.');
@@ -536,6 +540,22 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
             >
               <img src={wandIcon} alt="" width={16} height={16} />
             </button>
+            {/*
+              Beside the button it is about, not down in the footer where it
+              used to sit - and in the button's own word. See `ValidationStatus`.
+            */}
+            <ValidationStatus
+              subject="The code"
+              status={status}
+              saved={saved}
+              explains={
+                <>
+                  Validate compiles the TypeScript in the column and hands the JavaScript to the parser that will
+                  actually run it — the sandbox's, not the editor's. It answers whether this tool would load, and
+                  says which line stopped it if it would not. It does not call the tool.
+                </>
+              }
+            />
             <button type="button" className={styles.secondaryButton} onClick={() => void handleValidate()}>
               Validate
             </button>
@@ -629,14 +649,8 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                 )}
               </div>
 
-              <footer className={styles.editorFooter}>
-                <span className={styles.statusLeft}>
-                  <span
-                    className={`${styles.indicator} ${status === null ? styles.indicatorIdle : status.ok ? styles.indicatorOk : styles.indicatorBad}`}
-                    aria-hidden="true"
-                  />
-                  {status?.message ?? 'Not checked yet.'}
-                </span>
+              {/* Where the caret is, and nothing else; see the function editor. */}
+              <footer className={`${styles.editorFooter} ${styles.editorFooterEnd}`}>
                 <span className={styles.caret}>
                   Ln {caret.line}, Col {caret.column}
                 </span>
@@ -809,7 +823,17 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                                 title="Opens the object's definition in a new tab"
                                 aria-label={`Open definition of ${objectNameOf(param.objectId) ?? 'the object'} for ${param.name || `parameter ${index + 1}`}`}
                               >
-                                Open definition &#8599;
+                                {/*
+                                  The mark alone, like the ten other jumps to a
+                                  definition. This one kept the words and the
+                                  arrow long enough to become the only place in
+                                  the product still saying them - on a line that
+                                  also holds a select and an object's name, so
+                                  the words took the room the name needed. They
+                                  live on in the title and the aria-label, which
+                                  is what a pointer and a screen reader get.
+                                */}
+                                <OpenDefinitionIcon />
                               </Link>
                             )}
                           </div>

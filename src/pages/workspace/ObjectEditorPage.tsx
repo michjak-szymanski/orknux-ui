@@ -20,6 +20,8 @@ import type { DefinitionOption } from '../../components/DefinitionPicker';
 import { Loader } from '../../components/Loader';
 import { TrashIcon } from '../../components/TrashIcon';
 import { UnsavedWorkDialog } from '../../components/UnsavedWorkDialog';
+import { ValidationStatus } from '../../components/ValidationStatus';
+import type { Validation } from '../../components/ValidationStatus';
 import { useLeaveGuard } from '../../components/leaveGuard';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
@@ -67,26 +69,6 @@ function asProperty(row: Row): ObjectPropertyInput {
 }
 
 /**
- * What the last check found, or null when nothing has been checked.
- *
- * Null is a state of its own rather than an optimistic green, because the
- * footer used to open on `Schema compile healthy` before anything had been
- * asked: reassuring text that no check stood behind, and that stayed green
- * while the rows underneath it were edited into something the server would
- * refuse. The dot now only reports a round trip that examined these rows.
- */
-interface Status {
-  ok: boolean;
-  message: string;
-}
-
-/** Grey, green or red, in that order of confidence. */
-function indicatorTone(status: Status | null): string {
-  if (status === null) return styles.indicatorIdle;
-  return status.ok ? styles.indicatorOk : styles.indicatorBad;
-}
-
-/**
  * And back again, so a saved object reopens on what it was saved with.
  *
  * An array saved before this existed comes back as its element type with Many
@@ -126,7 +108,7 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
   const [rows, setRows] = useState<Row[]>([]);
   /** Everything nameable, so a property can point at another shape. */
   const [others, setOthers] = useState<WorkflowObject[]>([]);
-  const [status, setStatus] = useState<Status | null>(null);
+  const [status, setStatus] = useState<Validation | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -194,9 +176,13 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
   async function handleValidate() {
     try {
       const checked = await validateObject(workspaceId, rows.map(asProperty));
-      setStatus({ ok: checked.valid, message: checked.message });
+      setStatus(
+        checked.valid
+          ? { ok: true, message: "every property's type resolves" }
+          : { ok: false, message: checked.message },
+      );
     } catch (cause) {
-      setStatus({ ok: false, message: cause instanceof Error ? cause.message : 'Could not check the schema.' });
+      setStatus({ ok: false, message: cause instanceof Error ? cause.message : 'Could not check the schema.', whole: true });
     }
   }
 
@@ -222,7 +208,7 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
       // A save the server accepted has already been through the rules Validate
       // asks for - it resolves every reference on the way in and refuses the
       // rest - so this green stands on a round trip rather than on hope.
-      setStatus({ ok: true, message: 'Saved, so every type resolves.' });
+      setStatus({ ok: true, message: "every property's type resolves" });
       return true;
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : 'Could not save the object.');
@@ -309,6 +295,22 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
           </div>
           <div className={styles.actions}>
             {saved && saveError === null && <span className={styles.savedInline}>Saved.</span>}
+            {/*
+              Beside the button it is about. It used to sit in the footer at the
+              far end of a row from "+ Add Property", a control it has nothing
+              to do with - see `ValidationStatus`.
+            */}
+            <ValidationStatus
+              subject="The properties"
+              status={status}
+              explains={
+                <>
+                  Validate resolves every property's type against this workspace: the built-in ones, and the
+                  objects a property names. It answers whether this shape could be stored and used, and says which
+                  property is the problem if it could not.
+                </>
+              }
+            />
             <button type="button" className={styles.secondaryButton} onClick={() => void handleValidate()}>
               Validate
             </button>
@@ -474,10 +476,6 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
                 >
                   + Add Property
                 </button>
-                <span className={styles.statusLeft}>
-                  <span className={`${styles.indicator} ${indicatorTone(status)}`} aria-hidden="true" />
-                  {status?.message ?? 'Not checked yet.'}
-                </span>
               </footer>
             </section>
 

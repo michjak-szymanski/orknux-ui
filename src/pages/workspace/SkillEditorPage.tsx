@@ -19,6 +19,8 @@ import { BackLink } from '../../components/BackLink';
 import { Loader } from '../../components/Loader';
 import { RevisionHistory } from '../../components/RevisionHistory';
 import { UnsavedWorkDialog } from '../../components/UnsavedWorkDialog';
+import { ValidationStatus } from '../../components/ValidationStatus';
+import type { Validation } from '../../components/ValidationStatus';
 import { useLeaveGuard } from '../../components/leaveGuard';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
@@ -74,7 +76,7 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
    * no longer exists. Both are worse than showing nothing: an indicator is only
    * worth having if it can be wrong.
    */
-  const [status, setStatus] = useState<{ ok: boolean; message: string } | null>(null);
+  const [status, setStatus] = useState<Validation | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -116,7 +118,7 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
       const checked = await validateSkillContent(workspaceId, content);
       setStatus(
         checked.valid
-          ? { ok: true, message: 'Formatting valid' }
+          ? { ok: true, message: 'the frontmatter and the body are well formed' }
           : {
               ok: false,
               message:
@@ -126,7 +128,7 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
             },
       );
     } catch (cause) {
-      setStatus({ ok: false, message: cause instanceof Error ? cause.message : 'Could not validate.' });
+      setStatus({ ok: false, message: cause instanceof Error ? cause.message : 'Could not validate.', whole: true });
     }
   }
 
@@ -156,7 +158,7 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
         }),
       );
       setSaved(true);
-      setStatus({ ok: true, message: 'Formatting valid' });
+      setStatus({ ok: true, message: 'the frontmatter and the body are well formed' });
       return true;
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : 'Could not save the skill.');
@@ -283,6 +285,21 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
           <div className={styles.actions}>
             {/* Beside the button that caused it, where somebody is already looking. */}
             {saved && saveError === null && <span className={styles.savedInline}>Saved.</span>}
+            {/*
+              Beside the button it is about, not down in the footer where it
+              used to sit - and in the button's own word. See `ValidationStatus`.
+            */}
+            <ValidationStatus
+              subject="The definition"
+              status={status}
+              explains={
+                <>
+                  Validate reads this definition the way the runtime will: the frontmatter block at the top — the
+                  fence, and the <code>name</code> and <code>description</code> in it — and the prose under it. It
+                  answers whether this skill would load, and says which line stopped it if it would not.
+                </>
+              }
+            />
             <button type="button" className={styles.secondaryButton} onClick={() => void handleValidate()}>
               Validate
             </button>
@@ -353,14 +370,8 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
                 />
               </div>
 
-              <footer className={styles.editorFooter}>
-                <span className={styles.statusLeft}>
-                  <span
-                    className={`${styles.indicator} ${status === null ? styles.indicatorIdle : status.ok ? styles.indicatorOk : styles.indicatorBad}`}
-                    aria-hidden="true"
-                  />
-                  {status?.message ?? 'Not checked yet.'}
-                </span>
+              {/* What the column is written in, and nothing else; see the function editor. */}
+              <footer className={`${styles.editorFooter} ${styles.editorFooterEnd}`}>
                 <span className={styles.caret}>Markdown</span>
               </footer>
             </section>

@@ -324,6 +324,21 @@ export const TESTS = [
      */
   },
   {
+    name: 'validate-status-check',
+    what: 'the Validate status says what it checked, beside the button that checks it',
+    needs: ['workspace'],
+    /*
+     * The status read "Not checked yet." in a footer, and the owner asked what
+     * it meant. It is measured on all four editors that have a Validate button,
+     * in all three of its states, and the distance to the button is measured in
+     * pixels rather than read off the markup - "beside" is a distance. The
+     * function editor's two panel paragraphs, moved behind a (?) on their
+     * headings in the same pass, are asserted here too, along with the
+     * "Open Variables" link that stayed in the open because a (?) that swallows
+     * a navigation control makes the control unreachable.
+     */
+  },
+  {
     name: 'split-check',
     what: "the function editor's split drags, survives a reload, and remeasures Monaco",
     needs: ['workspace'],

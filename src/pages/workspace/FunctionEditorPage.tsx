@@ -32,8 +32,9 @@ import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
 import { CodeDiff } from '../../components/CodeDiff';
 import { CodeEditor } from '../../components/CodeEditor';
+import { FieldHint } from '../../components/FieldHint';
 import type { CodeEditorHandle } from '../../components/CodeEditor';
-import { LinkIcon } from '../../components/LinkIcon';
+import { OpenDefinitionIcon } from '../../components/OpenDefinitionIcon';
 import { Loader } from '../../components/Loader';
 import { RevisionHistory } from '../../components/RevisionHistory';
 import { compile, declareObjects } from '../../components/monaco';
@@ -43,6 +44,8 @@ import type { WorkflowObject } from '../../api/objects';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { TrashIcon } from '../../components/TrashIcon';
 import { UnsavedWorkDialog } from '../../components/UnsavedWorkDialog';
+import { ValidationStatus } from '../../components/ValidationStatus';
+import type { Validation } from '../../components/ValidationStatus';
 import { useLeaveGuard } from '../../components/leaveGuard';
 import { matches, useFormatShortcut, useSaveShortcut } from '../../session/shortcut';
 import { shellUser } from '../../session/user';
@@ -220,7 +223,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
    * no longer exists. Both are worse than showing nothing: an indicator is only
    * worth having if it can be wrong.
    */
-  const [status, setStatus] = useState<{ ok: boolean; message: string } | null>(null);
+  const [status, setStatus] = useState<Validation | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   /**
@@ -549,6 +552,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
       setStatus({
         ok: true,
         message: moved ? 'The suggested change is saved, parameters and all.' : 'The suggested change is saved.',
+        whole: true,
       });
       settleOffer(
         moved
@@ -591,7 +595,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
           setParams(found.params);
           setExternals(found.externals.map((external) => external.variableId));
           setSaved(false);
-          setStatus({ ok: true, message: 'Reloaded — the change was accepted.' });
+          setStatus({ ok: true, message: 'Reloaded — the change was accepted.', whole: true });
         })
         .catch(() => undefined);
     }
@@ -900,7 +904,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
       const checked = await validateFunctionSource(workspaceId, emitted.javascript);
       setStatus(
         checked.valid
-          ? { ok: true, message: 'No errors' }
+          ? { ok: true, message: "the code compiles and the sandbox's parser accepts it" }
           : {
               ok: false,
               message:
@@ -910,7 +914,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
             },
       );
     } catch (cause) {
-      setStatus({ ok: false, message: cause instanceof Error ? cause.message : 'Could not validate.' });
+      setStatus({ ok: false, message: cause instanceof Error ? cause.message : 'Could not validate.', whole: true });
     }
   }
 
@@ -952,7 +956,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
         ? await createFunction({ workspaceId, ...details })
         : await updateFunction(functionId, details);
       setFn(stored);
-      setStatus({ ok: true, message: 'No errors' });
+      setStatus({ ok: true, message: "the code compiles and the sandbox's parser accepts it" });
       setSaved(true);
       /*
        * The same page, now with somewhere to go back to. Replaced rather than
@@ -967,7 +971,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
       }
       return true;
     } catch (cause) {
-      setStatus({ ok: false, message: cause instanceof Error ? cause.message : 'Could not save.' });
+      setStatus({ ok: false, message: cause instanceof Error ? cause.message : 'Could not save.', whole: true });
       return false;
     } finally {
       setSaving(false);
@@ -979,7 +983,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
       await deleteFunction(functionId);
       navigate(`/workspace/${workspaceId}/functions`);
     } catch (cause) {
-      setStatus({ ok: false, message: cause instanceof Error ? cause.message : 'Could not delete.' });
+      setStatus({ ok: false, message: cause instanceof Error ? cause.message : 'Could not delete.', whole: true });
     }
   }
 
@@ -1061,6 +1065,23 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                     Wrap in Condition
                   </button>
                 )}
+                {/*
+                  Beside the button it is about, not down in the footer where it
+                  used to sit - and in the button's own word. See
+                  `ValidationStatus`.
+                */}
+                <ValidationStatus
+                  subject="The code"
+                  status={status}
+                  saved={saved}
+                  explains={
+                    <>
+                      Validate compiles the TypeScript in the column and hands the JavaScript to the parser that
+                      will actually run it — the sandbox's, not the editor's. It answers whether this function
+                      would load, and says which line stopped it if it would not. It does not run the function.
+                    </>
+                  }
+                />
                 <button type="button" className={styles.ghostButton} onClick={handleValidate}>
                   Validate
                 </button>
@@ -1188,16 +1209,13 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                 )}
               </div>
 
+              {/*
+                Where the caret is, and nothing else. The Validate status used
+                to share this row and has gone up beside the button that sets
+                it; what is left is the one thing that really is about the
+                column above it.
+              */}
               <footer className={styles.editorFooter}>
-                <span className={styles.statusLeft}>
-                  <span
-                    className={`${styles.indicator} ${status === null ? styles.indicatorIdle : status.ok ? styles.indicatorOk : styles.indicatorBad}`}
-                    aria-hidden="true"
-                  />
-                  <span className={status?.ok === false ? styles.statusTextBad : styles.statusText}>
-                    {saved && status?.ok === true ? 'Saved. No errors' : (status?.message ?? 'Not checked yet.')}
-                  </span>
-                </span>
                 <span className={styles.caret}>
                   Ln {caret.line}, Col {caret.column}
                 </span>
@@ -1433,15 +1451,14 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                             aria-label={`Open definition of ${objectNameOf(param.objectId) ?? 'the object'} for ${param.name || `parameter ${index + 1}`}`}
                           >
                             {/*
-                              The icon alone. "Open definition ↗" was two words
+                              The mark alone. "Open definition ↗" was two words
                               and an arrow on a line that also has to hold a
                               select and an object's name, and it took the room
-                              the name needed. What it does is the ordinary
-                              meaning of a link, so the link mark says it; the
+                              the name needed. The mark says what it does; the
                               words live on in the title and the aria-label,
                               which is what a pointer and a screen reader get.
                             */}
-                            <LinkIcon />
+                            <OpenDefinitionIcon />
                           </Link>
                         )}
                       </div>
@@ -1465,7 +1482,14 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                 script reads them as ordinary arguments after its own.
               */}
               <section className={styles.panelSection}>
-                <h2 className={styles.panelHeading}>External Parameters</h2>
+                <span className={styles.headingWithHint}>
+                  <h2 className={styles.panelHeading}>External Parameters</h2>
+                  <FieldHint label="External Parameters">
+                    The workspace’s values, handed to this function after its own parameters. Their values are
+                    never shown here — which is why a variable that is set looks empty on this page: what is
+                    chosen is the name, and only the sandbox ever sees what is behind it.
+                  </FieldHint>
+                </span>
                 <div className={styles.paramList}>
                   {externals.map((variableId, index) => {
                     const held = variables.find((candidate) => candidate.id === variableId);
@@ -1544,10 +1568,22 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                     for a navigation away, so the same tab would discard the
                     code being written without saying so.
                   */}
+                  {/*
+                    What is left in the open, once the explanation has moved
+                    behind the (?) on the heading: the state of the thing being
+                    looked at - there are no variables to choose from - and the
+                    way to the page that fixes that.
+
+                    The link does not move. A (?) that swallows a navigation
+                    control makes the control unreachable, which is worse than
+                    the paragraph it came from; and this is the one somebody
+                    reaches for in the middle of writing a function that wants a
+                    variable that does not exist yet.
+                  */}
                   <p className={styles.paramHint}>
                     {variables.length === 0
-                      ? 'Define a variable first; externals are chosen from what the workspace keeps.'
-                      : 'The workspace\u2019s values, handed to this function after its own parameters. Their values are never shown here.'}{' '}
+                      ? 'Define a variable first; externals are chosen from what the workspace keeps. '
+                      : ''}
                     <a
                       className={styles.shortcutLink}
                       href={`/workspace/${workspaceId}/variables`}
@@ -1561,7 +1597,13 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
               </section>
 
               <section className={styles.panelSection}>
-                <h2 className={styles.panelHeading}>Return Type</h2>
+                <span className={styles.headingWithHint}>
+                  <h2 className={styles.panelHeading}>Return Type</h2>
+                  <FieldHint label="Return Type">
+                    An object names a shape this workspace defines, and the editor checks the code against it. Map
+                    is for a structure with no defined shape.
+                  </FieldHint>
+                </span>
                 <div className={styles.selectWrapper}>
                   <select
                     className={`${styles.input} ${styles.inputMono}`}
@@ -1615,36 +1657,39 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                         title="Opens the object's definition in a new tab"
                         aria-label={`Open definition of ${objectNameOf(returnObjectId) ?? 'the returned object'}`}
                       >
-                        <LinkIcon />
+                        <OpenDefinitionIcon />
                       </Link>
                     )}
                   </div>
                 )}
 
-                <p className={styles.paramHint}>
-                  {objects.length === 0 ? (
-                    <>
-                      {'An object type names one of this workspace’s objects; there are none yet, so define one first or use map.'}{' '}
-                      {/*
-                        Only in the empty case, and for the reason the Variables link
-                        exists: there is no definition to jump to yet, and the sentence
-                        that says to define one otherwise leaves somebody to find the
-                        page themselves. Once objects exist, the way out is the
-                        "Open definition" link beside the select, not a second one here.
-                      */}
-                      <Link
-                        className={styles.shortcutLink}
-                        to={`/workspace/${workspaceId}/objects`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Open Objects
-                      </Link>
-                    </>
-                  ) : (
-                    'An object names a shape this workspace defines, and the editor checks the code against it. Map is for a structure with no defined shape.'
-                  )}
-                </p>
+                {/*
+                  What the workspace has, which is a state and not an
+                  explanation: what an object type *means* has gone behind the
+                  (?) on the heading, and this says only that there are none to
+                  name yet.
+
+                  The link stays in the open with it, and only in this case, for
+                  the reason the Variables one does: there is no definition to
+                  jump to yet, and a sentence that says to define one otherwise
+                  leaves somebody to find the page themselves. Once objects
+                  exist, the way out is the "Open definition" link beside the
+                  select, not a second one here - and this paragraph is gone
+                  altogether.
+                */}
+                {objects.length === 0 && (
+                  <p className={styles.paramHint}>
+                    {'There are no objects in this workspace yet, so define one first or use map.'}{' '}
+                    <Link
+                      className={styles.shortcutLink}
+                      to={`/workspace/${workspaceId}/objects`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open Objects
+                    </Link>
+                  </p>
+                )}
               </section>
 
               <hr className={styles.divider} />

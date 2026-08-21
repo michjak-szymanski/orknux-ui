@@ -357,39 +357,14 @@
 .editorFooter {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  /*
+   * The caret is the only thing left in this row - the Validate status has gone
+   * up beside the button that sets it - so it stays at the end it has always
+   * been at, rather than sliding to the other one because it is now alone.
+   */
+  justify-content: flex-end;
   padding: var(--space-8) var(--space-16);
   border-top: 1px solid var(--color-border);
-}
-
-.statusLeft {
-  display: flex;
-  align-items: center;
-  gap: var(--space-8);
-}
-
-.indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.indicatorOk {
-  background: var(--color-success-solid);
-}
-
-.indicatorBad {
-  background: var(--color-danger-solid);
-}
-
-.statusText {
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-}
-
-.statusTextBad {
-  font-size: var(--text-sm);
-  color: var(--color-danger);
 }
 
 .caret {
@@ -442,6 +417,20 @@
   letter-spacing: 0.5px;
   text-transform: uppercase;
   color: var(--color-text-muted);
+}
+
+/*
+ * A heading with its (?) beside it.
+ *
+ * A (?) on a heading explains the group, which is what these two are: what an
+ * external parameter is, and what choosing an object as the return type means.
+ * Beside the words rather than after the whole row, so it reads as part of the
+ * heading and not as a control belonging to the field below.
+ */
+.headingWithHint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
 }
 
 .field {
