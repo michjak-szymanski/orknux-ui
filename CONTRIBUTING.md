@@ -117,9 +117,15 @@ keeping.
 - Match the surrounding code. The comment density here is deliberate: comments
   explain *why*, and a change that removes the reasoning is a change that will
   be made again wrongly in six months.
-- Typecheck before opening a pull request: `npm run typecheck`. The dev server
-  runs in a container, so it is `docker exec orknux-ui-dev-1 npx tsc --noEmit`
-  when you are working that way.
+- Typecheck before opening a pull request: `npm run typecheck`, which is
+  `tsc -b`. The dev server runs in a container, so it is
+  `docker exec orknux-ui-dev-1 npx tsc -b` when you are working that way.
+
+  Not `tsc --noEmit`, which this file used to say. `tsconfig.json` here is a
+  solution-style config - `"files": []` and two references - so `--noEmit`
+  against it checks nothing at all and exits 0, every time, however broken the
+  code is. It is a green tick that means nothing, which is worse than no tick.
+  `AGENTS.md` beside this has said so all along and this line disagreed with it.
 - A new page goes in `navigation.ts`, which the router and the command palette
   both read. That list is why a page cannot exist without an answer to "how is
   this found".
