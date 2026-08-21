@@ -111,14 +111,30 @@ import { join } from 'node:path';
  * explanation of a control. A `fieldNote` under an input is a different thing
  * and is not on this list.
  */
+/**
+ * How many sentences an excuse of the subtitle family may cover.
+ *
+ * The export dialog was reported with four lines of prose under its title. It
+ * had not been missed - it was excused, by `dialogMessage` being on this list
+ * as "the line under a dialog title". The class was right about what it is for
+ * and said nothing about how much of it there may be, so a paragraph wearing it
+ * inherited a subtitle's exemption.
+ *
+ * A line is excused because it names the thing, and naming takes a sentence or
+ * two. Past that it is teaching, whatever it is wearing, and teaching goes
+ * behind the (?) beside the heading it belongs to.
+ */
+const A_LINE = 2;
+
 const NOT_A_FIELD_NOTE = [
   {
     class: 'subtitle',
+    upTo: A_LINE,
     why: 'the line under a page heading. It names the page, is drawn above everything rather than under a control, and is not a second icon convention - there is no affordance to hide it behind',
   },
-  { class: 'cardSubtitle', why: 'the same line, under a card heading rather than a page one' },
-  { class: 'panelSubtitle', why: 'the same line, at the top of a side panel' },
-  { class: 'dialogMessage', why: 'the line under a dialog title, saying what the dialog is for' },
+  { class: 'cardSubtitle', upTo: A_LINE, why: 'the same line, under a card heading rather than a page one' },
+  { class: 'panelSubtitle', upTo: A_LINE, why: 'the same line, at the top of a side panel' },
+  { class: 'dialogMessage', upTo: A_LINE, why: 'the line under a dialog title, saying what the dialog is for' },
   {
     class: 'dangerMessage',
     why: 'the body of a Danger Zone card, whose subject is the button beside it. There is no field here to put a (?) on, and the card exists to be read',
@@ -653,7 +669,9 @@ function ownText(src, from, to) {
 /** Every block of prose the interface prints in the open, out of the source. */
 export function proseInSource() {
   const muted = mutedClasses();
-  const excused = new Set(NOT_A_FIELD_NOTE.map((one) => one.class));
+  const excused = new Map(NOT_A_FIELD_NOTE.map((one) => [one.class, one.upTo ?? Infinity]));
+  /* Sentence ends, not full stops: "3.5s" and "e.g." are not two sentences. */
+  const sentences = (words) => (words.match(/[.!?](\s|$)/g) ?? []).length || 1;
   const found = [];
   for (const path of under('src', '.tsx')) {
     const src = readFileSync(path, 'utf8');
@@ -668,7 +686,7 @@ export function proseInSource() {
       }
       const [after, selfClosing] = pastOpeningTag(src, at);
       const cls = /className=\{[^{}]*styles\.([A-Za-z0-9_]+)/.exec(src.slice(at, after))?.[1] ?? null;
-      if (cls === null || selfClosing || !muted.has(cls) || excused.has(cls)) {
+      if (cls === null || selfClosing || !muted.has(cls)) {
         i = at + 1;
         continue;
       }
@@ -676,6 +694,15 @@ export function proseInSource() {
       const closeAt = src.lastIndexOf(`</${name}`, end);
       const runs = ownText(src, after, closeAt === -1 ? end : closeAt);
       const longest = runs.reduce((a, b) => (b.split(' ').length > a.split(' ').length ? b : a), '');
+      /*
+       * The excuse is asked after the words are read, not before. A class on
+       * this list is excused for being a line; one carrying a paragraph is not
+       * the thing the excuse was written about.
+       */
+      if (excused.has(cls) && sentences(longest) <= excused.get(cls)) {
+        i = at + 1;
+        continue;
+      }
       if (longest !== '' && longest.split(' ').length >= WORDS) {
         found.push({
           file: slashes(path),

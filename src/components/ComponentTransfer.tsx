@@ -31,6 +31,7 @@ import {
 import chevronDownIcon from '../assets/chevron-down-12.svg';
 import downloadIcon from '../assets/download.svg';
 import layersIcon from '../assets/layers.svg';
+import { FieldHint } from './FieldHint';
 import dialogStyles from './Dialog.module.css';
 import styles from './ComponentTransfer.module.css';
 
@@ -151,14 +152,16 @@ export function ExportComponentDialog({ open, workspaceId, kind, id, name, onClo
     <dialog ref={dialogRef} className={dialogStyles.dialog} onCancel={onClose} onClose={onClose}>
       <div className={dialogStyles.body}>
         <header className={dialogStyles.header}>
-          <h2 className={dialogStyles.title}>Export {name}</h2>
+          <span className={dialogStyles.titleRow}>
+            <h2 className={dialogStyles.title}>Export {name}</h2>
+            <FieldHint label="Export">
+              A JSON file you can import into another workspace. Nothing secret travels: a variable this
+              is handed is named in the file, and the workspace it lands in supplies its own value. So is
+              a model, a connection or an MCP server it points at — each of those is kept beside a
+              credential, and the workspace it lands in says which of its own the name means.
+            </FieldHint>
+          </span>
         </header>
-        <p className={dialogStyles.dialogMessage}>
-          A JSON file you can import into another workspace. Nothing secret travels: a variable this is
-          handed is named in the file, and the workspace it lands in supplies its own value. So is a model,
-          a connection or an MCP server it points at — each of those is kept beside a credential, and the
-          workspace it lands in says which of its own the name means.
-        </p>
 
         <div className={styles.choices}>
           <label className={`${styles.choice} ${depth === 'DEEP' ? styles.choiceSelected : ''}`}>
@@ -861,13 +864,15 @@ function TemplatePicker({ open, templates, error, onChoose, onClose }: TemplateP
     >
       <div className={dialogStyles.body}>
         <header className={dialogStyles.header}>
-          <h2 className={dialogStyles.title}>Use a template</h2>
+          <span className={dialogStyles.titleRow}>
+            <h2 className={dialogStyles.title}>Use a template</h2>
+            <FieldHint label="Use a template">
+              Templates are published for the whole installation. Each holds a copy taken when it was
+              published — it does not follow whatever it was made from, so what arrives is what was there
+              that day. Nothing already here is changed: a name that is taken is renamed.
+            </FieldHint>
+          </span>
         </header>
-        <p className={dialogStyles.dialogMessage}>
-          Templates are published for the whole installation. Each holds a copy taken when it was
-          published — it does not follow whatever it was made from, so what arrives is what was there
-          that day. Nothing already here is changed: a name that is taken is renamed.
-        </p>
 
         {templates === null && error === null && <p className={dialogStyles.dialogMessage}>Loading…</p>}
 
@@ -1018,13 +1023,15 @@ function SaveAsTemplateDialog({ open, workspaceId, kind, id, name, onClose }: Sa
     <dialog ref={dialogRef} className={dialogStyles.dialog} onCancel={onClose} onClose={onClose}>
       <div className={dialogStyles.body}>
         <header className={dialogStyles.header}>
-          <h2 className={dialogStyles.title}>Save {name} as a template</h2>
+          <span className={dialogStyles.titleRow}>
+            <h2 className={dialogStyles.title}>Save {name} as a template</h2>
+            <FieldHint label="Save as a template">
+              Every workspace on this installation is offered it. It stores a copy taken now: editing{' '}
+              {name} afterwards does not change the template, and replacing its file on the Templates page
+              is what brings it up to date.
+            </FieldHint>
+          </span>
         </header>
-        <p className={dialogStyles.dialogMessage}>
-          Every workspace on this installation is offered it. It stores a copy taken now: editing {name}{' '}
-          afterwards does not change the template, and replacing its file on the Templates page is what
-          brings it up to date.
-        </p>
 
         {done !== null ? (
           <p className={dialogStyles.dialogMessage}>

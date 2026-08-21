@@ -254,6 +254,21 @@ export const TESTS = [
      */
   },
 
+  {
+    name: 'row-action-check',
+    what: 'the square at the end of a row answers the pointer, and alike on every page',
+    needs: ['workspace'],
+    /*
+     * Reported as a screenshot of three buttons on one row: two did nothing
+     * under the pointer and the third turned green. Underneath were sixteen
+     * copies of `.rowAction` holding five different answers to `:hover`.
+     *
+     * It asserts in both places on purpose. The browser half proves the squares
+     * answer and answer alike; the source half proves no stylesheet has taken
+     * its copy back, which is the only thing that stops the thirteenth copy.
+     */
+  },
+
   // --- pages that are pages -------------------------------------------------
   {
     name: 'admin-width-check',

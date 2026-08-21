@@ -173,14 +173,7 @@
 }
 
 .rowAction {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: var(--color-surface-raised);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-6);
+  composes: rowAction from '../../styles/rowAction.module.css';
 }
 
 .notice {

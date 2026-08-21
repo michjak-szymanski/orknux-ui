@@ -124,12 +124,14 @@ export function ProxyRuleDialog({ open, onClose, onSaved }: ProxyRuleDialogProps
     >
       <form className={styles.body} onSubmit={handleSubmit}>
         <header className={styles.header}>
-          <h2 className={styles.title}>{editing === null ? 'Add Proxy Rule' : 'Edit Proxy Rule'}</h2>
+          <span className={styles.titleRow}>
+            <h2 className={styles.title}>{editing === null ? 'Add Proxy Rule' : 'Edit Proxy Rule'}</h2>
+            <FieldHint label="Proxy rule">
+              Every request whose URL matches the pattern goes through this proxy. Everything else
+              carries on going out the way it does now.
+            </FieldHint>
+          </span>
         </header>
-        <p className={styles.dialogMessage}>
-          Every request whose URL matches the pattern goes through this proxy. Everything else
-          carries on going out the way it does now.
-        </p>
 
         <div className={styles.fields}>
           <div className={styles.field}>

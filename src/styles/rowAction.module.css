@@ -1,0 +1,52 @@
+/*
+ * The small square button at the end of a row: export, save as template, open
+ * settings, edit, remove.
+ *
+ * This file exists because there were sixteen of it. Twelve stylesheets each
+ * carried a byte-identical copy of the same 32px bordered square, and their
+ * hovers had drifted into five different answers - three with no hover at all,
+ * six lifting the border to muted, three to the brand green, two lifting the
+ * background, one doing background and opacity. On the functions page that
+ * showed as two buttons that did nothing under the pointer sitting beside a
+ * third that turned green, which is how it was reported.
+ *
+ * Copies do not drift because anybody decided they should. They drift because
+ * the next person adds a rule to the file in front of them, and there is no
+ * file in front of them that is the button. This is that file.
+ *
+ * The hover is `--color-text-muted` on the border: it was the majority answer,
+ * and it is the only one that works whatever the base is. A background lift is
+ * invisible on a square whose base is already `--color-surface-raised`, which
+ * is most of them, and the brand green reads as chosen rather than pointed at.
+ *
+ * The borderless icon buttons - the chat's, the admin overview's, the
+ * triggers' - are a different control and are deliberately not composed from
+ * this. They have no border to lift, so they lift the background instead, and
+ * those three already agree with each other.
+ */
+.rowAction {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  cursor: pointer;
+}
+
+.rowAction:hover {
+  border-color: var(--color-text-muted);
+}
+
+/* A control that cannot be pressed does not answer the pointer either. */
+.rowAction:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.rowAction:disabled:hover {
+  border-color: var(--color-border);
+}

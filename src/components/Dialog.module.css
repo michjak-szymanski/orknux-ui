@@ -50,6 +50,18 @@
   justify-content: space-between;
 }
 
+/*
+ * The title and its (?) travel together. `.header` is space-between, so a hint
+ * placed as a sibling of the title would fly to the far edge of the dialog and
+ * read as a control of the dialog rather than a note about its heading.
+ */
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
 .title {
   margin: 0;
   font-weight: 600;
