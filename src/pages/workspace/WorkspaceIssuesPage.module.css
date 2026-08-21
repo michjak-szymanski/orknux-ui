@@ -64,7 +64,13 @@
   flex: none;
   gap: var(--space-4);
   padding: var(--space-2);
-  background: var(--color-background);
+  /*
+   * The field colour, and the one `.sortSelect` below was already corrected to.
+   * These asked for `--color-background`, which is not a token: the tab track was
+   * invisible behind its own active tab, and the search bar and the sort button
+   * were the card's colour while the select between them was not.
+   */
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-6);
 }
@@ -101,7 +107,7 @@
   gap: var(--space-8);
   min-width: 0;
   padding: var(--space-8) var(--space-12);
-  background: var(--color-background);
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-6);
 }
@@ -140,7 +146,7 @@
 }
 
 .labelChip {
-  background: var(--color-background);
+  background: var(--color-bg);
   color: var(--color-text-secondary);
 }
 
@@ -285,7 +291,7 @@
 .sortDirection {
   width: 30px;
   padding: var(--space-6) 0;
-  background: var(--color-background);
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-4);
   font: inherit;

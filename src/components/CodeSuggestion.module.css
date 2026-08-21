@@ -55,7 +55,12 @@
   margin: 0;
   padding: var(--space-8);
   overflow: auto;
-  background: var(--color-background);
+  /*
+   * `--color-bg`, not `--color-background`, which is not a token: the diff was
+   * transparent and read as part of the card it sits on, when the point of it is
+   * to be a block of code set into that card.
+   */
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-4);
   font-family: var(--font-mono);

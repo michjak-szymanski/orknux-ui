@@ -126,7 +126,11 @@
 
 .input {
   padding: var(--space-10) var(--space-12);
-  background: var(--color-background);
+  /*
+   * `--color-bg`, not `--color-background`, which is not a token: the fields on
+   * this card were transparent and the card showed through them.
+   */
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-6);
   font: inherit;
@@ -202,7 +206,7 @@
   align-items: baseline;
   gap: var(--space-8);
   padding: var(--space-6) var(--space-8);
-  background: var(--color-background);
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-4);
 }

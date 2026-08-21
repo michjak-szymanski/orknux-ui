@@ -597,8 +597,14 @@
   border: 2px solid var(--color-border);
 }
 
+/*
+ * Hollow means the colour behind the canvas, not no colour at all. This asked
+ * for `--color-background`, which is not a token, so the socket was transparent
+ * and filled itself with the node - a plug wearing a socket's border. The page's
+ * own colour makes it a hole in the node, which is what the shape is for.
+ */
 .handleIn {
-  background: var(--color-background);
+  background: var(--color-bg);
   border-color: var(--color-text-muted);
 }
 

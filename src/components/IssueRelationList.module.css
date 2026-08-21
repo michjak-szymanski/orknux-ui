@@ -62,7 +62,11 @@
 .kind,
 .search {
   padding: var(--space-8) var(--space-10);
-  background: var(--color-background);
+  /*
+   * The field colour. These asked for `--color-background`, which is not a token,
+   * so both controls showed the raised form behind them and were outlines only.
+   */
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-4);
   font: inherit;
@@ -96,8 +100,15 @@
   cursor: pointer;
 }
 
+/*
+ * A hovered result, which until now was not marked at all: this asked for
+ * `--color-background` and so painted nothing, and a list you can click had no
+ * way of saying which row was under the hand. The field colour rather than a
+ * lighter one, because the form around it is already the raised colour and the
+ * two fields above it are `--color-bg`; the row joins them.
+ */
 .option:hover:not(:disabled) {
-  background: var(--color-background);
+  background: var(--color-bg);
 }
 
 .option:disabled {

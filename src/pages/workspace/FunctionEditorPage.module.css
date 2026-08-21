@@ -249,7 +249,12 @@
   min-width: 0;
   min-height: 420px;
   overflow: hidden;
-  background: var(--color-background);
+  /*
+   * `--color-bg`, not `--color-background`, which is not a token. The select in
+   * `.selectWrapper` below already says this in as many words; the code area and
+   * the plain fields were left behind by that fix and are brought along here.
+   */
+  background: var(--color-bg);
 }
 
 /* The line numbers scroll with the code they belong to. */
@@ -455,7 +460,7 @@
 .input {
   width: 100%;
   padding: var(--space-10);
-  background: var(--color-background);
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-6);
   font-family: inherit;

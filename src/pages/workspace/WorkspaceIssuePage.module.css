@@ -48,7 +48,15 @@
 
 .titleInput:hover,
 .titleInput:focus {
-  background: var(--color-background);
+  /*
+   * The field colour. Eight rules on this page asked for `--color-background`,
+   * which is not a token, so every one of them resolved to nothing and showed
+   * `.card` through it: the title took no fill when hovered, the sidebar was not
+   * a panel, and the comment and description boxes were outlines. `--color-bg` is
+   * what the palette calls that colour, and it is the one the chips and avatars
+   * around them are already pitched against.
+   */
+  background: var(--color-bg);
   border-color: var(--color-border);
   outline: none;
 }
@@ -147,7 +155,7 @@
 .description,
 .commentInput {
   padding: var(--space-12);
-  background: var(--color-background);
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-6);
   font: inherit;
@@ -184,7 +192,7 @@
   flex: 1 1 0;
   min-width: 0;
   padding: var(--space-10) var(--space-12);
-  background: var(--color-background);
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-6);
 }
@@ -249,7 +257,7 @@
   flex-direction: column;
   gap: var(--space-16);
   padding: var(--space-16);
-  background: var(--color-background);
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-6);
 }
@@ -385,7 +393,7 @@
 .rendered {
   min-height: 120px;
   padding: var(--space-12);
-  background: var(--color-background);
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-6);
   font-size: var(--text-md);
@@ -539,7 +547,7 @@
   align-items: center;
   gap: var(--space-8);
   padding: var(--space-4) var(--space-8);
-  background: var(--color-background);
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-4);
   font-size: var(--text-sm);
@@ -694,7 +702,7 @@ button.attachmentName {
 .historyRecording {
   margin: 0;
   padding: var(--space-8) var(--space-12);
-  background: var(--color-background);
+  background: var(--color-bg);
   border: 1px dashed var(--color-border);
   border-radius: var(--radius-6);
   font-size: var(--text-sm);
@@ -737,7 +745,7 @@ button.attachmentName {
   display: block;
   max-width: 100%;
   padding: var(--space-8) var(--space-10);
-  background: var(--color-background);
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-6);
   font: inherit;

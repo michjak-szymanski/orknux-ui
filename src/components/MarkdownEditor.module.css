@@ -2,7 +2,11 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  background: var(--color-background);
+  /*
+   * `--color-bg`, not `--color-background`, which is not a token: the editor took
+   * the colour of whatever it was dropped into rather than reading as a field.
+   */
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-6);
 }
