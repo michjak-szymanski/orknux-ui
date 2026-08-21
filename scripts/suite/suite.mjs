@@ -187,6 +187,27 @@ export const TESTS = [
      */
   },
   {
+    name: 'agent-grants-check',
+    what: "an agent's grants: bounded, searchable, and explained behind a (?), on the page and in the panel",
+    needs: ['workflow'],
+    /*
+     * Issues #172 and #173 over the same twenty rows of markup, so one check
+     * rather than two runs of the same form.
+     *
+     * It measures both frames, which is the half that could not be taken on
+     * trust: #149 made the settings page and the editor's left panel one
+     * `AgentForm`, and the panel is 441px against the page's 1070px - a cap
+     * that leaves one readable can leave the other a wall. Every assertion is
+     * made twice, once in each.
+     *
+     * The bound is measured against what the rows wanted rather than against a
+     * number: 1638px of tools inside a 240px box. Where a workspace has too few
+     * tools or MCP servers to prove that with, it makes its own, and it sweeps
+     * both those and any an earlier killed run left behind. It never presses
+     * Save, so the agent it drives is read and not written.
+     */
+  },
+  {
     name: 'param-panel-check',
     what: "the function editor's details panel: the row, the notch colour, the link mark",
     needs: ['workspace'],

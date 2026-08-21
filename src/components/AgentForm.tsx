@@ -15,8 +15,10 @@ import chevronDownIcon from '../assets/chevron-down.svg';
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
 import xCircleIcon from '../assets/x-circle.svg';
 import { CatalogueNote, useCatalogue } from './Catalogue';
+import type { Catalogue } from './Catalogue';
 import { FieldHint } from './FieldHint';
 import { IconField } from './IconField';
+import { segments } from './searchMatches';
 import own from './AgentForm.module.css';
 
 /**
@@ -39,12 +41,17 @@ export interface AgentFormStyles {
   inputWrapper: string;
   inputWrapperTall: string;
   textarea: string;
-  /**
-   * What a field has to say for itself where that is not an explanation of it.
-   * What a field means sits behind the (?) beside its label; what is printed
-   * under one is the consequence of ticking it, which a hover must not hide.
+  /*
+   * There is no `fieldHint` here any more, and its absence is the point.
+   *
+   * It named the class the two printed paragraphs were drawn in - the argument
+   * beside it was that the consequence of ticking a box must not be hidden
+   * behind a hover. Issue #173 settled that the other way, and
+   * UI-DESIGN-RULES.md now says so in as many words: a consequence worth
+   * knowing before granting a permission belongs in the (?) beside that
+   * permission. Taking the slot away leaves the next person nothing to print a
+   * paragraph with.
    */
-  fieldHint: string;
   error: string;
   actions: string;
   ghost: string;
@@ -67,6 +74,199 @@ export interface AgentFormProps {
 
 /** The whole of a workspace's tools fits in the list. */
 const TOOL_PAGE_SIZE = 100;
+
+/**
+ * How many rows a group must hold before it grows a search box.
+ *
+ * A workspace with four tools should not be handed a control for finding one
+ * of four, and the box is not free: it costs a row of the height this change
+ * is about. Eight is roughly what the scroll box shows without scrolling, so
+ * the search arrives at the point the list stops being readable whole.
+ */
+const SEARCH_FROM = 8;
+
+interface GrantListProps<Item> {
+  /** The heading, spelled as the panel spells it: `Tools`, `Skill Catalogs`. */
+  label: string;
+  /**
+   * The same thing mid-sentence - `tools`, `skill catalogs`. It is what the
+   * search box is called, and a screen reader reads it as *Search tools*.
+   */
+  what: string;
+  /** The frame's class names; this group is one of its fields. */
+  styles: AgentFormStyles;
+  /** Everything the workspace has of this kind, and whether it could be read. */
+  catalogue: Catalogue<Item>;
+  /** What to say when the workspace really has none - not when a search found none. */
+  empty: string;
+  keyOf: (item: Item) => string;
+  /** The name the grant is stored under, which is also the name searched. */
+  nameOf: (item: Item) => string;
+  /** The muted word at the end of a row: how much it holds, or `off`. */
+  metaOf?: (item: Item) => ReactNode;
+  /** The names granted now. */
+  granted: string[];
+  onChange: (granted: string[]) => void;
+}
+
+/**
+ * One kind of grant: everything the workspace offers of it, and which of them
+ * this agent has.
+ *
+ * The three grant groups on this form - memory catalogs, skill catalogs, tools -
+ * were the same twenty-five lines three times over, and so were three copies of
+ * what issue #172 was filed about: every row drawn at full height with no bound,
+ * and no way to find one but to scroll and read. One component with three call
+ * sites, so the next thing that is wrong with a grant list is wrong in one place.
+ *
+ * Two rules it keeps that a plain filter would not.
+ *
+ * **A granted row is always drawn.** Rows are filtered by what somebody typed,
+ * except that a ticked one survives whatever they typed. A search that can hide
+ * a grant is how the same tool gets granted twice and how one fails to be
+ * revoked: the box is unticked because the row is not there, not because the
+ * grant is not there, and nothing on the screen tells those apart.
+ *
+ * Kept *in place*, rather than pinned above the results, which was the other way
+ * to keep them visible. Pinning reorders the list on the press: a row that jumps
+ * to the top the moment it is ticked moves out from under the pointer that
+ * ticked it, and the next click - landing on whatever slid into that spot -
+ * grants something nobody chose. That is the same double-grant hazard read from
+ * the other end. Here nothing ever moves; rows appear and disappear, and the
+ * ones that cannot disappear are the ones that matter.
+ *
+ * **A row kept against the search says so.** It is drawn dashed, so a list
+ * answering `slack` with four rows of which one matched does not read as a
+ * filter that is broken.
+ */
+function GrantList<Item>({
+  label,
+  what,
+  styles,
+  catalogue,
+  empty,
+  keyOf,
+  nameOf,
+  metaOf,
+  granted,
+  onChange,
+}: GrantListProps<Item>) {
+  const [search, setSearch] = useState('');
+  const items = catalogue.items;
+  const needle = search.trim().toLowerCase();
+
+  /*
+   * Worked out on the way past rather than memoised. This is one `includes` per
+   * row over a list the server caps at a hundred, which is nothing beside the
+   * render it is part of - and a memo here would want the caller's `nameOf`
+   * closure in its dependencies, a new function on every render, so it would
+   * miss every time and cost the comparison as well.
+   */
+  const rows = items.map((item) => {
+    const name = nameOf(item);
+    return {
+      item,
+      name,
+      ticked: granted.includes(name),
+      matches: needle === '' || name.toLowerCase().includes(needle),
+    };
+  });
+
+  const shown = rows.filter((row) => row.matches || row.ticked);
+  const matching = rows.filter((row) => row.matches).length;
+  const here = rows.filter((row) => row.ticked).length;
+
+  return (
+    <div className={styles.field} data-grants={what}>
+      <span className={own.grantHead}>
+        <span className={styles.label}>{label}</span>
+        {/*
+          Printed rather than put behind a (?), and that is the rule rather than
+          an exception to it: this is the state of the thing being looked at, not
+          an explanation of it - see UI-DESIGN-RULES.md. It is also the question
+          somebody opening this panel came to ask.
+        */}
+        {items.length > 0 && (
+          <span className={own.grantCount} data-grant-count="">
+            {here} of {items.length} granted
+            {needle !== '' && ` · ${matching} matching`}
+          </span>
+        )}
+      </span>
+
+      {/*
+        Above the box rather than inside it: a list that could not be fetched
+        must not be able to scroll the reason out of sight.
+      */}
+      <CatalogueNote catalogue={catalogue} className={own.emptyNote} empty={empty} />
+
+      {items.length >= SEARCH_FROM && (
+        <input
+          className={own.grantSearch}
+          type="search"
+          value={search}
+          spellCheck={false}
+          placeholder={`Search ${what}…`}
+          aria-label={`Search ${what}`}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+      )}
+
+      {items.length > 0 && (
+        <div className={own.checkList} data-grant-rows="">
+          {shown.map((row) => {
+            const meta = metaOf?.(row.item);
+            return (
+              <label
+                key={keyOf(row.item)}
+                className={row.matches ? own.checkRow : `${own.checkRow} ${own.checkRowKept}`}
+                data-grant-name={row.name}
+                /*
+                  What a check finds a kept row by. CSS modules hash the class
+                  names this project writes, so the class cannot be asked for
+                  from outside the bundle; `searchMatches` marks its hits with an
+                  attribute for the same reason.
+                */
+                data-kept={row.matches ? undefined : ''}
+              >
+                <input
+                  type="checkbox"
+                  checked={row.ticked}
+                  onChange={(event) =>
+                    onChange(
+                      event.target.checked
+                        ? [...granted, row.name]
+                        : granted.filter((one) => one !== row.name),
+                    )
+                  }
+                />
+                {/*
+                  The typed part picked out, by the matcher the manual's search
+                  already uses - so the two cannot disagree about what matched.
+                */}
+                <span className={own.grantName}>
+                  {segments(row.name, search).map((part, index) =>
+                    part.match ? (
+                      <mark key={index} className={own.grantMark}>
+                        {part.text}
+                      </mark>
+                    ) : (
+                      <span key={index}>{part.text}</span>
+                    ),
+                  )}
+                </span>
+                {meta !== undefined && meta !== null && meta !== false && (
+                  <span className={own.checkCount}>{meta}</span>
+                )}
+              </label>
+            );
+          })}
+          {shown.length === 0 && <p className={own.emptyNote}>Nothing by that name.</p>}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * Everything an agent is: what it is called, what it is briefed with, the model
@@ -125,10 +325,13 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
     { skip: noWorkspace },
   );
 
+  /*
+   * Only the models are unpacked here. The three grant lists are handed the
+   * catalogue itself rather than the rows out of it, because each of them draws
+   * the failure and the empty state as well as the list, and those are three
+   * fields on one value.
+   */
   const models: Model[] = modelCatalogue.items;
-  const catalogs: MemoryCatalog[] = memoryCatalogue.items;
-  const skillFolders: SkillCatalog[] = skillCatalogue.items;
-  const workspaceTools: Tool[] = toolCatalogue.items;
 
   useEffect(() => {
     if (addingServer) newServerRef.current?.focus();
@@ -299,94 +502,53 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
           What this agent may read of what the workspace knows. A grant:
           an agent given none reads none.
         */}
-        <div className={styles.field}>
-          <span className={styles.label}>Memory Catalogs</span>
-          <div className={own.checkList}>
-            <CatalogueNote
-              catalogue={memoryCatalogue}
-              className={own.emptyNote}
-              empty="No catalogs in this workspace yet."
-            />
-            {catalogs.map((catalog) => (
-              <label key={catalog.id} className={own.checkRow}>
-                <input
-                  type="checkbox"
-                  checked={memoryCatalogs.includes(catalog.name)}
-                  onChange={(event) =>
-                    setMemoryCatalogs((present) =>
-                      event.target.checked
-                        ? [...present, catalog.name]
-                        : present.filter((one) => one !== catalog.name),
-                    )
-                  }
-                />
-                <span>{catalog.name}</span>
-                <span className={own.checkCount}>{catalog.memoryCount}</span>
-              </label>
-            ))}
-          </div>
-        </div>
+        <GrantList<MemoryCatalog>
+          label="Memory Catalogs"
+          what="memory catalogs"
+          styles={styles}
+          catalogue={memoryCatalogue}
+          empty="No catalogs in this workspace yet."
+          keyOf={(catalog) => catalog.id}
+          nameOf={(catalog) => catalog.name}
+          metaOf={(catalog) => catalog.memoryCount}
+          granted={memoryCatalogs}
+          onChange={setMemoryCatalogs}
+        />
 
         {/*
           And what it may draw on of how the workspace goes about things.
           Granted per catalog, like memory: what an agent is expected to know
           is decided once rather than once per skill.
         */}
-        <div className={styles.field}>
-          <span className={styles.label}>Skill Catalogs</span>
-          <div className={own.checkList}>
-            <CatalogueNote
-              catalogue={skillCatalogue}
-              className={own.emptyNote}
-              empty="No skill catalogs in this workspace yet."
-            />
-            {skillFolders.map((catalog) => (
-              <label key={catalog.id} className={own.checkRow}>
-                <input
-                  type="checkbox"
-                  checked={skillCatalogs.includes(catalog.name)}
-                  onChange={(event) =>
-                    setSkillCatalogs((present) =>
-                      event.target.checked
-                        ? [...present, catalog.name]
-                        : present.filter((one) => one !== catalog.name),
-                    )
-                  }
-                />
-                <span>{catalog.name}</span>
-                <span className={own.checkCount}>{catalog.skillCount}</span>
-              </label>
-            ))}
-          </div>
-        </div>
+        <GrantList<SkillCatalog>
+          label="Skill Catalogs"
+          what="skill catalogs"
+          styles={styles}
+          catalogue={skillCatalogue}
+          empty="No skill catalogs in this workspace yet."
+          keyOf={(catalog) => catalog.id}
+          nameOf={(catalog) => catalog.name}
+          metaOf={(catalog) => catalog.skillCount}
+          granted={skillCatalogs}
+          onChange={setSkillCatalogs}
+        />
 
         {/*
           And what it may *do*. The strictest of the grants: a skill is a
           page this agent reads, a tool is code it runs.
         */}
-        <div className={styles.field}>
-          <span className={styles.label}>Tools</span>
-          <div className={own.checkList}>
-            <CatalogueNote catalogue={toolCatalogue} className={own.emptyNote} empty="No tools in this workspace yet." />
-            {workspaceTools.map((tool) => (
-              <label key={tool.id} className={own.checkRow}>
-                <input
-                  type="checkbox"
-                  checked={tools.includes(tool.name)}
-                  onChange={(event) =>
-                    setTools((present) =>
-                      event.target.checked
-                        ? [...present, tool.name]
-                        : present.filter((one) => one !== tool.name),
-                    )
-                  }
-                />
-                <span>{tool.name}</span>
-                {!tool.enabled && <span className={own.checkCount}>off</span>}
-              </label>
-            ))}
-          </div>
-        </div>
+        <GrantList<Tool>
+          label="Tools"
+          what="tools"
+          styles={styles}
+          catalogue={toolCatalogue}
+          empty="No tools in this workspace yet."
+          keyOf={(tool) => tool.id}
+          nameOf={(tool) => tool.name}
+          metaOf={(tool) => (tool.enabled ? null : 'off')}
+          granted={tools}
+          onChange={setTools}
+        />
 
         {/*
           Orknux itself, kept apart from the servers below on purpose: those
@@ -395,23 +557,31 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
         */}
         <div className={styles.field}>
           <span className={styles.label}>Orknux</span>
-          <label className={own.checkRow}>
-            <input
-              type="checkbox"
-              checked={orknuxAccess}
-              onChange={(event) => setOrknuxAccess(event.target.checked)}
-            />
-            <span>Let this agent ask orknux about orknux</span>
-          </label>
           {/*
-            Printed rather than behind the (?): the second sentence is a
-            consequence of ticking the box, and a loop nothing here breaks
-            is not something to find out about after granting it.
+            The (?) sits on the row and not on the heading above it, because the
+            row is the thing being granted - UI-DESIGN-RULES.md says to put it
+            beside that where the two differ, and here they do: the heading names
+            the application, the row is the permission.
+
+            It is a sibling of the <label> rather than a child of one. A button
+            inside a label is a press the browser forwards to the control that
+            label is for, so asking what the grant means would grant it.
           */}
-          <p className={styles.fieldHint}>
-            Its workspace’s workflows, runs and agents — and it can start a workflow, which really runs
-            it. An agent that starts a workflow which asks an agent is a loop nothing here breaks.
-          </p>
+          <div className={own.checkRow}>
+            <label className={own.grantToggle}>
+              <input
+                type="checkbox"
+                checked={orknuxAccess}
+                onChange={(event) => setOrknuxAccess(event.target.checked)}
+              />
+              <span>Let this agent ask orknux about orknux</span>
+            </label>
+            <FieldHint label="Orknux">
+              Its workspace’s workflows, runs and agents — and it can start a workflow, which really
+              runs it. An agent that starts a workflow which asks an agent is a loop nothing here
+              breaks.
+            </FieldHint>
+          </div>
         </div>
 
         {/*
@@ -422,48 +592,67 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
         */}
         <div className={styles.field}>
           <span className={styles.label}>Shells</span>
-          <label className={own.checkRow}>
-            <input
-              type="checkbox"
-              checked={shellAccess}
-              onChange={(event) => setShellAccess(event.target.checked)}
-            />
-            <span>Let this agent open a shell and run commands on it</span>
-          </label>
           {/*
-            Printed for the same reason. "Can do whatever that account can"
-            is the whole of what this switch hands over, and hiding it
-            behind a hover is hiding the reason to think before ticking.
+            Beside the row for the same reason, and this is the one where it
+            matters most: what the note says is what an account on that machine
+            can do, which is a sentence about the tick rather than about the
+            word "Shells" above it.
           */}
-          <p className={styles.fieldHint}>
-            It opens a session on one of the machines an administrator set up under Admin →
-            Shell, gets a working directory of its own on it, and runs commands there. What
-            contains that is the machine and the account named on it, not anything here: an
-            agent given this can do whatever that account can. Every command is written down in
-            the audit log under this agent&apos;s name.
-          </p>
+          <div className={own.checkRow}>
+            <label className={own.grantToggle}>
+              <input
+                type="checkbox"
+                checked={shellAccess}
+                onChange={(event) => setShellAccess(event.target.checked)}
+              />
+              <span>Let this agent open a shell and run commands on it</span>
+            </label>
+            <FieldHint label="Shells">
+              It opens a session on one of the machines an administrator set up under Admin →
+              Shell, gets a working directory of its own on it, and runs commands there. What
+              contains that is the machine and the account named on it, not anything here: an
+              agent given this can do whatever that account can. Every command is written down in
+              the audit log under this agent&apos;s name.
+            </FieldHint>
+          </div>
         </div>
 
-        <div className={styles.field}>
+        <div className={styles.field} data-grants="mcp servers">
           <span className={own.labelWithHint}>
             <span className={styles.label}>MCP Servers</span>
             <FieldHint label="MCP Servers">External tool servers this agent can connect to.</FieldHint>
           </span>
           <div className={own.servers}>
-            {mcpServers.map((server) => (
-              <span key={server} className={own.chip}>
-                {server}
-                <button
-                  type="button"
-                  className={own.chipRemove}
-                  onClick={() => setMcpServers((current) => current.filter((named) => named !== server))}
-                  aria-label={`Remove ${server}`}
-                  title={`Remove ${server}`}
-                >
-                  <img src={xCircleIcon} alt="" width={8} height={8} />
-                </button>
-              </span>
-            ))}
+            {/*
+              Bounded like the grant lists above, and for the same reason - but
+              without a search, because there is nothing here to search for. The
+              lists above draw the whole workspace and mark what is granted; this
+              draws only what is granted, so a box that narrowed it would only
+              ever hide grants. The count is the length of the list, which is
+              already on the screen.
+
+              The way to add one is outside the box on purpose: put inside it, it
+              would scroll away with the chips the moment there were enough of
+              them to need scrolling.
+            */}
+            {mcpServers.length > 0 && (
+              <div className={own.serverChips} data-grant-rows="">
+                {mcpServers.map((server) => (
+                  <span key={server} className={own.chip}>
+                    {server}
+                    <button
+                      type="button"
+                      className={own.chipRemove}
+                      onClick={() => setMcpServers((current) => current.filter((named) => named !== server))}
+                      aria-label={`Remove ${server}`}
+                      title={`Remove ${server}`}
+                    >
+                      <img src={xCircleIcon} alt="" width={8} height={8} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
 
             {addingServer ? (
               <input

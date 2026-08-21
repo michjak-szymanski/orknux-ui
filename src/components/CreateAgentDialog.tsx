@@ -44,7 +44,6 @@ const FORM_STYLES: AgentFormStyles = {
   inputWrapper: styles.inputWrapper,
   inputWrapperTall: styles.inputWrapperTall,
   textarea: styles.textarea,
-  fieldHint: styles.fieldHint,
   error: styles.error,
   actions: styles.actions,
   ghost: styles.ghost,

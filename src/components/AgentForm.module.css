@@ -48,22 +48,82 @@
   transform: rotate(-90deg);
 }
 
+/* ---- Grants ---- */
+
 /*
- * The catalogs this agent may read. Checkboxes rather than a multi-select: the
- * list is short, and what matters is seeing at a glance what it can and cannot
- * reach.
+ * The heading of a grant group, and how much of it is granted.
+ *
+ * "3 of 41 granted" is the question somebody opening this panel came to ask,
+ * and it is a status rather than an explanation, so it stays in the open beside
+ * the label - UI-DESIGN-RULES.md.
+ */
+.grantHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.grantCount {
+  flex: none;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.grantSearch {
+  width: 100%;
+  padding: var(--space-6) var(--space-10);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.grantSearch:focus {
+  outline: none;
+  border-color: var(--color-accent-brand);
+}
+
+/*
+ * The catalogs this agent may read. Checkboxes rather than a multi-select:
+ * what matters is seeing at a glance what it can and cannot reach.
+ *
+ * Bounded, whatever the workspace holds. It used to draw every row at full
+ * height, so a workspace with forty tools in it was a wall of checkboxes that
+ * pushed the Shells switch, the MCP servers and Save off the bottom of the
+ * screen - issue #172, found on the 0.9.0 pre-release.
+ *
+ * 240px is between five and six rows here and four in the workflow editor's
+ * panel, where the column is narrower and a long name takes two lines. One
+ * number for both frames, because what the cap buys is the same in both: the
+ * fields under this group are still on the screen. Measured in both -
+ * `scripts/agent-grants-check.mjs`.
  */
 .checkList {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   width: 100%;
+  max-height: 240px;
+  overflow-y: auto;
+  /* Room for the hover border, which a box with no padding clips. */
+  padding: 1px;
 }
 
 .checkRow {
   display: flex;
   align-items: center;
   gap: var(--space-8);
+  /*
+   * Never squeezed. These stand in a scrolling flex column now, and a flex
+   * child's default is to shrink rather than overflow - so without this, a
+   * group of thirty rows drew thirty rows squashed into 240px instead of six
+   * rows and a scrollbar.
+   */
+  flex: none;
   padding: var(--space-8) var(--space-12);
   background: var(--color-bg);
   border: 1px solid var(--color-border);
@@ -75,6 +135,52 @@
 
 .checkRow:hover {
   border-color: var(--color-accent-brand);
+}
+
+/*
+ * A row that is drawn because it is granted, not because it matched.
+ *
+ * A search that could hide a grant would be a search that hides the reason
+ * somebody came to look, so a ticked row survives whatever is typed. Dashed
+ * says which ones those are: a list answering "slack" with four rows of which
+ * one matched would otherwise read as a filter that does not work.
+ */
+.checkRowKept {
+  border-style: dashed;
+}
+
+/*
+ * The name, over as many lines as the frame leaves room for. The workflow
+ * editor's panel is the narrow one, and a name cut off there is a row nobody
+ * can tell from the row above it.
+ */
+.grantName {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The typed part, in the tint the manual's search already uses for a hit. */
+.grantMark {
+  border-radius: var(--radius-4);
+  background: var(--color-accent-brand-soft);
+  color: var(--color-text-primary);
+}
+
+/*
+ * The tick and its sentence, inside a row that also carries the (?).
+ *
+ * The label is only the part that toggles: the (?) is its sibling, because a
+ * button inside a label is a press the browser forwards to the checkbox, and
+ * asking what a permission means would grant it.
+ */
+.grantToggle {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+  cursor: pointer;
 }
 
 .checkCount {
@@ -92,11 +198,31 @@
 
 /* ---- MCP servers ---- */
 
+/*
+ * A column rather than one wrapping row: the chips are bounded and scroll, and
+ * the way to add one sits under them where scrolling cannot take it away.
+ */
 .servers {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-8);
+}
+
+/*
+ * Bounded like the grant lists, at three rows of chips. Chips are far denser
+ * than checkbox rows, so the same number of names costs a fraction of the
+ * height - which is why this cap is smaller and why there is no search box
+ * over it.
+ */
+.serverChips {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-8);
+  width: 100%;
+  max-height: 96px;
+  overflow-y: auto;
 }
 
 .chip {
