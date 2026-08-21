@@ -8,7 +8,7 @@
  * Two: editing a node used to replace its data wholesale, dropping the ports the
  * server had worked out, so a field vanished from the node until a save.
  */
-import { BASE, WORKSPACE, WORKFLOW, open, finish } from './suite/harness.mjs';
+import { BASE, WORKSPACE, WORKFLOW, open, record, finish } from './suite/harness.mjs';
 
 const WATCHED = 'Reply in the thread';
 
@@ -46,9 +46,22 @@ const kept = portsBefore !== null && portsBefore.length > 0 && portsAfter?.lengt
 console.log(kept ? 'PASS - the ports stayed' : 'FAIL - editing dropped the ports');
 
 const nodesBefore = await page.locator('.react-flow__node').count();
-await page.getByRole('button', { name: 'Object', exact: true }).click();
+/*
+ * An Object node onto the canvas, through the Add menu.
+ *
+ * This used to be one press of a button called `Object`. The toolbar had six of
+ * them - Trigger, LLM Agent, Action, Condition, Object, LLM Session - and issue
+ * 127 collapsed the six into one plus that opens a menu, because the row of
+ * words cost more of the bar than the workflow's own name had. So the six names
+ * still exist, and are still the way to find them by label; they are one press
+ * further in. The button is found by the start of its name because the rest of
+ * it is the keystroke, which is a setting and can be rebound.
+ */
+await page.getByRole('button', { name: /^Add node/ }).click();
+await page.getByRole('menuitem', { name: 'Object', exact: true }).click();
 await page.waitForTimeout(800);
 const withObject = await page.locator('.react-flow__node').count();
+record(withObject === nodesBefore + 1, `the Add menu put an Object node on the canvas: ${nodesBefore} then ${withObject}`);
 
 await page.getByRole('button', { name: '+ Add field' }).click();
 await page.waitForTimeout(400);

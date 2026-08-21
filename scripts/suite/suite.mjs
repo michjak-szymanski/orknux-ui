@@ -46,16 +46,13 @@ export const TESTS = [
     name: 'editor-check',
     what: 'typing in a field name keeps focus, and does not delete the node behind it',
     needs: ['workflow'],
-    ci: false,
     /*
-     * This one is not a fixture problem: it fails against the developer's
-     * database too, and for the same reason in both. Its first half still
-     * passes - the ports a node was given survive an edit - and its second half
-     * waits for a button called `Object` in the node panel, which the panel has
-     * not had since the field editor was rebuilt. Half a check that cannot
-     * finish is worse than none, so it is out until somebody points that half
-     * at whatever replaced the button. The comment at the top of the file says
-     * what the two bugs were, and both are still worth catching.
+     * Was held back for waiting on a button called `Object` that nothing draws
+     * any more. Nothing was wrong with the editor: issue 127 collapsed the six
+     * Add buttons in the toolbar - Trigger, LLM Agent, Action, Condition,
+     * Object, LLM Session - into one plus that opens a menu, and all six names
+     * are still there one press further in. The check opens the menu, and both
+     * bugs it was written for are being watched again.
      */
   },
   {
@@ -104,13 +101,17 @@ export const TESTS = [
     name: 'hint-forms-check',
     what: 'the trigger and condition forms, on a settings page and inside a dialog',
     needs: ['workspace'],
-    ci: false,
     /*
-     * "trigger incoming: the page drew nothing in twenty seconds". The three
-     * trigger settings pages it walks did not render against a seeded
-     * workspace. Worth chasing rather than assuming a fixture gap - a page that
-     * draws nothing is the failure this suite exists to catch - but it needs
-     * looking at with a browser open, and it is out until then.
+     * "trigger incoming: the page drew nothing in twenty seconds" was chased
+     * with a browser open, and the pages are fine: all three draw their form
+     * against the developer's database in well under a second. The check was
+     * asking for /triggers/18, /conditions/7 and /agents/9 - the developer's
+     * numbers - and a seeded workspace hands those ids to nothing, so what it
+     * was photographing was the "That trigger does not exist" card, ninety
+     * characters of <main> where it waits for three hundred. It looks the four
+     * up by the names `seed-demo.mjs` writes now, and says what a page actually
+     * held when one does not settle, so the next one of these cannot be
+     * mistaken for a blank screen.
      */
   },
   {

@@ -28,7 +28,79 @@ const WHEN = process.env.ORKNUX_SHOTS ?? 'after';
 const SHOTS = SHOT_DIR;
 mkdirSync(SHOTS, { recursive: true });
 
-const { browser, page } = await open({ viewport: { width: 1440, height: 1000 } });
+const { browser, page, graphql } = await open({ viewport: { width: 1440, height: 1000 } });
+
+/*
+ * Which trigger, which condition, which agent - looked up rather than written
+ * down.
+ *
+ * These paths were nine hard numbers out of the developer's database:
+ * /triggers/18, /conditions/7, /agents/9. Against a workspace built by
+ * `seed-demo.mjs` those ids belong to nothing, and the page each one lands on is
+ * the honest "That trigger does not exist" card - about ninety characters of
+ * <main>, under the three hundred this waits for. So the check reported "the
+ * page drew nothing in twenty seconds" about a page that had drawn the right
+ * thing in well under one, and three settings pages spent a while looking like a
+ * product defect.
+ *
+ * The names are the fixture, the numbers are not - the same rule
+ * `scripts/suite/fixture.mjs` already works by. These are the names
+ * `seed-demo.mjs` writes.
+ */
+const named = async (what, wanted, rows) => {
+  const found = rows.find((row) => row.name === wanted);
+  if (found === undefined) {
+    console.log(`FAIL: no ${what} called ${JSON.stringify(wanted)} in workspace ${WORKSPACE}.`);
+    console.log(`      There is: ${rows.map((row) => row.name).join(', ') || '(nothing)'}`);
+    console.log('      Has scripts/seed-demo.mjs been run against this server?');
+    await browser.close();
+    process.exit(1);
+  }
+  return found;
+};
+
+const catalogue = await graphql(
+  `query($w: ID!) {
+     workspaceTriggers(workspaceId: $w, page: 0, size: 200) { content { id name } }
+     workspaceConditions(workspaceId: $w, page: 0, size: 200) { content { id name } }
+     workspaceAgents(workspaceId: $w, page: 0, size: 200) { content { id name } }
+     workspaceObjects(workspaceId: $w, page: 0, size: 200) { content { id name propertyCount } }
+   }`,
+  { w: WORKSPACE },
+);
+
+const incoming = (await named('trigger', 'Slack message received', catalogue.workspaceTriggers.content)).id;
+const scheduled = (await named('trigger', 'Nightly backlog sweep', catalogue.workspaceTriggers.content)).id;
+const webhook = (await named('trigger', 'Ticket raised in Zendesk', catalogue.workspaceTriggers.content)).id;
+const outage = (await named('condition', 'Mentions an outage', catalogue.workspaceConditions.content)).id;
+const agent = (await named('agent', 'Support responder', catalogue.workspaceAgents.content)).id;
+
+/*
+ * A shape with no fields in it, which is what one of the notes below is about -
+ * "This one has no fields yet, so any JSON matches it". The seed builds Ticket
+ * and Customer and both have fields, so if there is no empty one to borrow this
+ * makes its own and takes it away again at the end. Only what this made is
+ * deleted; a borrowed one is left alone.
+ */
+const borrowed = catalogue.workspaceObjects.content.find((row) => row.propertyCount === 0);
+const scratch =
+  borrowed === undefined
+    ? (
+        await graphql(
+          'mutation($input: CreateObjectInput!) { createObject(input: $input) { id name } }',
+          {
+            input: {
+              workspaceId: WORKSPACE,
+              // An identifier, because the server refuses an object name that
+              // is not one - it is what a reference has to be able to write.
+              name: 'zzSuiteNoFields',
+              description: 'Made by scripts/hint-forms-check.mjs, and removed again by it.',
+            },
+          },
+        )
+      ).createObject
+    : null;
+const shapeless = borrowed ?? scratch;
 
 /** Opens one of the pickers and takes the row whose label reads like this. */
 async function pick(id, label) {
@@ -48,7 +120,7 @@ async function pick(id, label) {
 const screens = [
   {
     name: 'trigger incoming',
-    path: `/workspace/${WORKSPACE}/triggers/18`,
+    path: `/workspace/${WORKSPACE}/triggers/${incoming}`,
     hints: 5,
     gone: [
       'Select the connection that will trigger this event',
@@ -61,7 +133,7 @@ const screens = [
   },
   {
     name: 'trigger scheduled',
-    path: `/workspace/${WORKSPACE}/triggers/19`,
+    path: `/workspace/${WORKSPACE}/triggers/${scheduled}`,
     hints: 5,
     gone: [
       'A cron expression defining when the trigger fires',
@@ -72,7 +144,7 @@ const screens = [
   },
   {
     name: 'trigger webhook',
-    path: `/workspace/${WORKSPACE}/triggers/20`,
+    path: `/workspace/${WORKSPACE}/triggers/${webhook}`,
     hints: 6,
     gone: [
       'Where this installation answers',
@@ -89,10 +161,10 @@ const screens = [
      * about the caller. Neither is stored - the form is never saved.
      */
     name: 'trigger webhook chosen',
-    path: `/workspace/${WORKSPACE}/triggers/20`,
+    path: `/workspace/${WORKSPACE}/triggers/${webhook}`,
     hints: 7,
     async drive() {
-      await pick('trigger-object', 'sfsd');
+      await pick('trigger-object', shapeless.name);
       await page.selectOption('#trigger-auth', 'FUNCTION');
       await page.waitForTimeout(400);
     },
@@ -101,7 +173,7 @@ const screens = [
   },
   {
     name: 'condition',
-    path: `/workspace/${WORKSPACE}/conditions/7`,
+    path: `/workspace/${WORKSPACE}/conditions/${outage}`,
     hints: 1,
     gone: ['Nodes drawn from this condition start with it'],
     // What the condition now says, in the words the list uses. A reading of the
@@ -152,7 +224,7 @@ const screens = [
      * alone for exactly that reason, loses its paragraph here.
      */
     name: 'agent settings',
-    path: `/workspace/${WORKSPACE}/agents/9/settings`,
+    path: `/workspace/${WORKSPACE}/agents/${agent}/settings`,
     hints: 2,
     gone: ['Nodes drawn from this agent start with it'],
     // The two switches whose consequences the settings batch left printed.
@@ -208,7 +280,19 @@ for (const one of screens) {
       { timeout: 20_000 },
     );
   } catch {
-    record(false, `${one.name}: the page drew nothing in twenty seconds`);
+    /*
+     * What is on the page, not just how little of it there is. A settings page
+     * asked for something that is not there answers with a short card saying so,
+     * and that card is under the threshold above - so a bare "drew nothing"
+     * cannot tell a page that failed to render from a page that rendered a
+     * refusal. The first two hundred characters settle it at a glance.
+     */
+    const drew = await page.evaluate(() => document.querySelector('main')?.innerText ?? '<there is no main>');
+    record(
+      false,
+      `${one.name}: the page did not settle in twenty seconds; <main> holds ${drew.length} characters: ` +
+        JSON.stringify(drew.slice(0, 200)),
+    );
   }
   await page.waitForTimeout(1500);
   if (one.drive !== undefined) await one.drive();
@@ -321,6 +405,10 @@ for (const one of screens) {
     await page.waitForTimeout(300);
     record((await shown()) === false, `${one.name}: the close control puts it away`);
   }
+}
+
+if (scratch !== null) {
+  await graphql('mutation($id: ID!) { deleteObject(id: $id) }', { id: scratch.id });
 }
 
 if (WHEN === 'before') {
