@@ -16,11 +16,23 @@
 
 /* ---- System prompt disclosure ---- */
 
-.inputWrapperPrompt {
-  align-items: stretch;
-  height: 120px;
-  padding: var(--space-12);
-}
+/*
+ * `.inputWrapperPrompt` was here, and it never took.
+ *
+ * It said `align-items: stretch; height: 120px; padding: var(--space-12)` - the
+ * same three declarations the frames' own `.inputWrapperTall` makes - but it
+ * lived in this stylesheet while `.inputWrapper` lives in theirs. One class
+ * each, so specificity is a tie and source order decides, and this file is
+ * injected first: the frame's `align-items: center` and `padding: 0 12px` won
+ * both. What was left was a 120px box with `padding: 0`, a textarea sized to
+ * its content and centred in it - 39px of nothing above the first line and 39
+ * below, against the description box's 13. The height was the other half: 120px
+ * for a field whose sibling asks for 80.
+ *
+ * The fix is to stop competing. The system prompt now wears the same
+ * `.inputWrapperTall` the description does, which is in the winning stylesheet
+ * and is what "the same as the other multi-line fields" actually means.
+ */
 
 .promptInput {
   font-size: var(--text-md);
