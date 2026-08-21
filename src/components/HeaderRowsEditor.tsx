@@ -84,7 +84,20 @@ export function HeaderRowsEditor({
       )}
 
       {headers.map((header, index) => {
-        const reference = (header.variableId ?? '') !== '';
+        /*
+         * Which side the row is on, and the empty string is the interesting
+         * value. Absent means a literal; *any* string, the empty one included,
+         * means a reference - because "Reference pressed, nothing picked yet" is
+         * a state somebody is in for as long as it takes to read the list, and
+         * it has to be somewhere.
+         *
+         * Deriving this from "has a variable been chosen" instead, which is what
+         * it did first, made the switch inert: pressing Reference could only
+         * leave the row a literal, and the picker that is the only way to choose
+         * a variable never appeared to be pressed on. Nothing was clickable and
+         * nothing said so.
+         */
+        const reference = header.variableId !== null && header.variableId !== undefined;
         return (
           // Rows have no identity of their own until they are saved.
           // eslint-disable-next-line react/no-array-index-key
@@ -117,6 +130,12 @@ export function HeaderRowsEditor({
                      */
                     onClick={() =>
                       update(index, option === 'REFERENCE' ? { value: '', variableId: '' } : { variableId: null })
+                    }
+                    disabled={option === 'REFERENCE' && (variables?.length ?? 0) === 0}
+                    title={
+                      option === 'REFERENCE' && (variables?.length ?? 0) === 0
+                        ? 'This workspace has no variables to point at yet'
+                        : undefined
                     }
                   >
                     {option === 'VALUE' ? 'Value' : 'Reference'}
@@ -175,16 +194,18 @@ export function HeaderRowsEditor({
 const SOURCES = ['VALUE', 'REFERENCE'] as const;
 
 /**
- * What the picker says when it has nothing, and when what it holds is gone.
+ * What the picker says, word for word what the plugins page says.
  *
- * "No longer in this workspace" rather than a blank, because a header pointing
- * at a variable somebody deleted is a request that will fail, and the row is
- * where that is worth knowing.
+ * The same control, offering the same list, for the same reason - so it says the
+ * same thing. `empty` is the closed control with nothing chosen and `none` is a
+ * list with nothing in it, which is a distinction easy to write down backwards:
+ * doing so puts "this workspace has no variables" on a control that is about to
+ * offer several.
  */
 const VARIABLE_LABELS: FieldPickerLabels = {
-  empty: 'This workspace holds no variables',
-  search: 'Search variables…',
-  none: 'Select a variable…',
+  empty: 'Choose a variable…',
+  search: 'Search variables',
+  none: 'This workspace has no variables yet.',
   noMatch: 'No variable matches',
   gone: 'no longer in this workspace',
 };

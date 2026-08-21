@@ -134,6 +134,17 @@
   color: var(--color-accent-brand);
 }
 
+/* A workspace with no variables: Reference leads to an empty list, so it is not
+   offered, and the title says why rather than leaving a dead control. */
+.modeOption:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.modeOption:disabled:hover {
+  color: var(--color-text-muted);
+}
+
 /*
  * The picker stands where the value input stood, and takes the same share of
  * the row - a control that changed the row's shape when the switch was thrown

@@ -97,13 +97,21 @@ try {
   await page.goto(`${BASE}/workspace/${WORKSPACE}/actions`);
   if (!(await drawn(page, 'the actions page'))) await finish(browser);
 
-  await page.getByRole('button', { name: /new action|create action/i }).first().click();
+  await page.getByRole('button', { name: /create action/i }).first().click();
   const dialog = page.locator('dialog[open]');
   await dialog.waitFor({ state: 'visible', timeout: 10_000 });
 
-  await dialog.getByLabel(/^name$/i).fill(rowsName);
-  await dialog.getByLabel(/^subtype$/i).selectOption('HTTP_REQUEST');
-  await dialog.getByLabel(/^url$/i).fill('https://api.example.com/orders');
+  /*
+   * By id, not by label. The first draft of this asked for /^name$/i, and the
+   * field is called "Action Name" - so it matched nothing and waited thirty
+   * seconds to say so. Worse, a looser pattern would have matched *two* things
+   * once the rows existed, since a header row has a name too. The ids are what
+   * the labels point at and do not move when the wording does; the rows, which
+   * have no id of their own, are reached by the aria-label that numbers them.
+   */
+  await dialog.locator('#action-name').fill(rowsName);
+  await dialog.locator('#action-subtype').selectOption('HTTP_REQUEST');
+  await dialog.locator('#action-url').fill('https://api.example.com/orders');
 
   // Add two rows, and take one away again. The count is read off the name
   // inputs rather than off the block, because a row is what has a name.
@@ -116,7 +124,7 @@ try {
   await add.click();
   record((await names.count()) === before + 3, 'Add Header adds a row each time it is pressed');
 
-  await dialog.getByRole('button', { name: /^Remove header 3$/ }).click();
+  await dialog.getByRole('button', { name: `Remove header ${before + 3}` }).click();
   record((await names.count()) === before + 2, 'and the remove control takes one away');
 
   // A literal, and a reference beside it.
@@ -129,9 +137,16 @@ try {
     .getByRole('button', { name: 'Reference' })
     .click();
 
-  const picker = dialog.getByLabel(`Header ${before + 2} variable`);
-  await picker.click();
-  await page.getByText(variableName, { exact: true }).first().click();
+  // The picker's trigger is a button carrying the label, and each option is a
+  // button naming the variable beside its type - so the option is matched on the
+  // name rather than on the whole accessible string.
+  await dialog.getByRole('button', { name: `Header ${before + 2} variable` }).click();
+  await dialog.getByRole('button', { name: new RegExp(variableName) }).first().click();
+
+  record(
+    (await dialog.getByRole('button', { name: `Header ${before + 2} variable` }).innerText()).includes(variableName),
+    'the picker closes on the variable it was pointed at',
+  );
 
   record(
     (await dialog.innerText()).includes(variableName),
@@ -148,7 +163,9 @@ try {
 
   await page.screenshot({ path: shot('action-headers-rows.png') });
 
-  await dialog.getByRole('button', { name: /^(create|save)/i }).first().click();
+  const submit = dialog.getByRole('button', { name: /^(Create Action|Save Changes)$/ });
+  record(await submit.isEnabled(), 'the form is complete enough to save');
+  await submit.click();
   await dialog.waitFor({ state: 'hidden', timeout: 10_000 });
 
   // ------------------------------------------- what was stored, and what was not
