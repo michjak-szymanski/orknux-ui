@@ -226,9 +226,21 @@ const screens = [
     name: 'agent settings',
     path: `/workspace/${WORKSPACE}/agents/${agent}/settings`,
     hints: 2,
-    gone: ['Nodes drawn from this agent start with it'],
-    // The two switches whose consequences the settings batch left printed.
-    kept: ['a loop nothing here breaks', 'can do whatever that account can'],
+    /*
+     * The two grant switches went with issue #173. They were `kept` here on the
+     * argument that a consequence of granting something is not an explanation
+     * of it; the rules file settled the other way - a consequence worth knowing
+     * before granting a permission belongs in the (?) beside that permission -
+     * and both sentences are now inside the `FieldHint` on their own switch.
+     * They are listed as moved rather than dropped, so the check still asserts
+     * the product says them, only elsewhere.
+     */
+    gone: [
+      'Nodes drawn from this agent start with it',
+      'a loop nothing here breaks',
+      'can do whatever that account can',
+    ],
+    kept: [],
   },
   {
     /*
@@ -260,6 +272,31 @@ const away = async () => {
   await page.mouse.move(1400, 980);
   await page.waitForTimeout(300);
 };
+
+/**
+ * What every (?) on the screen says, each one opened in turn.
+ *
+ * `gone` used to mean one thing: the sentence is not printed in the open. That
+ * passes just as well for a sentence that was deleted as for one that moved,
+ * and the rules file is explicit that deleting it is the mistake the move
+ * invites - something said only in a paragraph and then trimmed away is a thing
+ * the product no longer says anywhere. So `gone` now means both halves: not in
+ * the open, and in the note.
+ */
+async function noteText() {
+  const controls = page.locator('[data-hint]');
+  const many = await controls.count();
+  let held = '';
+  for (let index = 0; index < many; index += 1) {
+    const one = controls.nth(index);
+    if (!(await one.isVisible().catch(() => false))) continue;
+    await one.hover().catch(() => {});
+    await page.waitForTimeout(250);
+    if (await shown()) held += `\n${await note.first().innerText()}`;
+    await away();
+  }
+  return held;
+}
 
 /** One screen at a time, for photographing something that has to be opened first. */
 const only = process.env.ORKNUX_ONLY ?? null;
@@ -325,8 +362,10 @@ for (const one of screens) {
   }
 
   const body = await page.locator('body').innerText();
+  const said = one.gone.length > 0 ? await noteText() : '';
   for (const sentence of one.gone) {
     record(!body.includes(sentence), `${one.name}: "${sentence}" is no longer printed under a field`);
+    record(said.includes(sentence), `${one.name}: "${sentence}" is what a (?) on the screen says`);
   }
   for (const sentence of one.kept) {
     record(body.includes(sentence), `${one.name}: "${sentence}" is still printed, as it must be`);

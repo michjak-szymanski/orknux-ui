@@ -88,24 +88,48 @@ const pages = [
     name: 'agent settings',
     path: agent,
     hints: 1,
-    gone: ['External tool servers this agent can connect to'],
-    kept: ['a loop nothing here breaks', 'can do whatever that account can'],
+    /*
+     * The last two were `kept`, on the argument that a consequence of ticking a
+     * box is not an explanation of it. The rules file settled the other way - a
+     * consequence worth knowing before granting a permission belongs in the (?)
+     * beside that permission - and issue #173 moved both into the `FieldHint` on
+     * their own switch. Listed as moved rather than dropped, so the check still
+     * asserts the product says them, only somewhere else.
+     */
+    gone: [
+      'External tool servers this agent can connect to',
+      'a loop nothing here breaks',
+      'can do whatever that account can',
+    ],
+    kept: [],
   },
   {
     name: 'provider settings',
     path: provider,
     hints: 1,
-    gone: ['Keys and Endpoint', 'on every request'],
+    gone: [],
+    /*
+     * Both of these belong to Azure OpenAI - the endpoint hint and the API
+     * version - and this opens whichever provider is first in the list, which on
+     * the seed is not an Azure one. Their absence has always been the only thing
+     * measurable here, and it passes for free. Saying so out loud rather than
+     * leaving them among the sentences the check claims to have found in a note:
+     * to assert those two properly, this page needs to be opened on an Azure
+     * provider.
+     */
+    elsewhere: ['Keys and Endpoint', 'on every request'],
     kept: [],
   },
   {
     name: 'connection settings',
     path: connection,
     hints: 0,
-    gone: [
-      'Every mail this connection sends is from this address',
-      'orknux listens for mentions and runs the triggers waiting on them',
-    ],
+    gone: ['orknux listens for mentions and runs the triggers waiting on them'],
+    /*
+     * The mail one, for the same reason: it is drawn for an SMTP connection and
+     * the seed builds only Slack ones, so there is no page here that carries it.
+     */
+    elsewhere: ['Every mail this connection sends is from this address'],
     kept: [],
   },
   {
@@ -176,6 +200,31 @@ const away = async () => {
   await page.waitForTimeout(300);
 };
 
+/**
+ * What every (?) on the page says, each one opened in turn.
+ *
+ * `gone` used to mean one thing: the sentence is not printed in the open. That
+ * passes just as well for a sentence that was deleted as for one that moved,
+ * and the rules file is explicit that deleting it is the mistake the move
+ * invites - something said only in a paragraph and then trimmed away is a thing
+ * the product no longer says anywhere. So `gone` now means both halves: not in
+ * the open, and in the note.
+ */
+async function noteText() {
+  const controls = page.locator('[data-hint]');
+  const many = await controls.count();
+  let held = '';
+  for (let index = 0; index < many; index += 1) {
+    const one = controls.nth(index);
+    if (!(await one.isVisible().catch(() => false))) continue;
+    await one.hover().catch(() => {});
+    await page.waitForTimeout(250);
+    if (await shown()) held += `\n${await note.first().innerText()}`;
+    await away();
+  }
+  return held;
+}
+
 /** One page at a time, for photographing a panel that has to be opened first. */
 const only = process.env.ORKNUX_ONLY ?? null;
 
@@ -236,8 +285,18 @@ for (const one of pages) {
   }
 
   const body = await page.locator('body').innerText();
+  const elsewhere = one.elsewhere ?? [];
+  const said = one.gone.length > 0 ? await noteText() : '';
   for (const sentence of one.gone) {
     record(!body.includes(sentence), `${one.name}: "${sentence}" is no longer printed under a field`);
+    record(said.includes(sentence), `${one.name}: "${sentence}" is what a (?) on the page says`);
+  }
+  for (const sentence of elsewhere) {
+    record(!body.includes(sentence), `${one.name}: "${sentence}" is no longer printed under a field`);
+    console.log(
+      `NOTE: ${one.name}: "${sentence}" is not asserted to be in a note - the field it belongs to ` +
+        'is drawn for a kind of thing this fixture is not, so only its absence is measured here',
+    );
   }
   for (const sentence of one.kept) {
     record(body.includes(sentence), `${one.name}: "${sentence}" is still printed, as it must be`);
