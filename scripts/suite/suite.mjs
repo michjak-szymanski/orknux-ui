@@ -173,6 +173,25 @@ export const TESTS = [
 
   // --- pages that are pages -------------------------------------------------
   {
+    name: 'admin-width-check',
+    what: 'every page under Admin fills the column it was given, and none of them caps it',
+    needs: [],
+    /*
+     * Needs nothing, and is the only one here that does not: it opens no
+     * browser and speaks to no server. It reads the admin paths out of
+     * `navigation.ts`, follows each through `routes.tsx` to the file that draws
+     * it, and asserts that nothing a page puts directly inside `<AppShell>`
+     * carries a max-width.
+     *
+     * That is the point rather than a shortcut. Half these pages need a fixture
+     * to render at all - the database this was written against had no template,
+     * so `/admin/templates/:templateId` drew nothing - and a measurement only
+     * covers the pages that happened to have something in them. Read out of
+     * `src/`, it covers every page there is, including the next one somebody
+     * adds.
+     */
+  },
+  {
     name: 'condition-page-check',
     what: 'the condition editor as a page: create, find, change, reload, jump to its function',
     needs: ['workspace'],

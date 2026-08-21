@@ -1,9 +1,26 @@
+/*
+ * The panel this page is, filling the column `AppShell` gives it — the same as
+ * every other page under Admin.
+ *
+ * It used to carry `max-width: 640px`, which was the only content cap in the
+ * whole admin section: measured at 1440 and 1920, sixteen admin pages ran the
+ * full width of the column and this one stopped at 640px pinned to the left,
+ * leaving two thirds of a wide screen empty. That is what was reported.
+ *
+ * It is tempting to answer "a form should be narrow", and there is something in
+ * it — but if that were this product's rule it would be the shell editor's rule
+ * and the template editor's rule too, and it is neither: both are forms, both
+ * fill. What those pages do instead is state narrowness where narrowness is
+ * actually meant, one field at a time — `.fieldNarrow` on the shell page is
+ * `flex: 0 0 120px` because a port is five characters wide. So the cap goes,
+ * and anything on this page that should be narrower than the column says so on
+ * its own field. `scripts/admin-width-check.mjs` holds the section to it.
+ */
 .card {
   display: flex;
   flex-direction: column;
   gap: var(--space-20);
   width: 100%;
-  max-width: 640px;
   padding: var(--space-24);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
