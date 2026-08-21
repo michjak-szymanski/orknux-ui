@@ -52,14 +52,14 @@ const MASK = '••••••••••••••••••••••
  * them - so choosing here and choosing there are the same list in the same
  * order rather than two lists that drift.
  */
-const CONNECTION_TYPES: ConnectionType[] = ['SLACK', 'SMTP', 'GITHUB', 'JIRA', 'WEBHOOK'];
+const CONNECTION_TYPES: ConnectionType[] = ['SLACK', 'SMTP', 'HTTP'];
 
 /**
  * What this field is called, which is what the service filling it calls it.
  *
  * Not one name for the shared column: Slack calls its own the bot token, and a
  * mail server has a password. "API Token" is left for the kinds where that is
- * genuinely the word - a GitHub or Jira token, or whatever a webhook wants.
+ * genuinely the word - whatever the endpoint at the other end expects.
  */
 function secretLabel(kind: ConnectionType | null): string {
   switch (kind) {
@@ -94,20 +94,6 @@ function secretHint(kind: ConnectionType | null) {
         <>
           The password for the mailbox above. Where the provider offers one, use an app password
           rather than the account&apos;s own - it can be withdrawn on its own.
-        </>
-      );
-    case 'GITHUB':
-      return (
-        <>
-          A personal access token, or a fine-grained token with access to the repositories this
-          workspace should reach.
-        </>
-      );
-    case 'JIRA':
-      return (
-        <>
-          An API token from your Atlassian account, paired with the account&apos;s email address as
-          the username.
         </>
       );
     default:
@@ -671,7 +657,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
             {!slack && !mail && (
             <div className={styles.field}>
               <label className={styles.label} htmlFor="connection-url-override">
-                Webhook URL Override
+                URL Override
               </label>
               <div className={styles.inputWrapper}>
                 <input
