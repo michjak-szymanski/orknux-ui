@@ -25,7 +25,7 @@ import { CreateWorkflowDialog } from '../../components/CreateWorkflowDialog';
 import { Loader } from '../../components/Loader';
 import { SortControl } from '../../components/SortControl';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
-import { WorkflowConfirmDialog } from '../../components/WorkflowConfirmDialog';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceWorkflowsPage.module.css';
 
@@ -463,8 +463,8 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
         }}
       />
 
-      <WorkflowConfirmDialog
-        workflowName={disabling?.name ?? null}
+      <ConfirmDialog
+        subject={disabling?.name ?? null}
         kind="disable"
         onClose={() => setDisabling(null)}
         onConfirm={async () => {

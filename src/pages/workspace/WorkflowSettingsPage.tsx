@@ -10,7 +10,7 @@ import { Loader } from '../../components/Loader';
 import { PublicationHistory } from '../../components/PublicationHistory';
 import { FieldHint } from '../../components/FieldHint';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
-import { WorkflowConfirmDialog } from '../../components/WorkflowConfirmDialog';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { shellUser } from '../../session/user';
 import styles from './AgentSettingsPage.module.css';
 
@@ -221,8 +221,8 @@ export function WorkflowSettingsPage({ session, onSignOut }: WorkflowSettingsPag
         </>
       )}
 
-      <WorkflowConfirmDialog
-        workflowName={removing ? (workflow?.name ?? null) : null}
+      <ConfirmDialog
+        subject={removing ? (workflow?.name ?? null) : null}
         kind="remove"
         onClose={() => setRemoving(false)}
         onConfirm={async () => {

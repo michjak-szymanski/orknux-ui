@@ -57,6 +57,7 @@ import { VoiceMode } from '../../components/VoiceMode';
 import type { VoiceModeHandle, VoicePhase } from '../../components/VoiceMode';
 import { Loader } from '../../components/Loader';
 import { Markdown } from '../../components/Markdown';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { setSidebarCollapsed, useSidebarCollapsed } from '../../session/sidebar';
 import { useInstallation } from '../../session/installation';
 import { shellUser } from '../../session/user';
@@ -252,6 +253,8 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
   const searchRef = useRef<HTMLInputElement>(null);
   /** Set when the collapsed search icon was the thing that opened the column. */
   const wantsSearch = useRef(false);
+  /** The chat a delete is being asked about, or null when nothing is. */
+  const [deleting, setDeleting] = useState<ChatSession | null>(null);
   const collapsed = useSidebarCollapsed();
 
   /*
@@ -842,13 +845,25 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
     setMenuFor(null);
   }
 
-  async function handleDelete(entry: ChatSession) {
+  /*
+   * Deleting a chat takes every message in it and there is no way back, so it
+   * asks. It did not: the button deleted, from the header and from the row menu
+   * both, on one press and with nothing said.
+   */
+  function handleDelete(entry: ChatSession) {
+    setMenuFor(null);
+    setDeleting(entry);
+  }
+
+  async function confirmDelete() {
+    const entry = deleting;
+    if (entry === null) return;
     await guard(async () => {
       await deleteChat(entry.id);
       setCurrentId((present) => (present === entry.id ? null : present));
       await loadSessions();
     });
-    setMenuFor(null);
+    setDeleting(null);
   }
 
   async function handlePin(entry: ChatSession) {
@@ -982,7 +997,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                   onMenu={() => setMenuFor(menuFor === entry.id ? null : entry.id)}
                   onPin={() => void handlePin(entry)}
                   onRename={() => void handleRename(entry)}
-                  onDelete={() => void handleDelete(entry)}
+                  onDelete={() => handleDelete(entry)}
                 />
               ))}
             </div>
@@ -1014,7 +1029,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                   onMenu={() => setMenuFor(menuFor === entry.id ? null : entry.id)}
                   onPin={() => void handlePin(entry)}
                   onRename={() => void handleRename(entry)}
-                  onDelete={() => void handleDelete(entry)}
+                  onDelete={() => handleDelete(entry)}
                 />
               ))}
             </div>
@@ -1088,13 +1103,130 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
       ) : (
         <div className={styles.chatRow}>
         <div className={styles.chat}>
+          {/*
+            One row, not two.
+
+            The title had a row and the model picker had another below it, and
+            the second held a single word - so two thirds of a bar of chrome
+            said what belongs beside the chat's name. Who answers next is now
+            read in the same glance as what the chat is called, immediately
+            left of the controls that act on it.
+          */}
           <header className={styles.titleBar}>
             <h1 className={styles.chatTitle}>{current.title}</h1>
+            <div className={styles.titleRight}>
+            <div className={styles.modelBar} ref={pickerRef}>
+              <button
+                type="button"
+                className={styles.modelButton}
+                onClick={() => setPickerOpen(!pickerOpen)}
+                aria-expanded={pickerOpen}
+              >
+                <span className={current.modelName === null ? styles.modelUnset : styles.modelName}>
+                  {current.agentName ?? current.modelName ?? 'Choose a model'}
+                </span>
+                <img src={chevronDown12Icon} alt="" width={12} height={12} />
+              </button>
+
+              {pickerOpen && (
+                <div className={styles.picker}>
+                  <div className={styles.pickerSearch}>
+                    <img src={searchIcon} alt="" width={14} height={14} />
+                    <input
+                      className={styles.searchInput}
+                      value={pickerSearch}
+                      onChange={(event) => setPickerSearch(event.target.value)}
+                      placeholder="Search"
+                      aria-label="Search models"
+                      autoFocus
+                    />
+                  </div>
+                  <div className={styles.pickerTabs} role="tablist">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={pickerTab === 'models'}
+                      className={pickerTab === 'models' ? styles.pickerTabActive : styles.pickerTab}
+                      onClick={() => setPickerTab('models')}
+                    >
+                      Models
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={pickerTab === 'agents'}
+                      className={pickerTab === 'agents' ? styles.pickerTabActive : styles.pickerTab}
+                      onClick={() => setPickerTab('agents')}
+                    >
+                      Agents
+                    </button>
+                  </div>
+                  <div className={styles.pickerList}>
+                    {/*
+                      Three things the list can have nothing in it for, and they
+                      are not the same thing: the workspace has none, the fetch
+                      failed, or what was typed above matches none of them.
+                    */}
+                    <CatalogueNote
+                      catalogue={pickerTab === 'models' ? modelCatalogue : agentCatalogue}
+                      className={styles.pickerEmpty}
+                      empty={
+                        pickerTab === 'models'
+                          ? 'No models in this workspace yet.'
+                          : 'No agents in this workspace yet.'
+                      }
+                    />
+                    {pickerEntries.length === 0 &&
+                      (pickerTab === 'models' ? models.length > 0 : agents.length > 0) && (
+                        <p className={styles.pickerEmpty}>Nothing by that name.</p>
+                      )}
+                    {pickerEntries.map((entry) => (
+                      <button
+                        key={entry.id}
+                        type="button"
+                        className={
+                          entry.id === (pickerTab === 'agents' ? current.agentId : current.modelId)
+                            ? styles.pickerEntryCurrent
+                            : styles.pickerEntry
+                        }
+                        // An agent with no model cannot answer; the server says so
+                        // too, but there is no reason to offer it as a choice.
+                        disabled={!entry.enabled}
+                        title={entry.enabled ? undefined : 'Not active'}
+                        onClick={() => void handleChoose(entry.id)}
+                      >
+                        {entry.label}
+                        {!entry.enabled && <span className={styles.pickerNote}>inactive</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             <div className={styles.titleActions}>
               <button
                 type="button"
                 className={styles.iconButton}
-                onClick={() => document.getElementById('chat-search')?.focus()}
+                onClick={() => {
+                  /*
+                   * The same act the collapsed column's magnifier performs, and
+                   * for the same reason: the search box lives in the sidebar,
+                   * so searching means putting the caret there - opening the
+                   * column first if it is shut, since the box does not exist
+                   * while it is.
+                   *
+                   * It used to focus `#chat-search`, a hidden read-only input
+                   * that was never anything but a placeholder. Pressing it did
+                   * exactly nothing, and looked like it should.
+                   */
+                  if (collapsed) {
+                    wantsSearch.current = true;
+                    setSidebarCollapsed(false);
+                    return;
+                  }
+                  searchRef.current?.focus();
+                  searchRef.current?.select();
+                }}
                 title="Search chats"
                 aria-label="Search chats"
               >
@@ -1112,12 +1244,13 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
               <button
                 type="button"
                 className={styles.iconButton}
-                onClick={() => void handleDelete(current)}
+                onClick={() => handleDelete(current)}
                 title="Delete this chat"
                 aria-label="Delete this chat"
               >
                 <img src={trashIcon} alt="" width={14} height={14} />
               </button>
+            </div>
             </div>
           </header>
 
@@ -1142,95 +1275,6 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
               </Link>
             </p>
           )}
-
-          <div className={styles.modelBar} ref={pickerRef}>
-            <button
-              type="button"
-              className={styles.modelButton}
-              onClick={() => setPickerOpen(!pickerOpen)}
-              aria-expanded={pickerOpen}
-            >
-              <span className={current.modelName === null ? styles.modelUnset : styles.modelName}>
-                {current.agentName ?? current.modelName ?? 'Choose a model'}
-              </span>
-              <img src={chevronDown12Icon} alt="" width={12} height={12} />
-            </button>
-
-            {pickerOpen && (
-              <div className={styles.picker}>
-                <div className={styles.pickerSearch}>
-                  <img src={searchIcon} alt="" width={14} height={14} />
-                  <input
-                    className={styles.searchInput}
-                    value={pickerSearch}
-                    onChange={(event) => setPickerSearch(event.target.value)}
-                    placeholder="Search"
-                    aria-label="Search models"
-                    autoFocus
-                  />
-                </div>
-                <div className={styles.pickerTabs} role="tablist">
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={pickerTab === 'models'}
-                    className={pickerTab === 'models' ? styles.pickerTabActive : styles.pickerTab}
-                    onClick={() => setPickerTab('models')}
-                  >
-                    Models
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={pickerTab === 'agents'}
-                    className={pickerTab === 'agents' ? styles.pickerTabActive : styles.pickerTab}
-                    onClick={() => setPickerTab('agents')}
-                  >
-                    Agents
-                  </button>
-                </div>
-                <div className={styles.pickerList}>
-                  {/*
-                    Three things the list can have nothing in it for, and they
-                    are not the same thing: the workspace has none, the fetch
-                    failed, or what was typed above matches none of them.
-                  */}
-                  <CatalogueNote
-                    catalogue={pickerTab === 'models' ? modelCatalogue : agentCatalogue}
-                    className={styles.pickerEmpty}
-                    empty={
-                      pickerTab === 'models'
-                        ? 'No models in this workspace yet.'
-                        : 'No agents in this workspace yet.'
-                    }
-                  />
-                  {pickerEntries.length === 0 &&
-                    (pickerTab === 'models' ? models.length > 0 : agents.length > 0) && (
-                      <p className={styles.pickerEmpty}>Nothing by that name.</p>
-                    )}
-                  {pickerEntries.map((entry) => (
-                    <button
-                      key={entry.id}
-                      type="button"
-                      className={
-                        entry.id === (pickerTab === 'agents' ? current.agentId : current.modelId)
-                          ? styles.pickerEntryCurrent
-                          : styles.pickerEntry
-                      }
-                      // An agent with no model cannot answer; the server says so
-                      // too, but there is no reason to offer it as a choice.
-                      disabled={!entry.enabled}
-                      title={entry.enabled ? undefined : 'Not active'}
-                      onClick={() => void handleChoose(entry.id)}
-                    >
-                      {entry.label}
-                      {!entry.enabled && <span className={styles.pickerNote}>inactive</span>}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
 
           <div className={styles.log} ref={logRef}>
             {messages.length === 0 && (
@@ -1486,7 +1530,28 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
               </div>
             )}
 
-            <div className={styles.composerBox}>
+            {/*
+              The whole box is the text field, as far as a pointer is
+              concerned.
+              
+              It looks like one control and is several: a 20px textarea beside
+              taller buttons, inside 16px of padding. Everything that is not the
+              one line of text - the padding, and the gap left beside the
+              buttons - was dead, so clicking what plainly reads as the input
+              did nothing.
+              
+              `mousedown` rather than `click`, and only when the press landed on
+              the box itself: a press on a child is that child's, and focus has
+              to be taken before the default action moves it somewhere else.
+            */}
+            <div
+              className={styles.composerBox}
+              onMouseDown={(event) => {
+                if (event.target !== event.currentTarget) return;
+                event.preventDefault();
+                document.getElementById('chat-composer')?.focus();
+              }}
+            >
               {/*
                 One button, one menu, and for now one thing in it. A dropdown
                 rather than a paperclip because what can be added to a message
@@ -1679,7 +1744,13 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
         </div>
       )}
       {/* The title bar's search focuses the sidebar's box, which is the one that filters. */}
-      <input id="chat-search" className={styles.hiddenAnchor} tabIndex={-1} aria-hidden="true" readOnly />
+
+      <ConfirmDialog
+        subject={deleting?.title ?? null}
+        kind="deleteChat"
+        onClose={() => setDeleting(null)}
+        onConfirm={confirmDelete}
+      />
 
       <AttachmentViewer
         images={previewPictures}

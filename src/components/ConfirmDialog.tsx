@@ -5,21 +5,28 @@ import alertTriangleIcon from '../assets/alert-triangle.svg';
 import trash2Icon from '../assets/trash-2.svg';
 import styles from './Dialog.module.css';
 
-export type WorkflowConfirmKind = 'disable' | 'remove' | 'discard';
+export type ConfirmKind = 'disable' | 'remove' | 'discard' | 'deleteChat';
 
-export interface WorkflowConfirmDialogProps {
-  /** The workflow name to confirm against, or null when closed. */
-  workflowName: string | null;
-  kind: WorkflowConfirmKind;
+export interface ConfirmDialogProps {
+  /** What is being acted on, named, or null when the dialog is closed. */
+  subject: string | null;
+  kind: ConfirmKind;
   onClose: () => void;
   onConfirm: () => Promise<void>;
 }
 
 /**
- * The disable and remove modals share a layout and differ only in icon, accent
- * and copy, so they are one component.
+ * Asking before something cannot be undone.
+ *
+ * The modals share a layout and differ only in icon, accent and copy, so they
+ * are one component. It was called `WorkflowConfirmDialog` and took a
+ * `workflowName` while three of its four uses were workflows - then deleting a
+ * chat turned out to ask nothing at all, and the choice was between a second
+ * component of the same shape and a name that tells the truth. Two dialogs
+ * doing one job is the drift this codebase keeps paying for, so it is one, and
+ * what it confirms against is a `subject`.
  */
-export function WorkflowConfirmDialog({ workflowName, kind, onClose, onConfirm }: WorkflowConfirmDialogProps) {
+export function ConfirmDialog({ subject, kind, onClose, onConfirm }: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,14 +35,14 @@ export function WorkflowConfirmDialog({ workflowName, kind, onClose, onConfirm }
     const dialog = dialogRef.current;
     if (dialog === null) return;
 
-    if (workflowName !== null && !dialog.open) {
+    if (subject !== null && !dialog.open) {
       setError(null);
       setSubmitting(false);
       dialog.showModal();
-    } else if (workflowName === null && dialog.open) {
+    } else if (subject === null && dialog.open) {
       dialog.close();
     }
-  }, [workflowName]);
+  }, [subject]);
 
   async function handleConfirm() {
     if (submitting) return;
@@ -49,8 +56,8 @@ export function WorkflowConfirmDialog({ workflowName, kind, onClose, onConfirm }
     }
   }
 
-  const name = <strong>&quot;{workflowName}&quot;</strong>;
-  const copy: Record<WorkflowConfirmKind, { title: string; message: ReactNode; button: string }> = {
+  const name = <strong>&quot;{subject}&quot;</strong>;
+  const copy: Record<ConfirmKind, { title: string; message: ReactNode; button: string }> = {
     disable: {
       title: 'Disable workflow',
       message: (
@@ -70,6 +77,15 @@ export function WorkflowConfirmDialog({ workflowName, kind, onClose, onConfirm }
         </>
       ),
       button: submitting ? 'Removing…' : 'Remove',
+    },
+    deleteChat: {
+      title: 'Delete chat',
+      message: (
+        <>
+          Delete {name}? Every message in it goes with it, and there is no way back from this one.
+        </>
+      ),
+      button: submitting ? 'Deleting…' : 'Delete',
     },
     discard: {
       title: 'Discard changes',
@@ -93,8 +109,8 @@ export function WorkflowConfirmDialog({ workflowName, kind, onClose, onConfirm }
         </header>
 
         <div className={styles.warning}>
-          <span className={kind === 'remove' ? styles.warningBadge : styles.warningBadgeAmber}>
-            <img src={kind === 'remove' ? trash2Icon : alertTriangleIcon} alt="" width={18} height={18} />
+          <span className={kind === 'remove' || kind === 'deleteChat' ? styles.warningBadge : styles.warningBadgeAmber}>
+            <img src={kind === 'remove' || kind === 'deleteChat' ? trash2Icon : alertTriangleIcon} alt="" width={18} height={18} />
           </span>
           <p className={styles.warningMessage}>{message}</p>
         </div>
@@ -111,7 +127,7 @@ export function WorkflowConfirmDialog({ workflowName, kind, onClose, onConfirm }
           </button>
           <button
             type="button"
-            className={kind === 'remove' ? styles.destructive : styles.amber}
+            className={kind === 'remove' || kind === 'deleteChat' ? styles.destructive : styles.amber}
             onClick={handleConfirm}
             disabled={submitting}
             autoFocus

@@ -93,7 +93,7 @@ import type { FieldOption } from '../../components/FieldPicker';
 import { Icon, IconPickerDialog } from '../../components/IconPicker';
 import { Loader } from '../../components/Loader';
 import { TrashIcon } from '../../components/TrashIcon';
-import { WorkflowConfirmDialog } from '../../components/WorkflowConfirmDialog';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import {
   matches,
   useAddShortcut,
@@ -4426,8 +4426,8 @@ Change the keystroke in Preferences.`}
         onClose={() => setExporting(false)}
       />
 
-      <WorkflowConfirmDialog
-        workflowName={removing ? name : null}
+      <ConfirmDialog
+        subject={removing ? name : null}
         kind="remove"
         onClose={() => setRemoving(false)}
         onConfirm={async () => {
@@ -4444,8 +4444,8 @@ Change the keystroke in Preferences.`}
         first, and then reloads rather than undoing: what the server holds is
         what the graph was, whatever the panel has been doing to it since.
       */}
-      <WorkflowConfirmDialog
-        workflowName={discarding ? name : null}
+      <ConfirmDialog
+        subject={discarding ? name : null}
         kind="discard"
         onClose={() => setDiscarding(false)}
         onConfirm={async () => {

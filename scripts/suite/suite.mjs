@@ -269,6 +269,31 @@ export const TESTS = [
      */
   },
 
+  {
+    name: 'composer-target-check',
+    what: 'the whole chat composer takes a click, and has not grown its padding back',
+    needs: [],
+    /*
+     * Reported as "the click only activates the input on a narrow area". The
+     * box is 54px and the text in it 24, so most of what reads as the field was
+     * dead. It asserts the three places somebody actually aims and the box's
+     * height, because the padding was cut in the same breath and a check that
+     * only proved the clicks would let it grow back.
+     */
+  },
+
+  {
+    name: 'chat-header-check',
+    what: 'the title bar is one row, its search searches, and its delete asks first',
+    needs: [],
+    /*
+     * The delete assertion is the one that matters. The trash button called
+     * `deleteChat` straight through - one press, nothing said, every message
+     * gone - from the header and from the row menu both. The check presses it
+     * and asserts the chat is still there.
+     */
+  },
+
   // --- pages that are pages -------------------------------------------------
   {
     name: 'admin-width-check',
