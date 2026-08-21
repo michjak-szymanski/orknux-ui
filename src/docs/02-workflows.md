@@ -265,11 +265,38 @@ of their own, in the node's panel. Nothing else does: a condition that does not
 hold has answered, and an object node assembles what it was already handed.
 
 **Retries** is how many goes in all rather than how many extra ones — one is the
-single attempt every step has always had. Beside it is the wait before the first
-retry, which is the same before every one after it unless **Double the wait
-after each attempt** is ticked, and never grows past an hour however far the
-doubling would have gone. A provider asking to be left alone is then left alone
-for longer each time instead of being knocked on at the same interval.
+single attempt every step has always had. Beside it, **initial wait** is what the
+node leaves before its second attempt, and **multiplier** is what that wait is
+multiplied by after each one: 1 repeats it, 2 doubles it, and 1.5 grows it
+without doubling. A provider asking to be left alone is then left alone for
+longer each time instead of being knocked on at the same interval.
+
+Under the three is a line saying what they come to — *"up to 5 attempts over
+about 2m"* — because the numbers compose in a way nobody works out in their head,
+and that sentence is the one worth reading before saving.
+
+Three more sit behind **Ceiling, jitter and budget**, and most nodes never need
+any of them:
+
+- **Maximum wait** stops the curve growing past a number you choose. It is only
+  offered where the wait grows, since a wait that repeats cannot reach a ceiling.
+  No single wait ever passes an hour whatever is set here.
+- **Jitter** is how much of a wait may be taken off it at random — 0 is none,
+  0.25 takes off up to a quarter, 1 draws each wait from anywhere up to what the
+  curve asked for. It only ever shortens, so every other number stays the most
+  that can happen. It is what stops a hundred runs that failed on one outage all
+  coming back at the same instant, which is how a service that is struggling gets
+  held down.
+- **Budget** is a wall clock: *give up after this long whatever you are doing.*
+  It is the only setting that can stop a node with attempts still in hand, and
+  the only one that counts the work as well as the waiting — five attempts at a
+  request that times out after a minute is five minutes of run that none of the
+  waits above account for. A node that reaches it stops there, and says so in the
+  run's log.
+
+A node saved before any of this had a fixed wait, or that wait doubling, and
+means exactly what it meant: doubling is a multiplier of 2, and a fixed wait is a
+multiplier of 1.
 
 A failure that is already settled never spends an attempt. A request refused for
 what it said will be refused the same way in ten seconds; only the failures that
