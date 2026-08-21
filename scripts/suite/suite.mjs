@@ -385,6 +385,31 @@ export const TESTS = [
     needs: ['workspace'],
   },
   {
+    name: 'typing-race-check',
+    what: 'typing fast comes out character for character, and the four things allowed to overwrite it still can',
+    needs: ['workspace'],
+    /*
+     * Issue #198. `CodeEditor` wrote its model back from its `value` prop
+     * whenever the two differed, which for an editor is a race rather than a
+     * rule: a passive effect runs after paint, so a keystroke landing in that
+     * gap left it writing the text from one character ago back over the model
+     * and sending the caret home. Typed at 15ms a key, an ordinary line came out
+     * as "';n 'o' retu) 4154262ion1787".
+     *
+     * The delay is the whole point of this one. Playwright's default typing
+     * speed is slower than a person's and does not reproduce it - which is how
+     * every other check that drives this editor went on passing while real text
+     * was being scrambled - so it types at 15ms and compares the whole string.
+     *
+     * The other half is what a fix could quietly break. Four things legitimately
+     * write into this editor through that same prop - the panel rewriting a
+     * declaration when a parameter is added, an accepted suggestion, a revision
+     * restored from the History panel, another function opened - and all four
+     * are driven here, along with the case #175 was about: a load rewrites
+     * nothing.
+     */
+  },
+  {
     name: 'tool-signature-check',
     what: "a tool's signature is editable, follows into the code column, and sticks",
     needs: ['workspace'],
