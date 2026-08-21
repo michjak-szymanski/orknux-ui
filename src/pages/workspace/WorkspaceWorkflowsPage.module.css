@@ -161,6 +161,14 @@
  * The icon, and nothing around it until it is pointed at. A boxed button on
  * every row draws the eye down the actions column rather than across the
  * workflows, which are what the table is about.
+ *
+ * All three of the row's icon controls wear this class - export, save as
+ * template, and the way in to the settings - and it never said `cursor`. Only
+ * the last one looked right, and only because it is an `<a href>`, which the
+ * browser gives a pointer for nothing. The two that are `<button>`s got the
+ * arrow, which reads as "not clickable" on a control that is. Setting it here
+ * rather than on the one that was noticed is the difference between fixing the
+ * class and fixing the complaint.
  */
 .settings {
   display: flex;
@@ -171,6 +179,7 @@
   background: none;
   border: 1px solid transparent;
   border-radius: var(--radius-6);
+  cursor: pointer;
   opacity: 0.75;
 }
 
