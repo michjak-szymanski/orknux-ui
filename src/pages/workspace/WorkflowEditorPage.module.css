@@ -1129,8 +1129,9 @@ select.input {
  *
  * Each sits on the line - the first at its middle until the line is bent, and
  * each on its own bend after that - so the thing that moves the line is where
- * the line is. On a labelled line the first of them is the label instead,
- * which is the same point and a far bigger target.
+ * the line is. A labelled line has them too, and its label is drawn just above
+ * the first rather than over it: the label is a second, bigger way to take hold
+ * of that one point, not a replacement for its dot.
  *
  * Quiet by default. One of these per line on a graph of twenty is twenty dots,
  * and a canvas dotted all over reads as clutter rather than as an offer - so

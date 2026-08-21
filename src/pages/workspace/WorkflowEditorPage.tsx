@@ -368,6 +368,23 @@ const FIELDS_ON_A_LINE = 4;
 /** How far one press of an arrow key moves a line's point. About a nudge. */
 const NUDGE = 8;
 
+/**
+ * How far above its point a label sits.
+ *
+ * It used to sit *on* the point, straddling the line, and be the only handle
+ * that point had - which is what made a labelled line refuse extra bends. A
+ * label is a hundred and sixty pixels wide over a line drawn one pixel thick,
+ * so the middle of the line, where anybody aims to bend it, was label rather
+ * than line: the double-click that puts a point on landed on the label, which
+ * answers that gesture by taking its own point off. The line accepted bends
+ * everywhere except where it was covered, which on a short line is everywhere.
+ *
+ * Lifted clear, the line under it is line again, and the point can have the
+ * same dot every other point has. The label stays attached to that point and
+ * still drags it, so nothing about what a label is for has changed.
+ */
+const LABEL_LIFT = 10;
+
 /** One thing a line carries: the field read, and the parameter it answers. */
 interface Carried {
   from: string;
@@ -694,9 +711,10 @@ function CarriedEdge({
   const path = placed.length === 0 ? straight : bentPath(ends.source, ends.target, placed);
   /*
    * What can be taken hold of: one handle per point, or a single quiet one at
-   * the line's middle when it has none yet. The first stands where the label
-   * stands, so a labelled line is still dragged by its label and never grows a
-   * dot underneath one.
+   * the line's middle when it has none yet. Every point has one, on a labelled
+   * line as much as on a bare one - the label is lifted off the line rather
+   * than standing in for the first point, so the dot underneath it is a dot
+   * like any other and the line either side of it can be double-clicked.
    */
   const handles = placed.length === 0 ? [{ x: labelX, y: labelY }] : placed;
   // The label sits in flow coordinates; a pointer moves in screen ones, and the
@@ -852,19 +870,21 @@ function CarriedEdge({
            * The points a line can be taken hold of by.
            *
            * Lines are routed for you, and where two nodes sit awkwardly the
-           * line between them runs through whatever is in the way. A labelled
-           * line has always had a handle - its label - and a line carrying
-           * nothing had none, which is most of the lines on most graphs. These
-           * are those handles: small and quiet on a line still running where
-           * it was put, lit once each is holding a bend, so the thing to
-           * double-click is the thing you can see.
+           * line between them runs through whatever is in the way. These are
+           * the handles: small and quiet on a line still running where it was
+           * put, lit once each is holding a bend, so the thing to double-click
+           * is the thing you can see.
            *
-           * The first of them is the label's own place on a labelled line, and
-           * the label is drawn there instead: two draggable things on one spot
-           * would fight over the same point.
+           * One per point on every line. The first used to be left off a
+           * labelled line, because the label stood on that point and two
+           * draggable things on one spot would fight over it - but that made
+           * the label the only handle a labelled line had, and a label answers
+           * a double-click by taking its point off rather than by putting one
+           * on. So a labelled line could not be bent a second time anywhere
+           * its label lay, which is over the middle of it. The label is lifted
+           * above its point now and this dot is what stands on it.
            */}
-          {handles.map((spot, at) =>
-            says.length > 0 && at === 0 ? null : (
+          {handles.map((spot, at) => (
               <button
                 key={at}
                 type="button"
@@ -896,8 +916,7 @@ function CarriedEdge({
                   removePoint(at);
                 }}
               />
-            ),
-          )}
+          ))}
         </EdgeLabelRenderer>
       )}
       {says.length > 0 && (
@@ -906,8 +925,16 @@ function CarriedEdge({
             className={[styles.edgeLabel, drag?.at === 0 ? styles.edgeLabelDragging : '', 'nodrag', 'nopan']
               .filter(Boolean)
               .join(' ')}
+            /*
+             * Above its point rather than on it, by exactly the lift. What is
+             * under the label is the line, and what is on the point is the dot
+             * - so a double-click aimed at the line puts a point on it, and one
+             * aimed at the point takes it off, on a labelled line as on a bare
+             * one.
+             */
             style={{
-              transform: `translate(-50%, -50%) translate(${handles[0].x}px, ${handles[0].y}px)`,
+              transform:
+                `translate(-50%, -100%) translate(${handles[0].x}px, ${handles[0].y - LABEL_LIFT}px)`,
             }}
             // Which line it belongs to, said in the markup: a label that has been
             // dragged away is otherwise attributable only by eye.
