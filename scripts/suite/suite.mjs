@@ -151,6 +151,17 @@ export const TESTS = [
     needs: ['workspace'],
   },
   {
+    name: 'agent-definition-check',
+    what: "an agent node's definition opening in the panel, beside the graph, like a trigger's",
+    needs: ['workflow'],
+    /*
+     * Runs against the workflow the seed builds: a trigger node pointing at a
+     * trigger and an agent node pointing at an agent, which is what it presses
+     * Open definition on. It saves the agent it opened - with the values it was
+     * already holding, and it reads the name back afterwards to say so.
+     */
+  },
+  {
     name: 'param-panel-check',
     what: "the function editor's details panel: the row, the notch colour, the link mark",
     needs: ['workspace'],

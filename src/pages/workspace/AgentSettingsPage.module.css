@@ -72,18 +72,6 @@
   color: var(--color-text-secondary);
 }
 
-/*
- * A label and the (?) that explains it, on one line, so the question mark reads
- * as belonging to that label rather than floating at the edge of the card. The
- * same shape the node panel uses, because it is the same control.
- */
-.labelWithHint {
-  display: flex;
-  align-items: center;
-  gap: var(--space-6);
-  min-width: 0;
-}
-
 .inputWrapper {
   display: flex;
   align-items: center;
@@ -101,12 +89,6 @@
 .inputWrapperTall {
   align-items: stretch;
   height: 80px;
-  padding: var(--space-12);
-}
-
-.inputWrapperPrompt {
-  align-items: stretch;
-  height: 120px;
   padding: var(--space-12);
 }
 
@@ -133,96 +115,10 @@
   resize: vertical;
 }
 
-.promptInput {
-  font-size: var(--text-md);
-  line-height: 1.5;
-}
-
-/* ---- System prompt disclosure ---- */
-
-.promptToggle {
-  display: flex;
-  align-items: center;
-  gap: var(--space-8);
-  padding: 0;
-  background: none;
-  border: 0;
-  font-weight: 600;
-  font-size: var(--text-md);
-  color: var(--color-text-primary);
-  cursor: pointer;
-}
-
-.chevron {
-  transition: transform 120ms ease;
-}
-
-.chevronClosed {
-  transform: rotate(-90deg);
-}
-
-/* ---- MCP servers ---- */
-
 .hint {
   margin: 0;
   font-size: var(--text-md);
   color: var(--color-text-muted);
-}
-
-.servers {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-8);
-}
-
-.chip {
-  display: flex;
-  align-items: center;
-  gap: var(--space-6);
-  padding: var(--space-4) var(--space-8);
-  background: var(--color-border);
-  border-radius: var(--radius-4);
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  color: var(--color-text-primary);
-}
-
-.chipRemove {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 12px;
-  height: 12px;
-  padding: 0;
-  background: none;
-  border: 0;
-  cursor: pointer;
-}
-
-.addServer {
-  padding: 0 var(--space-4);
-  background: none;
-  border: 0;
-  font-weight: 500;
-  font-size: var(--text-md);
-  color: var(--color-accent-brand);
-  cursor: pointer;
-}
-
-.newServer {
-  width: 160px;
-  padding: var(--space-4) var(--space-8);
-  background: var(--color-bg);
-  border: 1px solid var(--color-accent-brand);
-  border-radius: var(--radius-4);
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  color: var(--color-text-primary);
-}
-
-.newServer:focus {
-  outline: none;
 }
 
 /* ---- Actions ---- */
@@ -353,48 +249,6 @@
 .select {
   appearance: none;
   cursor: pointer;
-}
-
-/*
- * The catalogs this agent may read. Checkboxes rather than a multi-select: the
- * list is short, and what matters is seeing at a glance what it can and cannot
- * reach.
- */
-.checkList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  width: 100%;
-}
-
-.checkRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-8);
-  padding: var(--space-8) var(--space-12);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-6);
-  font-size: var(--text-md);
-  color: var(--color-text-primary);
-  cursor: pointer;
-}
-
-.checkRow:hover {
-  border-color: var(--color-accent-brand);
-}
-
-.checkCount {
-  margin-left: auto;
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-}
-
-.emptyNote {
-  margin: 0;
-  font-size: var(--text-md);
-  color: var(--color-text-muted);
 }
 
 /*

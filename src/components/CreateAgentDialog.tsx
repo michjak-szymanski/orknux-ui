@@ -3,6 +3,8 @@ import type { FormEvent } from 'react';
 
 import { createAgent } from '../api/agents';
 import type { Agent } from '../api/agents';
+import { AgentForm } from './AgentForm';
+import type { AgentFormStyles } from './AgentForm';
 import styles from './Dialog.module.css';
 
 export interface CreateAgentDialogProps {
@@ -16,12 +18,51 @@ export interface CreateAgentDialogProps {
   placement?: 'modal' | 'panel';
   open: boolean;
   workspaceId: string;
+  /**
+   * Null makes one; an agent opens its definition as it stands.
+   *
+   * Making an agent asks for a name and a description and nothing else - there
+   * is no model to choose for something that does not exist yet, and no grant
+   * to give it. Everything else an agent is arrives the moment it does, which
+   * is why the two are not the same form.
+   */
+  agent?: Agent | null;
   onClose: () => void;
+  /** What was made, or what was saved. */
   onCreated: (agent: Agent) => void;
 }
 
-/** No frame exists for this one; it follows the create-workflow modal. */
-export function CreateAgentDialog({ open, workspaceId, onClose, onCreated, placement = 'modal' }: CreateAgentDialogProps) {
+/** The dialog's own names for what the form needs. */
+const FORM_STYLES: AgentFormStyles = {
+  // The padding belongs to the panel around it, which also holds the title.
+  body: styles.fields,
+  fields: styles.fields,
+  field: styles.field,
+  label: styles.label,
+  input: styles.input,
+  select: styles.select,
+  inputWrapper: styles.inputWrapper,
+  inputWrapperTall: styles.inputWrapperTall,
+  textarea: styles.textarea,
+  fieldHint: styles.fieldHint,
+  error: styles.error,
+  actions: styles.actions,
+  ghost: styles.ghost,
+  filled: styles.filled,
+};
+
+/**
+ * Create agent, from the agent list — and the whole of an agent's definition
+ * again for one that exists, where the frame around it is a panel rather than a
+ * modal.
+ *
+ * A modal still only creates: settings for something real want a URL, room, and
+ * somewhere to keep a Danger Zone, which is what the agent's own page is for.
+ * Beside a workflow graph the bargain is different — the reason somebody is
+ * reading an agent there is the node in front of them, and a page would take
+ * that off the screen to show a form this one already holds.
+ */
+export function CreateAgentDialog({ open, workspaceId, agent = null, onClose, onCreated, placement = 'modal' }: CreateAgentDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -62,63 +103,88 @@ export function CreateAgentDialog({ open, workspaceId, onClose, onCreated, place
 
   return (
     <dialog ref={dialogRef} className={`${styles.dialog} ${styles.dialogWide} ${placement === 'panel' ? styles.dialogPanel : ''}`} onCancel={onClose} onClose={onClose}>
-      <form className={styles.body} onSubmit={handleSubmit}>
-        <header className={styles.header}>
-          <h2 className={styles.title}>Create agent</h2>
-        </header>
+      {agent !== null ? (
+        <div className={styles.body}>
+          <header className={styles.header}>
+            <h2 className={styles.title}>Agent Settings</h2>
+          </header>
 
-        <div className={styles.fields}>
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="create-agent-name">
-              Agent name
-            </label>
-            <div className={styles.inputWrapper}>
-              <input
-                id="create-agent-name"
-                name="agentName"
-                className={styles.input}
-                type="text"
-                placeholder="e.g. Research Agent"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                autoFocus
-                required
-              />
+          {/*
+            Mounted only while this is open, and keyed by which agent it holds,
+            which is what resets it: the form reads its fields as it mounts, so
+            opening the panel on a second agent starts it over without anything
+            having to empty it.
+          */}
+          {open && (
+            <AgentForm
+              key={agent.id}
+              workspaceId={workspaceId}
+              agent={agent}
+              styles={FORM_STYLES}
+              onSaved={onCreated}
+              onCancel={onClose}
+            />
+          )}
+        </div>
+      ) : (
+        <form className={styles.body} onSubmit={handleSubmit}>
+          <header className={styles.header}>
+            <h2 className={styles.title}>Create agent</h2>
+          </header>
+
+          <div className={styles.fields}>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="create-agent-name">
+                Agent name
+              </label>
+              <div className={styles.inputWrapper}>
+                <input
+                  id="create-agent-name"
+                  name="agentName"
+                  className={styles.input}
+                  type="text"
+                  placeholder="e.g. Research Agent"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  autoFocus
+                  required
+                />
+              </div>
+            </div>
+
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="create-agent-description">
+                Description
+              </label>
+              <div className={`${styles.inputWrapper} ${styles.inputWrapperTall}`}>
+                <textarea
+                  id="create-agent-description"
+                  name="agentDescription"
+                  className={`${styles.input} ${styles.textarea}`}
+                  placeholder="What this agent does."
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                />
+              </div>
             </div>
           </div>
 
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="create-agent-description">
-              Description
-            </label>
-            <div className={`${styles.inputWrapper} ${styles.inputWrapperTall}`}>
-              <textarea
-                id="create-agent-description"
-                name="agentDescription"
-                className={`${styles.input} ${styles.textarea}`}
-                placeholder="What this agent does."
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-              />
-            </div>
+          {error !== null && (
+            <p className={styles.error} role="alert">
+              {error}
+            </p>
+          )}
+
+          <div className={styles.actions}>
+            <button type="button" className={styles.ghost} onClick={onClose} disabled={submitting}>
+              Cancel
+            </button>
+            <button type="submit" className={styles.filled} disabled={name.trim() === '' || submitting}>
+              {submitting ? 'Creating…' : 'Create'}
+            </button>
           </div>
-        </div>
-
-        {error !== null && (
-          <p className={styles.error} role="alert">
-            {error}
-          </p>
-        )}
-
-        <div className={styles.actions}>
-          <button type="button" className={styles.ghost} onClick={onClose} disabled={submitting}>
-            Cancel
-          </button>
-          <button type="submit" className={styles.filled} disabled={name.trim() === '' || submitting}>
-            {submitting ? 'Creating…' : 'Create'}
-          </button>
-        </div>
-      </form>
+        </form>
+      )}
     </dialog>
   );
 }

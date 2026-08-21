@@ -2824,11 +2824,18 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     };
   }
 
-  /** The catalogue behind a picker, for the kinds the panel can hold. */
+  /**
+   * The catalogue behind a picker, for the kinds the panel can hold.
+   *
+   * An object is not among them: what the panel makes for one is a name, and
+   * its fields are given on its own page - so Open definition on an object node
+   * goes there, which is where the answer is.
+   */
   function catalogue(kind: NodeKind): { id: string }[] {
     if (kind === 'TRIGGER') return triggers;
     if (kind === 'ACTION') return actions;
     if (kind === 'CONDITION') return conditions;
+    if (kind === 'AGENT') return agents;
     return [];
   }
 
@@ -3301,7 +3308,11 @@ Change the keystroke in Preferences.`}
                           <Link
                             to={`/workspace/${workspaceId}/agents/${draft.agentId}/settings`}
                             className={styles.definitionLink}
-                            onClick={leavingFor(`/workspace/${workspaceId}/agents/${draft.agentId}/settings`)}
+                            onClick={openingIn(
+                              'AGENT',
+                              draft.agentId,
+                              `/workspace/${workspaceId}/agents/${draft.agentId}/settings`,
+                            )}
                           >
                             Open definition
                           </Link>
@@ -4297,10 +4308,19 @@ Change the keystroke in Preferences.`}
         placement="panel"
         open={building?.kind === 'AGENT'}
         workspaceId={workspaceId}
+        agent={beingBuilt('AGENT', agents)}
         onClose={() => setBuilding(null)}
         onCreated={(agent) => {
           setAgents((all) => withDefinition(all, agent));
-          setDraft((current) => (current === null ? current : { ...current, agentId: agent.id }));
+          /*
+           * Made here, the node points at it straight away. Opened here, it
+           * already does - and writing the same id back would count as an edit
+           * to the graph, so a person who read an agent beside their canvas
+           * would be told they had unsaved work they never did.
+           */
+          setDraft((current) =>
+            current === null || current.agentId === agent.id ? current : { ...current, agentId: agent.id },
+          );
           setBuilding(null);
         }}
       />
