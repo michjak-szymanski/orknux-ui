@@ -74,10 +74,30 @@ const asDrawn = () =>
 const names = (rows) => rows.map((row) => row.name);
 const same = (a, b) => a.length === b.length && a.every((one, at) => one === b[at]);
 
-/** The footer's own sentence, and the total it claims. */
+/**
+ * The footer's own sentence, the total it claims, and what the list holds now.
+ *
+ * `holds` is asked of the server at the moment the footer is read, rather than
+ * compared against the total taken at the top of this check. What this line is
+ * about is "the footer counts the whole list, not the rows on this page", and
+ * that is a statement about now. Workspace 9 is shared: `import-refresh-check`
+ * imports components into this very workspace and sweeps them out again
+ * afterwards, so the list goes up and comes back down while something else is
+ * reading it. A recorded failure of this assertion was exactly that - a footer
+ * saying 27 against a total of 28 taken twenty seconds earlier, and the same
+ * footer back at 28 four assertions later. The list had moved; the footer had
+ * not lied, and the arithmetic that was wrong was this check's.
+ *
+ * Nothing is loosened. A footer that counted the rows on the page instead of
+ * the whole list fails against the live total exactly as it failed against the
+ * stale one - and the callers below assert it is larger than the rows drawn as
+ * well, which is the same claim said a second way and does not depend on a
+ * total at all.
+ */
 async function footer() {
   const said = (await page.locator('p:has-text("Showing")').first().innerText()).trim();
-  return { said, total: Number(/of (\d+)/.exec(said)?.[1] ?? -1) };
+  const holds = (await asServer(null, null, 1)).totalElements;
+  return { said, total: Number(/of (\d+)/.exec(said)?.[1] ?? -1), holds };
 }
 
 /** Waits for the rows to settle after a control was used. */
@@ -99,7 +119,7 @@ async function flip() {
 }
 
 async function showPerPage(size) {
-  await page.selectOption('select[aria-label="How many templates to show at once"]', String(size));
+  await page.selectOption('select[aria-label="How many workflows to show at once"]', String(size));
   await settle();
 }
 
@@ -142,7 +162,15 @@ try {
   const ten = await asDrawn();
   const tenSaid = await footer();
   record(ten.length === Math.min(10, TOTAL), `10 per page draws ${Math.min(10, TOTAL)} rows (drew ${ten.length})`);
-  record(tenSaid.total === TOTAL, `the footer counts the whole list at 10 a page: "${tenSaid.said}"`);
+  record(
+    tenSaid.total === tenSaid.holds,
+    `the footer counts the whole list at 10 a page (${tenSaid.holds} in it): "${tenSaid.said}"`,
+  );
+  record(
+    tenSaid.total > ten.length,
+    `and counts more than the rows on the page, so it is not the page it is counting ` +
+      `(${tenSaid.total} against ${ten.length} drawn)`,
+  );
 
   await showPerPage(25);
   const twentyFive = await asDrawn();
@@ -155,12 +183,15 @@ try {
     twentyFive.length > ten.length,
     `asking for more rows drew more rows (${ten.length} -> ${twentyFive.length})`,
   );
-  record(bigSaid.total === TOTAL, `the footer still counts the whole list: "${bigSaid.said}"`);
+  record(
+    bigSaid.total === bigSaid.holds,
+    `the footer still counts the whole list (${bigSaid.holds} in it): "${bigSaid.said}"`,
+  );
 
   // The size is a fact about the screen somebody is at, so it outlives the page.
   await page.reload({ waitUntil: 'domcontentloaded' });
   await settle();
-  const remembered = await page.locator('select[aria-label="How many templates to show at once"]').inputValue();
+  const remembered = await page.locator('select[aria-label="How many workflows to show at once"]').inputValue();
   record(remembered === '25', `the chosen size survives a reload (came back as ${remembered})`);
 
   await showPerPage(10);

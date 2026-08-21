@@ -285,6 +285,18 @@ export const TESTS = [
      */
   },
   {
+    name: 'pagination-footer-check',
+    what: 'every paginated list names its own rows in the footer, and counts the list not the page',
+    needs: ['workspace'],
+    /*
+     * Wants nothing built for it. Every list it opens is one the workspace
+     * already has, and the half that matters most - which noun each call site
+     * hands the shared footer - is read out of `src/` and needs no database at
+     * all. A list the workspace happens to have none of is allowed to draw no
+     * footer, but only two of them, so an empty workspace cannot pass this.
+     */
+  },
+  {
     name: 'catalogue-failure-check',
     what: 'a catalogue that failed to load says so, where an empty one says it is empty',
     needs: ['workspace'],

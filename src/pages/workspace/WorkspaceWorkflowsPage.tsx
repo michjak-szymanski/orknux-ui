@@ -414,7 +414,17 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
             page={page}
             pageSize={pageSize}
             totalItems={workflows?.totalElements ?? 0}
-            unit="templates"
+            /*
+             * "workflows", because that is what the rows are.
+             *
+             * This said "templates", which is not a synonym here - a template is
+             * a published copy of a component, kept on the Templates page under
+             * Admin and reached from this page's own Use Template button. So the
+             * footer under a list of workflows named a different thing in the
+             * product, and the size control beside it asked "How many templates
+             * to show at once" about rows that are not templates.
+             */
+            unit="workflows"
             onPageChange={setPage}
             pageSizes={PAGE_SIZES}
             onPageSizeChange={(chosen) => {

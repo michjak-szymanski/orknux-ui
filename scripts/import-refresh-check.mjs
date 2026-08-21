@@ -89,7 +89,7 @@ async function state() {
   const rows = await page.locator('a[href*="/workflows/"][href$="/editor"]').count();
   const empty = await page.locator('text=/No workflows for .* yet/').count();
   const size = Number(
-    await page.locator('select[aria-label="How many templates to show at once"]').inputValue(),
+    await page.locator('select[aria-label="How many workflows to show at once"]').inputValue(),
   );
   return { summary, total, rows, empty: empty > 0, size };
 }
@@ -269,7 +269,7 @@ await page.waitForTimeout(1200);
  * Ten a page is the smallest the control offers, and eleven workflows is the
  * whole of what a second page needs.
  */
-await page.selectOption('select[aria-label="How many templates to show at once"]', '10');
+await page.selectOption('select[aria-label="How many workflows to show at once"]', '10');
 await page.waitForTimeout(1200);
 
 const propped = [];
