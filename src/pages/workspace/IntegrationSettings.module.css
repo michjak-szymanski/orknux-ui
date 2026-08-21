@@ -402,37 +402,3 @@ select.input {
   font-size: var(--text-base);
   color: var(--color-text-primary);
 }
-
-/*
- * Offering this connection to every workspace: said plainly, beside the button
- * that does it, in the same shape the danger zone below uses.
- */
-.shareRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-16);
-  width: 100%;
-}
-
-.shareText {
-  display: flex;
-  flex: 1 0 0;
-  flex-direction: column;
-  gap: var(--space-4);
-  min-width: 0;
-}
-
-.shareTitle {
-  margin: 0;
-  font-weight: 500;
-  font-size: var(--text-md);
-  color: var(--color-text-primary);
-}
-
-.shareMessage {
-  margin: 0;
-  max-width: 70ch;
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-}
