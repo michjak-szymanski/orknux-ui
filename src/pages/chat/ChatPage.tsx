@@ -255,6 +255,71 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
   const wantsSearch = useRef(false);
   /** The chat a delete is being asked about, or null when nothing is. */
   const [deleting, setDeleting] = useState<ChatSession | null>(null);
+  /*
+   * Finding something in the conversation that is open.
+   *
+   * A different act from the sidebar's box, which asks "which chat was that
+   * in" and filters a list of titles. This one asks "where in this one did we
+   * say that", and the answer is a position in the log. The magnifier in the
+   * title bar used to do neither - it focused a hidden input - and then, for a
+   * while, the first one, which is the wrong question for a control that sits
+   * above the conversation rather than above the list.
+   */
+  const [finding, setFinding] = useState(false);
+  const [find, setFind] = useState('');
+  const [findAt, setFindAt] = useState(0);
+  const findRef = useRef<HTMLInputElement>(null);
+
+  /*
+   * Which turns carry what is being looked for.
+   *
+   * Whole messages rather than the run of characters inside one: an answer is
+   * drawn as markdown, so highlighting a substring there means reaching into
+   * rendered output rather than text. A conversation is read a turn at a time
+   * anyway - what somebody wants is to be taken to the exchange, and the
+   * exchange is the unit the eye is already using.
+   */
+  const findHits = useMemo(() => {
+    const needle = find.trim().toLowerCase();
+    if (needle === '') return [];
+    return messages.reduce<number[]>((found, message, index) => {
+      if (message.content.toLowerCase().includes(needle)) found.push(index);
+      return found;
+    }, []);
+  }, [find, messages]);
+
+  /* A new search starts at its first hit, not wherever the last one had got to. */
+  useEffect(() => {
+    setFindAt(0);
+  }, [find]);
+
+  /* Taking the reader to the hit is the whole point; nothing else moves. */
+  useEffect(() => {
+    if (findHits.length === 0) return;
+    const at = logRef.current?.querySelector('[data-find="at"]');
+    at?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [findAt, findHits]);
+
+  const stepFind = (by: number) => {
+    if (findHits.length === 0) return;
+    setFindAt((was) => (was + by + findHits.length) % findHits.length);
+  };
+
+  const closeFind = () => {
+    setFinding(false);
+    setFind('');
+    setFindAt(0);
+  };
+
+  /**
+   * What to mark a turn with: the one being looked at, one of the others that
+   * matched, or nothing.
+   */
+  const findMark = (index: number): string | undefined => {
+    if (findHits.length === 0) return undefined;
+    if (findHits[findAt] === index) return 'at';
+    return findHits.includes(index) ? 'hit' : undefined;
+  };
   const collapsed = useSidebarCollapsed();
 
   /*
@@ -1209,26 +1274,26 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                 className={styles.iconButton}
                 onClick={() => {
                   /*
-                   * The same act the collapsed column's magnifier performs, and
-                   * for the same reason: the search box lives in the sidebar,
-                   * so searching means putting the caret there - opening the
-                   * column first if it is shut, since the box does not exist
-                   * while it is.
+                   * Opens a strip under the title, and the strip searches this
+                   * conversation.
                    *
-                   * It used to focus `#chat-search`, a hidden read-only input
-                   * that was never anything but a placeholder. Pressing it did
-                   * exactly nothing, and looked like it should.
+                   * It focused a hidden read-only input to begin with, so it
+                   * did nothing at all. Then it focused the sidebar's box,
+                   * which was wrong in a subtler way: that box asks "which chat
+                   * was that in" and filters a list of titles, and this control
+                   * sits above the conversation rather than above the list.
+                   * What is wanted here is where in this one it was said.
                    */
-                  if (collapsed) {
-                    wantsSearch.current = true;
-                    setSidebarCollapsed(false);
+                  if (finding) {
+                    closeFind();
                     return;
                   }
-                  searchRef.current?.focus();
-                  searchRef.current?.select();
+                  setFinding(true);
+                  window.setTimeout(() => findRef.current?.focus(), 0);
                 }}
-                title="Search chats"
-                aria-label="Search chats"
+                title="Find in this chat"
+                aria-label="Find in this chat"
+                aria-expanded={finding}
               >
                 <img src={searchIcon} alt="" width={14} height={14} />
               </button>
@@ -1253,6 +1318,65 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
             </div>
             </div>
           </header>
+
+          {/*
+            Under the title rather than inside it: the title row was two rows
+            until an hour ago and putting a field back into it would undo that,
+            and a strip that appears and goes is easier to read as a mode you
+            are in than a field that was always there.
+          */}
+          {finding && (
+            <div className={styles.findBar}>
+              <img src={searchIcon} alt="" width={14} height={14} />
+              <input
+                ref={findRef}
+                className={styles.findInput}
+                value={find}
+                onChange={(event) => setFind(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') {
+                    event.preventDefault();
+                    closeFind();
+                  } else if (event.key === 'Enter') {
+                    event.preventDefault();
+                    stepFind(event.shiftKey ? -1 : 1);
+                  }
+                }}
+                placeholder="Find in this chat"
+                aria-label="Find in this chat"
+              />
+              <span className={styles.findCount} role="status">
+                {find.trim() === ''
+                  ? ''
+                  : findHits.length === 0
+                    ? 'Nothing'
+                    : `${findAt + 1} of ${findHits.length}`}
+              </span>
+              <button
+                type="button"
+                className={styles.findStep}
+                onClick={() => stepFind(-1)}
+                disabled={findHits.length === 0}
+                aria-label="Previous match"
+                title="Previous match"
+              >
+                <img src={chevronDown12Icon} alt="" width={12} height={12} style={{ transform: 'rotate(180deg)' }} />
+              </button>
+              <button
+                type="button"
+                className={styles.findStep}
+                onClick={() => stepFind(1)}
+                disabled={findHits.length === 0}
+                aria-label="Next match"
+                title="Next match"
+              >
+                <img src={chevronDown12Icon} alt="" width={12} height={12} />
+              </button>
+              <button type="button" className={styles.findStep} onClick={closeFind} aria-label="Close find" title="Close find">
+                <img src={xIcon} alt="" width={12} height={12} />
+              </button>
+            </div>
+          )}
 
           {/*
             A chat opened from a session says so.
@@ -1291,7 +1415,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
               {message.role === CALL_ROLE ? (
                 <CallLine actor={message.actor} content={message.content} />
               ) : message.role === 'user' ? (
-                <div className={styles.userRow}>
+                <div className={styles.userRow} data-find={findMark(index)}>
                   <div className={styles.userBody}>
                     {/*
                       A carried turn says who put it. It may not have been a
@@ -1321,7 +1445,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                   </div>
                 </div>
               ) : (
-                <div className={styles.assistantRow}>
+                <div className={styles.assistantRow} data-find={findMark(index)}>
                   <span className={styles.assistantAvatar} aria-hidden="true">
                     <img src={cpuIcon} alt="" width={16} height={16} />
                   </span>

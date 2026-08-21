@@ -1347,3 +1347,69 @@ button.attachmentName {
   align-items: center;
   gap: var(--space-6);
 }
+
+/*
+ * Finding something in the conversation that is open.
+ *
+ * A strip under the title rather than a field inside it. The title row had just
+ * been collapsed from two rows into one and putting a field back into it would
+ * have undone that - and a strip that appears and goes reads as a mode you are
+ * in, which is what finding is.
+ */
+.findBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-24);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.findInput {
+  flex: 1 0 0;
+  min-width: 0;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.findInput:focus {
+  outline: none;
+}
+
+.findInput::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* "3 of 11", or "Nothing". Reads the state, so it stays printed. */
+.findCount {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.findStep {
+  composes: iconButton from '../../styles/iconButton.module.css';
+}
+
+/*
+ * A turn that matched, and the one being looked at.
+ *
+ * The whole turn rather than the run of characters inside it: an answer is
+ * drawn as markdown, so marking a substring means reaching into rendered
+ * output. A conversation is read a turn at a time, and the turn is the unit the
+ * eye is already using.
+ */
+[data-find='hit'] {
+  border-radius: var(--radius-6);
+  background: var(--color-surface-hover);
+}
+
+[data-find='at'] {
+  border-radius: var(--radius-6);
+  background: var(--color-surface-hover);
+  box-shadow: inset 0 0 0 2px var(--color-accent-brand);
+}
