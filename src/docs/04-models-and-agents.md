@@ -26,6 +26,22 @@ for. Usage over time is charted on the same page.
 ![A provider on its own page: where it is, how it authenticates, and what it
 said when it was last asked](/screens/model-provider.png)
 
+A provider has a **type** of its own, and there are five: **OpenAI**,
+**Anthropic**, **Azure OpenAI**, **Ollama** and **Custom**. It decides how the
+address is built and how the key is sent rather than which company answers, so
+anything speaking the OpenAI shape at an address of its own is a **Custom**
+provider. That is how Google's models are reached: the endpoint is
+`https://generativelanguage.googleapis.com/v1beta/openai` with a Gemini key, and
+the model list, chat, streaming and tool calls all behave. There is no Google
+type. The one that used to be here sent the header Google's own API wants to
+addresses that API does not have, so it could not work either way round;
+providers stored as it became Custom providers on upgrade, endpoint and key
+untouched.
+
+**Ollama** wants its OpenAI-compatible half, which lives under `/v1`.
+`http://localhost:11434` is the address of Ollama's own API and answers `404`
+to both of the calls made here; the hint in the form says so.
+
 A provider's page is also where it is tested. The status is the answer to the
 last check, not a guess: a provider with no credential fails the check rather
 than waiting to fail at the first question.
@@ -71,13 +87,20 @@ reads the rest.
 ![The skill editor](/screens/skill-editor.png)
 
 Agents are granted whole **catalogs** rather than single skills, so adding a
-skill to a catalog gives it to every agent already holding that catalog.
+skill to a catalog gives it to every agent already holding that catalog. It is
+also why a catalog an agent holds cannot be deleted, and the refusal names the
+agents: a grant is a name, so nothing would have broken loudly — the agent would
+simply have stopped knowing what the catalog held. A single skill carries no
+grant and deletes as it always did. See *Deleting something in use* under
+Workflows.
 
 ![The workspace's tools](/screens/tools.png)
 
 A **tool** is JavaScript an agent may call while it answers. Unlike a function,
 which a workflow node calls with arguments it mapped, a tool is offered to the
-model and called if the model decides to.
+model and called if the model decides to. A tool an agent has been granted
+cannot be deleted while the grant is there, for the reason a skill catalog
+cannot.
 
 ![The tool editor](/screens/tool-editor.png)
 
@@ -92,6 +115,20 @@ does - what runs is the JavaScript stored beside the TypeScript it came from.
 Nothing is written before that, and whichever you press is said back into the
 conversation, so a change that will not compile can be answered rather than
 silently dropped. The function editor's wand works the same way.
+
+## Keeping what they were
+
+An agent, a tool and a skill each keep the version they replaced every time they
+are saved, and each has a **History** beside it: who saved it, when, what the
+prompt or the code said then, and a button that puts it back. A tool's and a
+skill's are in the panel beside the editor; an agent's is on its settings page,
+under the form and above the way to delete it.
+
+It is the same mechanism a function has, and it is set out under Workflows, in
+*What a component was* — including how long a version is kept, which is an
+administrator's to decide. It is worth most here: a prompt is written by trying
+something, and without this the version that worked is only in somebody's memory
+of what they typed.
 
 ## Memory
 
@@ -110,6 +147,11 @@ An agent that holds at least one catalog is offered a tool called
 `memory_search`, and only the catalogs it was granted are searched. So memory is
 not pushed into every prompt: the agent asks when it thinks there is something
 to know, the same way it reaches for any other tool.
+
+A memory catalog an agent holds cannot be deleted either, and the refusal names
+the agents holding it. Removing one memory from a catalog is not the same act
+and is not refused: the catalog is what an agent is granted, so deleting one
+takes the whole folder from everybody at once.
 
 Each catalog has its own search, a filter by who wrote a memory and a sort, since
 a catalog somebody has been adding to for a year is longer than a page.
@@ -288,3 +330,22 @@ reach](/screens/integrations.png)
 **Integrations** holds the workspace's connections — Slack, MCP servers, HTTP
 endpoints. A connection made in the admin section can be marked as the default
 for new workspaces; that setting lives on the connection's own page.
+
+A connection has a kind — **Slack**, **Email (SMTP)**, **GitHub**, **Jira** or a
+plain **Webhook** — and the kind decides what it asks for.
+
+**Slack** takes a bot token beginning `xoxb-`, and optionally an app-level token
+beginning `xapp-`. The second decides what the connection does: given one,
+orknux listens for mentions and starts the triggers waiting on them; left empty,
+the connection only sends. There used to be two Slack kinds to choose between,
+"outgoing only" and "Socket Mode", and they were one integration wearing two
+names — whichever was picked, it listened the moment it held an app-level token.
+Connections stored as Socket Mode became Slack connections on upgrade, both
+tokens where they were, and go on listening exactly as they did.
+
+A Slack connection is asked neither for an address nor for how it authenticates.
+There is one Slack Web API and a bot token is a bearer token, so both are
+already settled and a field offering to change them would be showing you a
+decision it is not making. Either token can be revealed from its own field
+afterwards, which is the only way to tell which one is stored, and the audit log
+says which of the two was revealed rather than only that something was.

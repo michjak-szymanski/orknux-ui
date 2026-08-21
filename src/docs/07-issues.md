@@ -380,6 +380,12 @@ Some of it protects authorship rather than the workspace: a comment is edited
 only by whoever wrote it, and a file or a link is removed only by whoever put it
 there.
 
+**Deleting asks first**, naming the issue by its number as well as its title,
+because two issues in a workspace can read the same and the number is what
+somebody came here by. It used to go on the click that reached the button, and
+an issue takes its comments, its attachments and its whole history with it, none
+of which anything here brings back.
+
 Two things need the **administrator** role, and for different reasons. Moving an
 issue to another workspace, because it is the one thing that changes which
 workspace an issue belongs to. And putting somebody *other than yourself* on the

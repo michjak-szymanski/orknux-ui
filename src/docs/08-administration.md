@@ -265,6 +265,33 @@ browser the ability to change.
 The configuration file is the floor. An administrator can turn something off
 from this screen, but not back on where the file has said no.
 
+### How long component history is kept
+
+Every save of a function, a tool, a skill or an agent keeps what that component
+was before it, and every publication of a workflow is kept as a version of it;
+both are described under Workflows. **How many days of that to keep is set
+here**, and it is fourteen until somebody changes it.
+
+A version is a whole copy — the code, the parameters, the prompt — rather than a
+note of what changed, so this is the number that decides how much disk the
+history takes. An installation with a hundred functions edited all day is a
+different proposition from one with six, which is why it is a setting rather
+than a constant, and why it belongs to whoever owns the disk.
+
+It is counted from when a version stopped being current rather than from when it
+was written. A prompt composed a year ago and replaced this morning has a
+fortnight ahead of it, instead of being swept the moment it is recorded. **A
+workflow's live publication is never swept**, whatever its age: it is not
+history, it is what that workflow runs, and a tidy-up that silently stopped a
+workflow published two years ago would be a poor kind of housekeeping.
+
+`ORKNUX_REVISION_RETENTION_DAYS` is what a fresh installation starts at, and
+this is the one thing on this page the configuration file is not the floor of:
+once an administrator has stored a number here, that is the number in force, and
+the page says as much where the two disagree. Between a day and ten years, and
+there is no off — a history nobody keeps is a different decision from a short
+one, and it would want a switch of its own rather than a zero in this box.
+
 ## Monitoring
 
 ![Monitoring: the health of the service and everything it needs to be up](/screens/monitoring.png)

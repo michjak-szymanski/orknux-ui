@@ -5,6 +5,27 @@ saying what runs after what. It runs when its trigger fires, and only while it
 is enabled. What it runs then is the copy that was published, which is not
 always the graph you are looking at; see Draft and published, below.
 
+## The list
+
+**Workflows**, under **Workflow** in the menu down the left, is every workflow
+the workspace has, with when each of them last ran and when it is next due.
+
+**Sort** names the field it sorts on — **Name**, **Last run** or **Switched
+on** — with a single arrow beside it for the direction. It starts at A to Z
+rather than at the newest, because a column of names is read that way round. The
+ordering is the server's, over the whole list rather than over the rows on
+screen: sorting ten of a hundred looks like it worked until the row somebody
+wanted turns out to be on page three. Next Run is a column and deliberately not
+something to sort on — it is the soonest of however many cron expressions the
+workflow's triggers carry, worked out one workflow at a time, and nothing has
+ever written it down to order by.
+
+The line at the bottom says how many there are and how many are shown, and how
+many at a time sits in it: 10, 25, 50 or 100. The order is in the address, so
+"the ones nobody has run" is a link rather than a paragraph of instructions;
+how many at a time is remembered in your browser instead, because it says how
+much of a screen you have rather than what you are looking at.
+
 ## The editor
 
 ![The workflow editor: the graph on the canvas, what can be added along the top, and the selected node's settings on the right](/screens/editor.png)
@@ -17,17 +38,26 @@ end to change where it leaves from. A line dropped on nothing goes back where it
 was, and one dropped on wiring the graph already has is left alone.
 
 Lines are routed for you, and where two nodes sit awkwardly a line can run
-through whatever is between them. Each line has one point it can be pulled
-through: a small handle at its middle, or its label where it has one. Drag the
-point and the line bends to follow it; double-click the point to put the line
-back the way it was drawn. The point can also be nudged with the arrow keys once
-it has focus, and Escape straightens the line.
+through whatever is between them. A line is pulled through **points**: a small
+handle at its middle, or its label where it has one. Drag a point and the line
+bends to follow it.
+
+A line takes as many points as it needs, because a line that has to get round
+two things cannot be bent through one. **Double-click the line** to put a point
+where you clicked — it goes into the gap you aimed at, so a line already bent
+twice can be bent again between those two — and **double-click a point** to take
+it off. Taking the last one off leaves the line running where it was routed.
+
+A point that has focus can be worked from the keyboard: the arrow keys nudge it,
+Delete or Escape takes it off, and `+` puts another one after it. Delete there
+means this point rather than this line, which is what the canvas would otherwise
+have done with it.
 
 Where a line has been pulled to is remembered by your browser and nowhere else.
 It is an arrangement of your own view: a colleague opening the same workflow
 sees the lines routed as they were drawn for them, and it does not travel with
-an export. A line deleted from the graph forgets its bend, so drawing it again
-starts it straight.
+an export. A line deleted from the graph forgets its points, so drawing it
+again starts it straight.
 
 - **Things to fix** lists what is not yet valid, and refreshes as you edit.
   A workflow with entries here can be saved but should not be trusted to run.
@@ -56,9 +86,12 @@ starts it straight.
   row is a detour past it. A start that is refused - a graph with no nodes has
   nothing to run - is said beside the workflow's name and leaves you in the
   editor, because there is no run at the other end to go and look at.
-- A node can be **turned**: **Facing** in its panel, or `R` on the canvas. It
-  moves where the lines join the node - left to right, top to bottom, right to
-  left, bottom to top - and changes nothing about what runs. A long chain simply
+- A node can be **turned**, three ways that are one act: the **Turn** button
+  that appears above the selected node, **Facing** in its panel, or `R` on the
+  canvas. The button is there because turning is something somebody does four
+  times in a row, and a panel on the far side of the screen is a long way to go
+  for that. It moves where the lines join the node - left to right, top to
+  bottom, right to left, bottom to top - and changes nothing about what runs. A long chain simply
   reads better down a screen than off the side of one. Each node is turned on
   its own, so a graph can bend where it needs to.
 - A node can be **copied**: **Duplicate** in the toolbar, or `Ctrl`+`D` on the
@@ -79,6 +112,13 @@ starts it straight.
   making it for stay on screen together. A trigger, an action, a condition, an
   object and an agent can each be made this way, and what you make is chosen
   into the node as soon as it exists.
+- **Open definition**, beside the picker on a node that already points at one,
+  opens it in that same panel — a trigger, an action, a condition and an agent
+  alike. Reading a node is a question about the graph, and answering it by
+  taking the graph off the screen is a poor answer. An object is the exception
+  and opens its own page, because its fields are given there and a panel has
+  nowhere to put them. It is still a link, so `Ctrl`, `Cmd`, `Shift` or the
+  middle button opens the definition's own page in a tab of its own.
 - Anything that navigates is a **link**. Clicking one saves the graph and goes;
   `Ctrl`, `Cmd`, `Shift` or the middle button opens it in a new tab and leaves
   what you were doing where it was.
@@ -216,6 +256,125 @@ workspace's objects, or define the fields inline, and write or reference each
 field. What comes out is one value under the node's output name, which the next
 node can read field by field.
 
+## When a node fails
+
+A step that fails stops the run where it happened, which is the right thing when
+nothing else was going to work either and the wrong thing when the failure was a
+provider having a bad minute. So an action and an agent each carry two settings
+of their own, in the node's panel. Nothing else does: a condition that does not
+hold has answered, and an object node assembles what it was already handed.
+
+**Retries** is how many goes in all rather than how many extra ones — one is the
+single attempt every step has always had. Beside it is the wait before the first
+retry, which is the same before every one after it unless **Double the wait
+after each attempt** is ticked, and never grows past an hour however far the
+doubling would have gone. A provider asking to be left alone is then left alone
+for longer each time instead of being knocked on at the same interval.
+
+A failure that is already settled never spends an attempt. A request refused for
+what it said will be refused the same way in ten seconds; only the failures that
+might come out differently — a timeout, a rate limit, a connection that dropped —
+are asked again. Worth knowing before you turn retries on for an agent: **every
+attempt is another call you are billed for**, and nothing here caps that.
+
+**When it fails** is the other one. Off, a failure ends the run. On, the node
+grows a second handle and the run carries on down whatever is wired to it, drawn
+as a red **If fails** line beside the green **If works** one — so the graph says
+what to do about a failure rather than the run simply stopping. Both ways out
+can be renamed, the same as a condition's two, because the words beside the
+handles are most of what makes a graph legible. The step records its failure
+either way; what changes is whether anything happens next. Switching it back off
+takes the failure line with it, since a line leaving by a door that is no longer
+there could not be saved.
+
+## What a component was
+
+Every save of a function keeps the version it replaced, and so does every save
+of a tool, a skill and an agent. **History** is that list: who saved it, when,
+what it was called then if the name has changed since, and — when a row is
+opened — the code or the prose it held. It sits in the panel beside what you are
+editing for a function, a tool and a skill, and on the agent's own settings page.
+**Restore this version** makes an older one current again.
+
+The list is fetched when the panel is opened rather than with the component. A
+tool edited fifty times in an afternoon is fifty copies of its source, and none
+of that is wanted by somebody who came to change a description.
+
+Restoring asks nothing first, deliberately. It keeps what it displaces exactly
+as a save does, so the button that made the mistake is the button that takes it
+back, and a dialog guarding an undoable act is a dialog people learn to dismiss.
+What the editor was holding is read again afterwards, because a form left with
+the version from before the restore would put that version straight back on its
+next save.
+
+A component's history begins with the first save after this arrived. Nothing
+from before it was kept, there having been nothing keeping it.
+
+How long these are kept is an administrator's setting, fourteen days unless it
+has been changed; see Administration. A version is a whole copy of what the
+component was rather than a note of what changed, which is why there is a number
+on it at all.
+
+A workflow has a history too, and it is versioned by publishing rather than by
+saving; see **Draft and published**, below. **Variables are deliberately not
+versioned.** Their values are encrypted, and keeping old ones would mean keeping
+old secrets.
+
+## Leaving with something unsaved
+
+The function, tool, object and skill editors hold work the server has not been
+told about, and all four used to lose it without a word: a link followed, a Back
+press, and twenty minutes were gone.
+
+They ask now. The question is only asked where something has actually changed —
+what is on screen compared against what was loaded, rather than a flag set by
+the first keystroke, so somebody who types a character and deletes it is not
+stopped by it. It offers to save and go as well as to go anyway, because the
+alternative is three gestures for the answer almost everybody wants. A save the
+server refuses leaves you where you are with the reason on the page, since
+leaving on a save that did not happen is exactly the loss the question exists to
+prevent.
+
+Closing the tab or reloading is the browser's own warning rather than this one.
+Asking is the whole of what a page may do about it there.
+
+## Deleting something in use
+
+Deleting a definition that something still points at used to go through, and
+what it left behind was a workflow that stopped working with nobody having
+touched it. An action calling a function that is gone, an agent granted a tool
+that no longer exists, a webhook checked against a shape nobody kept: each of
+those fails later, somewhere else, and says nothing about the delete that caused
+it.
+
+The delete is refused instead, and the refusal names what is in the way — *Act
+is used by the published workflow Answer, so it cannot be deleted*. It covers
+actions, agents, conditions, functions and triggers, which are pointed at by an
+id, and tools, skill catalogs and memory catalogs, which are granted to an agent
+by name. The way through is to change what is in the way first: take the node
+off the graph, take the grant off the agent, and the delete goes through. It is
+the rule a variable has always had.
+
+**A published copy counts as well as the graph on the canvas.** A workflow
+published months ago goes on calling the definitions its nodes name, so an
+action whose node was taken off the canvas and never republished is exactly the
+case that asking the drawing alone would have let through.
+
+A grant is a name rather than an id, which is why a tool or a catalog is refused
+even though nothing would have been left dangling by it. Nothing dangles, and
+that is the problem: the agent's screen goes on listing a grant that now means
+nothing, and a name can be bound again — make a tool called `weather` tomorrow
+and every agent still holding that grant is handed whatever it now does, which
+nobody chose.
+
+Objects are the deliberate exception, and only half an exception. A function's
+parameters, a tool's parameters and a node on a canvas name an object as an
+annotation: losing it degrades what the editor draws above the code, on the
+screen where somebody would fix it, and no run resolves it. A webhook's input
+object is not an annotation but the contract every arriving request is checked
+against, and a request that matches nothing is answered `404` — so an object a
+webhook names is refused, and so is one another object's field points at.
+
 ## Draft and published
 
 Saving and publishing are two different acts, and the difference decides what an
@@ -247,9 +406,26 @@ left to publish - a graph that was never published, or one edited since it was.
 Publishing saves first, so what is published is always what is on screen. A
 graph with no nodes in it is refused: *Add at least one node before publishing*.
 
-There is one published copy per workflow and publishing replaces it. There is no
-history to browse and nothing to roll back to, so the way back to a graph you
-preferred is the editor's own **Discard**, before it is published over.
+**Every publication is kept.** The workflow's settings page lists them — when,
+and by whom — marks the one that runs as **Live**, and **Restore** puts an older
+one back into service. Restoring publishes that graph again rather than reviving
+its row, so the list only ever grows and a rollback is something that happened
+rather than a gap where something used to be; the row it adds says which
+publication it copied.
+
+Restoring does not touch the draft on the canvas. The draft is what somebody is
+in the middle of, it is not versioned, and overwriting it would destroy
+unpublished work with nothing to get it back from. What changes is what triggers
+and schedules run — and the badge reads **Draft** while the two differ, rather
+than pretending the canvas is what is running.
+
+So a workflow's versions are its publications and not its saves: a draft is a
+draft. The way back from a save you regret is still the editor's own
+**Discard**, which puts the graph back as it was last saved.
+
+How long publications are kept is the same administrator's setting that governs
+the rest of the component history, and the live one is never swept whatever its
+age — it is not history, it is what the workflow runs. See Administration.
 
 **What is published is the graph, not the components it calls.** The copy holds
 the nodes, what each one passes and the arrows between them - and, for the
@@ -270,6 +446,16 @@ Enable the workflow to let its trigger start it. Each run appears in
   what each step passed on;
 - the **Workflow** column, which opens the definition it ran from;
 - the execution id, for matching against logs.
+
+Removing a workflow leaves every run of it here, and those runs say so. The name
+stays on the row and on the run's own page, because it is the only record of
+what ran, with **removed** beside it and nowhere to click: the editor would
+answer *No workflow assignment with id 373*, which reads as a broken page rather
+than as a workflow somebody deleted. The **Workflow** filter is built from the
+workflows the runs actually name rather than from the ones the workspace still
+lists, so those runs can be singled out instead of only scrolled past, and the
+removed ones are marked **(removed)** in it — the filter gains the reach without
+passing them off as live ones.
 
 ![One run: its summary, and the graph as it ran with each node marked by how it
 went](/screens/execution-detail.png)

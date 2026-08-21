@@ -20,6 +20,11 @@ Secrets are encrypted where they are stored. What is written down is
 `orkx1:iv:ct` — a version, a nonce, and AES-256-GCM ciphertext — so a database
 dump carries no keys.
 
+That is also why a variable keeps no history of what it was. A function, a tool,
+a skill and an agent all keep the version each save replaced; a variable does
+not, deliberately, because keeping old versions of a secret would mean keeping
+old secrets.
+
 A variable is a string, a number or a boolean. There are no object variables:
 a shape belongs in an object, where it can be validated.
 
