@@ -103,12 +103,22 @@
 /*
  * A hovered result, which until now was not marked at all: this asked for
  * `--color-background` and so painted nothing, and a list you can click had no
- * way of saying which row was under the hand. The field colour rather than a
- * lighter one, because the form around it is already the raised colour and the
- * two fields above it are `--color-bg`; the row joins them.
+ * way of saying which row was under the hand.
+ *
+ * Raised away from the panel rather than recessed into it, which is what every
+ * other row you can hover does - the assignee picker lifts its option off the
+ * menu, and the chat's own picker entry uses this exact colour for this exact
+ * gesture. It briefly went the other way here, to `--color-bg`, on the argument
+ * that the row should join the fields above it. That made this the one picker
+ * in the product whose hover went the opposite way from the picker beside it,
+ * which is a worse thing to be than inconsistent with two text fields.
+ *
+ * `--color-border` and not `--color-surface-raised` because the form is already
+ * the raised colour: this is the next step up the same scale, and it moves the
+ * same direction in both themes - away from whatever it sits on.
  */
 .option:hover:not(:disabled) {
-  background: var(--color-bg);
+  background: var(--color-border);
 }
 
 .option:disabled {
