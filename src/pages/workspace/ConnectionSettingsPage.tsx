@@ -22,6 +22,7 @@ import { BackLink } from '../../components/BackLink';
 import { FieldHint } from '../../components/FieldHint';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { Loader } from '../../components/Loader';
+import { RevealToggle } from '../../components/RevealToggle';
 import { shellUser } from '../../session/user';
 import styles from './IntegrationSettings.module.css';
 
@@ -579,35 +580,36 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
                   value={secret ?? (connection?.secretSet === true ? MASK : '')}
                   onChange={(event) => setSecret(event.target.value)}
                 />
-                {connection?.secretSet === true && !revealed && secret === null && (
-                  <button type="button" className={styles.reveal} onClick={handleReveal}>
-                    Reveal
-                  </button>
-                )}
                 {/*
-                  And a way back. Revealing put the credential on the screen with
-                  nothing to undo it, so it stayed there until the page was
-                  loaded again - which is a poor answer to somebody who looked at
-                  it in one window and then turned to another person.
+                  One control, two states. This was a pair of green words -
+                  Reveal, then Hide - which is the same gesture the variables
+                  page offers as an eye, and the owner picked the eye: the field
+                  beside it is already a row of dots, so the row is about the
+                  value rather than about prose, and a word inside a control
+                  holding a secret reads as part of the secret.
 
-                  Offered only while the field still holds what was revealed;
-                  after that it is an edit like any other.
+                  Offered only while the field still holds what is stored or
+                  what was revealed; once it has been typed into, it is an edit
+                  like any other and there is nothing to hide.
                 */}
-                {revealed && secret === revealedValue && (
-                  <button
-                    type="button"
-                    className={styles.reveal}
-                    onClick={() => {
-                      // Back to untouched, not to empty: null is what tells the
-                      // save to leave the stored credential alone.
-                      setSecret(null);
-                      setRevealed(false);
-                      setRevealedValue(null);
-                    }}
-                  >
-                    Hide
-                  </button>
-                )}
+                {connection?.secretSet === true &&
+                  (secret === null || (revealed && secret === revealedValue)) && (
+                    <RevealToggle
+                      shown={revealed && secret === revealedValue}
+                      label={secretLabel(kind).toLowerCase()}
+                      onToggle={() => {
+                        if (revealed && secret === revealedValue) {
+                          // Back to untouched, not to empty: null is what tells
+                          // the save to leave the stored credential alone.
+                          setSecret(null);
+                          setRevealed(false);
+                          setRevealedValue(null);
+                        } else {
+                          void handleReveal();
+                        }
+                      }}
+                    />
+                  )}
               </div>
             </div>
 
@@ -639,24 +641,22 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
                     there was no way to check which token was in there, compare
                     it against Slack, or see whether it had been rotated.
                   */}
-                  {connection.appTokenSet && !appRevealed && appToken === null && (
-                    <button type="button" className={styles.reveal} onClick={handleRevealAppToken}>
-                      Reveal
-                    </button>
-                  )}
-                  {appRevealed && appToken === appRevealedValue && (
-                    <button
-                      type="button"
-                      className={styles.reveal}
-                      onClick={() => {
-                        setAppToken(null);
-                        setAppRevealed(false);
-                        setAppRevealedValue(null);
-                      }}
-                    >
-                      Hide
-                    </button>
-                  )}
+                  {connection.appTokenSet &&
+                    (appToken === null || (appRevealed && appToken === appRevealedValue)) && (
+                      <RevealToggle
+                        shown={appRevealed && appToken === appRevealedValue}
+                        label="app-level token"
+                        onToggle={() => {
+                          if (appRevealed && appToken === appRevealedValue) {
+                            setAppToken(null);
+                            setAppRevealed(false);
+                            setAppRevealedValue(null);
+                          } else {
+                            void handleRevealAppToken();
+                          }
+                        }}
+                      />
+                    )}
                 </div>
               </div>
             )}

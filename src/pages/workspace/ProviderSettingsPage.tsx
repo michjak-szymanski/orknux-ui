@@ -19,6 +19,7 @@ import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
 import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
+import { RevealToggle } from '../../components/RevealToggle';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './ProviderSettingsPage.module.css';
@@ -86,6 +87,14 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
   // Null while a stored credential is untouched, so saving leaves it alone.
   const [secret, setSecret] = useState<string | null>(adding ? '' : null);
   const [revealed, setRevealed] = useState(false);
+  /**
+   * What was revealed, kept so it can be put back out of sight.
+   *
+   * Hiding is only offered while the field still holds exactly this: once it
+   * has been typed into, covering it again would either throw the typing away
+   * or leave an edit pending behind a row of dots.
+   */
+  const [revealedValue, setRevealedValue] = useState<string | null>(null);
 
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -165,6 +174,7 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
     setScope(found.scope ?? DEFAULT_SCOPE);
     setSecret(null);
     setRevealed(false);
+    setRevealedValue(null);
   }
 
   const azure = type === 'AZURE_OPENAI';
@@ -244,6 +254,7 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
     try {
       const stored = await revealProviderSecret(providerId);
       setSecret(stored ?? '');
+      setRevealedValue(stored ?? '');
       setRevealed(true);
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : 'Could not reveal the credentials.');
@@ -512,11 +523,37 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
                   }}
                   placeholder={entra ? 'Client secret' : 'sk-…'}
                 />
-                {!adding && provider?.secretSet === true && !revealed && (
-                  <button type="button" className={styles.revealButton} onClick={() => void handleReveal()}>
-                    Reveal
-                  </button>
-                )}
+                {/*
+                  The eye the variables page and the connection form use, in
+                  place of the word this one had. It was also the only one of
+                  the four that could not be undone: `Reveal` put the key on the
+                  screen and then went away, so it stayed there until the page
+                  was loaded again.
+
+                  Offered while the field still holds the mask or exactly what
+                  was revealed. After that it is an edit, and hiding it would
+                  either throw the typing away or leave a pending change behind
+                  a row of dots.
+                */}
+                {!adding &&
+                  provider?.secretSet === true &&
+                  (!revealed || secret === revealedValue) && (
+                    <RevealToggle
+                      shown={revealed && secret === revealedValue}
+                      label="API key"
+                      onToggle={() => {
+                        if (revealed && secret === revealedValue) {
+                          // Null, not empty: it is what tells the save to leave
+                          // the stored key alone.
+                          setSecret(null);
+                          setRevealed(false);
+                          setRevealedValue(null);
+                        } else {
+                          void handleReveal();
+                        }
+                      }}
+                    />
+                  )}
               </div>
             </div>
 

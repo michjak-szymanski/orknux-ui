@@ -164,18 +164,12 @@
   color: var(--color-text-primary);
 }
 
-.reveal {
-  flex-shrink: 0;
-  padding: var(--space-2) var(--space-6);
-  background: none;
-  border: 0;
-  border-radius: var(--radius-4);
-  font-family: inherit;
-  font-weight: 600;
-  font-size: var(--text-sm);
-  color: var(--color-accent-brand);
-  cursor: pointer;
-}
+/*
+ * `.reveal` was here: a green word inside the credential field, first Reveal
+ * and then Hide. Issue #191 replaced it with `RevealToggle`, the eye the
+ * variables page and the connection dialog already drew, so that one gesture
+ * has one control across the product and nothing is left for this to style.
+ */
 
 .divider {
   width: 100%;

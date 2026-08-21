@@ -222,18 +222,13 @@
   width: 100%;
 }
 
-.revealButton {
-  position: absolute;
-  right: var(--space-12);
-  padding: 0;
-  background: none;
-  border: 0;
-  font-family: inherit;
-  font-weight: 600;
-  font-size: var(--text-md);
-  color: var(--color-accent-brand);
-  cursor: pointer;
-}
+/*
+ * `.revealButton` was here: a green word floated over the right-hand end of the
+ * key field. Issue #191 replaced it with `RevealToggle`, which is a flex child
+ * of the row rather than something laid over it - so the row's own
+ * `position: relative` is now the only thing left of the arrangement, and it is
+ * harmless.
+ */
 
 /* ---- Footer ---- */
 

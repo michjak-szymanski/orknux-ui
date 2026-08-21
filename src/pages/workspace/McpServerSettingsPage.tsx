@@ -17,6 +17,7 @@ import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
 import { HeaderRowsEditor } from '../../components/HeaderRowsEditor';
 import { Loader } from '../../components/Loader';
+import { RevealToggle } from '../../components/RevealToggle';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './IntegrationSettings.module.css';
@@ -43,6 +44,12 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
   // Null while the stored secret is untouched, so saving leaves it alone.
   const [secret, setSecret] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
+  /**
+   * What was revealed, kept so it can be put back out of sight. Hiding is only
+   * offered while the field still holds exactly this; once it has been typed
+   * into, it is an edit like any other.
+   */
+  const [revealedValue, setRevealedValue] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -63,6 +70,7 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
         setHeaders(found.headers);
         setSecret(null);
         setRevealed(false);
+        setRevealedValue(null);
       })
       .catch((cause: unknown) => {
         setLoadError(cause instanceof Error ? cause.message : 'Could not load the server.');
@@ -73,6 +81,7 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
     try {
       const stored = await revealMcpServerSecret(serverId);
       setSecret(stored ?? '');
+      setRevealedValue(stored ?? '');
       setRevealed(true);
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : 'Could not reveal the credentials.');
@@ -219,11 +228,31 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
                     value={secret ?? (server?.secretSet === true ? MASK : '')}
                     onChange={(event) => setSecret(event.target.value)}
                   />
-                  {server?.secretSet === true && !revealed && secret === null && (
-                    <button type="button" className={styles.reveal} onClick={handleReveal}>
-                      Reveal
-                    </button>
-                  )}
+                  {/*
+                    The same eye the dialog that creates one of these already
+                    uses, in place of the word this page had - and with the half
+                    it was missing. `Reveal` put the token on the screen and then
+                    went away, so it stayed there until the page was loaded
+                    again.
+                  */}
+                  {server?.secretSet === true &&
+                    (secret === null || (revealed && secret === revealedValue)) && (
+                      <RevealToggle
+                        shown={revealed && secret === revealedValue}
+                        label="token"
+                        onToggle={() => {
+                          if (revealed && secret === revealedValue) {
+                            // Null, not empty: it is what tells the save to
+                            // leave the stored token alone.
+                            setSecret(null);
+                            setRevealed(false);
+                            setRevealedValue(null);
+                          } else {
+                            void handleReveal();
+                          }
+                        }}
+                      />
+                    )}
                 </div>
               </div>
             )}
