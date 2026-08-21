@@ -1111,11 +1111,25 @@ select.input {
 }
 
 /*
- * The one point a line can be taken hold of by.
+ * The line itself, as something to aim at.
  *
- * Sits on the line, at its middle until it is dragged and at the bend after
- * that, so the thing that moves the line is where the line is. Only lines with
- * nothing written on them get one: a labelled line is dragged by its label,
+ * A drawn line is a hair wide and a double-click has to land on it, so this
+ * runs the same path in a stroke wide enough to hit and no colour at all. It
+ * takes the place of the invisible path React Flow draws for the same purpose,
+ * which is turned off where this one is drawn.
+ */
+.edgeHit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 20px;
+}
+
+/*
+ * The points a line can be taken hold of by.
+ *
+ * Each sits on the line - the first at its middle until the line is bent, and
+ * each on its own bend after that - so the thing that moves the line is where
+ * the line is. On a labelled line the first of them is the label instead,
  * which is the same point and a far bigger target.
  *
  * Quiet by default. One of these per line on a graph of twenty is twenty dots,

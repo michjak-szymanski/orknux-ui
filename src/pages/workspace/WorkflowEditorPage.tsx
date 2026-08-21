@@ -370,20 +370,196 @@ interface Carried {
 }
 
 /**
- * The one point a line is pulled through, as a distance from its own middle.
+ * One point a line is pulled through, as a distance from the line's own middle.
  *
  * Held as a distance rather than a place on the canvas so that it survives the
  * nodes moving: drag a node and the line's middle goes with it, and the bend
  * keeps the same relation to the line it belongs to. A point kept as a canvas
  * position would stay behind while its line walked off, which is the stale
  * waypoint that drags a line into nonsense.
+ *
+ * Every point on one line is measured from that same middle. Measuring each
+ * from the one before it would mean moving one point moved every point after
+ * it, which is not what taking hold of one of them looks like.
  */
 export interface EdgeOffset {
   x: number;
   y: number;
 }
 
-const NO_OFFSET: EdgeOffset = { x: 0, y: 0 };
+/** A line running where it was routed. Shared, because it is never written to. */
+const NO_POINTS: EdgeOffset[] = [];
+
+/**
+ * How a line's points are written down.
+ *
+ * The first point *is* the record and the rest hang off it under a second key,
+ * which looks odd beside a plain array and is the whole reason for the shape:
+ * an editor from before this change reads `x` and `y`, finds the first bend
+ * exactly where it left it, and ignores a key it has never heard of. A line
+ * with one bend is written today byte for byte as it was written yesterday, so
+ * nobody's arrangement moves by upgrading, and an arrangement made here can be
+ * read by a build that predates it. One store, and both can read it.
+ */
+interface StoredBend extends EdgeOffset {
+  more?: EdgeOffset[];
+}
+
+/** A number that can be drawn with, rather than whatever was in the store. */
+function usable(point: EdgeOffset | undefined | null): boolean {
+  return point !== null && typeof point === 'object' && Number.isFinite(point.x) && Number.isFinite(point.y);
+}
+
+/** The points of one line, out of what was written down for it. */
+function pointsOf(held: StoredBend | undefined | null): EdgeOffset[] {
+  if (held === null || held === undefined || typeof held !== 'object' || !usable(held)) return NO_POINTS;
+  const rest = Array.isArray(held.more) ? held.more : [];
+  return [held, ...rest].filter(usable).map((point) => ({ x: point.x, y: point.y }));
+}
+
+/** And back, in the shape above. Nothing at all for a line with no bend in it. */
+function storedAs(points: EdgeOffset[]): StoredBend | undefined {
+  const [first, ...rest] = points;
+  if (first === undefined) return undefined;
+  return rest.length === 0 ? { x: first.x, y: first.y } : { x: first.x, y: first.y, more: rest };
+}
+
+/** Every line's points, out of whatever the store had - which may be older. */
+function bendsIn(raw: unknown): Record<string, EdgeOffset[]> {
+  if (raw === null || typeof raw !== 'object') return {};
+  const read: Record<string, EdgeOffset[]> = {};
+  Object.entries(raw as Record<string, StoredBend>).forEach(([edgeId, held]) => {
+    const points = pointsOf(held);
+    if (points.length > 0) read[edgeId] = points;
+  });
+  return read;
+}
+
+/**
+ * How far a place is from a straight run between two others.
+ *
+ * For working out which stretch of a line was double-clicked, which is which
+ * gap a new point belongs in. The drawn line is curved and this measures the
+ * straight version of it, which is close enough to tell one gap from the next
+ * and much cheaper than asking the browser to walk the path.
+ */
+function distanceToRun(where: EdgeOffset, from: EdgeOffset, to: EdgeOffset): number {
+  const run = { x: to.x - from.x, y: to.y - from.y };
+  const length = run.x * run.x + run.y * run.y;
+  const reach = length === 0 ? 0 : ((where.x - from.x) * run.x + (where.y - from.y) * run.y) / length;
+  const along = Math.min(1, Math.max(0, reach));
+  return Math.hypot(where.x - (from.x + along * run.x), where.y - (from.y + along * run.y));
+}
+
+/** Which gap between a line's knots a place on it falls in. */
+function gapAt(knots: EdgeOffset[], where: EdgeOffset): number {
+  let best = 0;
+  let least = Infinity;
+  for (let at = 0; at < knots.length - 1; at += 1) {
+    const away = distanceToRun(where, knots[at], knots[at + 1]);
+    if (away < least) {
+      least = away;
+      best = at;
+    }
+  }
+  return best;
+}
+
+/**
+ * The exponent that keeps a tight corner from looping.
+ *
+ * A smooth curve through a list of points is a Catmull-Rom spline, and the
+ * plain version of it - where every stretch counts for the same - overshoots
+ * badly when one stretch is much shorter than its neighbours. Two points
+ * dragged close together would send the line out in a loop and back. Weighting
+ * each stretch by the square root of its length is the centripetal version,
+ * which provably has neither loop nor cusp however the points are placed.
+ */
+const CENTRIPETAL = 0.5;
+
+/**
+ * One control point of one stretch, on one axis.
+ *
+ * Called four times per stretch - each end, each axis - because the formula is
+ * the same one read from either end: hand it the knots in the other order and
+ * it gives the other control point.
+ */
+function lead(before: number, from: number, to: number, back: number, span: number): number {
+  /*
+   * Nothing before this knot to lean on, which is the case at both ends of the
+   * line: there is no knot before the source or after the target. It leaves
+   * along its own stretch, so the line arrives at a node pointing at it.
+   */
+  if (back === 0) return from + (to - from) / 3;
+  return (
+    (back * back * to - span * span * before + (2 * back * back + 3 * back * span + span * span) * from) /
+    (3 * back * (back + span))
+  );
+}
+
+/** A tidy number: two decimals is a hundredth of a pixel. */
+function round(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+/**
+ * A smooth line through every one of its points, in order.
+ *
+ * The curve passes *through* the knots rather than being pulled at by them,
+ * which is the whole of what makes a dragged point follow the pointer: a
+ * scheme where the points are control points moves the line by half of what
+ * the hand moved, which is the bug this had once already.
+ */
+function curveThrough(knots: EdgeOffset[]): string {
+  let drawn = `M${round(knots[0].x)},${round(knots[0].y)}`;
+  for (let at = 0; at < knots.length - 1; at += 1) {
+    const before = knots[at - 1] ?? knots[at];
+    const from = knots[at];
+    const to = knots[at + 1];
+    const after = knots[at + 2] ?? knots[at + 1];
+    const back = Math.hypot(from.x - before.x, from.y - before.y) ** CENTRIPETAL;
+    const span = Math.hypot(to.x - from.x, to.y - from.y) ** CENTRIPETAL;
+    const on = Math.hypot(after.x - to.x, after.y - to.y) ** CENTRIPETAL;
+    const out = { x: lead(before.x, from.x, to.x, back, span), y: lead(before.y, from.y, to.y, back, span) };
+    const into = { x: lead(after.x, to.x, from.x, on, span), y: lead(after.y, to.y, from.y, on, span) };
+    drawn += ` C${round(out.x)},${round(out.y)} ${round(into.x)},${round(into.y)} ${round(to.x)},${round(to.y)}`;
+  }
+  return drawn;
+}
+
+/**
+ * The line, given where it starts, where it ends and what it is pulled through.
+ *
+ * No points is the line React Flow routed, untouched: a line nobody has bent
+ * should be drawn by the library that knows where its ends are.
+ *
+ * One point keeps the quadratic it has always had, and the reason is worth
+ * keeping with it. The bend was once drawn as two half-beziers - in to the
+ * point from its left, out of it to the right - and forcing those two sides
+ * made the shape jump the moment the point was touched: a line that had been
+ * nearly straight became a wide S, because each half now had to leave and
+ * arrive horizontally, and a pixel of drag moved the line much further than a
+ * pixel. Pulled back past its own source it curled into a loop with the handle
+ * inside it, which is not something anybody can drag straight again. A
+ * quadratic has no such preference: its control point is placed so the curve
+ * passes through exactly where the handle was put - B(0.5) is the point when
+ * the control sits at twice the point less the midpoint of the ends. So the
+ * common case by far is drawn today exactly as it was drawn yesterday, and
+ * adding this feature moves nobody's existing line by a pixel.
+ *
+ * More than one needs a scheme that joins them, and that is the spline above -
+ * which is held to the same standard: it passes through its points, and none
+ * of it leaves or arrives in a direction it was not given.
+ */
+function bentPath(source: EdgeOffset, target: EdgeOffset, points: EdgeOffset[]): string {
+  if (points.length === 1) {
+    const only = points[0];
+    const control = { x: 2 * only.x - (source.x + target.x) / 2, y: 2 * only.y - (source.y + target.y) / 2 };
+    const [from, by, to] = [source, control, target].map((one) => `${round(one.x)},${round(one.y)}`);
+    return `M${from} Q${by} ${to}`;
+  }
+  return curveThrough([source, ...points, target]);
+}
 
 /**
  * What an edge is called, which is where it leaves from and where it arrives.
@@ -487,13 +663,15 @@ function CarriedEdge({
   /*
    * Where this line has been pulled to.
    *
-   * One point per edge, and it is the same point whichever way it is taken
-   * hold of: a labelled line is dragged by its label, a bare one by the handle
-   * below. Two separately draggable things on one line would each want to bend
-   * it, and a line cannot be bent twice through one point.
+   * As many points as somebody has put on it, in the order they are passed
+   * through. Each is the same point whichever way it is taken hold of: a
+   * labelled line is dragged by its label, a bare one by the handle below.
+   * There was one of these, and complex shapes need more than one - a line
+   * that has to go round two things cannot be bent through a single point.
    */
-  const offset = (data?.offset as EdgeOffset | undefined) ?? NO_OFFSET;
-  const movePoint = data?.onMovePoint as ((edgeId: string, to: EdgeOffset) => void) | undefined;
+  const points = (data?.points as EdgeOffset[] | undefined) ?? NO_POINTS;
+  const setPoints = data?.onPoints as ((edgeId: string, to: EdgeOffset[]) => void) | undefined;
+  const { screenToFlowPosition } = useReactFlow();
 
   /*
    * A moved point takes its line with it.
@@ -501,54 +679,71 @@ function CarriedEdge({
    * The label used to slide away on its own, leaving the line where it was -
    * so on a graph with more than a couple of them, nothing said which label
    * belonged to which line, which is the one thing a label has to say. The
-   * line is now drawn through wherever the point has been put: in by the left
-   * of it, out by the right, each half the same curve React Flow would have
-   * drawn on its own.
+   * line is now drawn through wherever the points have been put.
    *
-   * Only when it has been moved. An untouched point sits on its line already,
-   * and routing through it would bend a straight run for nothing.
+   * Only when there are any. An untouched line sits where it was routed, and
+   * routing it through its own middle would bend a straight run for nothing.
    */
-  const at = { x: labelX + offset.x, y: labelY + offset.y };
-  const moved = offset.x !== 0 || offset.y !== 0;
+  const ends = { source: { x: sourceX, y: sourceY }, target: { x: targetX, y: targetY } };
+  const placed = points.map((point) => ({ x: labelX + point.x, y: labelY + point.y }));
+  const path = placed.length === 0 ? straight : bentPath(ends.source, ends.target, placed);
   /*
-   * One curve through the point, not two curves meeting at it.
-   *
-   * It was drawn as two half-beziers - in to the point from its left, out of
-   * it to the right - and forcing those two sides made the shape jump the
-   * moment the point was touched: a line that had been nearly straight became
-   * a wide S, because each half now had to leave and arrive horizontally. A
-   * pixel of drag moved the line much further than a pixel. Pulled back past
-   * its own source it curled into a loop with the handle inside it, which is
-   * not something anybody can drag straight again.
-   *
-   * A quadratic has no such preference. Its control point is placed so the
-   * curve passes through exactly where the handle was put - B(0.5) is `at`
-   * when the control sits at twice `at` less the midpoint of the ends - so the
-   * line follows the pointer, and no placement can make it cross itself.
+   * What can be taken hold of: one handle per point, or a single quiet one at
+   * the line's middle when it has none yet. The first stands where the label
+   * stands, so a labelled line is still dragged by its label and never grows a
+   * dot underneath one.
    */
-  const control = { x: 2 * at.x - (sourceX + targetX) / 2, y: 2 * at.y - (sourceY + targetY) / 2 };
-  const path = moved ? `M${sourceX},${sourceY} Q${control.x},${control.y} ${targetX},${targetY}` : straight;
+  const handles = placed.length === 0 ? [{ x: labelX, y: labelY }] : placed;
   // The label sits in flow coordinates; a pointer moves in screen ones, and the
   // difference between them is exactly the zoom.
   const zoom = useStore((state) => state.transform[2]);
-  const [drag, setDrag] = useState<{ x: number; y: number; from: EdgeOffset } | null>(null);
+  const [drag, setDrag] = useState<{ at: number; x: number; y: number; from: EdgeOffset } | null>(null);
 
-  const onPointerDown = (event: ReactPointerEvent<HTMLElement>) => {
-    if (movePoint === undefined || event.button !== 0) return;
+  /** Puts one point somewhere, making it if the line had none. */
+  const movePoint = (at: number, to: EdgeOffset) => {
+    if (setPoints === undefined) return;
+    setPoints(id, points.length === 0 ? [to] : points.map((point, index) => (index === at ? to : point)));
+  };
+
+  /** Takes one point off. The last one off leaves the line as it was routed. */
+  const removePoint = (at: number) => {
+    if (setPoints === undefined) return;
+    setPoints(
+      id,
+      points.filter((_, index) => index !== at),
+    );
+  };
+
+  /** Adds one in the gap after `at`, halfway along it. */
+  const addAfter = (at: number) => {
+    if (setPoints === undefined) return;
+    const knots = [ends.source, ...placed, ends.target];
+    const from = knots[at + 1];
+    const to = knots[at + 2] ?? ends.target;
+    const next = [...points];
+    next.splice(at + 1, 0, { x: (from.x + to.x) / 2 - labelX, y: (from.y + to.y) / 2 - labelY });
+    setPoints(id, next);
+  };
+
+  const onPointerDown = (at: number) => (event: ReactPointerEvent<HTMLElement>) => {
+    if (setPoints === undefined || event.button !== 0) return;
     // Kept from the canvas underneath, which would otherwise pan instead.
     event.stopPropagation();
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
-    setDrag({ x: event.clientX, y: event.clientY, from: offset });
+    setDrag({ at, x: event.clientX, y: event.clientY, from: points[at] ?? { x: 0, y: 0 } });
   };
 
   const onPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
-    if (drag === null || movePoint === undefined) return;
+    if (drag === null || setPoints === undefined) return;
     event.stopPropagation();
-    movePoint(id, {
+    const to = {
       x: drag.from.x + (event.clientX - drag.x) / zoom,
       y: drag.from.y + (event.clientY - drag.y) / zoom,
-    });
+    };
+    // A press that has not moved is a click, and a click makes no bend.
+    if (points.length === 0 && to.x === 0 && to.y === 0) return;
+    movePoint(drag.at, to);
   };
 
   const endDrag = (event: ReactPointerEvent<HTMLElement>) => {
@@ -558,11 +753,13 @@ function CarriedEdge({
   };
 
   /**
-   * The same drag from the keyboard, for somebody who cannot hold a pointer
-   * down. The delete keys straighten it rather than removing anything.
+   * The same three gestures from the keyboard, for somebody who cannot hold a
+   * pointer down: the arrows drag, the delete keys take this point off, and
+   * `+` puts another one after it - since the way to add one with a pointer is
+   * a double-click on the line, which nothing can be focused on.
    */
-  const onKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
-    if (movePoint === undefined) return;
+  const onKeyDown = (at: number) => (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (setPoints === undefined) return;
     const step: Record<string, EdgeOffset> = {
       ArrowLeft: { x: -NUDGE, y: 0 },
       ArrowRight: { x: NUDGE, y: 0 },
@@ -570,90 +767,164 @@ function CarriedEdge({
       ArrowDown: { x: 0, y: NUDGE },
     };
     const by = step[event.key];
+    const from = points[at] ?? { x: 0, y: 0 };
     if (by !== undefined) {
       event.preventDefault();
       event.stopPropagation();
-      movePoint(id, { x: offset.x + by.x, y: offset.y + by.y });
+      movePoint(at, { x: from.x + by.x, y: from.y + by.y });
+      return;
+    }
+    if (event.key === '+' || event.key === 'Insert') {
+      event.preventDefault();
+      event.stopPropagation();
+      addAfter(at);
       return;
     }
     if (event.key === 'Delete' || event.key === 'Backspace' || event.key === 'Escape') {
       /*
-       * Straightened, not deleted. The canvas takes Delete as "remove what is
-       * selected", and the point is on a line somebody wants to keep.
+       * This point taken off, not the line deleted. The canvas takes Delete as
+       * "remove what is selected", and the point is on a line somebody wants
+       * to keep - so the last point off straightens it, which is what these
+       * keys did when a line could only have the one.
        */
       event.preventDefault();
       event.stopPropagation();
-      movePoint(id, NO_OFFSET);
+      removePoint(at);
     }
+  };
+
+  /**
+   * A new point where the line was double-clicked.
+   *
+   * The gesture every diagram editor uses, and the one already in this line's
+   * vocabulary from the other end: double-click a point to take it off,
+   * double-click the line to put one on. It goes in the gap it was aimed at
+   * rather than on the end, so a line already bent twice can be bent again
+   * between those two - which is the shape that needs three points, and the
+   * reason a plain "add another" button would not do.
+   *
+   * The one gesture a drag could not carry: this editor already spends the
+   * drag on moving a point, and a drag that sometimes moves and sometimes
+   * splits is a drag nobody can predict.
+   */
+  const addWhereClicked = (event: ReactMouseEvent<SVGPathElement>) => {
+    if (setPoints === undefined) return;
+    event.stopPropagation();
+    const where = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+    const gap = gapAt([ends.source, ...placed, ends.target], where);
+    const next = [...points];
+    next.splice(gap, 0, { x: where.x - labelX, y: where.y - labelY });
+    setPoints(id, next);
+  };
+
+  /** What a handle is called, which is which of the points it is. */
+  const pointName = (at: number) => {
+    if (points.length === 0) return 'Bend this line';
+    return points.length === 1 ? 'Bend on this line' : `Bend ${at + 1} of ${points.length} on this line`;
   };
 
   return (
     <>
-      <BaseEdge id={id} path={path} markerEnd={markerEnd} style={style} />
-      {says.length === 0 && movePoint !== undefined && (
+      <BaseEdge id={id} path={path} markerEnd={markerEnd} style={style} interactionWidth={0} />
+      {/*
+       * The line itself, as something to aim at.
+       *
+       * A stroke wide enough to hit and painted with nothing, over the line it
+       * copies, so a double-click anywhere along a line puts a point there.
+       * It stands in for the fat invisible path React Flow draws for its own
+       * hit testing - hence that one being turned off above - because this one
+       * has to carry `nopan`: the canvas zooms on a double-click, and the only
+       * thing that calls that off is the class it looks for on the way up.
+       */}
+      {setPoints !== undefined && (
+        <path className={`${styles.edgeHit} nopan`} d={path} onDoubleClick={addWhereClicked}>
+          <title>Double-click to add a point to bend through</title>
+        </path>
+      )}
+      {setPoints !== undefined && (
         <EdgeLabelRenderer>
           {/*
-           * The one point a bare line can be taken hold of.
+           * The points a line can be taken hold of by.
            *
            * Lines are routed for you, and where two nodes sit awkwardly the
            * line between them runs through whatever is in the way. A labelled
            * line has always had a handle - its label - and a line carrying
-           * nothing had none, which is most of the lines on most graphs. This
-           * is that handle: small and quiet on a line still running where it
-           * was put, lit once it is holding a bend, so the thing to
+           * nothing had none, which is most of the lines on most graphs. These
+           * are those handles: small and quiet on a line still running where
+           * it was put, lit once each is holding a bend, so the thing to
            * double-click is the thing you can see.
+           *
+           * The first of them is the label's own place on a labelled line, and
+           * the label is drawn there instead: two draggable things on one spot
+           * would fight over the same point.
            */}
-          <button
-            type="button"
-            className={[
-              styles.edgePoint,
-              moved ? styles.edgePointMoved : '',
-              drag !== null ? styles.edgePointDragging : '',
-              'nodrag',
-              'nopan',
-            ]
-              .filter(Boolean)
-              .join(' ')}
-            style={{ transform: `translate(-50%, -50%) translate(${at.x}px, ${at.y}px)` }}
-            data-edge={id}
-            aria-label={moved ? 'Bend on this line' : 'Bend this line'}
-            title="Drag to bend the line; double-click to straighten it"
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={endDrag}
-            onPointerCancel={endDrag}
-            onKeyDown={onKeyDown}
-            onDoubleClick={(event) => {
-              event.stopPropagation();
-              movePoint(id, NO_OFFSET);
-            }}
-          />
+          {handles.map((spot, at) =>
+            says.length > 0 && at === 0 ? null : (
+              <button
+                key={at}
+                type="button"
+                className={[
+                  styles.edgePoint,
+                  points.length > 0 ? styles.edgePointMoved : '',
+                  drag?.at === at ? styles.edgePointDragging : '',
+                  'nodrag',
+                  'nopan',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                style={{ transform: `translate(-50%, -50%) translate(${spot.x}px, ${spot.y}px)` }}
+                data-edge={id}
+                data-point={at}
+                aria-label={pointName(at)}
+                title={
+                  points.length === 0
+                    ? 'Drag to bend the line; double-click the line to add a point'
+                    : 'Drag to move this point; double-click or Delete to take it off; + adds another'
+                }
+                onPointerDown={onPointerDown(at)}
+                onPointerMove={onPointerMove}
+                onPointerUp={endDrag}
+                onPointerCancel={endDrag}
+                onKeyDown={onKeyDown(at)}
+                onDoubleClick={(event) => {
+                  event.stopPropagation();
+                  removePoint(at);
+                }}
+              />
+            ),
+          )}
         </EdgeLabelRenderer>
       )}
       {says.length > 0 && (
         <EdgeLabelRenderer>
           <ul
-            className={[styles.edgeLabel, drag !== null ? styles.edgeLabelDragging : '', 'nodrag', 'nopan']
+            className={[styles.edgeLabel, drag?.at === 0 ? styles.edgeLabelDragging : '', 'nodrag', 'nopan']
               .filter(Boolean)
               .join(' ')}
             style={{
-              transform: `translate(-50%, -50%) translate(${labelX + offset.x}px, ${labelY + offset.y}px)`,
+              transform: `translate(-50%, -50%) translate(${handles[0].x}px, ${handles[0].y}px)`,
             }}
             // Which line it belongs to, said in the markup: a label that has been
             // dragged away is otherwise attributable only by eye.
             data-edge={id}
-            onPointerDown={onPointerDown}
+            data-point={0}
+            onPointerDown={onPointerDown(0)}
             onPointerMove={onPointerMove}
             onPointerUp={endDrag}
             onPointerCancel={endDrag}
             onDoubleClick={(event) => {
-              // Back to where the line would have put it — for a label dragged
-              // somewhere unhelpful and now hard to aim at.
+              /*
+               * Back to where the line would have put it — for a label dragged
+               * somewhere unhelpful and now hard to aim at. On a line bent more
+               * than once it moves to the next point along rather than off the
+               * line altogether: a label sitting where the line no longer runs
+               * is the thing dragging it here was meant to stop.
+               */
               event.stopPropagation();
-              movePoint?.(id, NO_OFFSET);
+              removePoint(0);
             }}
             title={
-              movePoint === undefined ? undefined : 'Drag to move it and the line; double-click to put it back'
+              setPoints === undefined ? undefined : 'Drag to move it and the line; double-click to put it back'
             }
           >
             {shown.map((one) => (
@@ -1146,29 +1417,36 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
    * workflow itself means a column on the edge and a change to the graph
    * format the server reads and writes, which is a different job from this.
    *
-   * Stored under the name it has always had. The offset used only to move a
-   * label, and now shapes the line as well, but it is the same number in the
-   * same place - and a new name would leave everybody's arrangement behind in
-   * the old one for nothing.
+   * Stored under the name it has always had, in the shape it has always had:
+   * `StoredBend` above keeps a line's first point where the one point used to
+   * be, so an arrangement written here can still be read by a build from
+   * before lines could bend more than once, and one written there is read here
+   * as a line with a single point - which is what it is. A new name would
+   * leave everybody's arrangement behind in the old one for nothing.
    */
   const pointKey = `orknux.edge-labels.${workflowId}`;
-  const [edgeOffsets, setEdgeOffsets] = useState<Record<string, EdgeOffset>>({});
+  const [edgePoints, setEdgePoints] = useState<Record<string, EdgeOffset[]>>({});
 
   useEffect(() => {
     try {
       const held = window.localStorage.getItem(pointKey);
-      setEdgeOffsets(held === null ? {} : (JSON.parse(held) as Record<string, EdgeOffset>));
+      setEdgePoints(held === null ? {} : bendsIn(JSON.parse(held)));
     } catch {
       // Unreadable or turned off: the lines simply start where they are routed.
-      setEdgeOffsets({});
+      setEdgePoints({});
     }
   }, [pointKey]);
 
   /** Writes the arrangement down and hands it back, for a state updater to return. */
   const remember = useCallback(
-    (next: Record<string, EdgeOffset>) => {
+    (next: Record<string, EdgeOffset[]>) => {
       try {
-        window.localStorage.setItem(pointKey, JSON.stringify(next));
+        const written: Record<string, StoredBend> = {};
+        Object.entries(next).forEach(([edgeId, points]) => {
+          const one = storedAs(points);
+          if (one !== undefined) written[edgeId] = one;
+        });
+        window.localStorage.setItem(pointKey, JSON.stringify(written));
       } catch {
         // A browser that will not remember is no reason to refuse the drag.
       }
@@ -1177,13 +1455,14 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     [pointKey],
   );
 
-  const movePoint = useCallback(
-    (edgeId: string, to: EdgeOffset) => {
-      setEdgeOffsets((held) => {
+  const setPoints = useCallback(
+    (edgeId: string, to: EdgeOffset[]) => {
+      setEdgePoints((held) => {
         const next = { ...held };
-        // Back at the line's own position is the absence of an offset, not an
-        // offset of nothing, so a reset leaves nothing behind to remember.
-        if (to.x === 0 && to.y === 0) delete next[edgeId];
+        // A line with no points left is a line running where it was routed,
+        // not a line with an empty arrangement, so nothing is left behind to
+        // remember - which is how the last point taken off straightens it.
+        if (to.length === 0) delete next[edgeId];
         else next[edgeId] = to;
         return remember(next);
       });
@@ -1204,7 +1483,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
    */
   const forgetMissing = useCallback(
     (drawn: string[]) => {
-      setEdgeOffsets((held) => {
+      setEdgePoints((held) => {
         const on = new Set(drawn);
         const stale = Object.keys(held).filter((edgeId) => !on.has(edgeId));
         if (stale.length === 0) return held;
@@ -1227,7 +1506,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   const carryPoint = useCallback(
     (from: string, to: string) => {
       if (from === to) return;
-      setEdgeOffsets((held) => {
+      setEdgePoints((held) => {
         const moved = held[from];
         if (moved === undefined) return held;
         const next = { ...held, [to]: moved };
@@ -1482,7 +1761,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       return {
         ...shown,
         type: 'carried',
-        data: { says: held?.says ?? [], offset: edgeOffsets[edge.id], onMovePoint: movePoint },
+        data: { says: held?.says ?? [], points: edgePoints[edge.id], onPoints: setPoints },
       };
     });
 
@@ -1495,8 +1774,8 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
         type: 'carried',
         data: {
           says: held.says,
-          offset: edgeOffsets[`reads:${held.source}->${held.target}`],
-          onMovePoint: movePoint,
+          points: edgePoints[`reads:${held.source}->${held.target}`],
+          onPoints: setPoints,
         },
         style: { stroke: 'var(--color-accent-brand)', strokeDasharray: '6 4' },
         // Not the graph's, so not something a drag can move or a key can delete.
@@ -1514,7 +1793,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       }));
 
     return [...carrying, ...loose];
-  }, [edges, carried, edgeOffsets, movePoint]);
+  }, [edges, carried, edgePoints, setPoints]);
 
   /*
    * Nothing tells us an edge has gone - it simply stops being in the list - so
