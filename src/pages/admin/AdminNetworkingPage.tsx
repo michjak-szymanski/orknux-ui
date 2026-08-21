@@ -303,10 +303,13 @@ export function AdminNetworkingPage({ session, onSignOut }: AdminNetworkingPageP
 
       <p className={styles.disclaimer}>
         <img src={infoIcon} alt="" width={14} height={14} />
-        These rules apply to every outbound HTTP request this installation makes - connection
-        checks, MCP servers, model providers and the token grants they need, and anything a workflow
-        calls. They do not apply to mail: SMTP is not an HTTP request and a mail server is configured
-        by host on the connection itself. Passwords are stored encrypted and are never shown again.
+        These rules apply to every outbound request this installation makes - connection checks,
+        MCP servers, model providers and the token grants they need, Slack, the identity provider
+        an OIDC installation signs in against, and anything a workflow calls. Mail is included: a
+        rule is matched against <code>smtp://host:port</code>, and the proxy has to allow a{' '}
+        <code>CONNECT</code> to that port for it to work. Directory sign-in over LDAP is not - it
+        is not HTTP, and no rule here can carry it. Passwords are stored encrypted and are never
+        shown again.
       </p>
 
       <ProxyRuleDialog
