@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -41,6 +41,7 @@ import chevronDown12Icon from '../assets/chevron-down-12.svg';
  */
 import { ConditionDialog } from './ConditionDialog';
 import own from './ConditionForm.module.css';
+import { useCatalogue } from './Catalogue';
 import { DefinitionPicker } from './DefinitionPicker';
 import { FieldHint } from './FieldHint';
 import { IconField } from './IconField';
@@ -182,8 +183,6 @@ export function ConditionForm({
   const [draftValue, setDraftValue] = useState('');
   const [icon, setIcon] = useState<string | null>(condition?.icon ?? null);
 
-  const [functions, setFunctions] = useState<WorkspaceFunction[]>([]);
-  const [others, setOthers] = useState<Condition[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   /**
@@ -207,34 +206,50 @@ export function ConditionForm({
   const editingId = condition?.id ?? null;
   const presetFunctionId = preset?.functionId ?? null;
 
-  useEffect(() => {
-    if (workspaceId === '') return;
-
-    // Only functions that answer a question can be a condition.
-    fetchWorkspaceFunctions(workspaceId, 0, PAGE_SIZE)
-      .then((page) => {
-        const asking = page.content.filter((fn) => fn.returnType === 'BOOLEAN');
-        setFunctions(asking);
-
-        /*
-         * Named after the function it was opened for.
-         *
-         * Somebody arriving from a function to wrap it has already said what
-         * this is about, and an empty Name asks them to say it a second time.
-         * Only when nothing has been typed: what is in the box is theirs from
-         * the moment they touch it, and the functions arrive a moment after the
-         * form does.
-         */
+  /*
+   * The two catalogues the pickers offer. Both ended `.catch(() => setX([]))`,
+   * which left a picker saying *Nothing to choose here yet* whether the
+   * workspace had none or the server had not answered.
+   */
+  // Only functions that answer a question can be a condition.
+  const functionCatalogue = useCatalogue<WorkspaceFunction>(
+    'functions',
+    async () => {
+      const page = await fetchWorkspaceFunctions(workspaceId, 0, PAGE_SIZE);
+      return page.content.filter((fn) => fn.returnType === 'BOOLEAN');
+    },
+    [workspaceId, presetFunctionId],
+    {
+      skip: workspaceId === '',
+      /*
+       * Named after the function it was opened for.
+       *
+       * Somebody arriving from a function to wrap it has already said what
+       * this is about, and an empty Name asks them to say it a second time.
+       * Only when nothing has been typed: what is in the box is theirs from
+       * the moment they touch it, and the functions arrive a moment after the
+       * form does.
+       */
+      onLoaded: (asking) => {
         if (presetFunctionId === null) return;
         const wrapped = asking.find((fn) => fn.id === presetFunctionId);
         if (wrapped !== undefined) setName((present) => (present === '' ? wrapped.name : present));
-      })
-      .catch(() => setFunctions([]));
+      },
+    },
+  );
 
-    fetchWorkspaceConditions(workspaceId, 0, PAGE_SIZE)
-      .then((page) => setOthers(page.content.filter((other) => other.id !== editingId)))
-      .catch(() => setOthers([]));
-  }, [workspaceId, editingId, presetFunctionId]);
+  const otherCatalogue = useCatalogue<Condition>(
+    'conditions',
+    async () => {
+      const page = await fetchWorkspaceConditions(workspaceId, 0, PAGE_SIZE);
+      return page.content.filter((other) => other.id !== editingId);
+    },
+    [workspaceId, editingId],
+    { skip: workspaceId === '' },
+  );
+
+  const functions: WorkspaceFunction[] = functionCatalogue.items;
+  const others: Condition[] = otherCatalogue.items;
 
   const isComposite = composite(type);
   const properties = PROPERTIES_BY_TYPE[type];
@@ -545,6 +560,7 @@ export function ConditionForm({
                 placeholder="Select function…"
                 searchPlaceholder="Search functions…"
                 create={NEW_FUNCTION_ROW}
+                failure={functionCatalogue.failure}
               />
               {functionId === NEW_FUNCTION && (
                 <>
@@ -675,6 +691,7 @@ export function ConditionForm({
                 searchPlaceholder="Search conditions…"
                 ariaLabel="Add a condition"
                 create={NEW_CONDITION_ROW}
+                failure={otherCatalogue.failure}
               />
             </div>
           )}
@@ -724,7 +741,7 @@ export function ConditionForm({
           onSaved={(made) => {
             // Into this form's own list as well as into the members, because
             // nothing is going to fetch the conditions again while it stays open.
-            setOthers((current) => [...current, made]);
+            otherCatalogue.add(made);
             setMembers((current) => [...current, made.id]);
             setMakingMember(false);
           }}

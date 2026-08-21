@@ -228,11 +228,11 @@ export const TESTS = [
     what: 'a catalogue that failed to load says so, where an empty one says it is empty',
     needs: ['workspace'],
     /*
-     * Issue 139. Runs anywhere there is a workspace with an agent in it - the
-     * seed makes two - because it does not need the catalogues to hold
-     * anything: it answers the three queries itself, once with an empty list
-     * and once with an error, and reads what the page says about each. Nothing
-     * about it is particular to one database, so it is in CI.
+     * Issue 139. Needs nothing of the catalogues it is about: it answers their
+     * queries itself, once with an empty list and once with an error, and reads
+     * what each of three screens says about each. The whole fixture is a
+     * workspace with an agent in it - the seed makes two - and an administrator
+     * to open the admin half, so it runs in CI.
      */
   },
 

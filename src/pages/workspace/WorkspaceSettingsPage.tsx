@@ -17,6 +17,7 @@ import {
 import type { Workspace } from '../../api/workspaces';
 import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import { AppShell } from '../../components/AppShell';
+import { CatalogueNote, useCatalogue } from '../../components/Catalogue';
 import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
@@ -48,7 +49,6 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
   const { workspaceId = '' } = useParams();
 
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
-  const [models, setModels] = useState<Model[]>([]);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,10 +70,19 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       .catch((cause: unknown) => {
         setError(cause instanceof Error ? cause.message : 'Could not load the workspace.');
       });
-    fetchModels(workspaceId)
-      .then(setModels)
-      .catch(() => setModels([]));
   }, [workspaceId]);
+
+  /*
+   * The models the four pickers on this page offer.
+   *
+   * This ended `.catch(() => setModels([]))`, and the page's answer to an empty
+   * list is a line saying to go and add one under Models. A workspace whose
+   * models could not be fetched was told to add the ones it already has.
+   */
+  const modelCatalogue = useCatalogue('models in this workspace', () => fetchModels(workspaceId), [workspaceId], {
+    skip: workspaceId === '',
+  });
+  const models: Model[] = modelCatalogue.items;
 
   async function hear(modelId: string) {
     setError(null);
@@ -350,11 +359,16 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             the field has instead of contents - so it stays where the missing
             options would have been rather than going behind the (?).
           */}
-          {!models.some((model) => model.kind === 'TRANSCRIPTION') && (
-            <p className={styles.fieldNote}>
-              No transcription model has been added yet. Add one under Models, pointing at your Whisper
-              instance.
-            </p>
+          {modelCatalogue.failure === null ? (
+            !modelCatalogue.loading &&
+            !models.some((model) => model.kind === 'TRANSCRIPTION') && (
+              <p className={styles.fieldNote}>
+                No transcription model has been added yet. Add one under Models, pointing at your Whisper
+                instance.
+              </p>
+            )
+          ) : (
+            <CatalogueNote catalogue={modelCatalogue} className={styles.fieldNote} />
           )}
         </div>
 
@@ -391,11 +405,16 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             </select>
             <img src={chevronDown12Icon} alt="" width={12} height={12} />
           </div>
-          {!models.some((model) => model.kind === 'SPEECH') && (
-            <p className={styles.fieldNote}>
-              No speech model has been added yet. Add one under Models, pointing at whatever reads text
-              aloud.
-            </p>
+          {modelCatalogue.failure === null ? (
+            !modelCatalogue.loading &&
+            !models.some((model) => model.kind === 'SPEECH') && (
+              <p className={styles.fieldNote}>
+                No speech model has been added yet. Add one under Models, pointing at whatever reads text
+                aloud.
+              </p>
+            )
+          ) : (
+            <CatalogueNote catalogue={modelCatalogue} className={styles.fieldNote} />
           )}
         </div>
 

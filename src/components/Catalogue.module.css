@@ -1,0 +1,37 @@
+/*
+ * The failed line, and the way back from it.
+ *
+ * One property of its own: the colour that says this is not the ordinary empty
+ * state. Everything else - the size, the margin, the padding that puts it where
+ * the rows would have been - comes from the class the screen passes in, because
+ * this line stands exactly where that screen's empty line stood.
+ *
+ * The selector is doubled on purpose. That class sets a colour too - every one
+ * of these empty lines is muted grey - and one class against one class is a tie
+ * settled by whichever stylesheet the bundler happened to put second.
+ * `.failed.failed` outweighs it, wherever this is used.
+ */
+.failed.failed {
+  color: var(--color-danger);
+}
+
+/*
+ * A link, not a button, in the shape it takes: it sits inside a sentence, and a
+ * bordered control in the middle of a line of prose would be the loudest thing
+ * on a panel whose subject is elsewhere. It is a real <button> underneath,
+ * because it does something to this page rather than going anywhere.
+ */
+.retry {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.retry:hover {
+  text-decoration: none;
+}

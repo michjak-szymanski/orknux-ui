@@ -51,6 +51,7 @@ import trashIcon from '../../assets/trash-grey.svg';
 import volume2Icon from '../../assets/volume-2.svg';
 import xIcon from '../../assets/x.svg';
 import { AppShell } from '../../components/AppShell';
+import { CatalogueNote, useCatalogue } from '../../components/Catalogue';
 import { VoiceMeter } from '../../components/VoiceMeter';
 import { VoiceMode } from '../../components/VoiceMode';
 import type { VoiceModeHandle, VoicePhase } from '../../components/VoiceMode';
@@ -183,8 +184,6 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
     const own = messages.findIndex((message) => message.actor === null);
     return own === -1 ? messages.length : own;
   }, [messages]);
-  const [models, setModels] = useState<Model[]>([]);
-  const [agents, setAgents] = useState<Agent[]>([]);
 
   const [search, setSearch] = useState('');
   /** Off by default: most searches are for a chat by name, not through everything said. */
@@ -308,11 +307,28 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
     void loadSessions().catch((cause: unknown) =>
       setError(cause instanceof Error ? cause.message : 'Could not load the chats.'),
     );
-    fetchModels(workspaceId).then(setModels).catch(() => setModels([]));
-    fetchWorkspaceAgents(workspaceId, 0, 100)
-      .then((page) => setAgents(page.content))
-      .catch(() => setAgents([]));
   }, [workspaceId, loadSessions]);
+
+  /*
+   * What the chat can be pointed at. Both used to end `.catch(() => setX([]))`,
+   * which meant a server that had gone away left a picker saying this workspace
+   * has no models - the one sentence guaranteed to be wrong, since the chat on
+   * screen was already speaking to one.
+   */
+  const modelCatalogue = useCatalogue(
+    'models in this workspace',
+    () => fetchModels(workspaceId ?? ''),
+    [workspaceId],
+    { skip: workspaceId === null },
+  );
+  const agentCatalogue = useCatalogue<Agent>(
+    'agents in this workspace',
+    async () => (await fetchWorkspaceAgents(workspaceId ?? '', 0, 100)).content,
+    [workspaceId],
+    { skip: workspaceId === null },
+  );
+  const models: Model[] = modelCatalogue.items;
+  const agents: Agent[] = agentCatalogue.items;
 
   /*
    * What the open chat holds.
@@ -1165,13 +1181,24 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                   </button>
                 </div>
                 <div className={styles.pickerList}>
-                  {pickerEntries.length === 0 && (
-                    <p className={styles.pickerEmpty}>
-                      {pickerTab === 'models'
+                  {/*
+                    Three things the list can have nothing in it for, and they
+                    are not the same thing: the workspace has none, the fetch
+                    failed, or what was typed above matches none of them.
+                  */}
+                  <CatalogueNote
+                    catalogue={pickerTab === 'models' ? modelCatalogue : agentCatalogue}
+                    className={styles.pickerEmpty}
+                    empty={
+                      pickerTab === 'models'
                         ? 'No models in this workspace yet.'
-                        : 'No agents in this workspace yet.'}
-                    </p>
-                  )}
+                        : 'No agents in this workspace yet.'
+                    }
+                  />
+                  {pickerEntries.length === 0 &&
+                    (pickerTab === 'models' ? models.length > 0 : agents.length > 0) && (
+                      <p className={styles.pickerEmpty}>Nothing by that name.</p>
+                    )}
                   {pickerEntries.map((entry) => (
                     <button
                       key={entry.id}

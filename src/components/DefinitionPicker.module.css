@@ -170,3 +170,12 @@
   font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
+
+/*
+ * The same line, in the colour that says this is not the ordinary empty state:
+ * the list has nothing in it because it could not be fetched, not because the
+ * workspace has none.
+ */
+.notice.noticeFailed {
+  color: var(--color-danger);
+}

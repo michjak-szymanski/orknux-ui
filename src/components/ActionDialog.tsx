@@ -34,6 +34,7 @@ import type { WorkspaceFunction } from '../api/functions';
 import { fetchWorkspaceConnections } from '../api/integrations';
 import type { WorkspaceConnection } from '../api/integrations';
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
+import { CatalogueNote, useCatalogue } from './Catalogue';
 import { ConditionDialog } from './ConditionDialog';
 import { DefinitionPicker } from './DefinitionPicker';
 import { FieldHint } from './FieldHint';
@@ -118,9 +119,6 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
   const [durationSeconds, setDurationSeconds] = useState('60');
   const [icon, setIcon] = useState<string | null>(null);
 
-  const [connections, setConnections] = useState<WorkspaceConnection[]>([]);
-  const [functions, setFunctions] = useState<WorkspaceFunction[]>([]);
-  const [conditions, setConditions] = useState<Condition[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   /**
@@ -173,24 +171,40 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
     }
   }, [open, action]);
 
-  useEffect(() => {
-    if (!open || workspaceId === '') return;
+  /*
+   * The three catalogues this dialog picks from, asked for when it opens.
+   *
+   * All three used to end `.catch(() => setX([]))`, so a dialog opened against
+   * a server that had stopped answering said *None set up yet* under every
+   * picker - an invitation to go and make what the workspace already has.
+   */
+  const idle = !open || workspaceId === '';
+  const connectionCatalogue = useCatalogue(
+    'connections',
+    () => fetchWorkspaceConnections(workspaceId),
+    [open, workspaceId],
+    {
+      skip: idle,
+      // The first one is the default, but only where nothing has been picked.
+      onLoaded: (held) => setConnectionId((current) => (current === '' ? (held[0]?.id ?? '') : current)),
+    },
+  );
+  const functionCatalogue = useCatalogue<WorkspaceFunction>(
+    'functions',
+    async () => (await fetchWorkspaceFunctions(workspaceId, 0, FUNCTION_PAGE_SIZE)).content,
+    [open, workspaceId],
+    { skip: idle },
+  );
+  const conditionCatalogue = useCatalogue<Condition>(
+    'conditions',
+    async () => (await fetchWorkspaceConditions(workspaceId, 0, FUNCTION_PAGE_SIZE)).content,
+    [open, workspaceId],
+    { skip: idle },
+  );
 
-    fetchWorkspaceConnections(workspaceId)
-      .then((held) => {
-        setConnections(held);
-        setConnectionId((current) => (current === '' ? (held[0]?.id ?? '') : current));
-      })
-      .catch(() => setConnections([]));
-
-    fetchWorkspaceFunctions(workspaceId, 0, FUNCTION_PAGE_SIZE)
-      .then((page) => setFunctions(page.content))
-      .catch(() => setFunctions([]));
-
-    fetchWorkspaceConditions(workspaceId, 0, FUNCTION_PAGE_SIZE)
-      .then((page) => setConditions(page.content))
-      .catch(() => setConditions([]));
-  }, [open, workspaceId]);
+  const connections: WorkspaceConnection[] = connectionCatalogue.items;
+  const functions: WorkspaceFunction[] = functionCatalogue.items;
+  const conditions: Condition[] = conditionCatalogue.items;
 
   /**
    * The connections a mail may go through, which is the mail servers and nothing
@@ -482,15 +496,14 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                   onChoose={setConnectionId}
                   placeholder="Select connection…"
                   searchPlaceholder="Search connections…"
+                  failure={connectionCatalogue.failure}
                 />
                 {/* Nothing to make from here: a connection is a URL, a token and a
                     handshake with the service, none of which can be got from a
                     name. What is left printed is the empty state - what the field
                     has instead of contents - and where they come from went behind
                     the (?), which is a question rather than a fact about now. */}
-                {connections.length === 0 && (
-                  <p className={styles.fieldHint}>None set up yet.</p>
-                )}
+                <CatalogueNote catalogue={connectionCatalogue} className={styles.fieldHint} empty="None set up yet." />
               </div>
 
               <div className={styles.field}>
@@ -616,6 +629,7 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                       : 'Select connection…'
                   }
                   searchPlaceholder="Search mail servers…"
+                  failure={connectionCatalogue.failure}
                 />
               </div>
 
@@ -802,6 +816,7 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                   placeholder="Select function…"
                   searchPlaceholder="Search functions…"
                   create={NEW_FUNCTION_ROW}
+                  failure={functionCatalogue.failure}
                 />
                 {functionId === NEW_FUNCTION && (
                   <>
@@ -922,12 +937,15 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                 placeholder="Select condition…"
                 searchPlaceholder="Search conditions…"
                 create={NEW_CONDITION_ROW}
+                failure={conditionCatalogue.failure}
               />
               {/* The empty state stays where the missing contents would be; what
                   the field is for went behind the (?) above it. */}
-              {conditions.length === 0 && (
-                <p className={styles.fieldHint}>None defined yet. Make one here.</p>
-              )}
+              <CatalogueNote
+                catalogue={conditionCatalogue}
+                className={styles.fieldHint}
+                empty="None defined yet. Make one here."
+              />
             </div>
           )}
 
@@ -1075,7 +1093,7 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
             // Into this dialog's own list as well as into the field: the picker
             // has to be able to show what was just chosen, and nothing is going
             // to fetch the conditions again while this stays open.
-            setConditions((current) => [...current, made]);
+            conditionCatalogue.add(made);
             setConditionId(made.id);
             setMakingCondition(false);
           }}

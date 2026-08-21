@@ -14,6 +14,7 @@ import type { Tool } from '../api/tools';
 import chevronDownIcon from '../assets/chevron-down.svg';
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
 import xCircleIcon from '../assets/x-circle.svg';
+import { CatalogueNote, useCatalogue } from './Catalogue';
 import { FieldHint } from './FieldHint';
 import { IconField } from './IconField';
 import own from './AgentForm.module.css';
@@ -98,21 +99,36 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
   const [saving, setSaving] = useState(false);
   const newServerRef = useRef<HTMLInputElement>(null);
 
-  const [models, setModels] = useState<Model[]>([]);
-  const [catalogs, setCatalogs] = useState<MemoryCatalog[]>([]);
-  const [skillFolders, setSkillFolders] = useState<SkillCatalog[]>([]);
-  const [workspaceTools, setWorkspaceTools] = useState<Tool[]>([]);
+  /*
+   * What this workspace can offer the agent: its models, and its catalogs.
+   *
+   * Four lists, four grants, and each one used to end `.catch(() => setX([]))` -
+   * so a server that had stopped answering drew four boxes saying this
+   * workspace has nothing to grant, which is the one thing they could not
+   * possibly know. They keep their failure now, and each box says which of the
+   * two states it is in.
+   */
+  const noWorkspace = workspaceId === '';
+  const modelCatalogue = useCatalogue('models in this workspace', () => fetchModels(workspaceId), [workspaceId], {
+    skip: noWorkspace,
+  });
+  const memoryCatalogue = useCatalogue('memory catalogs', () => fetchMemoryCatalogs(workspaceId), [workspaceId], {
+    skip: noWorkspace,
+  });
+  const skillCatalogue = useCatalogue('skill catalogs', () => fetchSkillCatalogs(workspaceId), [workspaceId], {
+    skip: noWorkspace,
+  });
+  const toolCatalogue = useCatalogue<Tool>(
+    'tools',
+    async () => (await fetchWorkspaceTools(workspaceId, 0, TOOL_PAGE_SIZE)).content,
+    [workspaceId],
+    { skip: noWorkspace },
+  );
 
-  // What this workspace can offer the agent: its models, and its catalogs.
-  useEffect(() => {
-    if (workspaceId === '') return;
-    fetchModels(workspaceId).then(setModels).catch(() => setModels([]));
-    fetchMemoryCatalogs(workspaceId).then(setCatalogs).catch(() => setCatalogs([]));
-    fetchSkillCatalogs(workspaceId).then(setSkillFolders).catch(() => setSkillFolders([]));
-    fetchWorkspaceTools(workspaceId, 0, TOOL_PAGE_SIZE)
-      .then((page) => setWorkspaceTools(page.content))
-      .catch(() => setWorkspaceTools([]));
-  }, [workspaceId]);
+  const models: Model[] = modelCatalogue.items;
+  const catalogs: MemoryCatalog[] = memoryCatalogue.items;
+  const skillFolders: SkillCatalog[] = skillCatalogue.items;
+  const workspaceTools: Tool[] = toolCatalogue.items;
 
   useEffect(() => {
     if (addingServer) newServerRef.current?.focus();
@@ -276,6 +292,7 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
             models could not be fetched looks exactly the same from outside,
             which is what this line is for.
           */}
+          <CatalogueNote catalogue={modelCatalogue} className={own.emptyNote} />
         </div>
 
         {/*
@@ -285,7 +302,11 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
         <div className={styles.field}>
           <span className={styles.label}>Memory Catalogs</span>
           <div className={own.checkList}>
-            {catalogs.length === 0 && <p className={own.emptyNote}>No catalogs in this workspace yet.</p>}
+            <CatalogueNote
+              catalogue={memoryCatalogue}
+              className={own.emptyNote}
+              empty="No catalogs in this workspace yet."
+            />
             {catalogs.map((catalog) => (
               <label key={catalog.id} className={own.checkRow}>
                 <input
@@ -314,9 +335,11 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
         <div className={styles.field}>
           <span className={styles.label}>Skill Catalogs</span>
           <div className={own.checkList}>
-            {skillFolders.length === 0 && (
-              <p className={own.emptyNote}>No skill catalogs in this workspace yet.</p>
-            )}
+            <CatalogueNote
+              catalogue={skillCatalogue}
+              className={own.emptyNote}
+              empty="No skill catalogs in this workspace yet."
+            />
             {skillFolders.map((catalog) => (
               <label key={catalog.id} className={own.checkRow}>
                 <input
@@ -344,7 +367,7 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
         <div className={styles.field}>
           <span className={styles.label}>Tools</span>
           <div className={own.checkList}>
-            {workspaceTools.length === 0 && <p className={own.emptyNote}>No tools in this workspace yet.</p>}
+            <CatalogueNote catalogue={toolCatalogue} className={own.emptyNote} empty="No tools in this workspace yet." />
             {workspaceTools.map((tool) => (
               <label key={tool.id} className={own.checkRow}>
                 <input

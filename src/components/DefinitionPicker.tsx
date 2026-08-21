@@ -32,6 +32,16 @@ export interface DefinitionPickerProps {
   /** What the search box is called, where the field's own label is not enough. */
   ariaLabel?: string;
   disabled?: boolean;
+  /**
+   * Why there is nothing to choose from, where the reason is that the list
+   * could not be fetched rather than that the workspace has none.
+   *
+   * Without it a picker with no options says *Nothing to choose here yet*,
+   * which is an invitation to go and make one - and that is a lie told to
+   * anybody whose session expired with a workspace full of them behind it. The
+   * sentence comes from `catalogueFailure`; see components/Catalogue.tsx.
+   */
+  failure?: string | null;
 }
 
 /**
@@ -66,6 +76,7 @@ export function DefinitionPicker({
   create = null,
   ariaLabel,
   disabled = false,
+  failure = null,
 }: DefinitionPickerProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -203,8 +214,12 @@ export function DefinitionPicker({
           />
 
           {rows.length === 0 && (
-            <p className={styles.notice}>
-              {options.length === 0 ? 'Nothing to choose here yet.' : 'Nothing by that name.'}
+            <p className={failure === null ? styles.notice : `${styles.notice} ${styles.noticeFailed}`}>
+              {failure !== null
+                ? failure
+                : options.length === 0
+                  ? 'Nothing to choose here yet.'
+                  : 'Nothing by that name.'}
             </p>
           )}
 

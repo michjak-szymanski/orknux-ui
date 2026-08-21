@@ -10,6 +10,7 @@ import { fetchWorkspaces, updateWorkspace } from '../../api/workspaces';
 import type { Workspace } from '../../api/workspaces';
 import { AppShell } from '../../components/AppShell';
 import { AdminSidebar } from '../../components/AdminSidebar';
+import { CatalogueNote, useCatalogue } from '../../components/Catalogue';
 import { DeleteWorkspaceDialog } from '../../components/DeleteWorkspaceDialog';
 import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
@@ -40,18 +41,18 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
    * nothing, and the server refuses that save anyway.
    */
   const [adminRoleIds, setAdminRoleIds] = useState<string[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
 
   /*
    * Everything there is to assign. Loaded here rather than with the workspace
    * because it is the same list for every workspace, and a checkbox for a role that
    * has since been removed would be a checkbox for nothing.
+   *
+   * A failure used to arrive as an empty list, and the panel then sent the
+   * reader to the Roles screen to define the roles this installation already
+   * has - so the failure is kept and printed in that sentence's place.
    */
-  useEffect(() => {
-    fetchRoles()
-      .then(setRoles)
-      .catch(() => setRoles([]));
-  }, []);
+  const roleCatalogue = useCatalogue('roles', fetchRoles, []);
+  const roles: Role[] = roleCatalogue.items;
 
   /** What is left to add, so the button knows whether there is anything to add. */
   const unassigned = roles.filter((role) => !roleIds.includes(role.id));
@@ -268,11 +269,13 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                     className={styles.addRole}
                     disabled={unassigned.length === 0}
                     title={
-                      roles.length === 0
-                        ? 'No roles are defined yet'
-                        : unassigned.length === 0
-                          ? 'Every role is already assigned'
-                          : 'Assign another role to this workspace'
+                      roleCatalogue.failure !== null
+                        ? 'The roles could not be listed'
+                        : roles.length === 0
+                          ? 'No roles are defined yet'
+                          : unassigned.length === 0
+                            ? 'Every role is already assigned'
+                            : 'Assign another role to this workspace'
                     }
                     onClick={() => {
                       const next = unassigned[0];
@@ -287,12 +290,16 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                     add button is dead until somebody goes and makes a role, and
                     a dead end is not an explanation to go looking for.
                   */}
-                  {roles.length === 0 && (
-                    <p className={styles.fieldNote}>
-                      No roles are defined yet. Add one on the <Link to="/admin/roles">Roles</Link> screen,
-                      then assign it here.
-                    </p>
-                  )}
+                  <CatalogueNote
+                    catalogue={roleCatalogue}
+                    className={styles.fieldNote}
+                    empty={
+                      <>
+                        No roles are defined yet. Add one on the <Link to="/admin/roles">Roles</Link> screen,
+                        then assign it here.
+                      </>
+                    }
+                  />
                 </div>
               </div>
             </div>
