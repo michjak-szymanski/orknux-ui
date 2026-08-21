@@ -84,3 +84,63 @@
   color: var(--color-accent-brand);
   cursor: pointer;
 }
+
+/*
+ * The word the switch is about, and the (?) that explains its two options.
+ *
+ * Above the rows rather than in each of them: the sentence is the same for
+ * every row, and printed once per row it would outweigh the rows.
+ */
+.hintRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  margin-top: calc(-1 * var(--space-6));
+}
+
+.hintLead {
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+/* Written, or read from somewhere else. Two states, so a switch rather than a list. */
+.modeSwitch {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 2px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+}
+
+.modeOption {
+  padding: 3px var(--space-6);
+  background: none;
+  border: 0;
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.modeOption:hover {
+  color: var(--color-text-primary);
+}
+
+.modeOptionOn {
+  background: var(--color-surface-raised);
+  color: var(--color-accent-brand);
+}
+
+/*
+ * The picker stands where the value input stood, and takes the same share of
+ * the row - a control that changed the row's shape when the switch was thrown
+ * would make the switch look like it did more than it does.
+ */
+.reference {
+  display: flex;
+  flex: 1 0 0;
+  min-width: 0;
+}
