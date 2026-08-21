@@ -313,6 +313,23 @@ export const TESTS = [
      */
   },
 
+  {
+    name: 'attribution-check',
+    what: 'the licence notice is on screen on every shell, and says which version',
+    needs: ['workspace'],
+    /*
+     * The one check here where what breaks is not a bug but a licence term.
+     * `Attribution.tsx` argues at length why it exists - AGPL 5(d), the 7(b)
+     * term in NOTICE, the section 13 offer of source - and nothing had ever
+     * checked it was actually drawn. One `display: none` from a stylesheet it
+     * does not own and the obligation stops being met with nothing failing.
+     *
+     * The version is asserted against `package.json` rather than a number
+     * written into the check, so a release bump cannot leave the two
+     * disagreeing.
+     */
+  },
+
   // --- pages that are pages -------------------------------------------------
   {
     name: 'admin-width-check',

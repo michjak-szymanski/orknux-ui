@@ -1396,6 +1396,25 @@ button.attachmentName {
 }
 
 /*
+ * The two chevrons, held together and set apart from the close beside them.
+ * They step through what was found and the × leaves - three glyphs at one
+ * spacing read as three of a kind, and the odd one out is the one you do not
+ * want pressed by accident.
+ *
+ * The gap is on this wrapper rather than as a `margin-left` on the close
+ * button, which was the first attempt and did nothing: the button composes its
+ * margin from `iconButton.module.css`, one class against one class, so the
+ * winner is whichever stylesheet the bundler happened to put second. The
+ * wrapper has no rule competing with it.
+ */
+.findSteps {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  margin-right: var(--space-12);
+}
+
+/*
  * A turn that matched, and the one being looked at.
  *
  * The whole turn rather than the run of characters inside it: an answer is

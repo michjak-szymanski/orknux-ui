@@ -1352,26 +1352,28 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                     ? 'Nothing'
                     : `${findAt + 1} of ${findHits.length}`}
               </span>
-              <button
-                type="button"
-                className={styles.findStep}
-                onClick={() => stepFind(-1)}
-                disabled={findHits.length === 0}
-                aria-label="Previous match"
-                title="Previous match"
-              >
-                <img src={chevronDown12Icon} alt="" width={12} height={12} style={{ transform: 'rotate(180deg)' }} />
-              </button>
-              <button
-                type="button"
-                className={styles.findStep}
-                onClick={() => stepFind(1)}
-                disabled={findHits.length === 0}
-                aria-label="Next match"
-                title="Next match"
-              >
-                <img src={chevronDown12Icon} alt="" width={12} height={12} />
-              </button>
+              <span className={styles.findSteps}>
+                <button
+                  type="button"
+                  className={styles.findStep}
+                  onClick={() => stepFind(-1)}
+                  disabled={findHits.length === 0}
+                  aria-label="Previous match"
+                  title="Previous match"
+                >
+                  <img src={chevronDown12Icon} alt="" width={12} height={12} style={{ transform: 'rotate(180deg)' }} />
+                </button>
+                <button
+                  type="button"
+                  className={styles.findStep}
+                  onClick={() => stepFind(1)}
+                  disabled={findHits.length === 0}
+                  aria-label="Next match"
+                  title="Next match"
+                >
+                  <img src={chevronDown12Icon} alt="" width={12} height={12} />
+                </button>
+              </span>
               <button type="button" className={styles.findStep} onClick={closeFind} aria-label="Close find" title="Close find">
                 <img src={xIcon} alt="" width={12} height={12} />
               </button>

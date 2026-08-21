@@ -39,3 +39,13 @@
 .compact {
   padding: var(--space-8) var(--space-12);
 }
+
+/*
+ * Beside the name and quieter than it: this says which Orknux, so it should be
+ * findable when somebody is asked for it and invisible when nobody is.
+ */
+.version {
+  margin-left: var(--space-6);
+  font-family: var(--font-mono);
+  color: var(--color-text-muted);
+}

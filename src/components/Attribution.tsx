@@ -30,6 +30,18 @@ export function Attribution({ compact = false }: AttributionProps) {
   return (
     <p className={compact ? `${styles.attribution} ${styles.compact}` : styles.attribution}>
       <span className={styles.name}>Orknux</span>
+      {/*
+        The version, beside the name rather than as another item in the list:
+        it says which Orknux this is, so it belongs to the name and not to the
+        licence or the source beside it.
+
+        `__APP_VERSION__` is `package.json`'s version, stamped in at build time
+        by `vite.config.ts` - so what a running installation shows is what was
+        built, and there is no second place to remember to update. It is the
+        first thing anybody is asked for in a bug report and, until now, the
+        one thing this footer did not say.
+      */}
+      <span className={styles.version}>{__APP_VERSION__}</span>
       <span className={styles.separator}>·</span>
       {/* The copyright holder, named rather than implied by the product name. */}
       <span>© 2026 Michał Szymański</span>
