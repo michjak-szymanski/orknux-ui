@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import type { ValueType } from '../../api/actions';
 import {
@@ -41,6 +41,7 @@ import { fetchWorkspaceObjects } from '../../api/objects';
 import type { WorkflowObject } from '../../api/objects';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { TrashIcon } from '../../components/TrashIcon';
+import { UnsavedFunctionDialog } from '../../components/UnsavedFunctionDialog';
 import { matches, useFormatShortcut, useSaveShortcut } from '../../session/shortcut';
 import { shellUser } from '../../session/user';
 import { useWorkspaceVariables } from './workspaceVariables';
@@ -69,6 +70,21 @@ const OBJECT_PAGE_SIZE = 100;
  * where its lines have been pulled to the same way, for the same reason.
  */
 const SPLIT_KEY = 'orknux.function-editor.panel-width';
+
+/*
+ * The mark on the history entry that exists only to be pressed Back through.
+ *
+ * `useBlocker` is the right tool for this and it is not available here: it wants
+ * a data router, and the application mounts `<BrowserRouter>` - so the editor
+ * has to hold Back off with the one thing a page can do about it, which is to
+ * put an entry of its own on the stack while there is something to lose. Back
+ * lands on that instead of leaving, and the editor is still there to ask.
+ *
+ * Kept in react-router's own location state rather than in `window.history`
+ * directly, so the router keeps counting its entries correctly and Back goes on
+ * meaning what it means everywhere else on this screen.
+ */
+const LEAVE_GUARD = 'orknuxUnsavedFunction';
 
 /** What the panel is worth until somebody says otherwise - the width it always had. */
 const DEFAULT_PANEL = 380;
@@ -664,6 +680,26 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
     });
   }, [fn, creating, declarations]);
 
+  /**
+   * The stub a new function would say right now, given the panel as it stands.
+   *
+   * Computed rather than remembered, because two things want it and one of them
+   * cannot use a ref. The effect below prints it; `unsaved` compares against it
+   * to answer whether a new function has been written in yet - and an answer
+   * read out of a ref during rendering is an answer that does not change when
+   * the ref does.
+   */
+  const stub = useMemo(
+    () =>
+      starterSource(
+        identifier(name),
+        declarations,
+        params.filter((param) => param.name.trim() !== '').map((param) => param.name.trim()),
+        returnType,
+      ),
+    [name, declarations, params, returnType],
+  );
+
   /*
    * What a new function says before anybody writes anything.
    *
@@ -673,23 +709,251 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
    * only the parameter list is kept in step, exactly as for a function that
    * already exists.
    *
-   * The return type is in here because choosing nothing has to take the return
-   * statement out again, and choosing a type back has to put it back - a panel
-   * that only ever adds is a panel you have to correct by hand.
+   * The return type is in the stub above because choosing nothing has to take
+   * the return statement out again, and choosing a type back has to put it back
+   * - a panel that only ever adds is a panel you have to correct by hand.
    */
   useEffect(() => {
     if (!creating) return;
     if (printed.current !== null && source !== printed.current) return;
-    const next = starterSource(
-      identifier(name),
-      declarations,
-      params.filter((param) => param.name.trim() !== '').map((param) => param.name.trim()),
-      returnType,
-    );
-    printed.current = next;
-    if (next !== source) setSource(next);
-  }, [creating, name, declarations, params, returnType, source]);
+    printed.current = stub;
+    if (stub !== source) setSource(stub);
+  }, [creating, stub, source]);
 
+  /**
+   * The parameters as a save would send them: the blank rows dropped, the names
+   * as the server will store them.
+   *
+   * Both sides of the comparison below go through this. A row somebody added
+   * and has not named yet is not a change - the save would not carry it - and a
+   * name typed with a space after it is the same parameter as the one already
+   * stored, so neither should make the editor ask before letting somebody go.
+   */
+  const declared = (all: FunctionParam[]): FunctionParam[] =>
+    all.filter((param) => param.name.trim() !== '').map((param) => ({ ...param, name: param.name.trim() }));
+
+  /**
+   * There is work on this screen the server has not been told about.
+   *
+   * Measured against what was loaded, not against whether anybody has typed.
+   * The page already keeps a `saved` flag - the workflow editor's convention,
+   * and the thing that lights the green "Saved. No errors" - but a flag can
+   * only ever say that a key was pressed. Somebody who types a character and
+   * deletes it has changed nothing, and being asked to confirm losing nothing
+   * is how a prompt teaches people to click through prompts. The workflow
+   * editor answers by flag because a graph is not a value you can compare; a
+   * function is seven fields and a string, so here the comparison is the honest
+   * answer and the flag is not.
+   *
+   * `fn` is the baseline and it is maintained for free: it is set when the
+   * function is loaded, set again from what `handleSave` stored, and set again
+   * when a suggestion accepted in the panel is read back. So saving and then
+   * leaving asks nothing, which is the failure that makes a guard worth
+   * ignoring.
+   *
+   * A function being written has no baseline on the server, so its baseline is
+   * the page as it opens: the name it arrives with, no details, and the stub in
+   * the column. Anything else is somebody's work.
+   */
+  const unsaved = useMemo(() => {
+    if (creating) {
+      return !(
+        name.trim() === NEW_FUNCTION_NAME &&
+        description.trim() === '' &&
+        declared(params).length === 0 &&
+        externals.length === 0 &&
+        returnType === 'MAP' &&
+        /*
+         * The column is empty for exactly one render - the pass before the
+         * effect above puts the stub in it - and an empty column is not a
+         * written function. Without this the page would count itself as having
+         * work in it the instant it opened, and put a history entry on to
+         * defend nothing.
+         */
+        (source === stub || printed.current === null)
+      );
+    }
+    // Still loading, or it could not be loaded: there is nothing on screen to lose.
+    if (fn === null) return false;
+    const wasExternals = fn.externals.map((external) => external.variableId);
+    return (
+      name.trim() !== fn.name.trim() ||
+      description.trim() !== (fn.description ?? '').trim() ||
+      source !== (fn.typescript ?? fn.source) ||
+      returnType !== fn.returnType ||
+      // Normalised the way a save normalises it: an object chosen and then
+      // abandoned for a return type that names none is not sent, so it is not a
+      // change either.
+      (namesObject(returnType) ? returnObjectId : null) !==
+        (namesObject(fn.returnType) ? fn.returnObjectId : null) ||
+      !sameParameters(declared(params), declared(fn.params)) ||
+      externals.length !== wasExternals.length ||
+      externals.some((variableId, at) => variableId !== wasExternals[at])
+    );
+  }, [creating, fn, name, description, source, returnType, returnObjectId, params, externals, stub]);
+
+  /*
+   * Closing the tab, reloading, or going somewhere that is not this application.
+   *
+   * The browser will not let a page stop this or say anything of its own about
+   * it, so this is the one exit that gets the browser's own question in the
+   * browser's own words. Exactly the shape the workflow editor uses, and for
+   * the same reason: `preventDefault` on the event is the whole of the API.
+   */
+  useEffect(() => {
+    if (!unsaved) return;
+    function onLeaving(event: BeforeUnloadEvent) {
+      event.preventDefault();
+    }
+    window.addEventListener('beforeunload', onLeaving);
+    return () => window.removeEventListener('beforeunload', onLeaving);
+  }, [unsaved]);
+
+  /**
+   * What is being asked about, or null while nothing is.
+   *
+   * `to` is where the click was going; null means Back was pressed, which has
+   * no destination to name - only a number of entries to go.
+   */
+  const [leaving, setLeaving] = useState<{ to: string | null } | null>(null);
+  /**
+   * True from the moment somebody has said go.
+   *
+   * Everything below stops guarding while this is set. Without it the two acts
+   * that leave - the navigation, and the flag going quiet after a save - race
+   * each other through the same history stack.
+   */
+  const goingAnyway = useRef(false);
+  /** Read by listeners bound once, which must not close over an old answer. */
+  const unsavedRef = useRef(unsaved);
+  unsavedRef.current = unsaved;
+
+  /*
+   * A link out of the editor, wherever on the page it is.
+   *
+   * The workflow editor intercepts its links one by one, because it only has to
+   * catch the handful it draws itself. This page's ways out are mostly not its
+   * own: the sidebar, the shell's four sections, the breadcrumb and the back
+   * arrow are all shared components, and rewriting them to know about one
+   * editor's draft would put this guard in nine files. One listener on the
+   * document, in the capture phase, catches every one of them before
+   * react-router sees the click - and it is bound only while there is something
+   * to lose, so a page with nothing unsaved behaves exactly as it did.
+   *
+   * A modified click, a middle click, a download and a `target` of its own are
+   * all handed straight back to the browser: a new tab takes nothing off this
+   * screen. So is a link to another origin - that one is a real unload, and the
+   * effect above already asks about it in the only way the browser allows.
+   */
+  useEffect(() => {
+    if (!unsaved) return;
+    function onClick(event: MouseEvent) {
+      if (event.defaultPrevented || goingAnyway.current) return;
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const anchor = (event.target as Element | null)?.closest?.('a');
+      if (!(anchor instanceof HTMLAnchorElement)) return;
+      if (anchor.hasAttribute('download')) return;
+      if (anchor.target !== '' && anchor.target !== '_self') return;
+      const href = anchor.getAttribute('href');
+      if (href === null || href.startsWith('#')) return;
+      const destination = new URL(anchor.href, window.location.href);
+      if (destination.origin !== window.location.origin) return;
+      const to = `${destination.pathname}${destination.search}${destination.hash}`;
+      // A link to where we already are is not a way out of anything.
+      if (to === `${window.location.pathname}${window.location.search}${window.location.hash}`) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setLeaving({ to });
+    }
+    document.addEventListener('click', onClick, true);
+    return () => document.removeEventListener('click', onClick, true);
+  }, [unsaved]);
+
+  /* Whether the entry we are standing on is the spare one this page pushed. */
+  const location = useLocation();
+  const onGuardEntry = (location.state as Record<string, unknown> | null)?.[LEAVE_GUARD] === true;
+  /** Pops this page caused itself, which are not somebody pressing Back. */
+  const ourPops = useRef(0);
+  /** Set while the spare entry is being taken back off, so it is only done once. */
+  const dropping = useRef(false);
+
+  /*
+   * The spare history entry: put on while there is work to lose, taken off the
+   * moment there is not.
+   *
+   * Taking it off again is the half that matters most. Leave it on after a save
+   * and the first Back press lands on an address the page is already showing,
+   * which reads as Back being broken - and a guard that breaks Back when there
+   * is nothing to guard is a guard people learn to route around.
+   */
+  useEffect(() => {
+    if (goingAnyway.current) return;
+    if (unsaved && !onGuardEntry) {
+      dropping.current = false;
+      navigate(`${location.pathname}${location.search}`, {
+        state: { ...(location.state as Record<string, unknown> | null), [LEAVE_GUARD]: true },
+      });
+      return;
+    }
+    if (!unsaved && onGuardEntry && !dropping.current) {
+      dropping.current = true;
+      ourPops.current += 1;
+      navigate(-1);
+    }
+    // `location.state` is deliberately not a dependency: it is what this effect
+    // writes, and reading it back as a trigger is a loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unsaved, onGuardEntry, location.pathname, location.search, navigate]);
+
+  /*
+   * Back, pressed.
+   *
+   * By the time this runs the spare entry has already been spent, so the page
+   * has not moved - both entries are this same address. The effect above
+   * notices the spare one has gone and puts another on, so a second press is
+   * caught too; all this has to do is ask.
+   */
+  useEffect(() => {
+    function onPop() {
+      if (ourPops.current > 0) {
+        ourPops.current -= 1;
+        dropping.current = false;
+        return;
+      }
+      if (goingAnyway.current || !unsavedRef.current) return;
+      setLeaving({ to: null });
+    }
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  /**
+   * Go, having been asked and answered.
+   *
+   * A named destination replaces the spare entry rather than being pushed on
+   * top of it, so Back from wherever this lands is the editor once - not the
+   * editor's address twice, the first of which looks like a press that did
+   * nothing.
+   *
+   * Back has no destination, only a distance: two entries, being the spare one
+   * and the editor itself. An editor opened straight from a fresh tab has
+   * nothing two entries back, and rather than leave somebody pressing a button
+   * that does nothing, the way back to the list stands in for it.
+   */
+  function leaveNow(to: string | null) {
+    goingAnyway.current = true;
+    setLeaving(null);
+    if (to !== null) {
+      navigate(to, { replace: onGuardEntry });
+      return;
+    }
+    const here = location.pathname;
+    ourPops.current += 1;
+    navigate(-2);
+    window.setTimeout(() => {
+      if (window.location.pathname === here) navigate(backTo, { replace: true });
+    }, 300);
+  }
 
   /*
    * Saving from the keyboard.
@@ -800,15 +1064,15 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
    * A refusal from the compiler stops the save. Storing output from code TypeScript
    * could not parse would put something in the sandbox that nobody wrote.
    */
-  async function handleSave() {
-    if (saving) return;
+  async function handleSave(): Promise<boolean> {
+    if (saving) return false;
     setSaving(true);
     setSaved(false);
     try {
       const emitted = await compile(source);
       if (!emitted.ok) {
         setStatus({ ok: false, message: said(emitted.reason, emitted.line) });
-        return;
+        return false;
       }
 
       const details = {
@@ -839,8 +1103,10 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
         // opens at - and from there it looks like it was not made at all.
         navigate(`/workspace/${workspaceId}/functions/${stored.id}?made=1`, { replace: true });
       }
+      return true;
     } catch (cause) {
       setStatus({ ok: false, message: cause instanceof Error ? cause.message : 'Could not save.' });
+      return false;
     } finally {
       setSaving(false);
     }
@@ -1537,6 +1803,34 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
           </div>
         </>
       )}
+
+      {/*
+        Outside the branch above, so it is the same dialog whichever state the
+        page is in - and so closing it never depends on what the page happens to
+        be showing behind it.
+      */}
+      <UnsavedFunctionDialog
+        functionName={leaving === null ? null : called}
+        creating={creating}
+        onStay={() => setLeaving(null)}
+        onLeave={() => leaveNow(leaving?.to ?? null)}
+        onSaveAndLeave={async () => {
+          const to = leaving?.to ?? null;
+          /*
+           * Held up front so the spare entry is not taken back off underneath
+           * the navigation this is about to make: a successful save turns the
+           * flag off, and the effect that watches it would otherwise step back
+           * one entry at the same moment as the step this is taking.
+           */
+          goingAnyway.current = true;
+          if (!(await handleSave())) {
+            goingAnyway.current = false;
+            return false;
+          }
+          leaveNow(to);
+          return true;
+        }}
+      />
     </AppShell>
   );
 }
