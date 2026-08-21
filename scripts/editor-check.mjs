@@ -7,27 +7,12 @@
  *
  * Two: editing a node used to replace its data wholesale, dropping the ports the
  * server had worked out, so a field vanished from the node until a save.
- *
- * Temporary: delete once both have been looked at.
  */
-import { chromium } from 'playwright';
+import { BASE, WORKSPACE, WORKFLOW, open, finish } from './suite/harness.mjs';
 
-const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
-const WORKSPACE = process.env.ORKNUX_WORKSPACE ?? '9';
-const WORKFLOW = process.env.ORKNUX_WORKFLOW ?? '9';
 const WATCHED = 'Reply in the thread';
 
-const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-const page = await context.newPage();
-
-const signedIn = await context.request.post(`${BASE}/api/session`, {
-  data: { username: 'alice', password: 'password' },
-});
-if (!signedIn.ok()) {
-  console.error('sign-in failed');
-  process.exit(1);
-}
+const { browser, page } = await open({ viewport: { width: 1440, height: 900 } });
 
 await page.goto(`${BASE}/workspace/${WORKSPACE}/workflows/${WORKFLOW}/editor`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('.react-flow__node', { timeout: 20_000 });
@@ -86,5 +71,4 @@ console.log(`focus stayed on:       ${focused}`);
 const survived = nodesAfter === withObject;
 console.log(survived ? 'PASS - the node survived' : 'FAIL - a node was deleted while typing');
 
-await browser.close();
-process.exit(kept && survived ? 0 : 1);
+await finish(browser, kept, survived);

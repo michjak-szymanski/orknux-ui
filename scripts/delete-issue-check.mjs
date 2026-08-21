@@ -5,26 +5,12 @@
  * issue #135 is about. This files an issue of its own, presses the trash, checks
  * nothing has gone yet, cancels, presses again and confirms, and then checks the
  * issue is really gone from the server and not only from the page.
- *
- * Temporary: delete once it has been looked at.
  */
-import { chromium } from 'playwright';
+import { BASE, WORKSPACE, open, shot, finish } from './suite/harness.mjs';
 
-const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
-const WORKSPACE = process.env.ORKNUX_WORKSPACE ?? '9';
 const TITLE = `Delete confirmation check ${Date.now()}`;
 
-const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-const page = await context.newPage();
-
-const signedIn = await context.request.post(`${BASE}/api/session`, {
-  data: { username: 'alice', password: 'password' },
-});
-if (!signedIn.ok()) {
-  console.error('sign-in failed');
-  process.exit(1);
-}
+const { browser, page } = await open({ viewport: { width: 1440, height: 900 } });
 
 // Our own issue to delete, so the check never touches anybody else's.
 await page.goto(`${BASE}/workspace/${WORKSPACE}/issues/new`, { waitUntil: 'domcontentloaded' });
@@ -56,7 +42,7 @@ await page.locator('dialog[open] button', { hasText: /^Delete Issue$/ }).click()
 await page.waitForURL(new RegExp(`/workspace/${WORKSPACE}/issues$`), { timeout: 20_000 });
 const left = true;
 
-await page.screenshot({ path: 'delete-issue-confirm.png' });
+await page.screenshot({ path: shot('delete-issue-confirm.png') });
 
 // Gone on the server, not just off the page.
 await page.goto(url, { waitUntil: 'domcontentloaded' });
@@ -74,5 +60,4 @@ console.log(names ? 'PASS: the dialog names the issue' : 'FAIL: the dialog does 
 console.log(closed && stillHere && stillLoads ? 'PASS: cancel keeps the issue' : 'FAIL: cancel did not keep the issue');
 console.log(gone ? 'PASS: confirm deletes it' : 'FAIL: confirm did not delete it');
 
-await browser.close();
-process.exit(asks && names && closed && stillHere && stillLoads && gone ? 0 : 1);
+await finish(browser, asks, names, closed, stillHere, stillLoads, gone);

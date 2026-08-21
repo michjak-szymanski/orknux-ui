@@ -13,30 +13,17 @@
  * leaving out the last thing in a file says so instead of offering an import
  * that creates nothing, and that leaving out something a kept component needs
  * takes that one with it and says so before anything is written.
- *
- * Temporary: delete once it has been looked at.
  */
 import { writeFileSync } from 'node:fs';
-import { chromium } from 'playwright';
+import { BASE, open, finish } from './suite/harness.mjs';
 
-const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
 /** Where the workflow lives, and which one. */
 const FROM = process.env.ORKNUX_WORKSPACE ?? '9';
 const WORKFLOW = process.env.ORKNUX_WORKFLOW ?? '118';
 /** A workspace that has none of what the workflow runs. */
 const BARE = process.env.ORKNUX_BARE_WORKSPACE ?? '24';
 
-const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1440, height: 980 } });
-const page = await context.newPage();
-
-const signedIn = await context.request.post(`${BASE}/api/session`, {
-  data: { username: 'alice', password: 'password' },
-});
-if (!signedIn.ok()) {
-  console.error('sign-in failed');
-  process.exit(1);
-}
+const { browser, context, page } = await open({ viewport: { width: 1440, height: 980 } });
 
 async function envelope(depth, to) {
   const answered = await context.request.post(`${BASE}/graphql`, {
@@ -194,15 +181,4 @@ console.log(stillImportable ? 'PASS: and the import is still offered' : 'FAIL: I
 console.log(actionsAfter === actionsBefore ? 'PASS: the left-out action was not created' : 'FAIL: it was created anyway');
 
 await browser.close();
-const ok =
-  carriedOffers &&
-  referencesOfferNothing &&
-  saysNothingLeft &&
-  importOff &&
-  putBack &&
-  workflowWent &&
-  warned &&
-  pointsAtTheOneHere &&
-  stillImportable &&
-  actionsAfter === actionsBefore;
-process.exit(ok ? 0 : 1);
+await finish(browser, carriedOffers, referencesOfferNothing, saysNothingLeft, importOff, putBack, workflowWent, warned, pointsAtTheOneHere, stillImportable, actionsAfter === actionsBefore);

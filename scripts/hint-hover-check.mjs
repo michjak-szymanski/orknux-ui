@@ -4,32 +4,10 @@
  * Hovering is the glance: it comes with the pointer and goes with it. Pressing
  * pins it, and a pinned note stays through a press elsewhere and through a
  * scroll, until its own close control is used.
- *
- * Temporary: delete once it has been looked at.
  */
-import { chromium } from 'playwright';
+import { BASE, WORKSPACE, WORKFLOW, open, record, shot, finish } from './suite/harness.mjs';
 
-const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
-const WORKSPACE = process.env.ORKNUX_WORKSPACE ?? '9';
-const WORKFLOW = process.env.ORKNUX_WORKFLOW ?? '9';
-
-const results = [];
-const record = (ok, message) => {
-  results.push(ok);
-  console.log(`${ok ? 'PASS' : 'FAIL'}: ${message}`);
-};
-
-const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-const page = await context.newPage();
-
-const signedIn = await context.request.post(`${BASE}/api/session`, {
-  data: { username: 'alice', password: 'password' },
-});
-if (!signedIn.ok()) {
-  console.error('sign-in failed');
-  process.exit(1);
-}
+const { browser, page } = await open({ viewport: { width: 1440, height: 900 } });
 
 await page.goto(`${BASE}/workspace/${WORKSPACE}/workflows/${WORKFLOW}/editor`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('.react-flow__node', { timeout: 20_000 });
@@ -76,7 +54,7 @@ await page.mouse.click(700, 820);
 await page.waitForTimeout(300);
 record(await shown(), 'a pinned note survives a press elsewhere');
 
-await page.screenshot({ path: 'hint-pinned.png', clip: { x: 900, y: 100, width: 540, height: 420 } });
+await page.screenshot({ path: shot('hint-pinned.png'), clip: { x: 900, y: 100, width: 540, height: 420 } });
 
 const closer = page.locator('[role="note"] button');
 record((await closer.count()) === 1, 'a pinned note carries a close control');
@@ -102,7 +80,4 @@ await hint.press('Escape');
 await page.waitForTimeout(250);
 record((await shown()) === false, 'Escape closes a pinned note');
 
-await browser.close();
-const failed = results.filter((ok) => !ok).length;
-console.log(failed === 0 ? 'ALL PASS' : `${failed} FAILED`);
-process.exit(failed === 0 ? 0 : 1);
+await finish(browser);

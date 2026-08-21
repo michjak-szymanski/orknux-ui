@@ -8,34 +8,15 @@
  * handed back. It also asserts that the sentences that moved are no longer on
  * the page while every note is shut, and that the ones deliberately kept -
  * empty states, consequences, live readings - still are.
- *
- * Temporary: delete once it has been looked at.
  */
-import { chromium } from 'playwright';
+import { BASE, open, record, SHOT_DIR, finish } from './suite/harness.mjs';
 
-const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
 /** "before" or "after"; only what the pictures are called. */
 const WHEN = process.argv[2] ?? 'after';
 /** Where the pictures go, so none are left in the checkout. */
-const SHOTS = process.env.ORKNUX_SHOTS ?? '.';
+const SHOTS = SHOT_DIR;
 
-const results = [];
-const record = (ok, message) => {
-  results.push(ok);
-  console.log(`${ok ? 'PASS' : 'FAIL'}: ${message}`);
-};
-
-const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
-const page = await context.newPage();
-
-const signedIn = await context.request.post(`${BASE}/api/session`, {
-  data: { username: 'alice', password: 'password' },
-});
-if (!signedIn.ok()) {
-  console.error('sign-in failed');
-  process.exit(1);
-}
+const { browser, context, page } = await open({ viewport: { width: 1440, height: 1000 } });
 
 /** Asks the server for an id, so the check does not depend on a seeded number. */
 async function ask(query) {
@@ -175,7 +156,4 @@ for (const each of pages) {
   );
 }
 
-await browser.close();
-const failed = results.filter((ok) => !ok).length;
-console.log(failed === 0 ? 'ALL PASS' : `${failed} FAILED`);
-process.exit(failed === 0 ? 0 : 1);
+await finish(browser);

@@ -11,12 +11,15 @@
  * clearance the rest of the app leaves for the floating launcher. The second
  * pass forces that clearance away again, so the number the fix is worth is in
  * the output beside the number it replaced.
- *
- * Temporary: delete once it has been looked at.
  */
-import { chromium } from 'playwright';
+/*
+ * A context per viewport rather than one from `open()`: this check is about
+ * what the page does at two window sizes, and a resized context is not the same
+ * thing as a context that was that size when the shell measured itself. So it
+ * takes the harness's sign-in and screenshot folder and leaves the rest.
+ */
+import { BASE, chromium, shot, signIn, finish } from './suite/harness.mjs';
 
-const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
 const SIZES = [
   { width: 1440, height: 900 },
   { width: 1280, height: 720 },
@@ -51,16 +54,8 @@ const browser = await chromium.launch();
 let ok = true;
 
 for (const viewport of SIZES) {
-  const context = await browser.newContext({ viewport });
+  const context = await signIn(await browser.newContext({ viewport }));
   const page = await context.newPage();
-
-  const signedIn = await context.request.post(`${BASE}/api/session`, {
-    data: { username: 'alice', password: 'password' },
-  });
-  if (!signedIn.ok()) {
-    console.error('sign-in failed');
-    process.exit(1);
-  }
 
   const name = `${viewport.width}x${viewport.height}`;
   await page.goto(`${BASE}/preferences`, { waitUntil: 'domcontentloaded' });
@@ -69,7 +64,7 @@ for (const viewport of SIZES) {
 
   await toTheFoot(page, viewport);
   const after = await measure(page);
-  await page.screenshot({ path: `preferences-foot-${name}.png` });
+  await page.screenshot({ path: shot(`preferences-foot-${name}.png`) });
 
   /*
    * The same page with the frame held to the window - the shape the shell was
@@ -87,7 +82,7 @@ for (const viewport of SIZES) {
   await page.waitForTimeout(200);
   await toTheFoot(page, viewport);
   const pinned = await measure(page);
-  await page.screenshot({ path: `preferences-foot-pinned-${name}.png` });
+  await page.screenshot({ path: shot(`preferences-foot-pinned-${name}.png`) });
 
   console.log(
     `${name}: under the last card - window scrolling ${after.underLastCard}px, ` +
@@ -116,5 +111,4 @@ for (const viewport of SIZES) {
   await context.close();
 }
 
-await browser.close();
-process.exit(ok ? 0 : 1);
+await finish(browser, ok);

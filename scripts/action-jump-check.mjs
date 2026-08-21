@@ -6,31 +6,10 @@
  * opens Create Action, works through the four subtypes that ask, and checks the
  * link mark appears only once something is chosen, points where the route says
  * it should, and opens a tab of its own with the half-filled form left alone.
- *
- * Temporary: delete once it has been looked at.
  */
-import { chromium } from 'playwright';
+import { BASE, WORKSPACE, open, record, shot, finish } from './suite/harness.mjs';
 
-const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
-const WORKSPACE = process.env.ORKNUX_WORKSPACE ?? '9';
-
-const results = [];
-const record = (ok, message) => {
-  results.push(ok);
-  console.log(`${ok ? 'PASS' : 'FAIL'}: ${message}`);
-};
-
-const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
-const page = await context.newPage();
-
-const signedIn = await context.request.post(`${BASE}/api/session`, {
-  data: { username: 'alice', password: 'password' },
-});
-if (!signedIn.ok()) {
-  console.error('sign-in failed');
-  process.exit(1);
-}
+const { browser, context, page } = await open({ viewport: { width: 1440, height: 1000 } });
 
 /** GraphQL as this session, for the fixture the mail field needs. */
 const call = async (query, variables) => {
@@ -130,7 +109,7 @@ record(
   `it points under integrations/connections (${connectionHref})`,
 );
 
-await page.screenshot({ path: 'action-jump-connection.png' });
+await page.screenshot({ path: shot('action-jump-connection.png') });
 
 // ---- Mail server, on a send email ----
 
@@ -241,10 +220,9 @@ const stillOpen = await page.locator('dialog[open] #action-name').count();
 const stillTyped = stillOpen === 1 ? await page.locator('#action-name').inputValue() : '';
 record(stillOpen === 1 && stillTyped === typedName, `the form is as it was left ("${stillTyped}")`);
 
-await page.screenshot({ path: 'action-jump-condition.png' });
+await page.screenshot({ path: shot('action-jump-condition.png') });
 
 // The workspace as it was found.
 await call(`mutation ($id: ID!) { disconnectWorkspaceConnection(id: $id) }`, { id: mailConnectionId });
 
-await browser.close();
-process.exit(results.every(Boolean) ? 0 : 1);
+await finish(browser);

@@ -6,27 +6,12 @@
  * snapped it into a wide S and a pixel of drag moved it much further than a
  * pixel. This drags by a known amount and checks the handle travelled exactly
  * that far, and that the line is one curve rather than two.
- *
- * Temporary: delete once it has been looked at.
  */
-import { chromium } from 'playwright';
+import { BASE, WORKSPACE, WORKFLOW, open, finish } from './suite/harness.mjs';
 
-const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
-const WORKSPACE = process.env.ORKNUX_WORKSPACE ?? '9';
-const WORKFLOW = process.env.ORKNUX_WORKFLOW ?? '9';
 const BY = { x: 120, y: -80 };
 
-const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-const page = await context.newPage();
-
-const signedIn = await context.request.post(`${BASE}/api/session`, {
-  data: { username: 'alice', password: 'password' },
-});
-if (!signedIn.ok()) {
-  console.error('sign-in failed');
-  process.exit(1);
-}
+const { browser, page } = await open({ viewport: { width: 1440, height: 900 } });
 
 await page.goto(`${BASE}/workspace/${WORKSPACE}/workflows/${WORKFLOW}/editor`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('.react-flow__node', { timeout: 20_000 });
@@ -74,5 +59,4 @@ const oneCurve = edge.startsWith('M') && (edge.match(/[CQ]/g) ?? []).length === 
 console.log(follows ? 'PASS: the line follows the pointer' : 'FAIL: the line does not follow the pointer');
 console.log(oneCurve ? 'PASS: one curve through the point' : 'FAIL: still more than one curve');
 
-await browser.close();
-process.exit(follows && oneCurve ? 0 : 1);
+await finish(browser, follows, oneCurve);

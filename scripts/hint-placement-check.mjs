@@ -9,37 +9,17 @@
  *
  * This asserts the note sits under its own control, which is the thing that was
  * wrong, rather than asserting it exists, which was true all along.
- *
- * Temporary: delete once it has been looked at.
  */
-import { chromium } from 'playwright';
+import { BASE, WORKSPACE, WORKFLOW, open, record, finish } from './suite/harness.mjs';
 
-const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
-
-const results = [];
-const record = (ok, message) => {
-  results.push(ok);
-  console.log(`${ok ? 'PASS' : 'FAIL'}: ${message}`);
-};
-
-const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-const page = await context.newPage();
-
-const signedIn = await context.request.post(`${BASE}/api/session`, {
-  data: { username: 'alice', password: 'password' },
-});
-if (!signedIn.ok()) {
-  console.error('sign-in failed', signedIn.status());
-  process.exit(1);
-}
+const { browser, page } = await open({ viewport: { width: 1440, height: 900 } });
 
 // Pages inside the shell, which is where this went wrong, and the editor, which
 // is where it did not - so a fix that only moved the problem would show here.
 const pages = [
   { what: 'admin shell settings', at: '/admin/shell' },
   { what: 'admin settings', at: '/admin/settings' },
-  { what: 'workflow editor', at: '/workspace/9/workflows/9/editor', select: '.react-flow__node' },
+  { what: 'workflow editor', at: `/workspace/${WORKSPACE}/workflows/${WORKFLOW}/editor`, select: '.react-flow__node' },
 ];
 
 for (const { what, at, select } of pages) {
@@ -86,7 +66,7 @@ for (const { what, at, select } of pages) {
  * lands exactly where it should and is invisible - so this asks what is
  * actually drawn at the note's centre, not where the note thinks it is.
  */
-await page.goto(`${BASE}/workspace/9/triggers`, { waitUntil: 'domcontentloaded' });
+await page.goto(`${BASE}/workspace/${WORKSPACE}/triggers`, { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(1500);
 const opener = page.getByRole('button', { name: /new trigger|create trigger|add trigger/i }).first();
 if ((await opener.count()) > 0) {
@@ -114,7 +94,4 @@ if ((await opener.count()) > 0) {
   console.log('(could not open the trigger dialog)');
 }
 
-await browser.close();
-const failed = results.filter((ok) => !ok).length;
-console.log(failed === 0 ? 'ALL PASS' : `${failed} FAILED`);
-process.exit(failed === 0 ? 0 : 1);
+await finish(browser);

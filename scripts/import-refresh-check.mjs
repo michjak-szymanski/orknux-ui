@@ -15,31 +15,19 @@
  * of a bigger workspace into a smaller one. The assertion that would have
  * caught it is the same in both - the number of rows drawn and the count in the
  * footer have to agree.
- *
- * Temporary: delete once it has been looked at.
  */
 import { writeFileSync } from 'node:fs';
-import { chromium } from 'playwright';
+import { BASE, WORKSPACE, open, finish } from './suite/harness.mjs';
 
-const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
-const WORKSPACE = process.env.ORKNUX_WORKSPACE ?? '9';
 const WORKFLOW = process.env.ORKNUX_WORKFLOW ?? '118';
+/** What the workspace the checks live in is called, for the switcher. */
+const WORKSPACE_NAME = process.env.ORKNUX_WORKSPACE_NAME ?? 'Acme Support';
 /** A workspace with more than one page of workflows, to switch away from. */
 const BIGGER = process.env.ORKNUX_BIGGER_WORKSPACE ?? '1';
 const PAGE_SIZE = 4;
 const ENVELOPE = '/tmp/import-refresh-check.orkx.json';
 
-const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-const page = await context.newPage();
-
-const signedIn = await context.request.post(`${BASE}/api/session`, {
-  data: { username: 'alice', password: 'password' },
-});
-if (!signedIn.ok()) {
-  console.error('sign-in failed');
-  process.exit(1);
-}
+const { browser, context, page } = await open({ viewport: { width: 1440, height: 900 } });
 
 /** What the screen says about itself: rows drawn, and the footer's own count. */
 async function state() {
@@ -103,7 +91,7 @@ await page.waitForTimeout(1500);
 const onPageTwo = await state();
 console.log(`page two of the bigger workspace: ${onPageTwo.rows} rows, footer "${onPageTwo.summary}"`);
 
-await page.locator('select').first().selectOption({ label: 'Acme Support' });
+await page.locator('select').first().selectOption({ label: WORKSPACE_NAME });
 await page.waitForTimeout(2500);
 const switched = await state();
 console.log(
@@ -124,5 +112,4 @@ console.log(
     : 'FAIL: the list went empty under a footer still counting',
 );
 
-await browser.close();
-process.exit(grew && importAgrees && switchAgrees ? 0 : 1);
+await finish(browser, grew, importAgrees, switchAgrees);

@@ -6,35 +6,14 @@
  * person walks: Conditions, Create Condition, fill it in, save, find it again
  * in the list, change it, reload and see the change, then press Open definition
  * and check where it lands.
- *
- * Temporary: delete once it has been looked at.
  */
-import { chromium } from 'playwright';
-
-const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
-const WORKSPACE = process.env.ORKNUX_WORKSPACE ?? '9';
+import { BASE, WORKSPACE, open, check, shot, finish } from './suite/harness.mjs';
 
 const stamp = Date.now();
 const NAME = `zz Scratch Condition ${stamp}`;
 const RENAMED = `${NAME} edited`;
 
-const results = [];
-const check = (ok, pass, fail) => {
-  results.push(ok);
-  console.log(ok ? `PASS: ${pass}` : `FAIL: ${fail}`);
-};
-
-const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-const page = await context.newPage();
-
-const signedIn = await context.request.post(`${BASE}/api/session`, {
-  data: { username: 'alice', password: 'password' },
-});
-if (!signedIn.ok()) {
-  console.error('sign-in failed');
-  process.exit(1);
-}
+const { browser, context, page } = await open({ viewport: { width: 1440, height: 900 } });
 
 /** The API this app talks: one endpoint, queries by name. */
 async function gql(query, variables = {}) {
@@ -170,12 +149,9 @@ check(
 const danger = await page.locator('text=Danger Zone').count();
 check(danger > 0, 'an existing condition has a Danger Zone', 'no Danger Zone on the page');
 
-await page.screenshot({ path: 'condition-page.png', fullPage: true });
+await page.screenshot({ path: shot('condition-page.png'), fullPage: true });
 
 // Clear up after ourselves: this condition was made by the check.
 await gql(`mutation($id: ID!) { deleteCondition(id: $id) }`, { id: mine.id });
 
-await browser.close();
-const ok = results.every(Boolean);
-console.log(ok ? 'ALL PASS' : 'SOME FAILED');
-process.exit(ok ? 0 : 1);
+await finish(browser);

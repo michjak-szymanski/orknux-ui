@@ -15,27 +15,13 @@
  * - claiming, diffing, compiling, saving, answering - is the real path.
  *
  * The tool is put back the way it was before this exits.
- *
- * Temporary: delete once it has been looked at.
  */
-import { chromium } from 'playwright';
+import { BASE, WORKSPACE, open, shot, finish } from './suite/harness.mjs';
 
-const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
-const WORKSPACE = process.env.ORKNUX_WORKSPACE ?? '9';
 const TOOL = process.env.ORKNUX_TOOL ?? '13';
 const MARKER = '// wand-check marker';
 
-const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-const page = await context.newPage();
-
-const signedIn = await context.request.post(`${BASE}/api/session`, {
-  data: { username: 'alice', password: 'password' },
-});
-if (!signedIn.ok()) {
-  console.error('FAIL: sign-in failed');
-  process.exit(1);
-}
+const { browser, context, page } = await open({ viewport: { width: 1440, height: 900 } });
 
 async function graphql(query, variables = {}) {
   const response = await context.request.post(`${BASE}/graphql`, { data: { query, variables } });
@@ -183,7 +169,7 @@ try {
     'the stored JavaScript did not follow the accepted change',
   );
 
-  await page.screenshot({ path: 'tool-wand.png' });
+  await page.screenshot({ path: shot('tool-wand.png') });
 } finally {
   // Put the tool back, whatever happened above.
   await graphql('mutation ($id: ID!, $input: UpdateToolInput!) { updateTool(id: $id, input: $input) { id } }', {
@@ -193,5 +179,4 @@ try {
   await browser.close();
 }
 
-console.log(failures === 0 ? 'PASS: all of it' : `FAIL: ${failures} check(s) failed`);
-process.exit(failures === 0 ? 0 : 1);
+await finish(browser, failures === 0);

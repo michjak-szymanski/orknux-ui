@@ -19,31 +19,10 @@
  * on its own. Neither screen asks now, and a webhook still gets both.
  *
  * It makes its own connection and removes it again.
- *
- * Temporary: delete once it has been looked at.
  */
-import { chromium } from 'playwright';
+import { BASE, WORKSPACE, open, record, finish } from './suite/harness.mjs';
 
-const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
-const WORKSPACE = process.env.ORKNUX_WORKSPACE ?? '9';
-
-const results = [];
-const record = (ok, message) => {
-  results.push(ok);
-  console.log(`${ok ? 'PASS' : 'FAIL'}: ${message}`);
-};
-
-const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
-const page = await context.newPage();
-
-const signedIn = await context.request.post(`${BASE}/api/session`, {
-  data: { username: 'alice', password: 'password' },
-});
-if (!signedIn.ok()) {
-  console.error('sign-in failed', signedIn.status());
-  process.exit(1);
-}
+const { browser, context, page } = await open({ viewport: { width: 1440, height: 1000 } });
 
 const ask = async (query, variables) => {
   const answer = await context.request.post(`${BASE}/graphql`, { data: { query, variables } });
@@ -215,7 +194,4 @@ try {
   }
 }
 
-await browser.close();
-const failed = results.filter((ok) => !ok).length;
-console.log(failed === 0 ? 'ALL PASS' : `${failed} FAILED`);
-process.exit(failed === 0 ? 0 : 1);
+await finish(browser);

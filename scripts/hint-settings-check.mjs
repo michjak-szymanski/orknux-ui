@@ -13,36 +13,16 @@
  *
  * ORKNUX_SHOTS=before takes the pictures and skips the assertions, so the same
  * script photographs the old pages from a checkout without the change.
- *
- * Temporary: delete once it has been looked at.
  */
 import { mkdirSync } from 'node:fs';
 
-import { chromium } from 'playwright';
+import { BASE, WORKSPACE, open, record, SHOT_DIR, finish } from './suite/harness.mjs';
 
-const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
-const WORKSPACE = process.env.ORKNUX_WORKSPACE ?? '9';
 const WHEN = process.env.ORKNUX_SHOTS ?? 'after';
-const SHOTS = process.env.ORKNUX_SHOT_DIR ?? '.hint-shots';
+const SHOTS = SHOT_DIR;
 mkdirSync(SHOTS, { recursive: true });
 
-const results = [];
-const record = (ok, message) => {
-  results.push(ok);
-  console.log(`${ok ? 'PASS' : 'FAIL'}: ${message}`);
-};
-
-const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
-const page = await context.newPage();
-
-const signedIn = await context.request.post(`${BASE}/api/session`, {
-  data: { username: 'alice', password: 'password' },
-});
-if (!signedIn.ok()) {
-  console.error('sign-in failed');
-  process.exit(1);
-}
+const { browser, page } = await open({ viewport: { width: 1440, height: 1000 } });
 
 /** The first link on a list page that looks like the page under test. */
 async function findLink(listPath, pattern) {
@@ -296,8 +276,9 @@ if (WHEN !== 'before' && only === null) {
   );
 }
 
-await browser.close();
-if (WHEN === 'before') process.exit(0);
-const failed = results.filter((ok) => !ok).length;
-console.log(failed === 0 ? 'ALL PASS' : `${failed} FAILED`);
-process.exit(failed === 0 ? 0 : 1);
+if (WHEN === 'before') {
+  await browser.close();
+  console.log('pictures only; nothing asserted');
+  process.exit(0);
+}
+await finish(browser);

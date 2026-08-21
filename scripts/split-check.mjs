@@ -14,27 +14,13 @@
  *    and a click in the strip that was outside the old width, which a stale
  *    editor cannot resolve to the character under the pointer.
  *  - the handle answers the keyboard, for somebody who cannot hold a pointer.
- *
- * Temporary: delete once it has been looked at.
  */
-import { chromium } from 'playwright';
+import { BASE, WORKSPACE, open, SHOT_DIR, finish } from './suite/harness.mjs';
 
-const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
-const WORKSPACE = process.env.ORKNUX_WORKSPACE ?? '9';
-const FUNCTION = process.env.ORKNUX_FUNCTION ?? '29';
-const SHOTS = process.env.ORKNUX_SHOTS ?? '/tmp';
+const FUNCTION = process.env.ORKNUX_PANEL_FUNCTION ?? process.env.ORKNUX_FUNCTION ?? '29';
+const SHOTS = SHOT_DIR;
 
-const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
-const page = await context.newPage();
-
-const signedIn = await context.request.post(`${BASE}/api/session`, {
-  data: { username: 'alice', password: 'password' },
-});
-if (!signedIn.ok()) {
-  console.error('sign-in failed');
-  process.exit(1);
-}
+const { browser, page } = await open({ viewport: { width: 1600, height: 1000 } });
 
 const where = `${BASE}/workspace/${WORKSPACE}/functions/${FUNCTION}`;
 await page.goto(where, { waitUntil: 'domcontentloaded' });
@@ -220,6 +206,4 @@ const stowed = !stackedHandle && stacked.panel > stacked.code - 4;
 console.log(`stacked: handle ${stackedHandle ? 'shown' : 'hidden'}, panel ${stacked.panel.toFixed(0)}, code ${stacked.code.toFixed(0)}`);
 console.log(stowed ? 'PASS: no handle where there is nothing to divide' : 'FAIL: the handle survived the stack');
 
-await browser.close();
-const ok = bothMoved && measured && caretRight && kept && keyed && stowed;
-process.exit(ok ? 0 : 1);
+await finish(browser, bothMoved, measured, caretRight, kept, keyed, stowed);

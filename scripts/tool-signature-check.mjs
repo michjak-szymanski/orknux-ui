@@ -9,26 +9,12 @@
  *
  * A scratch tool of its own, created and deleted through the API, so the
  * workspace's own tools are not edited to prove a point.
- *
- * Temporary: delete once it has been looked at.
  */
-import { chromium } from 'playwright';
+import { BASE, WORKSPACE, open, finish } from './suite/harness.mjs';
 
-const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5174';
-const WORKSPACE = process.env.ORKNUX_WORKSPACE ?? '9';
 const NAME = 'signatureCheck140';
 
-const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-const page = await context.newPage();
-
-const signedIn = await context.request.post(`${BASE}/api/session`, {
-  data: { username: 'alice', password: 'password' },
-});
-if (!signedIn.ok()) {
-  console.error('FAIL sign-in');
-  process.exit(1);
-}
+const { browser, context, page } = await open({ viewport: { width: 1440, height: 900 } });
 
 async function graphql(query, variables = {}) {
   const answer = await context.request.post(`${BASE}/graphql`, { data: { query, variables } });
@@ -117,5 +103,4 @@ try {
   await browser.close();
 }
 
-console.log(failures === 0 ? 'ALL PASS' : `${failures} FAILED`);
-process.exit(failures === 0 ? 0 : 1);
+await finish(browser, failures === 0);

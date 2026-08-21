@@ -10,27 +10,11 @@
  * envelope holding the workflow and nothing it runs, which is precisely the
  * file that arrives somewhere else refusing to import; the default has to be
  * the one that carries the agents, actions and triggers with it.
- *
- * Temporary: delete once it has been looked at.
  */
 import { readFileSync } from 'node:fs';
-import { chromium } from 'playwright';
+import { BASE, WORKSPACE, WORKFLOW, open, finish } from './suite/harness.mjs';
 
-const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
-const WORKSPACE = process.env.ORKNUX_WORKSPACE ?? '9';
-const WORKFLOW = process.env.ORKNUX_WORKFLOW ?? '9';
-
-const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, acceptDownloads: true });
-const page = await context.newPage();
-
-const signedIn = await context.request.post(`${BASE}/api/session`, {
-  data: { username: 'alice', password: 'password' },
-});
-if (!signedIn.ok()) {
-  console.error('sign-in failed');
-  process.exit(1);
-}
+const { browser, context, page } = await open({ viewport: { width: 1440, height: 900 }, context: { acceptDownloads: true } });
 
 await page.goto(`${BASE}/workspace/${WORKSPACE}/workflows/${WORKFLOW}/editor`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('.react-flow__node', { timeout: 20_000 });
@@ -107,5 +91,4 @@ console.log(
 );
 console.log(plan.importable ? 'PASS: the default file imports' : 'FAIL: the default file is refused');
 
-await browser.close();
-process.exit(there && isDeep && carriesWorkflow && carriesMore && shallowIsBare && plan.importable ? 0 : 1);
+await finish(browser, there, isDeep, carriesWorkflow, carriesMore, shallowIsBare, plan.importable);

@@ -5,26 +5,10 @@
  * button, but neither is in view when somebody is looking at the shape of a
  * graph. This checks the control appears on the selected node, that pressing it
  * turns the node, and that R still does the same thing through the same path.
- *
- * Temporary: delete once it has been looked at.
  */
-import { chromium } from 'playwright';
+import { BASE, WORKSPACE, WORKFLOW, open, shot, finish } from './suite/harness.mjs';
 
-const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
-const WORKSPACE = process.env.ORKNUX_WORKSPACE ?? '9';
-const WORKFLOW = process.env.ORKNUX_WORKFLOW ?? '9';
-
-const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-const page = await context.newPage();
-
-const signedIn = await context.request.post(`${BASE}/api/session`, {
-  data: { username: 'alice', password: 'password' },
-});
-if (!signedIn.ok()) {
-  console.error('sign-in failed');
-  process.exit(1);
-}
+const { browser, page } = await open({ viewport: { width: 1440, height: 900 } });
 
 await page.goto(`${BASE}/workspace/${WORKSPACE}/workflows/${WORKFLOW}/editor`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('.react-flow__node', { timeout: 20_000 });
@@ -53,7 +37,7 @@ await page.locator('.react-flow__pane').press('r');
 await page.waitForTimeout(400);
 const afterKey = (await facing.innerText()).trim();
 
-await page.screenshot({ path: 'turn-node.png' });
+await page.screenshot({ path: shot('turn-node.png') });
 
 console.log(`before selecting anything: ${beforeSelecting ? 'shown' : 'not shown'}`);
 console.log(`on the selected node:      ${appears ? 'shown' : 'not shown'}`);
@@ -68,5 +52,4 @@ console.log(offered ? 'PASS: offered on the selected node' : 'FAIL: not offered'
 console.log(clickTurns ? 'PASS: the button turns it' : 'FAIL: the button did nothing');
 console.log(keyTurns ? 'PASS: R still turns it' : 'FAIL: R stopped working');
 
-await browser.close();
-process.exit(quiet && offered && clickTurns && keyTurns ? 0 : 1);
+await finish(browser, quiet, offered, clickTurns, keyTurns);

@@ -13,26 +13,12 @@
  *
  * Three: "Open definition ↗" is a link mark now, and a mark with no words has to
  * carry its name some other way.
- *
- * Temporary: delete once it has been looked at.
  */
-import { chromium } from 'playwright';
+import { BASE, WORKSPACE, open, finish } from './suite/harness.mjs';
 
-const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
-const WORKSPACE = process.env.ORKNUX_WORKSPACE ?? '9';
-const FUNCTION = process.env.ORKNUX_FUNCTION ?? '29';
+const FUNCTION = process.env.ORKNUX_PANEL_FUNCTION ?? process.env.ORKNUX_FUNCTION ?? '29';
 
-const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
-const page = await context.newPage();
-
-const signedIn = await context.request.post(`${BASE}/api/session`, {
-  data: { username: 'alice', password: 'password' },
-});
-if (!signedIn.ok()) {
-  console.error('sign-in failed');
-  process.exit(1);
-}
+const { browser, page } = await open({ viewport: { width: 1600, height: 1000 } });
 
 await page.goto(`${BASE}/workspace/${WORKSPACE}/functions/${FUNCTION}`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('text=Function Details', { timeout: 20_000 });
@@ -111,6 +97,4 @@ console.log(`jump: text ${JSON.stringify(words)}, aria-label ${JSON.stringify(na
 const marked = words === '' && (named ?? '') !== '' && (titled ?? '') !== '';
 console.log(marked ? 'PASS: the link is a mark with a name' : 'FAIL: the link lost its name or kept its words');
 
-await browser.close();
-const ok = sameLine && oneLine && inside && darkOk && focusedOk && lightOk && marked;
-process.exit(ok ? 0 : 1);
+await finish(browser, sameLine, oneLine, inside, darkOk, focusedOk, lightOk, marked);

@@ -10,35 +10,13 @@
  *
  * The API is held back deliberately: against a local server these loads finish
  * in well under 200ms, and at that speed staying quiet is the correct behaviour.
- *
- * Temporary: delete once it has been looked at.
  */
-import { chromium } from 'playwright';
-
-const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
-const WORKSPACE = process.env.ORKNUX_WORKSPACE ?? '9';
+import { BASE, WORKSPACE, open, record, finish } from './suite/harness.mjs';
 
 /** Long enough to clear the loader's three-second quiet period. */
 const HELD_MS = 4000;
 
-const results = [];
-const record = (ok, message) => {
-  results.push(ok);
-  console.log(`${ok ? 'PASS' : 'FAIL'}: ${message}`);
-};
-
-const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-
-const signedIn = await context.request.post(`${BASE}/api/session`, {
-  data: { username: 'alice', password: 'password' },
-});
-if (!signedIn.ok()) {
-  console.error('sign-in failed');
-  process.exit(1);
-}
-
-const page = await context.newPage();
+const { browser, context, page, graphql } = await open({ viewport: { width: 1440, height: 900 } });
 
 // The loader is the only role=status that carries the waiting label.
 const loader = page.locator('[role="status"]', { hasText: 'Loading' });
@@ -113,12 +91,23 @@ await check('issues list', `${BASE}/workspace/${WORKSPACE}/issues`, () =>
   seen(page.getByText(/opened by/)),
 );
 
-await check('issue detail', `${BASE}/workspace/${WORKSPACE}/issues/117`, () =>
-  seen(page.getByText('#117', { exact: true })),
+/*
+ * Whichever issue the tracker opens with, rather than the number this was
+ * written against. What is asserted is the same either way - a detail screen
+ * shows the mark while it fetches and stops once it has - and a hard-coded
+ * number is a fixture only one database has.
+ */
+const { workspaceIssues } = await graphql(
+  'query($w: ID!) { workspaceIssues(workspaceId: $w, page: 0, size: 1) { content { number } } }',
+  { w: WORKSPACE },
 );
+const anIssue = workspaceIssues.content[0]?.number;
+if (anIssue === undefined) {
+  record(false, 'issue detail: there are no issues in this workspace to open');
+} else {
+  await check('issue detail', `${BASE}/workspace/${WORKSPACE}/issues/${anIssue}`, () =>
+    seen(page.getByText(`#${anIssue}`, { exact: true })),
+  );
+}
 
-await browser.close();
-
-const passed = results.every(Boolean);
-console.log(passed ? 'ALL PASS' : 'SOME FAILED');
-process.exit(passed ? 0 : 1);
+await finish(browser);

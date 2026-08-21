@@ -5,26 +5,12 @@
  * definitions. This starts where a person would - in the function editor, giving
  * a parameter an object type - presses the link that appears, and checks the tab
  * it opens is that object's editor.
- *
- * Temporary: delete once it has been looked at.
  */
-import { chromium } from 'playwright';
+import { BASE, WORKSPACE, open, shot, finish } from './suite/harness.mjs';
 
-const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
-const WORKSPACE = process.env.ORKNUX_WORKSPACE ?? '9';
 const FUNCTION = process.env.ORKNUX_FUNCTION ?? '28';
 
-const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-const page = await context.newPage();
-
-const signedIn = await context.request.post(`${BASE}/api/session`, {
-  data: { username: 'alice', password: 'password' },
-});
-if (!signedIn.ok()) {
-  console.error('sign-in failed');
-  process.exit(1);
-}
+const { browser, context, page } = await open({ viewport: { width: 1440, height: 900 } });
 
 await page.goto(`${BASE}/workspace/${WORKSPACE}/functions/${FUNCTION}`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('text=Parameters', { timeout: 20_000 });
@@ -52,7 +38,7 @@ await page.locator('select[aria-label="Return type"]').selectOption('OBJECT');
 await page.waitForTimeout(400);
 const shownForReturn = (await jumps.count()) === 2;
 
-await page.screenshot({ path: 'definition-jump.png' });
+await page.screenshot({ path: shot('definition-jump.png') });
 
 // Pressed, not merely present: a new tab, and the object's own editor in it.
 const opened = context.waitForEvent('page');
@@ -83,5 +69,4 @@ console.log(points ? 'PASS: points at the chosen object' : 'FAIL: points elsewhe
 console.log(arrives ? "PASS: lands on that object's editor" : 'FAIL: landed somewhere else');
 console.log(newTab ? 'PASS: a new tab, the editor left as it was' : 'FAIL: the editor was navigated away');
 
-await browser.close();
-process.exit(quiet && offered && bothPlaces && points && arrives && newTab ? 0 : 1);
+await finish(browser, quiet, offered, bothPlaces, points, arrives, newTab);

@@ -5,26 +5,10 @@
  * the page and reads the box again - so what is asserted is that the choice
  * survived the round trip, not that a checkbox can be ticked. It puts the node
  * back to one attempt afterwards, which is what it was.
- *
- * Temporary: delete once issue #136 has been looked at.
  */
-import { chromium } from 'playwright';
+import { BASE, WORKSPACE, WORKFLOW, open, finish } from './suite/harness.mjs';
 
-const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
-const WORKSPACE = process.env.ORKNUX_WORKSPACE ?? '9';
-const WORKFLOW = process.env.ORKNUX_WORKFLOW ?? '9';
-
-const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
-const page = await context.newPage();
-
-const signedIn = await context.request.post(`${BASE}/api/session`, {
-  data: { username: 'alice', password: 'password' },
-});
-if (!signedIn.ok()) {
-  console.error('sign-in failed');
-  process.exit(1);
-}
+const { browser, page } = await open({ viewport: { width: 1440, height: 1100 } });
 
 const doubling = page.getByText('Double the wait after each attempt');
 const box = () => doubling.locator('xpath=../input');
@@ -72,5 +56,4 @@ console.log(`after a save and a reload:       attempts ${keptAttempts}, doubling
 const ok = deadAtOne && liveAtThree && keptTicked && keptAttempts === '3';
 console.log(ok ? 'PASS: the curve is taken, saved and read back' : 'FAIL: see above');
 
-await browser.close();
-process.exit(ok ? 0 : 1);
+await finish(browser, ok);
