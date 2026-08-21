@@ -287,6 +287,34 @@ export const TESTS = [
      */
   },
 
+  {
+    name: 'session-pages-check',
+    what: 'the sessions list narrows, a transcript filters and reorders, and a session takes two presses to remove',
+    needs: ['workspace'],
+    /*
+     * Issue #158. Both pages were built by #119 and neither was opened by
+     * anything here; `screenshots.mjs` photographs them for the manual, which is
+     * why they looked covered.
+     *
+     * It builds its own fixture the only way a session can be built - there is
+     * no mutation that makes one, and there should not be: a session exists
+     * because an agent node carrying a `sessionKey` ran. So it makes a scratch
+     * workflow of a session node wired to whichever agent has a model, runs it
+     * three times over two keys, and removes the sessions and the workflow
+     * afterwards.
+     *
+     * 'workspace' rather than 'model', because it does not need a model that
+     * answers: the question is written into the session before the model is
+     * asked and an answer that never comes is recorded as a system note, so the
+     * transcript holds two kinds either way. Which two is read back off the
+     * server and every assertion is made against that, so the check says the
+     * same thing here and in CI.
+     *
+     * The one thing it cannot sweep is the three executions the runs leave -
+     * nothing removes an execution, and `removeWorkflow` leaves them behind.
+     */
+  },
+
   // --- connections and transfer ---------------------------------------------
   {
     name: 'slack-connection-check',
