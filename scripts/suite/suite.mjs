@@ -239,6 +239,21 @@ export const TESTS = [
      */
   },
 
+  {
+    name: 'icon-chrome-check',
+    what: 'the picker hides the furniture and offers everything else, including the seven traps',
+    needs: [],
+    /*
+     * The second check here that opens nothing. It has to be: a hidden icon
+     * draws no pixels, so a browser cannot tell an icon deliberately kept out
+     * of the picker from one a prefix-anchored regular expression swallowed by
+     * accident. `plus-circle`, `search-code`, `save-all`, `sunrise`, `sunset`,
+     * `moon-star` and `pen-tool` would each have gone that way silently. It
+     * reads the rule out of `IconPicker.tsx` and asserts against every SVG in
+     * `assets`, so it covers the icon added tomorrow.
+     */
+  },
+
   // --- pages that are pages -------------------------------------------------
   {
     name: 'admin-width-check',

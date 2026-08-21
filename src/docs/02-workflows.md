@@ -237,6 +237,27 @@ A node with nothing to send - no recipients, or neither a subject nor a body -
 is skipped rather than failed. A server that refuses the message fails the step,
 and the failure says whether trying again is worth anything.
 
+## Making an HTTP request
+
+An HTTP action takes a method, a URL, a body and its **headers**, and the
+headers are rows rather than a blob of JSON. Each row is a name, a switch
+reading **Value** or **Reference**, and the thing itself.
+
+**Value** is used exactly as written. **Reference** points the row at one of
+this workspace's variables, which is read when the action runs and is shown
+nowhere else - not back in this form, not in a run's record, not in the text of
+an error. That is the reason the switch exists: a bearer token in a header used
+to be pasted in as literal text, into a field that was never a credential field,
+stored unencrypted, and readable by anyone who could open the action.
+
+A variable a header names counts as in use, so deleting it is refused with the
+action named - the same refusal a function's granted variable has always had.
+
+Headers saved before this were a JSON blob and are left exactly as they are
+until somebody saves the form. One that no longer reads as JSON is not silently
+dropped: the form says so and keeps the text, because a request that quietly
+sends no headers at all is worse than one that says it cannot.
+
 ## Values and references
 
 Every parameter is either **written** or **referenced**. There are no
@@ -378,7 +399,9 @@ The delete is refused instead, and the refusal names what is in the way — *Act
 is used by the published workflow Answer, so it cannot be deleted*. It covers
 actions, agents, conditions, functions and triggers, which are pointed at by an
 id, and tools, skill catalogs and memory catalogs, which are granted to an agent
-by name. The way through is to change what is in the way first: take the node
+by name. A variable is refused for the same reason where an action's header
+references it, which is new: a header pointing at a variable that is gone would
+send an empty one. The way through is to change what is in the way first: take the node
 off the graph, take the grant off the agent, and the delete goes through. It is
 the rule a variable has always had.
 
