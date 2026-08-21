@@ -86,7 +86,7 @@ const wouldAsk = () =>
     return event.defaultPrevented;
   });
 
-const dialog = page.locator('dialog[data-check="unsaved-function"][open]');
+const dialog = page.locator('dialog[data-check="unsaved-work"][open]');
 const asking = async () => (await dialog.count()) > 0;
 const press = (label) => dialog.getByRole('button', { name: label, exact: true }).click();
 
@@ -211,7 +211,7 @@ await page.waitForSelector('.view-lines', { timeout: 30_000 });
 await page.waitForTimeout(2500);
 record((await wouldAsk()) === false, 'new function, untouched: the browser would not ask');
 record(
-  (await page.evaluate(() => JSON.stringify(window.history.state))).includes('orknuxUnsavedFunction') === false,
+  (await page.evaluate(() => JSON.stringify(window.history.state))).includes('orknuxUnsavedWork') === false,
   'new function, untouched: and no history entry was put on to defend nothing',
 );
 

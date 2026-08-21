@@ -177,6 +177,18 @@ export const TESTS = [
      */
   },
   {
+    name: 'leave-guard-editors-check',
+    what: 'the object editor and the tool editor ask the same, and only then',
+    needs: ['workspace'],
+    /*
+     * Issue #138's other two editors. Builds and deletes a scratch tool and a
+     * scratch object of its own - and sweeps the ones an earlier run was killed
+     * before deleting - so nothing anybody else's check reads is edited by
+     * running it. The same drill twice, because a guard that behaves
+     * differently on two pages of the same shape is two guards.
+     */
+  },
+  {
     name: 'split-check',
     what: "the function editor's split drags, survives a reload, and remeasures Monaco",
     needs: ['workspace'],

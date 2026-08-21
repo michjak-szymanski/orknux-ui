@@ -19,6 +19,8 @@ import { DefinitionPicker } from '../../components/DefinitionPicker';
 import type { DefinitionOption } from '../../components/DefinitionPicker';
 import { Loader } from '../../components/Loader';
 import { TrashIcon } from '../../components/TrashIcon';
+import { UnsavedWorkDialog } from '../../components/UnsavedWorkDialog';
+import { useLeaveGuard } from '../../components/leaveGuard';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './EditorPage.module.css';
@@ -198,8 +200,15 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
     }
   }
 
-  async function handleSave() {
-    if (held === null || saving) return;
+  /**
+   * Stores what is on screen, and says whether it landed.
+   *
+   * The answer is for `Save & Leave` in the dialog below: leaving on a save the
+   * server refused - a property naming a type it cannot resolve, a row with no
+   * name - is exactly the loss the whole guard exists to prevent.
+   */
+  async function handleSave(): Promise<boolean> {
+    if (held === null || saving) return false;
     setSaving(true);
     setSaveError(null);
     try {
@@ -214,12 +223,54 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
       // asks for - it resolves every reference on the way in and refuses the
       // rest - so this green stands on a round trip rather than on hope.
       setStatus({ ok: true, message: 'Saved, so every type resolves.' });
+      return true;
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : 'Could not save the object.');
+      return false;
     } finally {
       setSaving(false);
     }
   }
+
+  /**
+   * There is work on this screen the server has not been told about.
+   *
+   * Measured against what was loaded, not against whether anybody has typed.
+   * The page keeps a `saved` flag as well - it is what lights the inline
+   * "Saved." - but a flag can only ever say that a key was pressed. Somebody
+   * who types a character and deletes it has changed nothing, and being asked
+   * to confirm losing nothing is how a prompt teaches people to click through
+   * prompts.
+   *
+   * The properties are compared as the payload a save would send rather than
+   * row by row, because that is the only comparison that agrees with what
+   * leaving would actually cost. It also means a blank row somebody added does
+   * count as a change - unlike a function's or a tool's parameters, this
+   * editor sends every row it has, so an unnamed one is work on its way to the
+   * server and not a half-typed nothing.
+   *
+   * `held` is the baseline and it maintains itself: `apply` sets it on load and
+   * again from what a save stored, so saving and then leaving asks nothing.
+   * An object is always one that exists - there is no create route to this page
+   * - so a null baseline means still loading, and there is nothing to lose yet.
+   */
+  const unsaved = useMemo(() => {
+    if (held === null) return false;
+    const sent = JSON.stringify(rows.map(asProperty));
+    const was = JSON.stringify(held.properties.map(asRow).map(asProperty));
+    return name.trim() !== held.name.trim() || description.trim() !== (held.description ?? '').trim() || sent !== was;
+  }, [held, name, description, rows]);
+
+  /*
+   * The three ways out, and the question before any of them: a link, a Back
+   * press, a closed tab. Shared with the function and tool editors, because all
+   * three lose work the same way; see `useLeaveGuard`.
+   */
+  const guard = useLeaveGuard({
+    unsaved,
+    backTo: `/workspace/${workspaceId}/objects`,
+    save: handleSave,
+  });
 
   async function handleDelete() {
     if (held === null || removing) return;
@@ -485,6 +536,19 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
           </div>
         </>
       )}
+
+      {/*
+        Outside the branch above, so it is the same dialog whichever state the
+        page is in - and so closing it never depends on what the page happens to
+        be showing behind it.
+      */}
+      <UnsavedWorkDialog
+        subject={guard.asking ? (held?.name ?? 'This object') : null}
+        creating={false}
+        onStay={guard.stay}
+        onLeave={guard.leave}
+        onSaveAndLeave={guard.saveAndLeave}
+      />
     </AppShell>
   );
 }

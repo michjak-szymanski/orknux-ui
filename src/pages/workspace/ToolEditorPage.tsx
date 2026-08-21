@@ -28,6 +28,8 @@ import { CodeDiff } from '../../components/CodeDiff';
 import { CodeEditor } from '../../components/CodeEditor';
 import type { CodeEditorHandle } from '../../components/CodeEditor';
 import { Loader } from '../../components/Loader';
+import { UnsavedWorkDialog } from '../../components/UnsavedWorkDialog';
+import { useLeaveGuard } from '../../components/leaveGuard';
 import { compile, declareObjects } from '../../components/monaco';
 import { objectTypes } from '../../components/objectTypes';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
@@ -331,8 +333,15 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
     }
   }
 
-  async function handleSave() {
-    if (tool === null || saving) return;
+  /**
+   * Stores what is on screen, and says whether it landed.
+   *
+   * The answer is for `Save & Leave` in the dialog below: leaving on a save the
+   * compiler or the server would not take is exactly the loss the whole guard
+   * exists to prevent, so every way out of here has to be distinguishable.
+   */
+  async function handleSave(): Promise<boolean> {
+    if (tool === null || saving) return false;
     setSaving(true);
     setSaveError(null);
     setSaved(false);
@@ -343,9 +352,18 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
           ok: false,
           message: emitted.line === null ? emitted.reason : `Line ${emitted.line}: ${emitted.reason}`,
         });
-        return;
+        return false;
       }
 
+      /*
+       * The effect that keeps the code in step with the panel is left one pass
+       * to do nothing in, exactly as accepting a suggestion does. Without it a
+       * tool whose stored code disagreed with its parameter list would have its
+       * declaration rewritten the instant the save came back - which would make
+       * the page dirty again the moment it stopped being, and the guard would
+       * ask about a change nobody made.
+       */
+      synced.current = false;
       apply(
         await updateTool(tool.id, {
           name: name.trim(),
@@ -359,12 +377,68 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
       );
       setSaved(true);
       setStatus({ ok: true, message: 'No errors' });
+      return true;
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : 'Could not save the tool.');
+      return false;
     } finally {
       setSaving(false);
     }
   }
+
+  /**
+   * The parameters as a save would send them: the blank rows dropped, the names
+   * as the server will store them.
+   *
+   * Both sides of the comparison below go through this. A row somebody added
+   * and has not named yet is not a change - the save would not carry it - and a
+   * name typed with a space after it is the same parameter as the one already
+   * stored, so neither should make the editor ask before letting somebody go.
+   */
+  const declared = (all: ToolParam[]): ToolParam[] =>
+    all.filter((param) => param.name.trim() !== '').map((param) => ({ ...param, name: param.name.trim() }));
+
+  /**
+   * There is work on this screen the server has not been told about.
+   *
+   * Measured against what was loaded, not against whether anybody has typed.
+   * The page keeps a `saved` flag as well - it is what lights the green
+   * "Saved." - but a flag can only ever say that a key was pressed. Somebody
+   * who types a character and deletes it has changed nothing, and being asked
+   * to confirm losing nothing is how a prompt teaches people to click through
+   * prompts. The same comparison the function editor makes, over the four
+   * things a tool is.
+   *
+   * `tool` is the baseline and it maintains itself: `apply` sets it on load,
+   * from what a save stored, and from what a suggestion accepted in the panel
+   * was stored as. So saving and then leaving asks nothing.
+   *
+   * A tool is always one that exists - there is no create route to this page -
+   * so a null baseline means still loading, and there is nothing to lose yet.
+   */
+  const unsaved = useMemo(() => {
+    if (tool === null) return false;
+    return (
+      name.trim() !== tool.name.trim() ||
+      description.trim() !== (tool.description ?? '').trim() ||
+      source !== (tool.typescript ?? tool.source) ||
+      !sameToolParameters(declared(params), declared(tool.params))
+    );
+    // `declared` is a plain helper over its arguments, and reading it as a
+    // dependency would rebuild this on every render for nothing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tool, name, description, source, params]);
+
+  /*
+   * The three ways out, and the question before any of them: a link, a Back
+   * press, a closed tab. Shared with the function and object editors, because
+   * all three lose work the same way; see `useLeaveGuard`.
+   */
+  const guard = useLeaveGuard({
+    unsaved,
+    backTo: `/workspace/${workspaceId}/tools`,
+    save: handleSave,
+  });
 
   async function handleToggle() {
     if (tool === null) return;
@@ -758,6 +832,19 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
           </div>
         </>
       )}
+
+      {/*
+        Outside the branch above, so it is the same dialog whichever state the
+        page is in - and so closing it never depends on what the page happens to
+        be showing behind it.
+      */}
+      <UnsavedWorkDialog
+        subject={guard.asking ? (tool?.name ?? 'This tool') : null}
+        creating={false}
+        onStay={guard.stay}
+        onLeave={guard.leave}
+        onSaveAndLeave={guard.saveAndLeave}
+      />
     </AppShell>
   );
 }
