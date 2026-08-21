@@ -38,7 +38,14 @@ const attempts = page.locator('input[type="number"]').first();
 await attempts.fill('3');
 await page.waitForTimeout(600);
 const wait = page.locator('input[type="number"]').nth(1);
-console.log(`wait box enabled once there are three attempts: ${await wait.isEnabled()}`);
+/*
+ * Judged rather than printed. This was the one measurement here that only went
+ * to the log: the wait between attempts means nothing while there is one
+ * attempt, so it is dead until the count says otherwise - and a run where it
+ * stayed dead said so in a line nobody's exit status ever read.
+ */
+const waitLive = await wait.isEnabled();
+console.log(`wait box enabled once there are three attempts: ${waitLive}`);
 
 await page.screenshot({ path: shot('agent-retry.png') });
-await finish(browser, hasRetries > 0, hasWhenItFails > 0, handlesAfter > handlesBefore);
+await finish(browser, hasRetries > 0, hasWhenItFails > 0, handlesAfter > handlesBefore, waitLive);
