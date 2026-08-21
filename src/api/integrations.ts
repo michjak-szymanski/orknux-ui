@@ -285,28 +285,6 @@ export async function disconnectWorkspaceConnection(id: string): Promise<boolean
   return data.disconnectWorkspaceConnection;
 }
 
-/**
- * Makes an admin default out of a connection this workspace set up.
- *
- * Its name, kind and URL — the part that was worked out once and would
- * otherwise be typed again in every other workspace. Credentials stay here,
- * as they do for every default. Administrators only.
- */
-export async function exportWorkspaceConnectionAsDefault(
-  id: string,
-  addToExistingWorkspaces: boolean,
-): Promise<Connection> {
-  const data = await graphql<{ exportWorkspaceConnectionAsDefault: Connection }>(
-    `mutation ExportWorkspaceConnection($id: ID!, $addToExistingWorkspaces: Boolean) {
-       exportWorkspaceConnectionAsDefault(id: $id, addToExistingWorkspaces: $addToExistingWorkspaces) {
-         id name type url
-       }
-     }`,
-    { id, addToExistingWorkspaces },
-  );
-  return data.exportWorkspaceConnectionAsDefault;
-}
-
 export async function revealWorkspaceConnectionSecret(id: string): Promise<string | null> {
   const data = await graphql<{ revealWorkspaceConnectionSecret: string | null }>(REVEAL_CONNECTION_MUTATION, { id });
   return data.revealWorkspaceConnectionSecret;

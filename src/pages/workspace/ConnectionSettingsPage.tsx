@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import {
-  exportWorkspaceConnectionAsDefault,
   authTypeLabel,
   connectionTypeLabel,
   disconnectWorkspaceConnection,
@@ -22,7 +21,6 @@ import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
 import { FieldHint } from '../../components/FieldHint';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
-import dialogStyles from '../../components/Dialog.module.css';
 import { Loader } from '../../components/Loader';
 import { shellUser } from '../../session/user';
 import styles from './IntegrationSettings.module.css';
@@ -118,8 +116,6 @@ function secretHint(kind: ConnectionType | null) {
 
 export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSettingsPageProps) {
   /** True while the export is being confirmed; the name once it has happened. */
-  const [exporting, setExporting] = useState(false);
-  const [exported, setExported] = useState<string | null>(null);
   const { workspaceId = '', connectionId = '' } = useParams();
   const navigate = useNavigate();
 
@@ -719,37 +715,6 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
             </div>
           </form>
 
-          {/*
-            Where a connection is set up is where it is worth offering to
-            everybody: whoever is on this screen has just decided it works.
-          */}
-          {session.admin && connection !== null && (
-            <section className={styles.card}>
-              <h2 className={styles.sectionHeading}>Share</h2>
-              <div className={styles.shareRow}>
-                <div className={styles.shareText}>
-                  <p className={styles.shareTitle}>Export as default</p>
-                  <p className={styles.shareMessage}>
-                    {exported !== null
-                      ? `${exported} is now an admin default; new workspaces are provisioned with it.`
-                      : 'Makes this an admin default, so new workspaces are provisioned with it. Its name, kind and URL are shared; the credentials stay here.'}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className={styles.testButton}
-                  onClick={() => {
-                    setExported(null);
-                    setExporting(true);
-                  }}
-                  disabled={exported !== null}
-                >
-                  Export as default
-                </button>
-              </div>
-            </section>
-          )}
-
           <section className={`${styles.card} ${styles.dangerCard}`}>
             <h2 className={styles.dangerHeading}>Danger Zone</h2>
             <div className={styles.dangerRow}>
@@ -768,101 +733,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
           </section>
         </>
       )}
-      <ExportConnectionDialog
-        connection={exporting ? connection : null}
-        onClose={() => setExporting(false)}
-        onExported={(name) => {
-          setExporting(false);
-          setExported(name);
-        }}
-      />
     </AppShell>
-  );
-}
-
-/**
- * Asks before a connection becomes everybody's.
- *
- * Two things are worth saying out loud: that no credential travels with it, and
- * that it can be handed to the workspaces that already exist as well as the ones
- * that come later — which is the difference between a catalogue entry and a
- * change every workspace sees today.
- */
-function ExportConnectionDialog({
-  connection,
-  onClose,
-  onExported,
-}: {
-  connection: WorkspaceConnection | null;
-  onClose: () => void;
-  onExported: (name: string) => void;
-}) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const [toExisting, setToExisting] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (dialog === null) return;
-
-    if (connection !== null && !dialog.open) {
-      setToExisting(false);
-      setError(null);
-      setBusy(false);
-      dialog.showModal();
-    } else if (connection === null && dialog.open) {
-      dialog.close();
-    }
-  }, [connection]);
-
-  async function handleExport() {
-    if (connection === null) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const created = await exportWorkspaceConnectionAsDefault(connection.id, toExisting);
-      onExported(created.name);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not export the connection.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <dialog ref={dialogRef} className={dialogStyles.dialog} onCancel={onClose} onClose={onClose}>
-      <div className={dialogStyles.body}>
-        <header className={dialogStyles.header}>
-          <h2 className={dialogStyles.title}>Export as default</h2>
-        </header>
-        <p className={dialogStyles.dialogMessage}>
-          {connection?.name} becomes an admin default: new workspaces are provisioned with it. Its
-          name, kind and URL are shared; the credentials stay in this workspace, as they do for
-          every default.
-        </p>
-
-        <label className={dialogStyles.checkboxField}>
-          <input
-            type="checkbox"
-            checked={toExisting}
-            onChange={(event) => setToExisting(event.target.checked)}
-          />
-          Also add it to the workspaces that already exist
-        </label>
-
-        {error !== null && <p className={dialogStyles.error}>{error}</p>}
-
-        <footer className={dialogStyles.actions}>
-          <button type="button" className={dialogStyles.ghost} onClick={onClose} disabled={busy}>
-            Cancel
-          </button>
-          <button type="button" className={dialogStyles.filled} onClick={handleExport} disabled={busy}>
-            {busy ? 'Exporting…' : 'Export'}
-          </button>
-        </footer>
-      </div>
-    </dialog>
   );
 }
 
