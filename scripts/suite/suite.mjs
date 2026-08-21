@@ -285,6 +285,25 @@ export const TESTS = [
      */
   },
   {
+    name: 'removed-workflow-check',
+    what: 'a run of a removed workflow can be filtered to, and its workflow is named rather than linked',
+    needs: ['workspace'],
+    /*
+     * Issue #168, both halves against the same run: the Workflow filter offers
+     * the workflow the run names even though the workspace no longer lists it,
+     * and the row and the run's page name that workflow without offering the
+     * editor link that answered "No workflow assignment with id 373". A run of
+     * an assigned workflow is measured beside it, because a page that linked
+     * nowhere at all would satisfy the first half and be worse than the bug.
+     *
+     * Its fixture is one workflow it creates, runs once and unassigns - and
+     * then finds again on every later run rather than making another. Nothing
+     * deletes a run or a workflow definition, so a check that built a fresh one
+     * each time would grow the database of every workspace it is pointed at,
+     * which is the thing issue #168 was written beside.
+     */
+  },
+  {
     name: 'pagination-footer-check',
     what: 'every paginated list names its own rows in the footer, and counts the list not the page',
     needs: ['workspace'],

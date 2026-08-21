@@ -20,6 +20,30 @@ export interface Execution {
    * further to do. Null for a run that went all the way through.
    */
   stoppedReason: string | null;
+  /**
+   * Whether the workspace still lists the workflow this run named.
+   *
+   * False for a run whose workflow has been removed. The run is untouched and
+   * still opens; what it has no longer got is a workflow page to link to, so
+   * the row names the workflow instead of pretending it can be reached.
+   */
+  workflowAssigned: boolean;
+}
+
+/**
+ * A workflow the executions list can be filtered by: one this workspace has
+ * runs of, whether or not it still lists it.
+ *
+ * Read off the runs rather than off the workflows list, which is the whole
+ * point of it. The filter used to be built from assigned workflows alone, so
+ * runs of a removed workflow could be scrolled past and never singled out.
+ */
+export interface ExecutionWorkflow {
+  workflowId: string;
+  /** The name its most recent run recorded, which for a removed one is all there is. */
+  name: string;
+  /** False for one the workspace has removed. */
+  assigned: boolean;
 }
 
 /**
@@ -126,7 +150,7 @@ const WORKSPACE_EXECUTIONS_QUERY = `
       days: $days
       search: $search
     ) {
-      content { id workflowId workflowName status trigger startedAt finishedAt durationSeconds }
+      content { id workflowId workflowName status trigger startedAt finishedAt durationSeconds workflowAssigned }
       page
       size
       totalElements
@@ -152,6 +176,20 @@ export async function fetchWorkspaceExecutions(
     search: filters.search ?? null,
   });
   return data.workspaceExecutions;
+}
+
+const EXECUTION_WORKFLOWS_QUERY = `
+  query ExecutionWorkflows($workspaceId: ID!) {
+    executionWorkflows(workspaceId: $workspaceId) { workflowId name assigned }
+  }
+`;
+
+/** Every workflow this workspace has runs of, for the Workflow filter. */
+export async function fetchExecutionWorkflows(workspaceId: string): Promise<ExecutionWorkflow[]> {
+  const data = await graphql<{ executionWorkflows: ExecutionWorkflow[] }>(EXECUTION_WORKFLOWS_QUERY, {
+    workspaceId,
+  });
+  return data.executionWorkflows;
 }
 
 export const STATUS_LABEL: Record<ExecutionStatus, string> = {
@@ -194,7 +232,7 @@ export function formatRelative(iso: string): string {
 }
 
 const EXECUTION_DETAIL_FIELDS = `
-  id workspaceId workflowId workflowName status trigger startedAt finishedAt durationSeconds error
+  id workspaceId workflowId workflowName status trigger startedAt finishedAt durationSeconds error workflowAssigned
   stoppedAtNodeKey stoppedReason startedFrom
   steps { key kind name description status startedAt finishedAt durationSeconds input output error actionId conditionId branch attempts carriedOver x y }
   edges { source target branch }

@@ -275,6 +275,43 @@
   text-decoration: underline;
 }
 
+/*
+ * The same cell for a run whose workflow the workspace no longer lists.
+ *
+ * The name is still printed — it is what ran, and a blank cell would leave the
+ * row saying nothing — but it is not a link, because the editor it used to
+ * point at answers "No workflow assignment with id 373". The tag carries the
+ * reason, so the missing link reads as a removed workflow rather than as a
+ * page that failed to load.
+ */
+.workflowGone {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  justify-content: center;
+  gap: var(--space-8);
+}
+
+.workflowGoneName {
+  overflow: hidden;
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.removedTag {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
 .muted {
   font-size: var(--text-md);
   color: var(--color-text-secondary);

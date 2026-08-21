@@ -281,6 +281,16 @@ function FitWhenReady({ signature }: { signature: string }) {
 /** Long enough for a slow layout, short enough not to be seen as a jump. */
 const LATE_FIT_MS = 250;
 
+/**
+ * Why a run names a workflow it cannot open.
+ *
+ * Removing a workflow deletes the workspace's assignment and leaves the runs;
+ * this is the whole of what the page can say about that, and it says it twice —
+ * where the link used to be, and beside the name in the summary — because
+ * neither place is where everybody looks.
+ */
+const REMOVED_NOTE = 'This workflow has been removed from the workspace. The run is kept; there is no workflow to open.';
+
 export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageProps) {
   const { workspaceId = '', executionId = '' } = useParams();
 
@@ -473,11 +483,24 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
                   </span>
                 )}
                 <h1 className={styles.title}>{run?.workflowName ?? '…'}</h1>
-                {run !== null && (
-                  <Link className={styles.viewWorkflow} to={`/workspace/${workspaceId}/workflows/${run.workflowId}/editor`}>
-                    View Workflow
-                  </Link>
-                )}
+                {/*
+                  A run outlives the workflow's place in the workspace. Once the
+                  assignment is gone there is nothing at the other end of this
+                  link — it rendered "No workflow assignment with id 373", which
+                  reads as a broken page rather than as a workflow that was
+                  removed — so what is offered instead is the sentence saying so.
+                  The name in the heading beside it is still the run's own.
+                */}
+                {run !== null &&
+                  (run.workflowAssigned ? (
+                    <Link className={styles.viewWorkflow} to={`/workspace/${workspaceId}/workflows/${run.workflowId}/editor`}>
+                      View Workflow
+                    </Link>
+                  ) : (
+                    <span className={styles.workflowGone} title={REMOVED_NOTE}>
+                      Workflow removed
+                    </span>
+                  ))}
                 <span className={styles.duration}>
                   <img src={clockIcon} alt="" width={14} height={14} />
                   {formatDuration(run?.durationSeconds ?? null)}
@@ -560,7 +583,16 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
                       </span>
                     )}
                   </SummaryRow>
-                  <SummaryRow label="Workflow">{run?.workflowName ?? '—'}</SummaryRow>
+                  <SummaryRow label="Workflow">
+                    {run === null ? (
+                      '—'
+                    ) : (
+                      <>
+                        {run.workflowName}
+                        {!run.workflowAssigned && <span className={styles.removedNote}>{REMOVED_NOTE}</span>}
+                      </>
+                    )}
+                  </SummaryRow>
                   <SummaryRow label="Triggered by">
                     {run === null ? '—' : TRIGGER_LABEL[run.trigger]}
                   </SummaryRow>

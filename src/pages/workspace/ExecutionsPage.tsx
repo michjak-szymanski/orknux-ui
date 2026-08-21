@@ -2,8 +2,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import type { PageOf } from '../../api/client';
-import { STATUS_LABEL, TRIGGER_LABEL, fetchWorkspaceExecutions, formatDuration, formatRelative } from '../../api/executions';
-import type { Execution, ExecutionStatus } from '../../api/executions';
+import {
+  STATUS_LABEL,
+  TRIGGER_LABEL,
+  fetchExecutionWorkflows,
+  fetchWorkspaceExecutions,
+  formatDuration,
+  formatRelative,
+} from '../../api/executions';
+import type { Execution, ExecutionStatus, ExecutionWorkflow } from '../../api/executions';
 import type { SessionUser } from '../../api/session';
 import { fetchWorkspaceWorkflows } from '../../api/workflows';
 import type { WorkspaceWorkflow } from '../../api/workflows';
@@ -30,6 +37,9 @@ const PAGE_SIZE = 6;
 const WORKFLOW_LIST_SIZE = 100;
 const SEARCH_DEBOUNCE_MS = 300;
 
+/** Said in one place, because the row and its tooltip are the only warning. */
+const REMOVED_NOTE = 'This workflow has been removed from the workspace. The run is kept; there is no workflow to open.';
+
 const TRIGGER_ICON: Record<string, string> = {
   WEBHOOK: terminalIcon,
   API: terminalIcon,
@@ -42,6 +52,7 @@ export function ExecutionsPage({ session, onSignOut }: ExecutionsPageProps) {
 
   const [runs, setRuns] = useState<PageOf<Execution> | null>(null);
   const [workflows, setWorkflows] = useState<WorkspaceWorkflow[]>([]);
+  const [ran, setRan] = useState<ExecutionWorkflow[]>([]);
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<ExecutionStatus | ''>('');
   const [workflowId, setWorkflowId] = useState('');
@@ -56,6 +67,20 @@ export function ExecutionsPage({ session, onSignOut }: ExecutionsPageProps) {
     fetchWorkspaceWorkflows(workspaceId, 0, WORKFLOW_LIST_SIZE)
       .then((result) => setWorkflows(result.content))
       .catch(() => setWorkflows([]));
+  }, [workspaceId]);
+
+  /*
+   * The workflows this workspace has runs of, which is not the same list as the
+   * workflows it assigns. Removing a workflow deletes the assignment and leaves
+   * every run of it on this page, so building the filter from the assigned ones
+   * alone left those runs unreachable by it: they could be scrolled past and
+   * never singled out. This is the other half of the list.
+   */
+  useEffect(() => {
+    if (workspaceId === '') return;
+    fetchExecutionWorkflows(workspaceId)
+      .then(setRan)
+      .catch(() => setRan([]));
   }, [workspaceId]);
 
   useEffect(() => {
@@ -87,6 +112,13 @@ export function ExecutionsPage({ session, onSignOut }: ExecutionsPageProps) {
   }, [workspaceId, page, status, workflowId, days, debouncedSearch]);
 
   useEffect(load, [load]);
+
+  /*
+   * Only the ones the workspace no longer lists: the assigned half of the
+   * filter is already built from `workflows`, under the names the workflows
+   * carry now rather than the names their oldest run recorded.
+   */
+  const removedWorkflows = ran.filter((workflow) => !workflow.assigned);
 
   return (
     <AppShell
@@ -128,6 +160,12 @@ export function ExecutionsPage({ session, onSignOut }: ExecutionsPageProps) {
             ]}
           />
 
+          {/*
+            The assigned workflows first, under their current names, then the
+            ones only the runs still name. A removed workflow is marked rather
+            than slipped in beside the live ones: it can be filtered by, and it
+            is not going to be found on the workflows screen.
+          */}
           <SelectField
             label="Workflow:"
             value={workflowId}
@@ -135,6 +173,10 @@ export function ExecutionsPage({ session, onSignOut }: ExecutionsPageProps) {
             options={[
               { value: '', label: 'All Workflows' },
               ...workflows.map((workflow) => ({ value: workflow.workflowId, label: workflow.name })),
+              ...removedWorkflows.map((workflow) => ({
+                value: workflow.workflowId,
+                label: `${workflow.name} (removed)`,
+              })),
             ]}
           />
 
@@ -197,12 +239,29 @@ export function ExecutionsPage({ session, onSignOut }: ExecutionsPageProps) {
             >
               {run.id}
             </Link>
-            <Link
-              className={`${styles.colWorkflow} ${styles.workflowName}`}
-              to={`/workspace/${workspaceId}/workflows/${run.workflowId}/editor`}
-            >
-              {run.workflowName}
-            </Link>
+            {/*
+              A run outlives the workflow's place in the workspace, and once the
+              assignment is gone there is no editor to open — the link led to
+              "No workflow assignment with id 373", which reads as a broken page
+              rather than as a workflow that was removed. So the name stays,
+              because it is what ran, and the tag beside it says why it is not a
+              link.
+            */}
+            {run.workflowAssigned ? (
+              <Link
+                className={`${styles.colWorkflow} ${styles.workflowName}`}
+                to={`/workspace/${workspaceId}/workflows/${run.workflowId}/editor`}
+              >
+                {run.workflowName}
+              </Link>
+            ) : (
+              <span className={`${styles.colWorkflow} ${styles.workflowGone}`}>
+                <span className={styles.workflowGoneName}>{run.workflowName}</span>
+                <span className={styles.removedTag} title={REMOVED_NOTE}>
+                  removed
+                </span>
+              </span>
+            )}
             <span className={styles.colStatus}>
               <span className={`${styles.statusBadge} ${styles[run.status.toLowerCase()]}`}>
                 <span className={styles.statusDot} aria-hidden="true" />

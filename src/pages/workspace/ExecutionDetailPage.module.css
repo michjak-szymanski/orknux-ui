@@ -100,6 +100,34 @@
   text-decoration: underline;
 }
 
+/*
+ * What stands where "View Workflow" stands on every other run: a run whose
+ * workflow the workspace no longer lists has nowhere to send anybody, and the
+ * link it used to carry rendered "No workflow assignment with id 373".
+ *
+ * Not a link, and not the brand colour, because it is not somewhere to go — but
+ * still in the same place, so the difference is visible rather than a control
+ * that has quietly gone missing.
+ */
+.workflowGone {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+/* The same fact in the summary, in full, where there is room for the sentence. */
+.removedNote {
+  display: block;
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
 .duration {
   display: flex;
   flex-shrink: 0;
