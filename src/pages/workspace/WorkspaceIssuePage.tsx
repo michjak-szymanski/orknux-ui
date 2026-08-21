@@ -36,6 +36,7 @@ import { AssigneePicker } from '../../components/AssigneePicker';
 import { AttachmentViewer } from '../../components/AttachmentViewer';
 import { BackLink } from '../../components/BackLink';
 import { DeleteIssueDialog } from '../../components/DeleteIssueDialog';
+import { FieldHint } from '../../components/FieldHint';
 import { IssueRelationList } from '../../components/IssueRelationList';
 import { Loader } from '../../components/Loader';
 import { Markdown } from '../../components/Markdown';
@@ -903,9 +904,24 @@ export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePagePro
                       </button>
                     )}
                   </span>
+                  {/*
+                    "Nothing attached yet." stops being true the moment a file
+                    is on it. That a screenshot beats a paragraph is an argument
+                    for attaching one, and it is exactly as true of an issue with
+                    four files on it - so by the rules file's test it is not
+                    status. Behind the (?) beside the line, not deleted: it is
+                    the only place the product makes the case.
+                  */}
                   {issueFiles.length === 0 ? (
                     <p className={styles.nothing}>
-                      Nothing attached yet. A screenshot is worth a paragraph of description.
+                      <span className={styles.labelWithHint}>
+                        Nothing attached yet.
+                        <FieldHint label="Nothing attached yet">
+                          A screenshot is worth a paragraph of description. Anything else that shows
+                          the thing rather than describes it belongs here too — a log, an export, the
+                          file that would not open.
+                        </FieldHint>
+                      </span>
                     </p>
                   ) : (
                     <Attachments files={issueFiles} onOpen={setPreviewId} onRemove={(id) => void detach(id)} />

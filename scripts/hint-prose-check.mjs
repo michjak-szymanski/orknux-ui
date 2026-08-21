@@ -235,12 +235,6 @@ const IN_THE_OPEN = [
     why: 'empty, and three examples of what would go there - not a definition of a link',
   },
   {
-    file: 'src/components/NotificationBell.tsx',
-    says: 'Nothing yet. Anything on your issues will appear here.',
-    because: 'status',
-    why: 'empty, and what will fill it',
-  },
-  {
     file: 'src/components/ObserverList.tsx',
     says: 'Nobody but the reporter and the assignee.',
     because: 'status',
@@ -320,12 +314,6 @@ const IN_THE_OPEN = [
   },
   {
     file: 'src/pages/workspace/WorkspaceIssuePage.tsx',
-    says: 'Nothing attached yet. A screenshot is worth a paragraph of description.',
-    because: 'status',
-    why: 'empty, and an argument for filling it - not a definition of an attachment',
-  },
-  {
-    file: 'src/pages/workspace/WorkspaceIssuePage.tsx',
     says: 'Nothing linked yet. The pull request, the dashboard, the page that will not load.',
     because: 'status',
     why: 'empty, and three examples of what would go there',
@@ -359,18 +347,6 @@ const IN_THE_OPEN = [
     says: 'No speech model has been added yet.',
     because: 'status',
     why: 'the same, for the speech picker',
-  },
-  {
-    file: 'src/pages/workspace/WorkspaceTriggersPage.tsx',
-    says: 'Nothing yet. This trigger has not been asked to do anything',
-    because: 'status',
-    why: "this trigger's own history, which is empty, and why that is unremarkable",
-  },
-  {
-    file: 'src/pages/workspace/WorkspaceTriggersPage.tsx',
-    says: 'Nothing has fired here yet. A trigger that has never been asked to do anything leaves no e',
-    because: 'status',
-    why: "the same, for the whole workspace's firing log",
   },
   {
     file: 'src/pages/admin/AdminSettingsPage.tsx',

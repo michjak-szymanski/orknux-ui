@@ -189,6 +189,25 @@ export const TESTS = [
      */
   },
   {
+    name: 'status-split-check',
+    what: 'four trimmed status lines, and the sentences that had to go somewhere',
+    needs: ['workspace'],
+    /*
+     * The other side of hint-prose-check, which looks for prose still in the
+     * open and would be perfectly happy with a status line whose second half
+     * was deleted rather than moved. This asserts the move: the state is still
+     * printed, and the sentence that left it is inside a `FieldHint` in the
+     * same file.
+     *
+     * Its browser half drives one of the four. The bell's empty panel needs an
+     * account with no notifications and the two trigger logs need a workspace
+     * nothing has ever fired in, and manufacturing either against a real
+     * database means changing somebody's data - so those three are asserted
+     * from source and the check says so in its output rather than appearing to
+     * measure something it does not.
+     */
+  },
+  {
     name: 'revision-retention-check',
     what: 'how long component history is kept: typed, saved, reloaded, and zero refused',
     needs: ['session'],

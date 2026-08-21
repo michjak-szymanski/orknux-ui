@@ -212,6 +212,13 @@
   color: var(--color-text-muted);
 }
 
+/* A status line and the (?) beside it, on one baseline. */
+.labelWithHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
 .colStatus,
 .colActions {
   display: flex;

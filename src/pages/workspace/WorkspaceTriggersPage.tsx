@@ -27,6 +27,7 @@ import {
   transferStyles,
 } from '../../components/ComponentTransfer';
 import { CreateTriggerDialog } from '../../components/CreateTriggerDialog';
+import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
@@ -277,10 +278,23 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
             {showing === trigger.id && (
               <div className={styles.log}>
                 {firingsError !== null && <p className={styles.logEmpty}>{firingsError}</p>}
+                {/*
+                  "Nothing yet." stops being true the first time this fires.
+                  Why an empty log is unremarkable, and what "asked" means for a
+                  Slack trigger, is as true of a log with forty rows in it - so
+                  by the rules file's test it is not status, and it goes behind
+                  the (?) beside the line rather than away.
+                */}
                 {firingsError === null && firings.length === 0 && (
                   <p className={styles.logEmpty}>
-                    Nothing yet. This trigger has not been asked to do anything — for a Slack
-                    trigger that means no matching event has arrived.
+                    <span className={styles.labelWithHint}>
+                      Nothing yet.
+                      <FieldHint label="Nothing yet">
+                        This trigger has not been asked to do anything — for a Slack trigger that
+                        means no matching event has arrived. An empty log is what a trigger nobody
+                        has reached looks like, not a sign that anything is wrong with it.
+                      </FieldHint>
+                    </span>
                   </p>
                 )}
                 {firings.map((firing) => (
@@ -351,10 +365,17 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
 
         <div className={styles.historyBody}>
           {historyError !== null && <p className={styles.logEmpty}>{historyError}</p>}
+          {/* The same split, for the whole workspace's log. */}
           {historyError === null && history !== null && history.content.length === 0 && (
             <p className={styles.logEmpty}>
-              Nothing has fired here yet. A trigger that has never been asked to do anything leaves
-              no entry.
+              <span className={styles.labelWithHint}>
+                Nothing has fired here yet.
+                <FieldHint label="Nothing has fired here yet">
+                  A trigger that has never been asked to do anything leaves no entry, so an empty
+                  log here means nothing has reached any trigger in this workspace rather than that
+                  something failed.
+                </FieldHint>
+              </span>
             </p>
           )}
           {history?.content.map((firing) => (

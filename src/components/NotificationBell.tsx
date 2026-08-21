@@ -6,6 +6,7 @@ import { fetchNotificationCount, fetchNotifications, readNotifications } from '.
 import type { Notification } from '../api/notifications';
 import { timeAgo } from '../api/tools';
 import bellIcon from '../assets/bell.svg';
+import { FieldHint } from './FieldHint';
 import styles from './NotificationBell.module.css';
 
 /** How often the count is asked for while somebody has the page open. */
@@ -121,8 +122,23 @@ export function NotificationBell() {
       {open && (
         <div className={styles.panel} role="dialog" aria-label="Notifications">
           {items === null && <p className={styles.notice}>Looking…</p>}
+          {/*
+            Split the way the rules split a status line. "Nothing yet." stops
+            being true the moment there is a notification; "anything on your
+            issues will appear here" is true of a full panel as well, so it is
+            what the panel is *for* rather than what it is showing. Moved, not
+            dropped - it is the only sentence anywhere that says what fills this.
+          */}
           {items !== null && items.length === 0 && (
-            <p className={styles.notice}>Nothing yet. Anything on your issues will appear here.</p>
+            <p className={styles.notice}>
+              <span className={styles.labelWithHint}>
+                Nothing yet.
+                <FieldHint label="Nothing yet">
+                  Anything on your issues will appear here — a comment, an assignment, a change of
+                  status on something you reported or are watching.
+                </FieldHint>
+              </span>
+            </p>
           )}
           {items?.map((item) => (
             <Link
