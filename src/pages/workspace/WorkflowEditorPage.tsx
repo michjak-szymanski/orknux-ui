@@ -1070,6 +1070,23 @@ const KIND_COLOUR: Record<NodeKind, string> = {
   SESSION: '#8b5cf6',
 };
 
+/**
+ * How a line that is not a step is drawn: dashed, in the accent.
+ *
+ * Two things on this canvas are dependencies rather than flow — a node reading
+ * a field off a node it is not wired to, and a session node saying which
+ * conversation an agent keeps — and nothing runs along either of them. A solid
+ * line is the graph's sentence about what happens next, so a dependency drawn
+ * solid says something false about how the run goes. One style for both, held
+ * here, because a second dashed line in a different colour would read as a
+ * third kind of thing rather than as the same kind.
+ *
+ * No arrowhead, and none to remove: no line in this editor has one. A
+ * dependency with an arrow on it would be back to suggesting direction, which
+ * is the whole of what is wrong with drawing it solid.
+ */
+const DEPENDENCY_LINE = { stroke: 'var(--color-accent-brand)', strokeDasharray: '6 4' };
+
 const KIND_CLASS: Record<NodeKind, string> = {
   TRIGGER: 'trigger',
   AGENT: 'agent',
@@ -1729,6 +1746,12 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     return between;
   }, [nodes, ports]);
 
+  /** Which node kind each key is, for the lines that are drawn by what they join. */
+  const kindOfNode = useMemo(
+    () => new Map(nodes.map((node) => [node.id, (node.data as NodeData).kind])),
+    [nodes],
+  );
+
   /**
    * The edges as drawn: the graph's own, labelled with what they carry, plus a
    * dashed one wherever a node reads a field from somewhere it is not wired to.
@@ -1737,6 +1760,12 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
    * that nothing before the node produces the field — but a line is how somebody
    * notices, rather than reading a list. They are not part of the graph and are
    * never saved: [edges] stays what the workflow is.
+   *
+   * A session's line is the graph's own and is saved, but it is drawn dashed
+   * with them: it says which conversation an agent keeps, not that a run gets
+   * there. The server reads it the same way — a session is folded into the
+   * agents it leads to and never reaches the engine, and its line does not count
+   * towards a node's incoming when the validator asks whether a run can arrive.
    */
   const drawnEdges = useMemo<Edge[]>(() => {
     const carrying = edges.map((edge) => {
@@ -1750,7 +1779,9 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       const shown =
         edge.sourceHandle === 'fail'
           ? { ...edge, style: { ...edge.style, stroke: 'var(--color-danger)', strokeWidth: 2 } }
-          : edge;
+          : kindOfNode.get(edge.source) === 'SESSION'
+            ? { ...edge, style: { ...edge.style, ...DEPENDENCY_LINE } }
+            : edge;
       /*
        * Every line drawn by us, whether it carries anything or not. The type
        * used to be put on only the lines with something to say, because the
@@ -1777,7 +1808,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           points: edgePoints[`reads:${held.source}->${held.target}`],
           onPoints: setPoints,
         },
-        style: { stroke: 'var(--color-accent-brand)', strokeDasharray: '6 4' },
+        style: DEPENDENCY_LINE,
         // Not the graph's, so not something a drag can move or a key can delete.
         selectable: false,
         deletable: false,
@@ -1793,7 +1824,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       }));
 
     return [...carrying, ...loose];
-  }, [edges, carried, edgePoints, setPoints]);
+  }, [edges, carried, edgePoints, setPoints, kindOfNode]);
 
   /*
    * Nothing tells us an edge has gone - it simply stops being in the list - so

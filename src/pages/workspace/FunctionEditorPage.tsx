@@ -415,8 +415,6 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
   /** Read by the keyboard handler, which must not start a second save. */
   const savingRef = useRef(saving);
   savingRef.current = saving;
-  /** False until the loaded function has been seen once, so opening one changes nothing. */
-  const synced = useRef(false);
   /**
    * The last stub this page printed, or null before it has printed one.
    *
@@ -580,7 +578,6 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
     function onSaved(event: Event) {
       const saved = (event as CustomEvent<{ id: string }>).detail;
       if (saved?.id !== functionId) return;
-      synced.current = false;
       printed.current = null;
       fetchFunction(functionId)
         .then((found) => {
@@ -602,6 +599,18 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
     window.addEventListener('orknux:function-saved', onSaved);
     return () => window.removeEventListener('orknux:function-saved', onSaved);
   }, [functionId]);
+
+  /**
+   * The parameters as a save would send them: the blank rows dropped, the names
+   * as the server will store them.
+   *
+   * Both sides of every comparison below go through this. A row somebody added
+   * and has not named yet is not a change - the save would not carry it - and a
+   * name typed with a space after it is the same parameter as the one already
+   * stored, so neither should make the editor ask before letting somebody go.
+   */
+  const declared = (all: FunctionParam[]): FunctionParam[] =>
+    all.filter((param) => param.name.trim() !== '').map((param) => ({ ...param, name: param.name.trim() }));
 
   /**
    * The function's parameter list, as TypeScript would write it.
@@ -640,6 +649,41 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
     [params, externals, variables, objects],
   );
 
+  /**
+   * Whether the panel says something about the parameters the server has not
+   * been told, which is the only thing the code has to be brought into step
+   * with.
+   *
+   * The panel against the stored row, not a count of how many times the effect
+   * below has run. Issue #175: it used to be a count - the first pass after
+   * loading was skipped, on the reasoning that a function stored before any of
+   * this existed may already disagree with its own declaration and rewriting it
+   * on sight would mark the editor dirty without anybody touching it. The
+   * reasoning was right and the mechanism could not carry it. `declarations` is
+   * built from the workspace's variables and objects as well as the panel, and
+   * those arrive in their own fetches - so the one pass being skipped was
+   * whichever render happened to come first, and the rewrite landed on the next
+   * one, before anybody had touched the page. A function with two externals and
+   * a hand-written parameter list opened dirty every time.
+   *
+   * Asking the question by value instead answers it whenever it is asked. The
+   * panel matching the stored row means there is nothing to write, whether that
+   * is a second after loading or a second after a save - and it is why nothing
+   * has to remember to give this effect a pass to do nothing in.
+   */
+  const panelMoved = useMemo(() => {
+    if (fn === null) return false;
+    const wasExternals = fn.externals.map((external) => external.variableId);
+    return (
+      !sameParameters(declared(params), declared(fn.params)) ||
+      externals.length !== wasExternals.length ||
+      externals.some((variableId, at) => variableId !== wasExternals[at])
+    );
+    // `declared` is a plain helper over its arguments, and reading it as a
+    // dependency would rebuild this on every render for nothing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fn, params, externals]);
+
   /*
    * The code follows the panel.
    *
@@ -648,24 +692,21 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
    * and being refused for something the panel just did to you is not a useful way to
    * find that out.
    *
-   * Skipped on the first pass after loading. A function stored before this existed
-   * may already disagree with its own details, and rewriting it the moment somebody
-   * opens it would mark the editor dirty without them touching anything.
+   * Only while the panel is ahead of the server. A function whose stored code
+   * disagrees with its own details is left exactly as it was stored until
+   * somebody changes something here; see `panelMoved`.
    */
   useEffect(() => {
     if (fn === null && !creating) return;
     // Nothing has been opened when one is being written, so there is nothing to
     // leave alone: the first change is somebody's own and belongs in the code.
-    if (!creating && !synced.current) {
-      synced.current = true;
-      return;
-    }
+    if (!creating && !panelMoved) return;
     setSource((current) => {
       const next = withParameters(current, declarations);
       if (next !== current) setSaved(false);
       return next;
     });
-  }, [fn, creating, declarations]);
+  }, [fn, creating, declarations, panelMoved]);
 
   /**
    * The stub a new function would say right now, given the panel as it stands.
@@ -706,18 +747,6 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
     printed.current = stub;
     if (stub !== source) setSource(stub);
   }, [creating, stub, source]);
-
-  /**
-   * The parameters as a save would send them: the blank rows dropped, the names
-   * as the server will store them.
-   *
-   * Both sides of the comparison below go through this. A row somebody added
-   * and has not named yet is not a change - the save would not carry it - and a
-   * name typed with a space after it is the same parameter as the one already
-   * stored, so neither should make the editor ask before letting somebody go.
-   */
-  const declared = (all: FunctionParam[]): FunctionParam[] =>
-    all.filter((param) => param.name.trim() !== '').map((param) => ({ ...param, name: param.name.trim() }));
 
   /**
    * There is work on this screen the server has not been told about.
@@ -762,7 +791,6 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
     }
     // Still loading, or it could not be loaded: there is nothing on screen to lose.
     if (fn === null) return false;
-    const wasExternals = fn.externals.map((external) => external.variableId);
     return (
       name.trim() !== fn.name.trim() ||
       description.trim() !== (fn.description ?? '').trim() ||
@@ -773,11 +801,11 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
       // change either.
       (namesObject(returnType) ? returnObjectId : null) !==
         (namesObject(fn.returnType) ? fn.returnObjectId : null) ||
-      !sameParameters(declared(params), declared(fn.params)) ||
-      externals.length !== wasExternals.length ||
-      externals.some((variableId, at) => variableId !== wasExternals[at])
+      // The parameters a save would send and the externals in order, which the
+      // code column is kept in step with above and so is asked for once.
+      panelMoved
     );
-  }, [creating, fn, name, description, source, returnType, returnObjectId, params, externals, stub]);
+  }, [creating, fn, name, description, source, returnType, returnObjectId, params, externals, panelMoved, stub]);
 
   /*
    * The three ways out, and the question before any of them.
@@ -1652,7 +1680,6 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                         next save would put that back - so it reads the row
                         again, exactly as it does when a suggestion is accepted.
                       */
-                      synced.current = false;
                       printed.current = null;
                       void fetchFunction(functionId)
                         .then((found) => {

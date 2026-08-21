@@ -72,14 +72,6 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
   const [params, setParams] = useState<ToolParam[]>([]);
   /** What a parameter can name, and what the editor declares to Monaco. */
   const [objects, setObjects] = useState<WorkflowObject[]>([]);
-  /**
-   * Whether the code has been left alone once since it was opened.
-   *
-   * A tool stored before it had a parameter list may already disagree with its
-   * own declaration, and rewriting it the moment somebody opens the page would
-   * mark the editor dirty without them touching anything.
-   */
-  const synced = useRef(false);
   const [caret, setCaret] = useState({ line: 1, column: 1 });
 /*
    * Null until something has actually been checked.
@@ -153,6 +145,18 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
   const objectNameOf = (objectId: string | null | undefined): string | null =>
     objects.find((held) => held.id === objectId)?.name ?? null;
 
+  /**
+   * The parameters as a save would send them: the blank rows dropped, the names
+   * as the server will store them.
+   *
+   * Both sides of every comparison below go through this. A row somebody added
+   * and has not named yet is not a change - the save would not carry it - and a
+   * name typed with a space after it is the same parameter as the one already
+   * stored, so neither should make the editor ask before letting somebody go.
+   */
+  const declared = (all: ToolParam[]): ToolParam[] =>
+    all.filter((param) => param.name.trim() !== '').map((param) => ({ ...param, name: param.name.trim() }));
+
   /** The tool's parameter list, as TypeScript would write it. */
   const declarations = useMemo(
     () =>
@@ -162,6 +166,32 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
     [params, objects],
   );
 
+  /**
+   * Whether the panel says something about the parameters the server has not
+   * been told, which is the only thing the code has to be brought into step
+   * with.
+   *
+   * The panel against the stored row, not a count of how many times the effect
+   * below has run. Issue #175, found on the function editor and shared here
+   * exactly: a pass was skipped after loading, so that a tool whose stored code
+   * already disagreed with its own parameter list was left as it was stored.
+   * But `declarations` is built from the workspace's objects as well as the
+   * panel, and those arrive in a fetch of their own - so the pass being skipped
+   * was whichever render came first, and the rewrite landed on the next one,
+   * before anybody had touched the page.
+   *
+   * Asking by value answers it whenever it is asked, and it is why three places
+   * that had to remember to hand this effect a pass to do nothing in - a save, an
+   * accepted suggestion, the Active badge - no longer have to.
+   */
+  const panelMoved = useMemo(() => {
+    if (tool === null) return false;
+    return !sameToolParameters(declared(params), declared(tool.params));
+    // `declared` is a plain helper over its arguments, and reading it as a
+    // dependency would rebuild this on every render for nothing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tool, params]);
+
   /*
    * The code follows the panel.
    *
@@ -169,19 +199,17 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
    * parameter the code does not bind is one the agent fills and the tool never
    * reads - and finding that out from a tool that quietly ignored an argument
    * is the worst way to find it out.
+   *
+   * Only while the panel is ahead of the server; see `panelMoved`.
    */
   useEffect(() => {
-    if (tool === null) return;
-    if (!synced.current) {
-      synced.current = true;
-      return;
-    }
+    if (tool === null || !panelMoved) return;
     setSource((current) => {
       const next = withToolParameters(current, tool.name, declarations);
       if (next !== current) setSaved(false);
       return next;
     });
-  }, [tool, declarations]);
+  }, [tool, declarations, panelMoved]);
 
   useEffect(() => {
     function onSuggested(event: Event) {
@@ -280,13 +308,6 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
         typescript: offered.code,
         params: moved ? read.params : undefined,
       });
-      /*
-       * Applied before the panel is told anything, and the effect that keeps
-       * the code in step with the panel is left one pass to do nothing in: it
-       * would otherwise put the old parameter list straight back into the code
-       * that was just accepted.
-       */
-      synced.current = false;
       apply(stored);
       setSaved(true);
       setStatus({
@@ -356,15 +377,6 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
         return false;
       }
 
-      /*
-       * The effect that keeps the code in step with the panel is left one pass
-       * to do nothing in, exactly as accepting a suggestion does. Without it a
-       * tool whose stored code disagreed with its parameter list would have its
-       * declaration rewritten the instant the save came back - which would make
-       * the page dirty again the moment it stopped being, and the guard would
-       * ask about a change nobody made.
-       */
-      synced.current = false;
       apply(
         await updateTool(tool.id, {
           name: name.trim(),
@@ -386,18 +398,6 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
       setSaving(false);
     }
   }
-
-  /**
-   * The parameters as a save would send them: the blank rows dropped, the names
-   * as the server will store them.
-   *
-   * Both sides of the comparison below go through this. A row somebody added
-   * and has not named yet is not a change - the save would not carry it - and a
-   * name typed with a space after it is the same parameter as the one already
-   * stored, so neither should make the editor ask before letting somebody go.
-   */
-  const declared = (all: ToolParam[]): ToolParam[] =>
-    all.filter((param) => param.name.trim() !== '').map((param) => ({ ...param, name: param.name.trim() }));
 
   /**
    * There is work on this screen the server has not been told about.
@@ -423,12 +423,11 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
       name.trim() !== tool.name.trim() ||
       description.trim() !== (tool.description ?? '').trim() ||
       source !== (tool.typescript ?? tool.source) ||
-      !sameToolParameters(declared(params), declared(tool.params))
+      // The parameters a save would send, which the code column is kept in step
+      // with above and so is asked for once.
+      panelMoved
     );
-    // `declared` is a plain helper over its arguments, and reading it as a
-    // dependency would rebuild this on every render for nothing.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tool, name, description, source, params]);
+  }, [tool, name, description, source, panelMoved]);
 
   /*
    * The three ways out, and the question before any of them: a link, a Back
@@ -467,10 +466,6 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
     if (tool === null) return;
     try {
       const { enabled, lastModifiedAt, lastModifiedBy } = await setToolEnabled(tool.id, !tool.enabled);
-      // The one pass the parameter sync is given to do nothing in, exactly as a
-      // save and an accepted suggestion give it: `tool` changing is what that
-      // effect watches, and there is no new parameter list here for it to write.
-      synced.current = false;
       setTool((current) => (current === null ? current : { ...current, enabled, lastModifiedAt, lastModifiedBy }));
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : 'Could not change the tool.');

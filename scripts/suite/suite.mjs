@@ -70,6 +70,22 @@ export const TESTS = [
     what: 'exporting the workflow on screen, at both depths, and what the file holds',
     needs: ['workflow'],
   },
+  {
+    name: 'session-edge-check',
+    what: "a session's line drawn as a dependency, against a flow line in the same graph",
+    needs: ['workspace'],
+    /*
+     * A session is not a step - the validator does not count its line towards a
+     * node's incoming, and the graph source folds it into the agents it leads to
+     * before the engine sees it - and it used to be drawn with the same solid
+     * line that means "and then".
+     *
+     * 'workspace' rather than 'workflow': it builds its own graph, because the
+     * one the seed makes has no session node in it, and removes it again. It
+     * needs no model and never runs anything - the graph is saved over GraphQL
+     * and read back off the canvas.
+     */
+  },
 
   // --- the (?) that replaced the prose --------------------------------------
   {
