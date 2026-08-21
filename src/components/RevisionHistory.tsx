@@ -117,16 +117,20 @@ export function RevisionHistory({ kind, componentId, currentName, onRestored }: 
         wondered where old versions go. On the heading rather than on a row,
         because it explains the whole panel.
 
-        The sentence below it stayed where it is on purpose. "Nothing yet…" is
-        the state of the thing being looked at, which the same file lists among
-        what still belongs in the open.
+        The sentence below it stayed where it is on purpose - but only the half
+        of it that is a sentence about this component. "Nothing yet." is the
+        state; "the next save will keep what this says now, and it will appear
+        here" was the panel teaching how it fills, said a second time three
+        inches under a control that exists to say exactly that. It is folded
+        into the note above rather than deleted: "and it appears here" is the
+        same fact, said once.
       */}
       <h2 className={styles.heading}>
         <span className={styles.headingWithHint}>
           History
           <FieldHint label="History">
-            Every save keeps what this was before it. How long they are kept is an administrator’s
-            setting.
+            Every save keeps what this was before it, and it appears here. How long they are kept
+            is an administrator’s setting.
           </FieldHint>
         </span>
       </h2>
@@ -140,9 +144,8 @@ export function RevisionHistory({ kind, componentId, currentName, onRestored }: 
       {revisions === null ? (
         <Loader />
       ) : revisions.length === 0 ? (
-        <p className={styles.empty}>
-          Nothing yet. The next save will keep what this says now, and it will appear here.
-        </p>
+        // A status says the state. It does not teach; the (?) above does that.
+        <p className={styles.empty}>Nothing yet.</p>
       ) : (
         <ul className={styles.list}>
           {revisions.map((revision) => (

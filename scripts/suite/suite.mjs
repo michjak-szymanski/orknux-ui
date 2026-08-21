@@ -160,14 +160,23 @@ export const TESTS = [
   },
   {
     name: 'history-hint-check',
-    what: "the History panel's explanation behind its (?), and its status still in the open",
+    what: "History and Publications: the explanation behind the (?), the state still printed",
     needs: ['workspace'],
     /*
-     * Builds a tool and an agent of its own and takes both away, because the
-     * half that would go unnoticed needs a component with no history: the
-     * panel's "Nothing yet…" is a status rather than an explanation and stays
+     * Builds a tool, an agent and a workflow of its own and takes them away,
+     * because the half that would go unnoticed needs a component with nothing
+     * in its history and a workflow nobody has published: "Nothing yet." and
+     * "Never published." are statuses rather than explanations and stay
      * printed, and a check that only asked for the absence of prose would pass
-     * a panel that had deleted it.
+     * a panel that had deleted them.
+     *
+     * Both directions, because the status is the half that goes wrong twice
+     * over. It is asserted as the whole string the panel draws rather than a
+     * substring of it - a status that runs on into a second sentence about how
+     * the panel fills is teaching, and the (?) beside it is where that goes -
+     * and every sentence that left the screen is asked for by name in the note,
+     * so trimming one on the way behind the control is a failure rather than a
+     * tidier screen.
      */
   },
 

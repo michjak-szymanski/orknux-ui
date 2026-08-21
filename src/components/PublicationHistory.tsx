@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { fetchWorkflowPublications, restoreWorkflowPublication } from '../api/revisions';
 import type { WorkflowPublication } from '../api/revisions';
 import { timeAgo } from '../api/tools';
+import { FieldHint } from './FieldHint';
 import { Loader } from './Loader';
 import styles from './RevisionHistory.module.css';
 
@@ -66,11 +67,35 @@ export function PublicationHistory({ workspaceId, workflowId, onRestored }: Publ
 
   return (
     <section className={styles.history} aria-label="Publications">
-      <h2 className={styles.heading}>Publications</h2>
-      <p className={styles.note}>
-        A workflow’s versions are what was published, not what was saved — a draft is a draft. The
-        newest publication is what triggers and schedules run.
-      </p>
+      {/*
+        What a publication is, behind the (?) rather than under the heading.
+
+        The same split the History panel next door was given, and it is cleaner
+        here: the paragraph explains what a version of a workflow *is*, which is
+        a thing to be told once, and the line below it is the state of this
+        workflow, which is a thing to be told every time.
+
+        Three sentences, and the middle one arrived from below. The empty state
+        used to read "Never published. Publishing this workflow makes a version
+        of it, and it will appear here" - a state and then a lesson in how the
+        panel fills, which is what the (?) beside it is for. The state stayed;
+        the lesson moved up here and is said once.
+
+        Nothing is shortened on the way in. "The newest publication is what
+        triggers and schedules run" is the one fact somebody needs before
+        restoring an older one - a note that explained what a version is and
+        left out which one runs would be the wrong half kept.
+      */}
+      <h2 className={styles.heading}>
+        <span className={styles.headingWithHint}>
+          Publications
+          <FieldHint label="Publications">
+            A workflow’s versions are what was published, not what was saved — a draft is a
+            draft. Publishing this workflow makes a version of it, and it appears here. The
+            newest publication is what triggers and schedules run.
+          </FieldHint>
+        </span>
+      </h2>
 
       {error !== null && (
         <p className={styles.error} role="alert">
@@ -81,9 +106,8 @@ export function PublicationHistory({ workspaceId, workflowId, onRestored }: Publ
       {publications === null ? (
         <Loader />
       ) : publications.length === 0 ? (
-        <p className={styles.empty}>
-          Never published. Publishing this workflow makes a version of it, and it will appear here.
-        </p>
+        // The state of this workflow, and only that. The rest is in the (?).
+        <p className={styles.empty}>Never published.</p>
       ) : (
         <ul className={styles.list}>
           {publications.map((publication) => (

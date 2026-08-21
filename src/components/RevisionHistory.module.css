@@ -36,7 +36,11 @@
   gap: var(--space-6);
 }
 
-.note,
+/*
+ * `.note` is gone from here, and not by accident: it styled the paragraph under
+ * each of these two headings, and both are behind a (?) now. What is left is
+ * the state of the thing being looked at and the line under a Restore button.
+ */
 .empty,
 .undo {
   margin: 0;
