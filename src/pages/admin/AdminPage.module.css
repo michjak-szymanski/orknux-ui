@@ -142,20 +142,7 @@
 }
 
 .rowAction {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  background: none;
-  border: 0;
-  border-radius: var(--radius-6);
-  cursor: pointer;
-}
-
-.rowAction:hover {
-  background: var(--color-surface-raised);
+  composes: iconButton from '../../styles/iconButton.module.css';
 }
 
 .removeWorkspace {

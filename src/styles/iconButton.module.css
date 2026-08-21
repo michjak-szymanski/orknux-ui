@@ -1,0 +1,41 @@
+/*
+ * An icon button with no chrome of its own: a switch in a row, a refresh, a
+ * glyph that acts on the thing beside it.
+ *
+ * The sibling of `rowAction.module.css`, and it exists for the same reason one
+ * file up: these were declared over and over - `.toggle` in seven stylesheets,
+ * `.rowAction` in the two pages that draw the borderless kind - and most of
+ * them answered the pointer with nothing at all. The ones that did answer lifted
+ * the background to `--color-surface-raised`, which on a page already painted
+ * `--color-surface` is six values away and invisible.
+ *
+ * A bordered square can lift its border. This kind has none, so the only thing
+ * it can lift is a fill - and to have a fill it needs somewhere to put one. The
+ * padding is that somewhere, and the negative margin gives it back, so a row of
+ * these sits exactly where it sat while gaining a box big enough to see and a
+ * click target bigger than the glyph.
+ */
+.iconButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  margin: calc(var(--space-6) * -1);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-6);
+  cursor: pointer;
+}
+
+.iconButton:hover {
+  background: var(--color-surface-hover);
+}
+
+.iconButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.iconButton:disabled:hover {
+  background: none;
+}

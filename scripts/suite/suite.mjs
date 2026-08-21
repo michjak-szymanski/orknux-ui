@@ -294,6 +294,25 @@ export const TESTS = [
      */
   },
 
+  {
+    name: 'hover-sweep-check',
+    what: 'every small icon control on seventeen pages answers the pointer',
+    needs: ['workspace'],
+    /*
+     * The wide one. `row-action-check` proves four pages and the stylesheets
+     * behind them, and passed while a fifth of the product's icon controls did
+     * nothing - the same square was declared as `.settings`, `.addMenu`,
+     * `.refresh` and a bare `.toggle` in nine more files, and a check built
+     * around names somebody already knew could not find any of them.
+     *
+     * This one knows no names: it finds everything drawn at about the size of
+     * an icon button and hovers it. It also counts "could not reach it"
+     * separately from "it did not respond" - the first version turned a
+     * swallowed hover error into fifteen false findings on the triggers page,
+     * whose buttons were simply off the right-hand edge.
+     */
+  },
+
   // --- pages that are pages -------------------------------------------------
   {
     name: 'admin-width-check',

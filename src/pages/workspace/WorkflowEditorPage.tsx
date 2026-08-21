@@ -1389,6 +1389,21 @@ function withDefinition<T extends { id: string }>(all: T[], one: T): T[] {
  * more thing to learn. A session has no catalogue entry to take an icon from,
  * so it uses the one `addNode` gives a new session node.
  */
+/**
+ * The order the Add menu offers them in.
+ *
+ * Written out rather than taken from `Object.keys(NODE_KIND_LABEL)`, which is
+ * where it used to come from - so the menu's order was whatever order somebody
+ * had happened to declare the labels in, and the two LLM kinds sat first and
+ * last with three unrelated things between them.
+ *
+ * The shape is: the four that make a graph, in the order somebody builds one,
+ * and then the two that are about a model. Which is the grouping being asked
+ * for - things that belong together are next to each other, and a list is the
+ * only place that can be said.
+ */
+const ADD_ORDER: NodeKind[] = ['TRIGGER', 'ACTION', 'CONDITION', 'OBJECT', 'AGENT', 'SESSION'];
+
 const ADD_ICON: Record<NodeKind, string> = {
   TRIGGER: bellIcon,
   AGENT: botIcon,
@@ -3364,7 +3379,7 @@ Change the keystroke in Preferences.`}
             </button>
             {adding && (
               <div className={styles.addDropdown} role="menu">
-                {(Object.keys(NODE_KIND_LABEL) as NodeKind[]).map((kind) => (
+                {ADD_ORDER.map((kind) => (
                   <button
                     key={kind}
                     type="button"

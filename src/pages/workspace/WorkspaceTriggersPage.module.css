@@ -27,20 +27,7 @@
 }
 
 .refresh {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  background: var(--color-surface-raised);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-6);
-  cursor: pointer;
-}
-
-.refresh:hover {
-  border-color: var(--color-text-muted);
+  composes: rowAction from '../../styles/rowAction.module.css';
 }
 
 .titleGroup {
@@ -262,29 +249,11 @@
 }
 
 .toggle {
-  display: flex;
-  align-items: center;
-  padding: 0;
-  background: none;
-  border: 0;
-  cursor: pointer;
+  composes: iconButton from '../../styles/iconButton.module.css';
 }
 
 .rowAction {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  background: none;
-  border: 0;
-  border-radius: var(--radius-6);
-  cursor: pointer;
-}
-
-.rowAction:hover {
-  background: var(--color-surface-raised);
+  composes: iconButton from '../../styles/iconButton.module.css';
 }
 
 /* ---- Loading / empty / error ---- */
