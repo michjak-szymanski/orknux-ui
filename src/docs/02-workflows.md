@@ -251,6 +251,14 @@ There is one published copy per workflow and publishing replaces it. There is no
 history to browse and nothing to roll back to, so the way back to a graph you
 preferred is the editor's own **Discard**, before it is published over.
 
+**What is published is the graph, not the components it calls.** The copy holds
+the nodes, what each one passes and the arrows between them - and, for the
+function, agent or condition a node names, only which one. Editing that function
+changes what the published workflow does the next time it runs. Nothing is
+republished and the badge does not change, because the graph did not. If you need
+a published workflow to keep behaving exactly as it does, take a copy of the
+function rather than editing the one it calls.
+
 ## Running
 
 ![The executions list: every run, how it ended, how long it took and what started it](/screens/executions.png)
