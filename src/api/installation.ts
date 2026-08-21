@@ -29,11 +29,23 @@ export interface InstallationSettings {
    * the page can say which of the two is actually in force when they differ.
    */
   metricsAnonymousConfigured: boolean;
+  /**
+   * How many days of component history are kept.
+   *
+   * A version of a function, tool, skill or agent is a whole copy of what it
+   * was before a save — the code, the parameters, the prompt — so this is the
+   * number that decides how much disk the history takes. Fourteen days unless
+   * an administrator has said otherwise.
+   */
+  revisionRetentionDays: number;
+  /** What a fresh installation would keep: ORKNUX_REVISION_RETENTION_DAYS. */
+  revisionRetentionDaysConfigured: number;
 }
 
 const FIELDS =
   'attachmentsEnabled attachmentsConfigurable attachmentStorage attachmentLocation attachmentMaxFileSizeMb ' +
-  'chatEnabled chatConfigurable metricsAnonymous metricsAnonymousConfigured';
+  'chatEnabled chatConfigurable metricsAnonymous metricsAnonymousConfigured ' +
+  'revisionRetentionDays revisionRetentionDaysConfigured';
 
 export async function fetchInstallationSettings(): Promise<InstallationSettings> {
   const data = await graphql<{ installationSettings: InstallationSettings }>(
@@ -75,4 +87,21 @@ export async function setMetricsAnonymous(enabled: boolean): Promise<Installatio
     { enabled },
   );
   return data.setMetricsAnonymous;
+}
+
+/**
+ * How long a component's history is kept before the sweep takes it.
+ *
+ * Between 1 and 3650 days; anything else is refused with a message saying so.
+ * Administrators only, and recorded in the audit log. The sweep reads it on
+ * every pass, so it takes effect without a restart.
+ */
+export async function setRevisionRetentionDays(days: number): Promise<InstallationSettings> {
+  const data = await graphql<{ setRevisionRetentionDays: InstallationSettings }>(
+    `mutation SetRevisionRetentionDays($days: Int!) {
+       setRevisionRetentionDays(days: $days) { ${FIELDS} }
+     }`,
+    { days },
+  );
+  return data.setRevisionRetentionDays;
 }

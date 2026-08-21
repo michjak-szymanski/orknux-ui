@@ -201,3 +201,66 @@
 .noticeError {
   color: var(--color-danger-solid);
 }
+
+/* ---- Component history ---- */
+
+/*
+ * A number, its unit and the button that stores it, on one line.
+ *
+ * The unit is beside the field rather than in the label because the field is a
+ * number and "14" alone is not an answer to anything. The button is separate
+ * from the switches above it for the reason the value differs from a switch:
+ * a toggle is decided the moment it is pressed, and a number is not decided
+ * until somebody has finished typing it.
+ */
+.retention {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.retention .input {
+  width: 6rem;
+}
+
+.retentionUnit {
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+.input {
+  padding: var(--space-10) var(--space-14);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  font-family: inherit;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.input:focus {
+  border-color: var(--color-accent-brand);
+  outline: none;
+}
+
+.input:disabled {
+  opacity: 0.6;
+}
+
+.primaryButton {
+  padding: var(--space-10) var(--space-24);
+  background: var(--color-accent-brand);
+  border: 0;
+  border-radius: var(--radius-8);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.primaryButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

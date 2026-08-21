@@ -132,6 +132,11 @@ export const TESTS = [
     what: 'the six admin screens, same story',
     needs: ['session'],
   },
+  {
+    name: 'revision-retention-check',
+    what: 'how long component history is kept: typed, saved, reloaded, and zero refused',
+    needs: ['session'],
+  },
 
   // --- pages that are pages -------------------------------------------------
   {

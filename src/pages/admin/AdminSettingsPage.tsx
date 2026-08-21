@@ -5,6 +5,7 @@ import {
   setAttachmentsEnabled,
   setChatEnabled,
   setMetricsAnonymous,
+  setRevisionRetentionDays,
 } from '../../api/installation';
 import type { InstallationSettings } from '../../api/installation';
 import type { SessionUser } from '../../api/session';
@@ -37,10 +38,21 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
+  /**
+   * What is typed in the retention box, as text.
+   *
+   * Kept apart from `settings` because a half-typed number is not a setting: a
+   * field bound straight to the stored value cannot be cleared to type a new
+   * one without saving an empty string on the way through.
+   */
+  const [retention, setRetention] = useState('');
 
   useEffect(() => {
     fetchInstallationSettings()
-      .then(setSettings)
+      .then((held) => {
+        setSettings(held);
+        setRetention(String(held.revisionRetentionDays));
+      })
       .catch((cause: unknown) => {
         setError(cause instanceof Error ? cause.message : 'Could not read the settings.');
       });
@@ -54,7 +66,9 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
     setError(null);
     setSaved(false);
     try {
-      setSettings(await change());
+      const held = await change();
+      setSettings(held);
+      setRetention(String(held.revisionRetentionDays));
       // The shell reads the same settings to decide whether to offer the Chat
       // tab, so it is told rather than left showing a link to a page that is off.
       forgetInstallation();
@@ -253,6 +267,62 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
                 </>
               )}
             </p>
+
+            <h2 className={styles.sectionHeading}>Component history</h2>
+
+            <div className={styles.setting}>
+              <div className={styles.settingText}>
+                <p className={styles.settingLabel}>How long versions are kept</p>
+                <p className={styles.settingNote}>
+                  Every save of a function, tool, skill or agent keeps what it was before, and every
+                  publication of a workflow is kept as a version of it. A version is a whole copy —
+                  the code, the parameters, the prompt — so this is what decides how much disk the
+                  history takes. Counted from when a version stopped being current, not from when it
+                  was written. A workflow’s live publication is never swept, however old it is.
+                </p>
+              </div>
+              <div className={styles.retention}>
+                <input
+                  id="revision-retention-days"
+                  name="revisionRetentionDays"
+                  className={styles.input}
+                  type="number"
+                  min={1}
+                  max={3650}
+                  value={retention}
+                  onChange={(event) => setRetention(event.target.value)}
+                  disabled={busy}
+                  aria-label="How many days of component history to keep"
+                />
+                <span className={styles.retentionUnit}>days</span>
+                <button
+                  type="button"
+                  className={styles.primaryButton}
+                  onClick={() => void save(() => setRevisionRetentionDays(Number(retention)))}
+                  disabled={
+                    busy ||
+                    retention.trim() === '' ||
+                    Number(retention) === settings.revisionRetentionDays
+                  }
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+
+            {/*
+              The same rival the metrics switch has: the environment says what a
+              fresh installation keeps, and a stored answer takes over from
+              there. Said only where they differ, because an operator who edited
+              their config file and finds it ignored is owed the reason.
+            */}
+            {settings.revisionRetentionDays !== settings.revisionRetentionDaysConfigured && (
+              <p className={styles.fieldNote}>
+                <code>ORKNUX_REVISION_RETENTION_DAYS</code> in the environment says{' '}
+                {settings.revisionRetentionDaysConfigured} days, but an administrator stored{' '}
+                {settings.revisionRetentionDays} here, and the stored answer is the one in force.
+              </p>
+            )}
 
             {saved && <p className={styles.saved}>Saved.</p>}
           </>
