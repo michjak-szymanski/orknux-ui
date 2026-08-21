@@ -477,7 +477,60 @@ export const TESTS = [
      */
   },
 
+  {
+    name: 'chat-copy-check',
+    what: "the copy control under the message it copies, on the bubble's edge and not the column's",
+    needs: ['workspace'],
+    /*
+     * Reads the chat the seed builds, found by title rather than by id. It
+     * asserts two things about one control because either alone passes for the
+     * wrong reason: under the bubble, and sharing its right edge. The third and
+     * fourth are the other half of issue #188 - a sent message and an answer
+     * were revealed by two different mechanisms, and only one of them was
+     * reachable from a keyboard.
+     */
+  },
+  {
+    name: 'row-action-cursor-check',
+    what: 'every icon control in a workflow row says it is clickable',
+    needs: ['workspace'],
+    /*
+     * Reads every control in the Actions column rather than the one that was
+     * reported. The fault was the shared class, not the button: two of the
+     * three were wrong and the third only looked right because it is an
+     * `<a href>`. Naming what it found means a fourth control added later is
+     * covered without anybody editing the check.
+     */
+  },
+  {
+    name: 'prompt-padding-check',
+    what: 'the system prompt box and the description box agree about their padding',
+    needs: ['workspace'],
+    /*
+     * Agreement rather than a number, which is what issue #190 asked for: a
+     * change to the shared class moves both and this still passes, while a
+     * change that moves one of them is the bug it was written for. It measures
+     * box edge to first line as well as the padding, because a box that centres
+     * its contents pads correctly and still reads wrong - which is exactly what
+     * was happening.
+     */
+  },
+
   // --- connections and transfer ---------------------------------------------
+  {
+    name: 'secret-reveal-check',
+    what: 'one eye for every stored credential, and it hides again',
+    needs: ['workspace'],
+    /*
+     * Issue #191. It asserts the three things that were wrong rather than that
+     * a control exists: no text on it, an accessible name that changes with the
+     * state, and a second press that puts the secret away - which the provider
+     * and MCP forms could not do at all. It reads the variables page beside
+     * them, since agreeing with that page is the whole request and a check that
+     * only read what changed would pass while the two drifted apart again from
+     * the other side.
+     */
+  },
   {
     name: 'slack-connection-check',
     what: 'one Slack connection type, made through the dialog and finished on its page',
