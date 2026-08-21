@@ -1254,45 +1254,6 @@ select.input {
   min-width: 0;
 }
 
-/* How many goes, and how long between them: one policy, so one row. */
-.retryFields {
-  display: flex;
-  gap: var(--space-8);
-}
-
-.retryField {
-  display: flex;
-  flex: 1 1 0;
-  flex-direction: column;
-  gap: var(--space-4);
-  min-width: 0;
-}
-
-/*
- * Two boxes side by side need saying which is which, and the panel's own label
- * is already spent on the pair of them.
- */
-.retryCaption {
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-}
-
-/* Nothing to wait between one attempt, so the box is not one to type into. */
-.retryFieldOff {
-  opacity: 0.5;
-}
-
-.retryFieldOff .inputWrapper {
-  background: var(--color-surface-raised);
-}
-
-.retryUnit {
-  flex: none;
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-}
-
 /*
  * A switch in the panel: one thing to turn on, with the words beside it rather
  * than above, since the sentence is what says what turning it on does.

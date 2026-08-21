@@ -65,16 +65,33 @@ export interface GraphNode {
    * for what it said - never spends one of them.
    */
   retryAttempts?: number | null;
-  /** How long a failed attempt is left alone before the next, in seconds. */
+  /** The wait before the second attempt, in seconds; null is none. */
   retryBackoffSeconds?: number | null;
   /**
-   * How that wait grows from one attempt to the next; null is FIXED.
+   * What that wait is multiplied by after each attempt; null is one.
    *
-   * EXPONENTIAL doubles it each time - the first retry waits what the node
-   * says and every one after it waits twice the last. The server caps a single
-   * wait at an hour however far the doubling would have gone.
+   * One repeats the wait, two doubles it, and the numbers between are the
+   * curves a checkbox could not say. However steep it is, the server caps a
+   * single wait at an hour.
    */
-  retryBackoff?: RetryBackoff | null;
+  retryMultiplier?: number | null;
+  /**
+   * The most any one wait may come to, in seconds; null is the server's hour.
+   * Kept only under a multiplier above one, since a wait that never grows is
+   * not bounded by a ceiling but shortened by it.
+   */
+  retryMaxWaitSeconds?: number | null;
+  /**
+   * The fraction of a wait that may be taken off it at random; null is none.
+   * Downward only, so every other number here stays an upper bound.
+   */
+  retryJitter?: number | null;
+  /**
+   * The longest this node may go on being attempted for, in seconds, work
+   * included; null is no limit beyond the attempts. A node that reaches it
+   * stops with the attempts it had left unspent.
+   */
+  retryBudgetSeconds?: number | null;
   /**
    * What this node passes, decided here rather than on the definition. Seeded
    * from the action when one is picked; editing it touches only this node.
@@ -87,9 +104,6 @@ export interface GraphNode {
   x: number;
   y: number;
 }
-
-/** How the wait between two attempts of a node grows. */
-export type RetryBackoff = 'FIXED' | 'EXPONENTIAL';
 
 /** One parameter and what the node puts in it: an expression, or a plain value. */
 /** Whether a parameter holds something written or something read from the run. */
@@ -167,7 +181,8 @@ const GRAPH_FIELDS = `
   enabled
   nodes {
     key kind name description agentId triggerId actionId conditionId objectId outputName icon orientation
-    yesLabel noLabel fallbackEnabled retryAttempts retryBackoffSeconds retryBackoff x y
+    yesLabel noLabel fallbackEnabled retryAttempts retryBackoffSeconds
+    retryMultiplier retryMaxWaitSeconds retryJitter retryBudgetSeconds x y
     mappings { name expression mode sourceNodeKey }
     inputs { name type display }
     outputs { name type display }

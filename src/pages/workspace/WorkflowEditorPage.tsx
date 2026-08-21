@@ -47,7 +47,6 @@ import type {
   NodeKind,
   NodeOrientation,
   NodeMapping,
-  RetryBackoff,
   WorkflowStatus,
 } from '../../api/graph';
 import type { SessionUser } from '../../api/session';
@@ -86,6 +85,7 @@ import { ExportComponentDialog } from '../../components/ComponentTransfer';
 import { ConditionDialog } from '../../components/ConditionDialog';
 import { DefinitionPicker } from '../../components/DefinitionPicker';
 import { FieldHint } from '../../components/FieldHint';
+import { RetryPolicyFields } from './RetryPolicyFields';
 import { CreateAgentDialog } from '../../components/CreateAgentDialog';
 import { NameDialog } from '../../components/NameDialog';
 import { CreateTriggerDialog } from '../../components/CreateTriggerDialog';
@@ -142,13 +142,18 @@ interface NodeData extends Record<string, unknown> {
    */
   retryBackoffSeconds?: number | null;
   /**
-   * How that wait grows from one attempt to the next; null is the fixed one
-   * every node had before there was a choice. Doubling is for the failure that
-   * is a queue rather than a blip - a rate limit, a provider still coming back
-   * up - where three attempts on one short clock are three attempts spent
-   * inside the same bad minute.
+   * What that wait is multiplied by after each attempt; null is one, which is
+   * the wait repeated - what every node did before there was a choice. Two is
+   * the doubling a checkbox used to offer, and the numbers between are the
+   * curves it could not: a wait that grows without trebling by the fourth go.
    */
-  retryBackoff?: RetryBackoff | null;
+  retryMultiplier?: number | null;
+  /** The most any one wait may come to; null is the server's own hour. */
+  retryMaxWaitSeconds?: number | null;
+  /** The fraction of a wait taken off it at random; null is none. */
+  retryJitter?: number | null;
+  /** The longest this node may go on being attempted for; null is no limit. */
+  retryBudgetSeconds?: number | null;
   name: string;
   description: string | null;
   /** The agent an agent node instances; it supplies the model and instructions. */
@@ -1134,21 +1139,6 @@ function waysOut(node: NodeData): { yes: string; no: string } {
 }
 
 /**
- * A whole number typed into a box, held inside what the server will take.
- *
- * Empty comes back null rather than zero, because a box nobody has filled in is
- * the absence of a policy and not a policy of none. Held to the range here as
- * well as on the server, so the panel never shows a number that would come back
- * from a save as a different one.
- */
-function whole(typed: string, least: number, most: number): number | null {
-  if (typed.trim() === '') return null;
-  const held = Number.parseInt(typed, 10);
-  if (Number.isNaN(held)) return null;
-  return Math.min(most, Math.max(least, held));
-}
-
-/**
  * Two ways out of one node, spaced along whichever edge they leave by.
  *
  * A condition leaves by the answer it gave; an action that handles its own
@@ -2011,7 +2001,10 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
               fallbackEnabled: node.fallbackEnabled ?? false,
               retryAttempts: node.retryAttempts ?? null,
               retryBackoffSeconds: node.retryBackoffSeconds ?? null,
-              retryBackoff: node.retryBackoff ?? null,
+              retryMultiplier: node.retryMultiplier ?? null,
+              retryMaxWaitSeconds: node.retryMaxWaitSeconds ?? null,
+              retryJitter: node.retryJitter ?? null,
+              retryBudgetSeconds: node.retryBudgetSeconds ?? null,
               agentId: node.agentId,
               triggerId: node.triggerId,
               actionId: node.actionId,
@@ -2256,7 +2249,10 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           fallbackEnabled: false,
           retryAttempts: null,
           retryBackoffSeconds: null,
-          retryBackoff: null,
+          retryMultiplier: null,
+          retryMaxWaitSeconds: null,
+          retryJitter: null,
+          retryBudgetSeconds: null,
           /*
            * Every other kind takes its icon from the definition it points at.
            * A session points at nothing - the key it holds is the whole of it -
@@ -2406,7 +2402,10 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           data.fallbackEnabled === draft.fallbackEnabled &&
           data.retryAttempts === draft.retryAttempts &&
           data.retryBackoffSeconds === draft.retryBackoffSeconds &&
-          data.retryBackoff === draft.retryBackoff &&
+          data.retryMultiplier === draft.retryMultiplier &&
+          data.retryMaxWaitSeconds === draft.retryMaxWaitSeconds &&
+          data.retryJitter === draft.retryJitter &&
+          data.retryBudgetSeconds === draft.retryBudgetSeconds &&
           sameMappings(data.mappings, shown.mappings);
         if (same) return node;
         setSaved(false);
@@ -2710,9 +2709,18 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
            * no orphaned number behind on the node.
            */
           retryBackoffSeconds: (data.retryAttempts ?? 1) > 1 ? (data.retryBackoffSeconds ?? null) : null,
-          // Same rule, same reason: a curve describes how a wait grows between
-          // attempts, and there is nothing for it to describe with one.
-          retryBackoff: (data.retryAttempts ?? 1) > 1 ? (data.retryBackoff ?? null) : null,
+          // Same rule, same reason, for the whole of the backoff: every one of
+          // these describes the gap between two attempts, and with one attempt
+          // there is no gap for any of them to describe.
+          retryMultiplier: (data.retryAttempts ?? 1) > 1 ? (data.retryMultiplier ?? null) : null,
+          // And a ceiling only under a curve that can reach it: over a wait that
+          // never grows it does not bound the wait, it shortens it.
+          retryMaxWaitSeconds:
+            (data.retryAttempts ?? 1) > 1 && (data.retryMultiplier ?? 1) > 1
+              ? (data.retryMaxWaitSeconds ?? null)
+              : null,
+          retryJitter: (data.retryAttempts ?? 1) > 1 ? (data.retryJitter ?? null) : null,
+          retryBudgetSeconds: (data.retryAttempts ?? 1) > 1 ? (data.retryBudgetSeconds ?? null) : null,
           mappings: data.mappings,
           x: node.position.x,
           y: node.position.y,
@@ -4051,122 +4059,18 @@ Change the keystroke in Preferences.`}
 
                 {/*
                   What the node does about failing, which is two decisions and
-                  not one: how many goes it gets, and where the run goes once it
-                  has used them up. An action and an agent have both - every
-                  other kind either asks a question or hands something on, and
-                  neither can fail in a way a second go would fix.
+                  not one: how many goes it gets and on what clock, and where the
+                  run goes once it has used them up. An action and an agent have
+                  both - every other kind either asks a question or hands
+                  something on, and neither can fail in a way a second go would
+                  fix.
+
+                  The backoff is its own component, because six numbers with the
+                  arithmetic that reads them back as a sentence is a thing in
+                  itself and not four hundred more lines of this file.
                 */}
                 {handlesFailure(draft.kind) && (
-                  <div className={styles.field}>
-                    <span className={styles.labelWithHint}>
-                      <span className={styles.label}>Retries</span>
-                      <FieldHint label="Retries">
-                        <p>
-                          How many goes in all, not extra ones: one is the single attempt every step has
-                          always had. The wait is the one before the first retry — the same before every
-                          one after it, or twice the last if it doubles, and never more than an hour
-                          however far the doubling would have gone.
-                        </p>
-                        <p>
-                          {draft.kind === 'AGENT' ? (
-                            <>
-                              A model that refused the request for what it said is settled and is never asked
-                              again, however many attempts are allowed; one that timed out, was rate limited or
-                              could not be reached is. Every attempt is another call you are billed for.
-                            </>
-                          ) : (
-                            <>
-                              A failure the server has already settled — a channel that does not exist, a request
-                              refused for what it said — is never tried again however many are asked for.
-                            </>
-                          )}
-                        </p>
-                      </FieldHint>
-                    </span>
-                    <div className={styles.retryFields}>
-                      <label className={styles.retryField}>
-                        <span className={styles.retryCaption}>Attempts</span>
-                        <div className={styles.inputWrapper}>
-                          <input
-                            className={styles.input}
-                            type="number"
-                            min={1}
-                            max={10}
-                            step={1}
-                            placeholder="1"
-                            value={draft.retryAttempts ?? ''}
-                            onChange={(event) =>
-                              setDraft({ ...draft, retryAttempts: whole(event.target.value, 1, 10) })
-                            }
-                          />
-                        </div>
-                      </label>
-                      {/*
-                        Dead while there is one attempt, because a wait between
-                        attempts describes nothing when there is nothing to wait
-                        between. Left live it reads as a delay before the action,
-                        which is not what it is and not what the server would do
-                        with it - so it goes grey and empties itself, and a
-                        number is taken again once a second attempt gives it
-                        something to sit between.
-                      */}
-                      <label
-                        className={
-                          (draft.retryAttempts ?? 1) > 1
-                            ? styles.retryField
-                            : `${styles.retryField} ${styles.retryFieldOff}`
-                        }
-                      >
-                        <span className={styles.retryCaption}>Wait between</span>
-                        <div className={styles.inputWrapper}>
-                          <input
-                            className={styles.input}
-                            type="number"
-                            min={0}
-                            max={3600}
-                            step={1}
-                            placeholder={(draft.retryAttempts ?? 1) > 1 ? '0' : '—'}
-                            disabled={(draft.retryAttempts ?? 1) <= 1}
-                            value={(draft.retryAttempts ?? 1) > 1 ? (draft.retryBackoffSeconds ?? '') : ''}
-                            onChange={(event) =>
-                              setDraft({
-                                ...draft,
-                                retryBackoffSeconds: whole(event.target.value, 0, 3600),
-                              })
-                            }
-                          />
-                          <span className={styles.retryUnit}>s</span>
-                        </div>
-                      </label>
-                    </div>
-                    {/*
-                      The curve, as one thing to switch on rather than two named
-                      alternatives. There are two of them and one is what every
-                      node already does, so a pair of radio buttons would spend
-                      three lines of a narrow panel naming the default - and it
-                      goes dead with the wait it shapes, for the same reason.
-                    */}
-                    <label
-                      className={
-                        (draft.retryAttempts ?? 1) > 1
-                          ? styles.checkRow
-                          : `${styles.checkRow} ${styles.retryFieldOff}`
-                      }
-                    >
-                      <input
-                        type="checkbox"
-                        checked={draft.retryBackoff === 'EXPONENTIAL'}
-                        disabled={(draft.retryAttempts ?? 1) <= 1}
-                        // Off is null rather than FIXED: a node that never had a
-                        // curve should come back from the panel exactly as it
-                        // went in, and not as an edit to save.
-                        onChange={(event) =>
-                          setDraft({ ...draft, retryBackoff: event.target.checked ? 'EXPONENTIAL' : null })
-                        }
-                      />
-                      <span>Double the wait after each attempt</span>
-                    </label>
-                  </div>
+                  <RetryPolicyFields draft={draft} onChange={(patch) => setDraft({ ...draft, ...patch })} />
                 )}
 
                 {handlesFailure(draft.kind) && (

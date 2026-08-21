@@ -1,0 +1,141 @@
+/*
+ * The retry panel's own styles.
+ *
+ * Its own file rather than more rules in the editor's sheet, because the panel
+ * is its own component now and a component whose styles live in somebody else's
+ * stylesheet is a component that cannot be moved. What is here is what the
+ * editor's field, label and input already looked like - copied deliberately, so
+ * the panel reads as one thing whichever sheet a rule came from.
+ */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.labelWithHint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.inputWrapper {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+}
+
+.inputWrapper:focus-within {
+  border-color: var(--color-accent-brand);
+}
+
+.input {
+  flex: 1 0 0;
+  min-width: 0;
+  padding: var(--space-8) 0;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.input:focus {
+  outline: none;
+}
+
+/* Three narrow boxes across, which is what fits in the panel's width. */
+.retryFields {
+  display: flex;
+  gap: var(--space-8);
+}
+
+.retryField {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+/*
+ * Boxes side by side need saying which is which, and the panel's own label is
+ * already spent on the set of them.
+ */
+.retryCaption {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* Nothing to wait between one attempt, so the box is not one to type into. */
+.retryFieldOff {
+  opacity: 0.5;
+}
+
+.retryFieldOff .inputWrapper {
+  background: var(--color-surface-raised);
+}
+
+/* The unit, and the multiplication sign, which sit outside the number. */
+.retryUnit {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/*
+ * What the numbers above come to, said as a sentence.
+ *
+ * Quieter than the fields and immediately under them, because it is a reading
+ * of what was typed and not another thing to type - and larger than the
+ * captions, because it is the line anybody actually checks.
+ */
+.retrySentence {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+}
+
+/*
+ * The way to the three that most nodes never set.
+ *
+ * A word rather than a caret, and left-aligned under the sentence, so it reads
+ * as the end of the panel rather than as a fourth control in the row.
+ */
+.moreToggle {
+  align-self: flex-start;
+  padding: 0;
+  background: none;
+  border: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.moreToggle:hover:not(:disabled) {
+  color: var(--color-accent-brand);
+}
+
+.moreToggle:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
