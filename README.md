@@ -91,7 +91,7 @@ the app at `/docs`.
 
 **Where the routes live.** There is one registry rather than a router full of
 hand-written elements: `src/navigation.ts` holds `PAGES` — the path, who may see
-it, and how it is named in Go to — and `src/routes.tsx` maps each of those paths
+it, and how the search box names it — and `src/routes.tsx` maps each of those paths
 to a component. `PAGE_ELEMENTS` is typed as an exact record over the paths in
 `PAGES`, so a page added to one file and not the other is a compile error rather
 than a route that quietly does nothing. `src/App.tsx` writes out only the routes
@@ -198,14 +198,15 @@ run down the screen instead of off the side of it, and it is per node rather tha
 per graph. A condition draws two ways out, and both can be named — "Escalate" and
 "File it" read better than Yes and No.
 
-**The shell.** Go to searches the pages and the workspace's own things —
-workflows, actions, agents, issues and the rest — and opens what was chosen. The
+**The shell.** The box in the top bar — "Search or create…" — searches the pages
+and the workspace's own things — workflows, actions, agents, issues and the rest
+— and opens what was chosen, alongside a few things it can start. The
 bell beside it counts what has happened on the issues that concern you: looking
 does not clear it, and reading it does.
 
 **Shortcuts are rebindable**, on the Preferences page, and are remembered in the
-browser rather than against the account. Go to, Save, Format, Turn node, Undo and
-Redo each have one.
+browser rather than against the account. Search, Save, Format, Turn node, Undo
+and Redo each have one.
 
 # Licence
 
