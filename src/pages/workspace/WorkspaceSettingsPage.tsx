@@ -21,6 +21,7 @@ import { CatalogueNote, useCatalogue } from '../../components/Catalogue';
 import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { useInstallation } from '../../session/installation';
 import { shellUser } from '../../session/user';
 import { forgetWorkspaces } from '../../session/workspaces';
 import styles from './WorkspaceSettingsPage.module.css';
@@ -48,9 +49,46 @@ export interface WorkspaceSettingsPageProps {
 export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsPageProps) {
   const { workspaceId = '' } = useParams();
 
+  /*
+   * Whether this installation has a chat at all - issue #201.
+   *
+   * Three of the settings below are a chat's and nothing else's: what names a
+   * chat, what the microphone in a chat speaks to, what reads an answer aloud
+   * under one. With chat switched off they configure a screen nobody here can
+   * open, and this is the page an administrator goes to straight after
+   * switching it off.
+   *
+   * `=== true` rather than `!== false`, which is how the shell reads the same
+   * flag: absent while the settings are still unknown, so the card does not
+   * appear and take itself away a moment later.
+   */
+  const installation = useInstallation();
+  const hasChat = installation?.chatEnabled === true;
+
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /*
+   * Which card the message above belongs to.
+   *
+   * One saved-and-failed state serves every picker here, which was invisible
+   * while they all sat in one card and the message was drawn under the first
+   * field. They are two cards now - a chat's settings, and the AI button's -
+   * so the message has to be told which one it is about, or saving the Quick
+   * Chat model says "Saved." three fields further up, in a card that may not
+   * even be drawn.
+   */
+  const [about, setAbout] = useState<'chat' | 'quick'>('chat');
+
+  /*
+   * Where that message is actually drawn.
+   *
+   * The card it belongs to, unless that card is not on the page - the workspace
+   * failing to load reports itself through the same state, and with chat off
+   * there would be no chat card to print it in. One card is always drawn, so
+   * anything with nowhere else to go goes there.
+   */
+  const messageIn = hasChat ? about : 'quick';
 
   /** The General card's own draft, and its own saved and failed states. */
   const [name, setName] = useState('');
@@ -85,6 +123,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
   const models: Model[] = modelCatalogue.items;
 
   async function hear(modelId: string) {
+    setAbout('chat');
     setError(null);
     setSaved(false);
     try {
@@ -98,6 +137,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
   }
 
   async function quick(modelId: string) {
+    setAbout('quick');
     setError(null);
     setSaved(false);
     try {
@@ -111,6 +151,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
   }
 
   async function writes(allowed: boolean) {
+    setAbout('quick');
     setError(null);
     setSaved(false);
     try {
@@ -122,6 +163,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
   }
 
   async function read(modelId: string) {
+    setAbout('chat');
     setError(null);
     setSaved(false);
     try {
@@ -165,6 +207,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
   }
 
   async function choose(modelId: string) {
+    setAbout('chat');
     setError(null);
     setSaved(false);
     try {
@@ -276,6 +319,19 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         </form>
       )}
 
+      {/*
+        A chat's own settings, drawn only where the installation has a chat.
+
+        All three are about a screen and nothing else: what names a chat from
+        what was said, what the microphone in a chat speaks to, what reads an
+        answer aloud under one. With chat switched off they configure something
+        nobody in this installation can open - which is issue #201, reported
+        from this page. Dropped rather than disabled, for the reason the shell
+        drops the Chat link: a control that leads to "this is turned off" is a
+        worse answer than no control, and the admin screen is where the switch
+        actually is.
+      */}
+      {hasChat && (
       <section className={styles.card}>
         <div className={styles.sectionTitle}>
           <h2 className={styles.sectionHeading}>Chat</h2>
@@ -312,8 +368,8 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             </select>
             <img src={chevronDown12Icon} alt="" width={12} height={12} />
           </div>
-          {saved && <p className={styles.saved}>Saved.</p>}
-          {error !== null && (
+          {messageIn === 'chat' && saved && <p className={styles.saved}>Saved.</p>}
+          {messageIn === 'chat' && error !== null && (
             <p className={styles.error} role="alert">
               {error}
             </p>
@@ -418,10 +474,28 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
           )}
         </div>
 
-        {/*
-          The panel that opens beside the page. A chat model, because it is
-          asked questions and calls orknux's own tools to answer them.
-        */}
+      </section>
+      )}
+
+      {/*
+        The AI button, which is a card of its own rather than the last field of
+        the one above.
+
+        It shares a word with chat and is not the same feature: the switch on
+        the admin screen governs the chat screen - `ChatAPI` and
+        `ChatStreamAPI`, "off takes the tab away and refuses new messages" - and
+        the panel that opens over a page answers through its own endpoint and
+        goes on working. What turns *it* off is the None this field already
+        offers, which is why it is still here on an installation with no chat.
+        Folded in above, it would have gone with the card and left nobody a way
+        to switch off something that still answers.
+      */}
+      <section className={styles.card}>
+        <div className={styles.sectionTitle}>
+          <h2 className={styles.sectionHeading}>Quick Chat</h2>
+          <div className={styles.rule} />
+        </div>
+
         <div className={styles.field}>
           <span className={styles.labelWithHint}>
             <label className={styles.label} htmlFor="quick-chat-model">
@@ -484,6 +558,14 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                 reading. It cannot delete anything either way.
               </FieldHint>
             </div>
+          )}
+
+          {/* The same message the card above has, about this card's own saves. */}
+          {messageIn === 'quick' && saved && <p className={styles.saved}>Saved.</p>}
+          {messageIn === 'quick' && error !== null && (
+            <p className={styles.error} role="alert">
+              {error}
+            </p>
           )}
         </div>
       </section>

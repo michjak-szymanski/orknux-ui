@@ -300,6 +300,25 @@ export const TESTS = [
   },
 
   {
+    name: 'chat-off-check',
+    what: 'an installation with chat switched off stops offering chat’s settings',
+    needs: ['workspace'],
+    /*
+     * Issue #201. The only check here that changes an installation-wide
+     * setting: it turns chat off, reads the workspace's settings page, and puts
+     * the switch back in a `finally` - whatever happened in between, including
+     * a failed assertion - and then says out loud that it put it back. A check
+     * that leaves chat off is a check that broke the thing it was measuring,
+     * and every check after it would be reading a different product.
+     *
+     * It asserts what stays as carefully as what goes. The Quick Chat model is
+     * a different feature under the same word - the server's flag governs
+     * `ChatAPI` and `ChatStreamAPI`, and the panel answers through its own
+     * endpoint - so hiding it here would take away the only way to switch off
+     * something that still works.
+     */
+  },
+  {
     name: 'chat-header-check',
     what: 'the title bar is one row, its search searches, and its delete asks first',
     needs: [],
