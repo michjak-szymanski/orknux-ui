@@ -371,7 +371,14 @@ for (const one of screens) {
     record(body.includes(sentence), `${one.name}: "${sentence}" is still printed, as it must be`);
   }
 
-  const hints = page.locator('[data-hint]');
+  // `:visible`, and it matters. A native <dialog> stays in the document when it
+  // is shut - `TemplatePicker` opens with showModal() rather than being mounted
+  // and unmounted - so every (?) inside a closed dialog is still a `[data-hint]`
+  // in DOM order, ahead of anything on the screen behind it. Counting those
+  // inflates the total until a hint that really is missing still clears the
+  // floor below, and `.first()` picks one that cannot be hovered because no
+  // pointer can reach it. A (?) nobody can see is not a (?) that is drawn.
+  const hints = page.locator('[data-hint]:visible');
   const many = await hints.count();
   const labels = await hints.evaluateAll((all) => all.map((each) => each.getAttribute('data-hint')));
   record(many >= one.hints, `${one.name}: ${many} (?) drawn, expecting ${one.hints} [${labels.join(', ')}]`);
