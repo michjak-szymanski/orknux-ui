@@ -295,6 +295,55 @@ export const TESTS = [
   },
 
   {
+    name: 'composer-growth-check',
+    what: 'Shift+Enter grows the chat box a line at a time, up to the top, and then it scrolls',
+    needs: ['workspace'],
+    /*
+     * Issue #221. The box was one line with a 200px ceiling and no growth at
+     * all, so everything past the first line was written into a slot. The check
+     * measures the step rather than the direction: "it got bigger" passes on a
+     * `min-height` that jumps once and then sticks. It also types far past any
+     * fixed ceiling and asserts the title bar is still on screen - the first
+     * attempt at this grew for ever and pushed the header off the top, which
+     * only a measurement of where things landed could tell from working.
+     */
+  },
+
+  {
+    name: 'send-label-check',
+    what: 'the send button says what is happening: waiting for the model, then answering',
+    needs: ['workspace'],
+    /*
+     * Issue #220. "Sending…" stood from the press until the answer was
+     * complete, which is a message that left in the first few hundred bytes
+     * being reported as still going out for as long as the model thinks - while
+     * the conversation two inches below said "Waiting for Gemma 31B…".
+     *
+     * It stubs `fetch` for the one address the chat streams from, and only that
+     * one. Not to avoid the server: what is being checked is *when* each word
+     * is shown, and that timing is the model's - a seeded installation has none
+     * that answers, and a real one takes anything from half a second to two
+     * minutes. Everything else on the page is the real thing.
+     */
+  },
+
+  {
+    name: 'chat-selector-check',
+    what: 'the model picker is drawn at its full width, and the link out goes where the name says',
+    needs: ['workspace'],
+    /*
+     * Issue #219. The picker is 560px and was drawn 92px - it kept
+     * `max-width: 100%` when it moved from a bar across the screen into the
+     * title row, where 100% became the width of a model's name. Both halves are
+     * asserted, because either alone would have passed at some point: content
+     * clipped inside a box is not the same failure as a box drawn outside its
+     * panel, and this had both. The link the same report asked for is followed
+     * rather than counted - one that is present and points at the wrong row is
+     * the thing a "there is a link" assertion would miss.
+     */
+  },
+
+  {
     name: 'hover-sweep-check',
     what: 'every small icon control on seventeen pages answers the pointer',
     needs: ['workspace'],

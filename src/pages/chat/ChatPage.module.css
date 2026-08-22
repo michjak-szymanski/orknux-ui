@@ -355,6 +355,9 @@
   position: relative;
   display: flex;
   align-items: center;
+  /* Closer than the title bar's own 16px: the link out belongs to the name
+     beside it, and at the row's spacing it read as a fourth chat control. */
+  gap: var(--space-8);
 }
 
 .modelButton {
@@ -365,6 +368,28 @@
   background: none;
   border: 0;
   cursor: pointer;
+}
+
+/*
+ * The link out to the agent or model whose name is beside it. Same shape as
+ * the `.jump` in a dialog and the `.definitionLink` in the editor - the arrow
+ * leaving a box, in the brand colour, brightening on hover - because it does
+ * the same thing and a third look for it would be a third thing to learn.
+ *
+ * It is the icon's own box and nothing more: it sits between the name and the
+ * three controls that act on the chat, and any padding of its own would read as
+ * belonging to one side or the other.
+ */
+.definitionJump {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  color: var(--color-accent-brand);
+  text-decoration: none;
+}
+
+.definitionJump:hover {
+  color: var(--color-text-primary);
 }
 
 .modelName {
@@ -379,18 +404,37 @@
   color: var(--color-text-muted);
 }
 
+/*
+ * The list of models and agents, hanging under the name of whichever is
+ * answering.
+ *
+ * It is 560px wide and it was drawn 92px wide. `max-width: 100%` was left over
+ * from when this was a bar of its own across the screen, where 100% meant the
+ * screen; the bar became a name in the title row, so 100% became the width of
+ * the word "Gemma 31B" - and a max-width beats a width, so the search box, the
+ * two tabs and every model's name were squeezed into it and clipped. "Agents"
+ * was drawn 49px outside its own panel. Nothing about the list changed to cause
+ * it; the box it measures itself against did.
+ *
+ * Anchored right rather than left, because that is the edge it can trust. The
+ * button sits at the right-hand end of the title bar with the window's edge a
+ * hundred-odd pixels away, so 560px opening rightwards leaves the screen. The
+ * cap is against the viewport now, which is the thing that was meant all along.
+ */
 .picker {
   position: absolute;
-  top: 100%;
-  left: 0;
+  /* Clear of the name it belongs to, rather than welded under it: it is a
+     panel that floats over the conversation now, not the bottom half of a bar. */
+  top: calc(100% + var(--space-8));
+  right: 0;
   z-index: 30;
   display: flex;
   flex-direction: column;
   width: 560px;
-  max-width: 100%;
+  max-width: 90vw;
   background: var(--color-surface-raised);
   border: 1px solid var(--color-border);
-  border-radius: 0 0 var(--radius-8) var(--radius-8);
+  border-radius: var(--radius-8);
   box-shadow: 0 8px 24px rgb(0 0 0 / 40%);
   overflow: clip;
 }
@@ -837,10 +881,19 @@
   border-color: var(--color-accent-brand);
 }
 
+/*
+ * No `max-height` here on purpose - see the layout effect in ChatPage.tsx. The
+ * box grows a line at a time up to the top of the conversation, and how far
+ * that is is a measurement of the window rather than a number a stylesheet
+ * could know. Both `height` and `overflow-y` are written by that effect; the
+ * two declared here are what one line looks like before anything is typed.
+ */
 .composerInput {
   flex: 1 0 0;
   min-width: 0;
-  max-height: 200px;
+  height: 20px;
+  padding: 0;
+  overflow-y: hidden;
   background: none;
   border: 0;
   font-family: inherit;

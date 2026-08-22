@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { FormEvent, KeyboardEvent } from 'react';
 
@@ -63,6 +63,7 @@ import { useInstallation } from '../../session/installation';
 import { shellUser } from '../../session/user';
 import { lastWorkspaceId } from '../../session/lastWorkspace';
 import { FieldHint } from '../../components/FieldHint';
+import { OpenDefinitionIcon } from '../../components/OpenDefinitionIcon';
 import styles from './ChatPage.module.css';
 
 export interface ChatPageProps {
@@ -250,6 +251,7 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
   const [copied, setCopied] = useState<number | null>(null);
 
   const logRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   /** Set when the collapsed search icon was the thing that opened the column. */
   const wantsSearch = useRef(false);
@@ -458,6 +460,57 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight });
   }, [messages]);
+
+  /*
+   * The box is as tall as what has been typed into it, up to the top of the
+   * screen.
+   *
+   * It was one line and a `max-height` of 200px, which meant Shift+Enter put a
+   * second line somewhere the writer could not see: the field kept its 20px and
+   * scrolled, so a message being composed was read through a slot. A cap in
+   * pixels is the same mistake written differently - it is a guess at how much
+   * room there is, made in a stylesheet that cannot see the window.
+   *
+   * So the cap is measured instead. The column is header, conversation and
+   * composer, and the conversation is the only part of it that yields: what the
+   * box can still take is what the log is holding *inside its own padding*.
+   * Padding does not shrink, so counting the log's whole height would let the
+   * composer grow 64px further than there is room for, and a flex column with
+   * nothing left to give overflows rather than resisting - the header goes off
+   * the top of the window and the growth never stops. At the cap - the top of
+   * the conversation area, which is what "up to the top" means - it scrolls
+   * like any other overflowing box.
+   *
+   * The log is measured *before* the height is reset, because resetting it to
+   * `auto` collapses the box to one line and hands the difference straight back
+   * to the log: read after, the room would be counted twice and the box would
+   * grow past the top on the first Shift+Enter.
+   *
+   * A layout effect rather than an effect: this runs between React writing the
+   * DOM and the browser painting it, so a line is never drawn at the old height
+   * first.
+   */
+  useLayoutEffect(() => {
+    const box = composerRef.current;
+    if (box === null) return;
+    const log = logRef.current;
+    const around = log === null ? null : window.getComputedStyle(log);
+    const yields =
+      log === null || around === null
+        ? 0
+        : Math.max(0, log.clientHeight - parseFloat(around.paddingTop) - parseFloat(around.paddingBottom));
+    // Its own height counts: what the box already occupies is room it is
+    // holding, not room it has to find. Which is also why this can never fall
+    // below one line, whatever the log is doing.
+    const room = box.clientHeight + yields;
+    box.style.height = 'auto';
+    const wanted = box.scrollHeight;
+    const height = Math.min(wanted, room);
+    box.style.height = `${height}px`;
+    // Only when it has stopped growing, so the scrollbar is not drawn over a
+    // box that had room for the line all along.
+    box.style.overflowY = wanted > height ? 'auto' : 'hidden';
+  }, [draft, attached, chatFiles, currentId]);
 
   const current = sessions?.find((entry) => entry.id === currentId) ?? null;
 
@@ -962,6 +1015,23 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
   }
 
   /*
+   * What the send button says while a turn is in flight.
+   *
+   * It said "Sending…" from the press until the answer was complete, which is
+   * only true for the first few hundred bytes of it: the message is written to
+   * the history before the stream opens, and everything after that is the model
+   * thinking. Minutes of "Sending…" reads as a message that never left, and the
+   * screen was already contradicting itself - the log says "Waiting for Gemma
+   * 31B…" while the button says the message is still going out.
+   *
+   * So it is derived from exactly what that row is derived from, and the two
+   * cannot disagree: an assistant turn that is still empty is the wait, and the
+   * first token that lands in it is the model answering.
+   */
+  const answering = sending && (messages[messages.length - 1]?.content ?? '') !== '';
+  const sendLabel = !sending ? 'Send' : answering ? 'Answering…' : 'Waiting…';
+
+  /*
    * One banner, drawn in whichever half is showing. It cannot simply sit above
    * both: the chat pane cancels the shell's padding with a negative margin and
    * would ride up over it, so anything failing while no chat is open would be
@@ -1266,6 +1336,42 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                     ))}
                   </div>
                 </div>
+              )}
+              {/*
+                The way out to whatever is answering.
+
+                The name in the picker is the only place this chat says which
+                agent or model it is talking to, and it was a dead word: finding
+                the agent whose prompt produced an answer meant leaving the chat,
+                opening the workspace's agent list and reading down it for a name
+                you were holding in your head. It is one press now, in a tab of
+                its own - the same arrow-leaving-a-box every other field that
+                names a definition uses, so it is read without being explained.
+
+                An agent when there is one, the model when there is not: that is
+                the same precedence the button beside it draws the name with, and
+                a link that went somewhere other than the name it sits next to
+                would be a worse answer than none.
+              */}
+              {workspaceId !== null && (current.agentId !== null || current.modelId !== null) && (
+                <Link
+                  className={styles.definitionJump}
+                  to={
+                    current.agentId !== null
+                      ? `/workspace/${workspaceId}/agents/${current.agentId}/settings`
+                      : `/workspace/${workspaceId}/models/${current.modelId}`
+                  }
+                  target="_blank"
+                  rel="noreferrer"
+                  title={`Opens ${current.agentName ?? current.modelName} in a new tab`}
+                  aria-label={
+                    current.agentId !== null
+                      ? `Open the agent ${current.agentName}`
+                      : `Open the model ${current.modelName}`
+                  }
+                >
+                  <OpenDefinitionIcon />
+                </Link>
               )}
             </div>
             <div className={styles.titleActions}>
@@ -1725,6 +1831,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
               )}
               <textarea
                 id="chat-composer"
+                ref={composerRef}
                 className={styles.composerInput}
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
@@ -1853,7 +1960,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                 className={styles.sendButton}
                 disabled={sending || draft.trim() === ''}
               >
-                {sending ? 'Sending…' : 'Send'}
+                {sendLabel}
               </button>
             </div>
           </form>
