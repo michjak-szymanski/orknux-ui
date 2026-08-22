@@ -51,11 +51,28 @@ record(alt.trim() !== '', 'the screenshot says what it is');
  * It has to look like something that can be pressed before anybody presses it.
  * A picture that opens on click and gives no sign of it is a feature nobody
  * finds.
+ *
+ * Queried inside the page each time rather than through the handle taken above,
+ * and read twice if the first answer is empty. `getComputedStyle` on an element
+ * that has just been replaced answers with nothing at all - the manual is nine
+ * documents of markdown and re-renders as it is scrolled and searched - and an
+ * empty answer read once reported a missing cursor on a page that had one. It
+ * failed exactly once, against the built image, and passed on the same code in
+ * development three times before that.
  */
-const pointer = await inline.evaluate((image) => {
-  const clickable = image.closest('button, [role="button"]') ?? image;
-  return getComputedStyle(clickable).cursor;
-});
+async function cursorOverThePicture() {
+  return page.evaluate(() => {
+    const image = document.querySelector('img[src*="/screens/"]');
+    const clickable = image?.closest('button, [role="button"]') ?? image;
+    return clickable == null ? '' : getComputedStyle(clickable).cursor;
+  });
+}
+
+let pointer = await cursorOverThePicture();
+if (pointer === '') {
+  await page.waitForTimeout(400);
+  pointer = await cursorOverThePicture();
+}
 record(pointer === 'pointer' || pointer === 'zoom-in', `the picture says it can be opened (cursor: ${pointer})`);
 
 await inline.click();
