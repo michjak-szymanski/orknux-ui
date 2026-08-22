@@ -93,6 +93,23 @@ export const TESTS = [
     needs: ['workflow'],
   },
   {
+    name: 'flow-arrow-check',
+    what: 'the lines a run travels point, in their own colour, and the dependencies still do not',
+    needs: ['workspace'],
+    /*
+     * Issue #200. It builds its own graph - a flow line, a failure line and an
+     * unwired node whose field is read, which is what draws the dashed one -
+     * and removes it again, so it needs an agent to point four nodes at and
+     * nothing else.
+     *
+     * It follows the `marker-end` to the `<marker>` it names rather than
+     * stopping at "the attribute is set": a URL pointing at a definition
+     * nothing rendered draws no arrow, and reads exactly like a fix that
+     * landed. `marker-start` is read for the other half of the claim, since an
+     * arrow at both ends says nothing about which way the run goes.
+     */
+  },
+  {
     name: 'session-edge-check',
     what: "a session's line drawn as a dependency, against a flow line in the same graph",
     needs: ['workspace'],

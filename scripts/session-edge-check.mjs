@@ -22,8 +22,11 @@
  * would go on passing if somebody gave sessions a third style of their own.
  *
  * The arrowhead is measured too, for the reason the style was changed at all: a
- * dependency with a direction arrow on it still reads as flow. No line in this
- * editor has one, and this says so rather than leaving it to be noticed later.
+ * dependency with a direction arrow on it still reads as flow. When this was
+ * written no line in the editor had one and it asserted exactly that; issue
+ * #200 then gave the lines a run travels an arrow, which makes this the check
+ * that keeps the two apart. What it asserts now is the shape of the rule: the
+ * step points, and neither dependency does.
  *
  * The fixture is built and swept here. It needs no model and never runs: the
  * graph is saved over GraphQL and read back off the canvas, so what is measured
@@ -189,9 +192,9 @@ if (await drawn(page, 'the workflow editor')) {
     );
     const bare = (one) => one.marker === null || one.marker === '' || one.marker === 'none';
     record(
-      bare(session) && bare(flow) && bare(reads),
-      `no line carries an arrowhead, so a dependency does not point: ` +
-        `${session.marker} / ${flow.marker} / ${reads.marker}`,
+      bare(session) && bare(reads) && !bare(flow),
+      `the arrow is on the step and on neither dependency: ` +
+        `${session.marker || 'none'} / ${flow.marker} / ${reads.marker || 'none'}`,
     );
   }
 }

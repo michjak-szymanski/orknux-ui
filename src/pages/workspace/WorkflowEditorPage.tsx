@@ -13,6 +13,7 @@ import {
   Controls,
   EdgeLabelRenderer,
   Handle,
+  MarkerType,
   MiniMap,
   NodeResizer,
   Position,
@@ -1112,11 +1113,33 @@ const KIND_COLOUR: Record<NodeKind, string> = {
  * here, because a second dashed line in a different colour would read as a
  * third kind of thing rather than as the same kind.
  *
- * No arrowhead, and none to remove: no line in this editor has one. A
- * dependency with an arrow on it would be back to suggesting direction, which
- * is the whole of what is wrong with drawing it solid.
+ * No arrowhead, and this is now the line that is defined by not having one. The
+ * lines a run travels grew one for issue #200; a dependency deliberately did
+ * not, because an arrow on it would be back to claiming direction, which is the
+ * whole of what was wrong with drawing it solid.
  */
 const DEPENDENCY_LINE = { stroke: 'var(--color-accent-brand)', strokeDasharray: '6 4' };
+
+/**
+ * The arrowhead on a line a run travels — issue #200.
+ *
+ * A graph drawn as plain strokes between boxes has to be read by working out
+ * which end of each line is somebody's output, and since a node carries its own
+ * orientation that can be either end: turn one node round and the picture stops
+ * saying anything about the order things happen in. The arrow is what the
+ * picture is for.
+ *
+ * No `color` on the plain one, on purpose. React Flow's own stylesheet paints
+ * an arrowhead with `--xy-edge-stroke`, which is exactly what it paints the
+ * line with, so leaving it out is what keeps the two the same colour rather
+ * than what leaves it undecided. A line that is *not* that colour says so —
+ * [failureArrow] below — because a red line ending in a grey arrow reads as two
+ * things joined rather than one.
+ */
+const FLOW_ARROW = { type: MarkerType.ArrowClosed, width: 18, height: 18 } as const;
+
+/** The same arrowhead, in the colour of whichever line it is ending. */
+const arrowIn = (colour: string) => ({ ...FLOW_ARROW, color: colour });
 
 const KIND_CLASS: Record<NodeKind, string> = {
   TRIGGER: 'trigger',
@@ -1825,12 +1848,22 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
        * same grey says the node has two ways out and nothing about which is
        * which. Red and thicker, so it is the line you notice.
        */
+      /*
+       * And every line a run travels ends in an arrow (issue #200). A session's
+       * does not: it says which conversation an agent keeps, not that a run
+       * gets there, and the server folds it away before the engine sees the
+       * graph - so it keeps the dashed, unpointed style a dependency has here.
+       */
       const shown =
         edge.sourceHandle === 'fail'
-          ? { ...edge, style: { ...edge.style, stroke: 'var(--color-danger)', strokeWidth: 2 } }
+          ? {
+              ...edge,
+              style: { ...edge.style, stroke: 'var(--color-danger)', strokeWidth: 2 },
+              markerEnd: arrowIn('var(--color-danger)'),
+            }
           : kindOfNode.get(edge.source) === 'SESSION'
             ? { ...edge, style: { ...edge.style, ...DEPENDENCY_LINE } }
-            : edge;
+            : { ...edge, markerEnd: FLOW_ARROW };
       /*
        * Every line drawn by us, whether it carries anything or not. The type
        * used to be put on only the lines with something to say, because the
