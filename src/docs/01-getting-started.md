@@ -151,7 +151,7 @@ turns up, whichever workspace it happened in.
 holds, in one list](/screens/command-palette.png)
 
 The box in the middle of the top bar is the command palette. Open it with your
-Go To shortcut — `Ctrl`+`Q` unless you have changed it in Preferences — type a
+Search shortcut — `Ctrl`+`Q` unless you have changed it in Preferences — type a
 few letters, and press Enter.
 
 It knows every page in the current workspace and the admin ones, and it knows
@@ -159,6 +159,11 @@ what the workspace *holds*: a trigger, a function, an agent, a variable and the
 catalog it is in are all reachable by name, and so is an open issue, by its
 title or by its number. Each row says what kind of thing it is, so two things
 with similar names can be told apart before you press Enter.
+
+It also holds a few things to *start* — **Create issue**, **Create function**,
+**Create condition** — each marked with a plus, and each offered before you
+type anything at all. That is what the box is called after: it searches, and it
+creates.
 
 ## Your first workflow
 
@@ -182,7 +187,7 @@ with similar names can be told apart before you press Enter.
 Preferences belong to the person signed in rather than to any workspace —
 the theme among them — so they follow you into every workspace you can see.
 
-Every keystroke this application listens for is set here too: **Go To**,
+Every keystroke this application listens for is set here too: **Search**,
 **Save**, **Format**, **Turn Node**, **Undo**, **Redo** and **Duplicate Node**.
 Each is changed by
 pressing the keys you want rather than by picking from a list, because which

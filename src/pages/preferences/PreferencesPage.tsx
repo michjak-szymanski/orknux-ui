@@ -359,9 +359,15 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
             <div className={styles.setting}>
               <span className={styles.labelWithHint}>
                 <span className={styles.settingLabel} id="palette-shortcut">
-                  Go To Shortcut
+                  Search Shortcut
                 </span>
-                <FieldHint label="Go To Shortcut">
+                {/*
+                  "Go To Shortcut" until issue #218, which is what the box in
+                  the top bar was called before it offered anything to do as
+                  well as somewhere to go. The keystroke and where it is stored
+                  are unchanged; only what it is called here.
+                */}
+                <FieldHint label="Search Shortcut">
                   Opens the box in the top bar from anywhere. Yours to choose: which keys are free
                   depends on your browser and your machine, not on this application.
                 </FieldHint>

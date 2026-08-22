@@ -1,5 +1,5 @@
 /**
- * Go to offers things to do, not only places to be.
+ * The search box offers things to do, not only places to be - and says so.
  *
  * Issue #218, whose description was one line: "- Create issue". The box in the
  * top bar could take you to the issue list, and starting one from there was two
@@ -14,11 +14,40 @@
  */
 import { BASE, WORKSPACE, open, record, finish } from './suite/harness.mjs';
 
-const BOX = 'input[aria-label="Go to a page"]';
+const BOX = 'input[aria-label="Search or create"]';
 
 const { browser, page } = await open({ viewport: { width: 1440, height: 1000 } });
 
 await page.goto(`${BASE}/workspace/${WORKSPACE}`, { waitUntil: 'domcontentloaded' });
+
+/* ---- what the box says it is ---- */
+
+/*
+ * Read off whatever input is in the top bar rather than off the name this check
+ * drives it by. Asserting the label with a selector that already assumes the
+ * label turns a wrong word into a thirty-second timeout and a report about a
+ * missing box, which is the wrong sentence entirely.
+ */
+await page.waitForSelector('header input', { timeout: 20_000 });
+const named = await page.evaluate(() => {
+  const box = document.querySelector('header input');
+  return { placeholder: box?.getAttribute('placeholder') ?? '', aria: box?.getAttribute('aria-label') ?? '' };
+});
+const bothNames = `${named.placeholder} ${named.aria}`;
+
+record(
+  !/go to/i.test(bothNames),
+  `the box no longer calls itself Go to ("${named.placeholder}" / "${named.aria}")`,
+);
+record(
+  /search/i.test(named.placeholder) && /creat/i.test(named.placeholder),
+  `and says both halves of what it does ("${named.placeholder}")`,
+);
+record(
+  named.aria.trim() !== '' && named.placeholder.replace(/…|\.\.\./g, '').trim().startsWith(named.aria.trim()),
+  `what it is read out as matches what is printed in it ("${named.aria}")`,
+);
+
 await page.waitForSelector(BOX, { timeout: 20_000 });
 
 /** What the palette is offering, in the order it offers it. */
@@ -116,5 +145,26 @@ if (there) {
   const asks = (await page.locator('input[placeholder="What is wrong?"]').count()) > 0;
   record(asks, `and that page drew the box to write it in ("${drew.replace(/\s+/g, ' ').slice(0, 60)}…")`);
 }
+
+/* ---- and the other place the old name was written ---- */
+
+/*
+ * The keystroke that opens it is a setting, and it was called Go To Shortcut. A
+ * rename that leaves the old word beside the key somebody presses is the same
+ * complaint again, one screen further along - so the whole of Preferences is
+ * read rather than the one label.
+ */
+await page.goto(`${BASE}/preferences`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('#palette-shortcut', { timeout: 20_000 });
+const preferences = (await page.evaluate(() => document.querySelector('main')?.innerText ?? '')).replace(
+  /\s+/g,
+  ' ',
+);
+
+record(!/go to/i.test(preferences), 'Preferences does not call the shortcut Go To either');
+record(
+  /Search Shortcut/i.test(preferences),
+  `it names the shortcut after the box it opens (${/(\S+ Shortcut)/i.exec(preferences)?.[1] ?? 'nothing found'})`,
+);
 
 await finish(browser);

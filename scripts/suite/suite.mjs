@@ -434,7 +434,7 @@ export const TESTS = [
   },
   {
     name: 'palette-actions-check',
-    what: 'Go to offers things to do as well as places to go, starting with Create issue',
+    what: 'the search box offers things to do as well as places to go, and is labelled for both',
     needs: ['workspace'],
     /*
      * Issue #218. The row has to be there before anything is typed - that is

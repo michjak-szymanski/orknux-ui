@@ -21,7 +21,7 @@ export interface QuickChatProps {
 /**
  * What the interface calls the page somebody is on.
  *
- * Read from the same list the router and Go to read, matched by shape rather
+ * Read from the same list the router and the search box read, matched by shape rather
  * than by string: `/workspace/12/executions/9` is the run page, and the label
  * that page carries is what the model should be told. A page with no label of
  * its own — a particular run, a particular function — borrows the label of the

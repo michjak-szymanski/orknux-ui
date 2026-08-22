@@ -114,12 +114,20 @@ function rank(one: Command, needle: string): number {
 }
 
 /**
- * Go anywhere by typing, from the top bar.
+ * Search, from the top bar: anywhere to go, anything the workspace holds, and a
+ * few things to start.
  *
  * The product is wide — a workspace alone has a dozen screens — and finding one
  * means knowing which section it lives under. This is the other way round: type
  * what the thing is called and go there, which is what the address bar of an
  * operating system, or the search of a cloud console, is for.
+ *
+ * **It said "Go to…" until issue #218**, and the identifiers here and in
+ * `navigation.ts` still say `goTo` — that field answers "can this page be gone
+ * to by name", which is as true as it ever was. What changed is the box: it
+ * offers actions as well as destinations now, and a label promising only the
+ * second was a label that lied about half the list. `Search or create…`, since
+ * both halves have to be in it and the mark beside it is a magnifier.
  *
  * Pages and the workspace's own contents. The pages are fixed and knowable and
  * cost nothing; the names of workflows, actions, agents and the rest are fetched
@@ -308,8 +316,8 @@ export function CommandPalette({ workspacePath, showAdmin = true, showChat = tru
           ref={inputRef}
           className={styles.input}
           value={text}
-          placeholder="Go to…"
-          aria-label="Go to a page"
+          placeholder="Search or create…"
+          aria-label="Search or create"
           onFocus={() => setOpen(true)}
           onChange={(event) => {
             setText(event.target.value);

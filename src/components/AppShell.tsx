@@ -56,7 +56,7 @@ export interface AppShellProps {
   workspacePath?: string;
   /**
    * Whether the admin section is offered — the button in the corner, and the
-   * admin pages in Go to.
+   * admin pages in the search box.
    *
    * Defaults to what [user.admin] says, which is the answer: a page passing it
    * is only repeating the session. It used to default to `true`, so the pages
@@ -183,7 +183,7 @@ export function AppShell({
   const installation = useInstallation();
 
   // The session's answer unless a page insisted on one, so the admin button and
-  // the admin half of Go to appear together and only for an administrator.
+  // the admin half of the search box appear together and only for an administrator.
   const canAdmin = showAdmin ?? user.admin;
   const workspaceHere = workspacePath ?? workspaceFallback;
   /*

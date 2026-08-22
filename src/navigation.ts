@@ -42,7 +42,7 @@ export type Access = 'signed-in' | 'admin';
  * One answer, in one place. It decides three things that used to be decided
  * separately and could therefore disagree: which link across the top is lit,
  * which menu is drawn down the side and what is in it, and which heading the
- * page appears under in Go to. A page states this once, here, and everything
+ * page appears under in the search box. A page states this once, here, and everything
  * else is read off it.
  *
  * The first four are the links across the top, in that order. `Docs`, `Admin`
@@ -68,7 +68,7 @@ export const TOP_SECTIONS = ['AI', 'Flow', 'Workspace', 'Chat'] as const;
 
 export type TopSection = (typeof TOP_SECTIONS)[number];
 
-/** Where a page is listed in Go to, and what finds it. */
+/** Where a page is listed in the search box, and what finds it. */
 export interface GoTo {
   /** As the sidebar and the top bar name it — the same word, or it cannot be found. */
   label: string;
@@ -85,7 +85,7 @@ export interface GoTo {
 }
 
 /**
- * Something Go to can *do*, offered beside the places it can go.
+ * Something the search box can *do*, offered beside the places it can go.
  *
  * It is still a page underneath - every one of these is a screen that already
  * exists and is already reachable from a button on some list - so it is written
@@ -107,9 +107,9 @@ export interface QuickAction {
  * One page of this application.
  *
  * The point of this list is `goTo`, and that it is not optional. Two pages were
- * added and neither turned up in Go to, because registering them was a second step
+ * added and neither turned up in the search box, because registering them was a second step
  * somebody had to remember — and a step you have to remember is a step that gets
- * missed. Here the router and Go to read the same list, so a page cannot exist
+ * missed. Here the router and the search box read the same list, so a page cannot exist
  * without an answer to "how is this found", even if the answer is `false`.
  *
  * `false` is a decision, not an omission: a page reached by opening something from
@@ -120,10 +120,10 @@ export interface QuickAction {
 export interface Page {
   path: string;
   access: Access;
-  /** How Go to lists it, or false where it cannot be gone to on its own. */
+  /** How the search box lists it, or false where it cannot be gone to on its own. */
   goTo: GoTo | false;
   /**
-   * The thing this page starts, if it starts one — offered in Go to as an
+   * The thing this page starts, if it starts one — offered in the search box as an
    * action rather than as a destination.
    *
    * Almost always on a `goTo: false` page: `.../issues/new` is not somewhere to
@@ -395,7 +395,7 @@ export const PAGES = [
     /*
      * Administrators, like every other page under /admin.
      *
-     * It was 'signed-in', so Go to offered it to anybody under the Admin
+     * It was 'signed-in', so the search box offered it to anybody under the Admin
      * heading and the page opened for them - showing what the installation
      * allows, with switches the server then refuses. The refusal was correct;
      * offering the page at all was not.
@@ -431,7 +431,7 @@ export const PAGES = [
 export type PagePath = (typeof PAGES)[number]['path'];
 
 /**
- * The pages Go to should offer, with `:workspaceId` filled in.
+ * The pages the search box should offer, with `:workspaceId` filled in.
  *
  * Workspace pages are only offered once a workspace is known, since a link to
  * `/workspace/:workspaceId/actions` with nothing to put in it goes nowhere.
@@ -454,7 +454,7 @@ export function goToPages(options: { workspacePath: string | null; showAdmin: bo
 }
 
 /**
- * The things Go to can do, with `:workspaceId` filled in.
+ * The things the search box can do, with `:workspaceId` filled in.
  *
  * The same walk as [goToPages] over the same list, reading the other field. It
  * is deliberately not folded into that function: what the palette does with
@@ -549,7 +549,7 @@ export interface SectionLink {
  * The pages of one section, in the order its menu draws them.
  *
  * Read straight off the registry, so a page moved from one section to another
- * moves in the menu, in the top bar and in Go to together. [workspacePath] is
+ * moves in the menu, in the top bar and in the search box together. [workspacePath] is
  * what `/workspace/:workspaceId` becomes; a section holding no workspace pages
  * ignores it.
  */
