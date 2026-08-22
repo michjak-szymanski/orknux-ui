@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { ComponentProps } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
@@ -16,6 +16,8 @@ import remarkBreaks from 'remark-breaks';
 import remarkGfm from 'remark-gfm';
 
 import styles from './Markdown.module.css';
+import { ImageZoom } from './ImageZoom';
+import type { Picture } from './ImageZoom';
 import { rehypeIssueLinks } from './issueLinks';
 import { rehypeMarkMatches } from './searchMatches';
 
@@ -50,6 +52,16 @@ export interface MarkdownProps {
    * is being searched for, which is every use of this but the documentation.
    */
   highlight?: string;
+  /**
+   * Whether a picture in the prose opens larger when it is clicked.
+   *
+   * On for the manual, where a screenshot of a 1440-wide application is drawn
+   * into a column half that width and the labels it was taken to show cannot be
+   * read (issue #217). Off elsewhere by default: what a model writes rarely
+   * carries a picture, and an issue's own attachments are looked at through the
+   * viewer the attachment list opens, which can step between them.
+   */
+  zoomImages?: boolean;
 }
 
 /**
@@ -74,7 +86,10 @@ export interface MarkdownProps {
 /** The plugin list, exactly as the renderer that takes it declares it. */
 type RehypePlugins = ComponentProps<typeof ReactMarkdown>['rehypePlugins'];
 
-export function Markdown({ children, highlight, issuesIn }: MarkdownProps) {
+export function Markdown({ children, highlight, issuesIn, zoomImages = false }: MarkdownProps) {
+  /** Which picture is open over the page, or null while none is. */
+  const [zoomed, setZoomed] = useState<Picture | null>(null);
+
   /*
    * Rebuilt only when the term changes. A fresh array on every render would have
    * react-markdown reparse the document on every keystroke, which for a manual
@@ -124,10 +139,45 @@ export function Markdown({ children, highlight, issuesIn }: MarkdownProps) {
               </a>
             );
           },
+          /*
+           * A picture in the prose is content, not furniture.
+           *
+           * `data-keeps-colour` whether or not it can be zoomed: the light
+           * theme darkens every `<img>` to 42% brightness, because every one of
+           * them is a stroked icon file that would otherwise be invisible on
+           * white — and the forty-six screenshots of the manual were being put
+           * through that too, which is why the light theme's manual was
+           * illustrated with photographs taken at dusk. The rule already has an
+           * opt-out for anything carrying colour of its own, and a screenshot
+           * is exactly that.
+           *
+           * Where zooming is on it is a button, not an `onClick` on the image:
+           * this is a control, so it belongs in the tab order and answers the
+           * space bar like every other one.
+           */
+          img: ({ node: _node, ...props }) => {
+            const picture = { src: String(props.src ?? ''), alt: String(props.alt ?? '') };
+            const image = <img {...props} data-keeps-colour="" />;
+            if (!zoomImages || picture.src === '') return image;
+
+            return (
+              <button
+                type="button"
+                className={styles.zoom}
+                onClick={() => setZoomed(picture)}
+                aria-label={picture.alt === '' ? 'Open this picture' : `Open larger: ${picture.alt}`}
+                title="Click to open this picture larger"
+              >
+                {image}
+              </button>
+            );
+          },
         }}
       >
         {children}
       </ReactMarkdown>
+
+      {zoomImages && <ImageZoom picture={zoomed} onClose={() => setZoomed(null)} />}
     </div>
   );
 }

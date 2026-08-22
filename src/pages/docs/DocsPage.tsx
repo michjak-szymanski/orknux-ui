@@ -418,7 +418,15 @@ export function DocsPage({ session, onSignOut }: DocsPageProps) {
               else sections.current.set(one.slug, element);
             }}
           >
-            <Markdown highlight={searching ? query : undefined}>{one.body}</Markdown>
+            {/*
+              The manual is where a picture is a picture of this application,
+              taken at 1440 and drawn into a column half that: `zoomImages` is
+              what makes clicking one open it at the size it was taken (issue
+              #217).
+            */}
+            <Markdown highlight={searching ? query : undefined} zoomImages>
+              {one.body}
+            </Markdown>
           </section>
         ))}
       </article>

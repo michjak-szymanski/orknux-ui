@@ -1,0 +1,101 @@
+/*
+ * A picture at the size of the window, rather than a panel in it.
+ *
+ * A dialog is centred, sized to its content and given a border, padding and a
+ * white background, none of which belong here — so the element is stretched
+ * flat and the frame inside does the layout. The same shape as
+ * `AttachmentViewer.module.css`, for the same reason: what is being looked at
+ * is the picture, and everything else on screen is in its way.
+ */
+.viewer {
+  width: 100vw;
+  max-width: 100vw;
+  height: 100vh;
+  max-height: 100vh;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  overflow: hidden;
+  color: var(--color-text-primary);
+}
+
+/* Darker than a form's backdrop: nothing behind this is meant to be read. */
+.viewer::backdrop {
+  background: rgb(9 9 11 / 88%);
+}
+
+.frame {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+.bar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-12) var(--space-16);
+}
+
+/*
+ * The alt text, which in the manual is a whole sentence saying what the picture
+ * shows. Wrapped to two lines rather than cut off at the first comma: it is the
+ * caption, and half a caption explains nothing.
+ */
+.caption {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.close {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-6);
+  font-size: var(--text-xl);
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.close:hover {
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+}
+
+.stage {
+  display: flex;
+  flex: 1 0 0;
+  align-items: center;
+  justify-content: center;
+  /* Without this the picture's natural height wins and the bar is pushed off. */
+  min-height: 0;
+  padding: 0 var(--space-24) var(--space-24);
+}
+
+/*
+ * Fitted rather than filled: a screenshot cropped to the window is a screenshot
+ * with the part somebody opened it for missing. It is allowed past its natural
+ * size, because the point of opening it is that the page was drawing it small.
+ */
+.picture {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}

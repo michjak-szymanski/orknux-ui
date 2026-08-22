@@ -381,6 +381,22 @@ export const TESTS = [
 
   // --- pages that are pages -------------------------------------------------
   {
+    name: 'docs-zoom-check',
+    what: 'a picture in the manual opens at full size, and keeps its colours on white',
+    needs: ['session'],
+    /*
+     * Issue #217. It measures the picture twice - in the column, then in the
+     * viewer - because "a viewer opened" is not the request: a viewer that
+     * draws the same 720px picture has zoomed nothing.
+     *
+     * The light theme half was found while writing it, and is the reason the
+     * check does not stop at the click. `tokens.css` darkens every `<img>` to
+     * 42% brightness so the stroked icon files stay readable on white, and the
+     * manual's forty-six screenshots were going through it too. Nothing failed;
+     * the manual was simply illustrated with photographs taken at dusk.
+     */
+  },
+  {
     name: 'admin-width-check',
     what: 'every page under Admin fills the column it was given, and none of them caps it',
     needs: [],

@@ -132,6 +132,42 @@
   border-radius: var(--radius-8, 8px);
 }
 
+/*
+ * The picture as something to press, where pressing it opens it larger.
+ *
+ * A button around the image rather than a handler on it, so it is reachable by
+ * keyboard — which means it has to be talked out of every default a button
+ * comes with. `width: fit-content` matters: a block-level button fills the
+ * column, and the strip of nothing to the right of a narrow picture would open
+ * it too.
+ */
+.markdown .zoom {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin: var(--space-16) 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-8, 8px);
+  cursor: zoom-in;
+}
+
+/* The margin belongs to whichever of the two is the block in the prose. */
+.markdown .zoom img {
+  margin: 0;
+}
+
+.markdown .zoom:hover img {
+  border-color: var(--color-accent-brand);
+}
+
+/* Keyboard focus has to be visible on a control that draws nothing of its own. */
+.markdown .zoom:focus-visible {
+  outline: 2px solid var(--color-accent-brand);
+  outline-offset: 2px;
+}
+
 /* ---- Highlighted code ---- */
 
 /*
