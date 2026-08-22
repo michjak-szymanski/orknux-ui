@@ -85,6 +85,25 @@ export interface GoTo {
 }
 
 /**
+ * Something Go to can *do*, offered beside the places it can go.
+ *
+ * It is still a page underneath - every one of these is a screen that already
+ * exists and is already reachable from a button on some list - so it is written
+ * here, on that page, rather than in a second list of commands that would drift
+ * from the first. What it adds is the verb: nobody looks for "Issue, new"; they
+ * look for "create an issue", which is a thing to do and not a place to be.
+ *
+ * Only a page that *starts* something carries one. A page you merely arrive at
+ * is a destination and is listed as one, by [GoTo] above.
+ */
+export interface QuickAction {
+  /** The verb, as it would be said out loud: "Create issue". */
+  label: string;
+  /** Other words somebody might type for it — "new", "report", "file". */
+  also?: string;
+}
+
+/**
  * One page of this application.
  *
  * The point of this list is `goTo`, and that it is not optional. Two pages were
@@ -103,6 +122,15 @@ export interface Page {
   access: Access;
   /** How Go to lists it, or false where it cannot be gone to on its own. */
   goTo: GoTo | false;
+  /**
+   * The thing this page starts, if it starts one — offered in Go to as an
+   * action rather than as a destination.
+   *
+   * Almost always on a `goTo: false` page: `.../issues/new` is not somewhere to
+   * be, it is where filing one begins, so it has nothing to offer as a place
+   * and everything to offer as a verb.
+   */
+  action?: QuickAction;
 }
 
 /**
@@ -216,7 +244,15 @@ export const PAGES = [
     access: 'signed-in',
     goTo: { label: 'Issues', where: 'Workspace', icon: alertTriangleIcon },
   },
-  { path: '/workspace/:workspaceId/issues/new', access: 'signed-in', goTo: false },
+  {
+    path: '/workspace/:workspaceId/issues/new',
+    access: 'signed-in',
+    goTo: false,
+    // The one issue #218 asked for. Somebody notices something while doing
+    // something else, and the cost of writing it down is what decides whether
+    // it gets written down at all.
+    action: { label: 'Create issue', also: 'new report file bug raise ticket' },
+  },
   { path: '/workspace/:workspaceId/issues/:number', access: 'signed-in', goTo: false },
   {
     path: '/workspace/:workspaceId/audit',
@@ -239,10 +275,20 @@ export const PAGES = [
   { path: '/workspace/:workspaceId/executions/:executionId', access: 'signed-in', goTo: false },
   { path: '/workspace/:workspaceId/actions/:actionId', access: 'signed-in', goTo: false },
   /* Before the one with an id in it: `new` is a page, not a function called new. */
-  { path: '/workspace/:workspaceId/functions/new', access: 'signed-in', goTo: false },
+  {
+    path: '/workspace/:workspaceId/functions/new',
+    access: 'signed-in',
+    goTo: false,
+    action: { label: 'Create function', also: 'new javascript typescript write code' },
+  },
   { path: '/workspace/:workspaceId/functions/:functionId', access: 'signed-in', goTo: false },
   /* Before the one with an id in it: `new` is a page, not a condition called new. */
-  { path: '/workspace/:workspaceId/conditions/new', access: 'signed-in', goTo: false },
+  {
+    path: '/workspace/:workspaceId/conditions/new',
+    access: 'signed-in',
+    goTo: false,
+    action: { label: 'Create condition', also: 'new branch question if' },
+  },
   { path: '/workspace/:workspaceId/conditions/:conditionId', access: 'signed-in', goTo: false },
   { path: '/workspace/:workspaceId/triggers/:triggerId', access: 'signed-in', goTo: false },
   { path: '/workspace/:workspaceId/integrations/servers/:serverId', access: 'signed-in', goTo: false },
@@ -404,6 +450,37 @@ export function goToPages(options: { workspacePath: string | null; showAdmin: bo
       : page.path;
 
     return [{ ...page.goTo, to }];
+  });
+}
+
+/**
+ * The things Go to can do, with `:workspaceId` filled in.
+ *
+ * The same walk as [goToPages] over the same list, reading the other field. It
+ * is deliberately not folded into that function: what the palette does with
+ * these differs from what it does with a destination — they are offered before
+ * anything is typed, where a page is one of twenty — and a caller asking for
+ * "everything" would have to take them apart again.
+ *
+ * `where` is the section the page it starts belongs to, worked out by walking
+ * up from the address rather than written down a second time: creating an issue
+ * belongs under Workspace because that is where issues are.
+ */
+export function quickActions(options: { workspacePath: string | null; showAdmin: boolean }) {
+  // Annotated, because `PAGES` is a const list of exact shapes and only some of
+  // them have this field at all; as `Page` it is the optional it was declared.
+  return PAGES.flatMap((page: Page) => {
+    if (page.action === undefined) return [];
+    if (page.access === 'admin' && !options.showAdmin) return [];
+
+    const workspaceScoped = page.path.startsWith('/workspace/');
+    if (workspaceScoped && options.workspacePath === null) return [];
+
+    const to = workspaceScoped
+      ? page.path.replace('/workspace/:workspaceId', options.workspacePath ?? '')
+      : page.path;
+
+    return [{ ...page.action, to, where: sectionAt(to)?.goTo.where ?? 'Workspace' }];
   });
 }
 

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { fetchWorkspaceEntities } from '../api/palette';
-import { goToPages } from '../navigation';
+import { goToPages, quickActions } from '../navigation';
 import type { EntityKind, NamedEntity } from '../api/palette';
 import activityIcon from '../assets/activity.svg';
 import bellIcon from '../assets/bell.svg';
@@ -15,6 +15,7 @@ import databaseIcon from '../assets/database.svg';
 import filterIcon from '../assets/filter.svg';
 import lockKeyholeIcon from '../assets/lock-keyhole.svg';
 import memoryIcon from '../assets/memory.svg';
+import plusIcon from '../assets/plus.svg';
 import searchIcon from '../assets/search.svg';
 import bugIcon from '../assets/bug.svg';
 import toolIcon from '../assets/tool.svg';
@@ -187,6 +188,23 @@ export function CommandPalette({ workspacePath, showAdmin = true, showChat = tru
     [workspacePath, showAdmin, showChat],
   );
 
+  /**
+   * The things this box can do rather than the places it can go — issue #218.
+   *
+   * From the same registry as the pages, so a screen that starts something says
+   * so once, on itself. They are drawn with a plus rather than with the icon of
+   * the section they belong to: in a list where every other row goes somewhere,
+   * the row that *makes* something has to be told apart at a glance.
+   */
+  const actions = useMemo<Command[]>(
+    () =>
+      quickActions({
+        workspacePath: workspacePath === undefined ? null : workspacePath.replace(/\/$/, ''),
+        showAdmin,
+      }).map((action) => ({ ...action, icon: plusIcon })),
+    [workspacePath, showAdmin],
+  );
+
   /** The workspace's own things, as somewhere to go. */
   const named = useMemo<Command[]>(() => {
     if (workspacePath === undefined) return [];
@@ -206,18 +224,24 @@ export function CommandPalette({ workspacePath, showAdmin = true, showChat = tru
 
   const found = useMemo(() => {
     const needle = text.trim().toLowerCase();
-    // Nothing typed offers the pages. Listing a workspace's every action before
-    // a single letter is a wall, not an answer.
-    if (needle === '') return commands.slice(0, SHOWN);
+    /*
+     * Nothing typed offers what can be done, and then where to go. Listing a
+     * workspace's every action before a single letter is a wall, not an answer,
+     * but the handful of things this box *does* have to be seen without being
+     * guessed at: a quick action nobody knows about is not a quick action. They
+     * come first for the same reason, and there are few enough of them that the
+     * pages underneath are still what most of the list is.
+     */
+    if (needle === '') return [...actions, ...commands].slice(0, SHOWN);
 
-    return [...commands, ...named]
+    return [...actions, ...commands, ...named]
       .map((one) => ({ one, at: rank(one, needle) }))
       .filter((scored) => scored.at >= 0)
       // Stable, so pages keep their place ahead of contents at the same rank.
       .sort((left, right) => left.at - right.at)
       .slice(0, SHOWN)
       .map((scored) => scored.one);
-  }, [commands, named, text]);
+  }, [actions, commands, named, text]);
 
   // The shortcut works wherever the caret is, which is the point of one.
   useEffect(() => {

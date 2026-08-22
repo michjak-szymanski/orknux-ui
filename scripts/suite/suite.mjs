@@ -397,6 +397,23 @@ export const TESTS = [
      */
   },
   {
+    name: 'palette-actions-check',
+    what: 'Go to offers things to do as well as places to go, starting with Create issue',
+    needs: ['workspace'],
+    /*
+     * Issue #218. The row has to be there before anything is typed - that is
+     * the half a check earns its place on, since a quick action nobody knows
+     * about is not one - and pressing it has to land on the page that starts an
+     * issue rather than on the list of them.
+     *
+     * It records what typing each word actually offers, which is how it came
+     * out that this box scores a row against the whole of what was typed: "new
+     * issue" matches nothing at all, because no label and no also-known-as
+     * holds that phrase. Left as it is and written down here rather than
+     * quietly fixed - one word is what people type into a box this size.
+     */
+  },
+  {
     name: 'admin-width-check',
     what: 'every page under Admin fills the column it was given, and none of them caps it',
     needs: [],
