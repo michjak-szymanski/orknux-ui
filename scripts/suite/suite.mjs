@@ -511,6 +511,26 @@ export const TESTS = [
      */
   },
   {
+    name: 'agent-memory-check',
+    what: "an agent's session memory: the slider, the server's figures, and a refusal that stops Save",
+    needs: ['workspace'],
+    /*
+     * Issue #226. What a session hands back to a model is a share of the chosen
+     * model's context window, and every number and every sentence involved is
+     * the server's - so what this measures is that the page prints what the API
+     * answered, character for character, rather than that the figures are
+     * right. A screen that recomputed one of these and landed a token out fails
+     * here, which is the whole point of asserting against the API rather than
+     * against numbers written into the check.
+     *
+     * It provokes the refusal rather than hoping for one: it makes a model with
+     * a small window that reserves most of it for its answer, so half of that
+     * window is a share that model cannot give. Waiting for a seeded model to
+     * happen to refuse something is a check that passes on the installations
+     * where it does not. Both models and the agent are removed again.
+     */
+  },
+  {
     name: 'agent-grants-check',
     what: "an agent's grants: bounded, searchable, and explained behind a (?), on the page and in the panel",
     needs: ['workflow'],

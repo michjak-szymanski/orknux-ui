@@ -34,10 +34,59 @@ export interface Agent {
   tools: string[];
   /** Which icon a node drawn from this starts with; null draws the kind's own. */
   icon: string | null;
+  /**
+   * How much of its model's context window one of its sessions may take back,
+   * as a percentage of that window. Null is the built-in default.
+   *
+   * One number rather than five: how many turns come back, how much of them,
+   * how much of what its tools returned and how much of any one result are all
+   * worked out from it, server-side. Nothing here does that arithmetic — ask
+   * [fetchMemoryBudget] what a share works out to.
+   */
+  memoryShare: number | null;
+}
+
+/**
+ * What a session may put back in front of a model, worked out.
+ *
+ * Every count is in **tokens** and every one is approximate: the server
+ * measures characters, which is the unit every model agrees on, and reports
+ * them here at four characters to the token. Do not relabel them and do not
+ * recompute them — this whole object is one calculation that the mutation
+ * saving a share performs as well, and a second copy of it here is a second
+ * answer to "may this be saved".
+ */
+export interface SessionMemoryBudget {
+  /** The share asked for; null when nothing is set and the default applies. */
+  share: number | null;
+  /** The model's context window in tokens, or null where it has none recorded. */
+  contextWindow: number | null;
+  /** True when the share and the window produced the figures; false when the default did. */
+  derived: boolean;
+  /** What a session may add to one prompt altogether. */
+  totalTokens: number;
+  /** Of that, what turns somebody said may take. */
+  conversationTokens: number;
+  /** And what tool results may take — a separate allowance, not a slice of the one above. */
+  toolResultTokens: number;
+  /** The most any one tool result may take; a longer one is cut. */
+  longestResultTokens: number;
+  /** How many said turns come back at most. */
+  turns: number;
+  /** How many tool lookups are considered: a ceiling on a query, not an allowance. */
+  toolResults: number;
+  /**
+   * Why this share cannot be saved, or null when it can.
+   *
+   * The sentence `updateAgent` would raise, in the server's own words, naming
+   * the model and its numbers. Print it as it arrives: rewording it here would
+   * be a second account of a rule this does not own.
+   */
+  refusal: string | null;
 }
 
 const AGENT_FIELDS =
-  'id workspaceId name type description systemPrompt enabled modelId modelName mcpServers orknuxAccess shellAccess memoryCatalogs skillCatalogs tools icon';
+  'id workspaceId name type description systemPrompt enabled modelId modelName mcpServers orknuxAccess shellAccess memoryCatalogs skillCatalogs tools icon memoryShare';
 
 const WORKSPACE_AGENTS_QUERY = `
   query WorkspaceAgents($workspaceId: ID!, $page: Int!, $size: Int!) {
@@ -78,6 +127,15 @@ const SET_ENABLED_MUTATION = `
 const DELETE_AGENT_MUTATION = `
   mutation DeleteAgent($id: ID!) {
     deleteAgent(id: $id)
+  }
+`;
+
+const MEMORY_BUDGET_FIELDS =
+  'share contextWindow derived totalTokens conversationTokens toolResultTokens longestResultTokens turns toolResults refusal';
+
+const MEMORY_BUDGET_QUERY = `
+  query MemoryBudget($workspaceId: ID!, $modelId: ID, $share: Int) {
+    memoryBudget(workspaceId: $workspaceId, modelId: $modelId, share: $share) { ${MEMORY_BUDGET_FIELDS} }
   }
 `;
 
@@ -122,10 +180,45 @@ export async function updateAgent(
     tools?: string[];
     /** Which icon a node drawn from this agent starts with; null clears it. */
     icon?: string | null;
+    /**
+     * How much of the model's window a session may take back, 1 to 50, or null
+     * for the built-in default.
+     *
+     * Sent whenever the form saves rather than left out to mean "leave it
+     * alone", which is the rule the icon above follows and what lets a screen
+     * put it back to the default. A share the chosen model cannot give is
+     * refused here, in the same words `memoryBudget` previews.
+     */
+    memoryShare?: number | null;
   },
 ): Promise<Agent> {
   const data = await graphql<{ updateAgent: Agent }>(UPDATE_AGENT_MUTATION, { id, input });
   return data.updateAgent;
+}
+
+/**
+ * What a share would work out to, for the model chosen **in the form**.
+ *
+ * Asked of a workspace and a model rather than of an agent, deliberately: the
+ * form setting a share may have changed the model in the same edit, and a
+ * preview read off the stored agent would answer for the model it used to
+ * have. So the caller passes what the picker is showing, not `agent.modelId`.
+ *
+ * It never fails. A share that could not be saved comes back with `refusal`
+ * set, which is why a slider can say why while it is being dragged instead of
+ * finding out at Save — or, worse, at the provider.
+ */
+export async function fetchMemoryBudget(
+  workspaceId: string,
+  modelId: string | null,
+  share: number | null,
+): Promise<SessionMemoryBudget> {
+  const data = await graphql<{ memoryBudget: SessionMemoryBudget }>(MEMORY_BUDGET_QUERY, {
+    workspaceId,
+    modelId,
+    share,
+  });
+  return data.memoryBudget;
 }
 
 export async function setAgentEnabled(id: string, enabled: boolean): Promise<Agent> {

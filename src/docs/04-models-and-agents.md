@@ -206,6 +206,27 @@ What the agent is handed on its next turn is the recent **User** and **Agent**
 lines, not the whole transcript and not the tool calls: enough of the
 conversation to carry on, without a fortnight of it arriving in one prompt.
 
+How much of it is **Session Memory**, on the agent's own settings card. It is a
+share of the context window of the model that agent uses — one number, from
+which how many turns come back, how much of them, how much of what its tools
+last returned and how much of any single result are all worked out. A share
+rather than a count because the window is what the budget is spent out of, and
+on the agent rather than on the installation because what a sensible budget is
+depends on what that agent's tools give back: one reading whole files needs a
+different allowance from one reading issue lists, and both may be pointed at the
+same model.
+
+Left at **Default** an agent gets a fixed allowance that knows nothing of the
+window, which is what every agent had before this could be set. Moving the
+slider shows what the share works out to against the model chosen just above it,
+in tokens — approximate ones: they are counted in characters, the only unit
+every model agrees on, and reported at four characters to the token. A share the
+model cannot give is refused before it is saved, with a sentence naming that
+model and its numbers, because the alternative is finding out on somebody's turn
+when the provider refuses the request. Choose the model first: until there is
+one, there is no window to take a share of and the slider says so by staying
+where it is.
+
 **Continue in chat** is how a person joins a conversation the agents have been
 having. The chat it opens is bound to this session and holds what was already
 said, so what you tell it is written back here and the next run to read the key

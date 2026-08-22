@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent, ReactNode } from 'react';
 
-import { updateAgent } from '../api/agents';
-import type { Agent } from '../api/agents';
+import { fetchMemoryBudget, updateAgent } from '../api/agents';
+import type { Agent, SessionMemoryBudget } from '../api/agents';
 import { fetchMemoryCatalogs } from '../api/memory';
 import type { MemoryCatalog } from '../api/memory';
 import { answers, fetchModels } from '../api/models';
@@ -84,6 +84,40 @@ const TOOL_PAGE_SIZE = 100;
  * the search arrives at the point the list stops being readable whole.
  */
 const SEARCH_FROM = 8;
+
+/**
+ * The widest share the slider offers.
+ *
+ * The server's own ceiling, and it is the server that enforces it: a share past
+ * this comes back refused, in a sentence saying why. This is the track's end,
+ * not a second copy of the rule - nothing here decides what may be saved.
+ */
+const MAX_SHARE = 50;
+
+/**
+ * Where the track reads "Default" - the position that means nothing is set.
+ *
+ * Zero rather than a checkbox beside the slider, because the two states are one
+ * question: an agent either has a share of the window or has the built-in
+ * allowance, and dragging off the end of the track into "no share" is that
+ * question asked once. It is also the only honest resting place for a slider
+ * with nothing set - any other position would be a percentage nobody chose.
+ */
+const DEFAULT_SHARE = 0;
+
+/**
+ * How long the slider must be still before its preview is asked for.
+ *
+ * A range input fires on every step of a drag, and each one of these is a round
+ * trip. Long enough that dragging across the track is one request and not
+ * fifty; short enough that letting go shows the figures immediately.
+ */
+const PREVIEW_PAUSE = 150;
+
+/** Grouped the way the server groups them in its own sentences. */
+function thousands(count: number): string {
+  return count.toLocaleString('en-US');
+}
 
 interface GrantListProps<Item> {
   /** The heading, spelled as the panel spells it: `Tools`, `Skill Catalogs`. */
@@ -290,6 +324,13 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
   const [skillCatalogs, setSkillCatalogs] = useState<string[]>(agent.skillCatalogs);
   const [tools, setTools] = useState<string[]>(agent.tools);
   const [icon, setIcon] = useState<string | null>(agent.icon ?? null);
+  /**
+   * The share of the model's window a session may take back, or null for the
+   * built-in default - issue #226.
+   */
+  const [share, setShare] = useState<number | null>(agent.memoryShare);
+  /** What that share works out to, as the server works it out. Null until asked. */
+  const [budget, setBudget] = useState<SessionMemoryBudget | null>(null);
 
   const [promptOpen, setPromptOpen] = useState(true);
   const [addingServer, setAddingServer] = useState(false);
@@ -332,6 +373,64 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
    * fields on one value.
    */
   const models: Model[] = modelCatalogue.items;
+
+  /**
+   * Whether there is a window to take a share of at all.
+   *
+   * The model *in the form*, not the one on the agent: this form may have
+   * changed it in the same edit, and a share previewed against the stored model
+   * would answer for the model this agent used to have.
+   */
+  const chosenModel = modelId === '' ? null : modelId;
+
+  /**
+   * What is actually asked for and saved, which is null while no model is
+   * chosen.
+   *
+   * The typed value is kept rather than cleared, so choosing a model again
+   * brings the share back. What it must not do is stay in force: the server
+   * refuses a share with no model to take it from - rightly, since a share of
+   * nothing is nothing - and a slider disabled at 20% with a refusal under it
+   * would be a form that cannot be saved and offers no way out of it.
+   */
+  const asked = chosenModel === null ? null : share;
+
+  /*
+   * What the share works out to, asked of the server and never worked out here.
+   *
+   * Debounced rather than sent on every step of the drag, and cancelled on the
+   * way out so a slow answer to a share nobody is asking for any more cannot
+   * land on top of a newer one.
+   */
+  useEffect(() => {
+    if (noWorkspace) return;
+
+    let current = true;
+    const timer = setTimeout(() => {
+      fetchMemoryBudget(workspaceId, chosenModel, asked)
+        .then((found) => {
+          if (current) setBudget(found);
+        })
+        .catch(() => {
+          // The preview is not the setting. A failure here leaves the figures
+          // off rather than putting a second error on a form that has its own.
+          if (current) setBudget(null);
+        });
+    }, PREVIEW_PAUSE);
+
+    return () => {
+      current = false;
+      clearTimeout(timer);
+    };
+  }, [workspaceId, noWorkspace, chosenModel, asked]);
+
+  /**
+   * Why this share cannot be saved, in the server's words, or null.
+   *
+   * Printed as it arrives and never reworded: it names the model and its
+   * numbers, and it is the same sentence the mutation would raise.
+   */
+  const refusal = budget?.refusal ?? null;
 
   useEffect(() => {
     if (addingServer) newServerRef.current?.focus();
@@ -377,6 +476,9 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
         skillCatalogs,
         tools,
         icon,
+        // Sent every save rather than left out, which is what lets the slider
+        // put it back to the default.
+        memoryShare: asked,
       });
       setMcpServers(updated.mcpServers);
       setOrknuxAccess(updated.orknuxAccess);
@@ -385,6 +487,7 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
       setSkillCatalogs(updated.skillCatalogs);
       setTools(updated.tools);
       setModelId(updated.modelId ?? '');
+      setShare(updated.memoryShare);
       setSaved(true);
       onSaved(updated);
     } catch (cause) {
@@ -496,6 +599,100 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
             which is what this line is for.
           */}
           <CatalogueNote catalogue={modelCatalogue} className={own.emptyNote} />
+        </div>
+
+        {/*
+          How much of that model's window a session may take back - issue #226.
+
+          Under the model picker because it is a share of what that picker
+          chose, and the two are read together: change the model and the figures
+          under this change with it.
+
+          One slider and not five boxes. The five numbers that used to be
+          constants in the server - how many turns come back, how much of them,
+          how much of what the tools returned, how much of any one result - are
+          all worked out from this one, because somebody setting it is answering
+          "how much conversation should it carry" and not five separate
+          questions.
+
+          Nothing is worked out here. The figures, the turn count and the
+          refusal all come from `memoryBudget`, which is the same calculation
+          the mutation judges a share with; a second copy in the browser would
+          eventually disagree with it, and the one that drifted would be this.
+        */}
+        <div className={styles.field}>
+          <span className={own.labelWithHint}>
+            <label className={styles.label} htmlFor="agent-memory-share">
+              Session Memory
+            </label>
+            <FieldHint label="Session Memory">
+              How much of the chosen model&rsquo;s context window one of this agent&rsquo;s sessions may
+              hand back on its next turn: what was said in it, and what its tools last returned. The
+              default is a fixed allowance that knows nothing of the window; a share is worked out from
+              it, which is why a model has to be chosen before one can be set. Token figures are
+              approximate — they are counted in characters and reported at four characters to the token.
+            </FieldHint>
+          </span>
+
+          <div className={own.shareRow}>
+            <input
+              id="agent-memory-share"
+              className={own.shareSlider}
+              type="range"
+              min={DEFAULT_SHARE}
+              max={MAX_SHARE}
+              step={1}
+              value={asked ?? DEFAULT_SHARE}
+              /*
+                A share means nothing without a window to be a share of, so with
+                no model chosen there is nothing to drag. It reads Default while
+                it is like that, which is also what would be saved.
+              */
+              disabled={chosenModel === null}
+              onChange={(event) => {
+                const at = Number(event.target.value);
+                setShare(at === DEFAULT_SHARE ? null : at);
+              }}
+              aria-valuetext={asked === null ? 'Default' : `${asked}%`}
+            />
+            <output className={own.shareValue} htmlFor="agent-memory-share">
+              {asked === null ? 'Default' : `${asked}%`}
+            </output>
+          </div>
+
+          {/*
+            The refusal, or the figures - never both. Where a share is refused
+            the server answers with the built-in default's numbers rather than
+            with nothing, and printing those under a refusal would show figures
+            this agent is not going to get.
+          */}
+          {refusal !== null ? (
+            <p className={own.shareRefusal} role="alert">
+              {refusal}
+            </p>
+          ) : (
+            budget !== null && (
+              <dl className={own.budget}>
+                <div className={own.budgetRow}>
+                  <dt>Altogether</dt>
+                  <dd>{thousands(budget.totalTokens)} tokens</dd>
+                </div>
+                <div className={own.budgetRow}>
+                  <dt>Conversation</dt>
+                  <dd>
+                    {thousands(budget.conversationTokens)} tokens, {budget.turns} turns
+                  </dd>
+                </div>
+                <div className={own.budgetRow}>
+                  <dt>Tool results</dt>
+                  <dd>
+                    {thousands(budget.toolResultTokens)} tokens, longest{' '}
+                    {thousands(budget.longestResultTokens)}
+                  </dd>
+                </div>
+              </dl>
+            )
+          )}
         </div>
 
         {/*
@@ -690,7 +887,16 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
             Cancel
           </button>
         )}
-        <button type="submit" className={styles.filled} disabled={name.trim() === '' || saving}>
+        {/*
+          A refused share stops the save here as well as at the server. Not
+          instead of: the mutation refuses it from the same calculation, and
+          this is only the form saying so before the press rather than after.
+        */}
+        <button
+          type="submit"
+          className={styles.filled}
+          disabled={name.trim() === '' || saving || refusal !== null}
+        >
           {saving ? 'Saving…' : 'Save Changes'}
         </button>
       </div>
