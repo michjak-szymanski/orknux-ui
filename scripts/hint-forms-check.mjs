@@ -371,14 +371,32 @@ for (const one of screens) {
     record(body.includes(sentence), `${one.name}: "${sentence}" is still printed, as it must be`);
   }
 
-  // `:visible`, and it matters. A native <dialog> stays in the document when it
-  // is shut - `TemplatePicker` opens with showModal() rather than being mounted
-  // and unmounted - so every (?) inside a closed dialog is still a `[data-hint]`
-  // in DOM order, ahead of anything on the screen behind it. Counting those
-  // inflates the total until a hint that really is missing still clears the
-  // floor below, and `.first()` picks one that cannot be hovered because no
-  // pointer can reach it. A (?) nobody can see is not a (?) that is drawn.
-  const hints = page.locator('[data-hint]:visible');
+  /*
+   * The top layer, and nothing behind it.
+   *
+   * This took two goes and the first one was wrong, so it is worth writing down
+   * what the question actually is. A native <dialog> stays in the document when
+   * it is shut - `TemplatePicker` opens with showModal() rather than mounting -
+   * so a bare `[data-hint]` picks up every (?) inside every closed dialog, in
+   * DOM order, ahead of anything on the screen behind them.
+   *
+   * `:visible` was the obvious repair and it is not enough: it means the
+   * element has a box, not that a pointer can arrive at it. With a modal open,
+   * the (?) marks on the page *behind* the modal are visible by that
+   * definition, and hovering one times out on the dialog's own backdrop:
+   *
+   *   <div class="_box_…"> from <dialog open=""> subtree intercepts pointer events
+   *
+   * Same fault as the first, one layer along. So ask the question the browser
+   * asks: a modal <dialog> is the top layer while it is open, and while one is
+   * open nothing outside it can be reached at all. Scope to it when there is
+   * one. That fixes the count as well as the hover - the marks behind a modal
+   * were inflating the total that `one.hints` is compared against, so a (?)
+   * that had genuinely gone missing could still clear the floor.
+   */
+  const modal = page.locator('dialog[open]').last();
+  const top = (await modal.count()) > 0 ? modal : page;
+  const hints = top.locator('[data-hint]:visible');
   const many = await hints.count();
   const labels = await hints.evaluateAll((all) => all.map((each) => each.getAttribute('data-hint')));
   record(many >= one.hints, `${one.name}: ${many} (?) drawn, expecting ${one.hints} [${labels.join(', ')}]`);

@@ -309,6 +309,30 @@ const { createWorkspaceConnection: slack } = await gql(
       name: 'Slack',
       // The server addresses a Slack connection itself; there is no URL to give.
       type: 'SLACK',
+      /*
+       * Both tokens, and neither of them real.
+       *
+       * A connection with no credential on it is not the ordinary case - a
+       * Slack connection somebody actually made has a bot token, and one that
+       * listens has an app-level token beside it. Seeding neither left the
+       * fixture with no stored credential anywhere, and `secret-reveal-check`
+       * has nothing to reveal: it reported "no connection in workspace 1 holds
+       * a credential", which reads as the eye being missing when it is the
+       * fixture that is.
+       *
+       * Deliberately not the shape Slack uses. The first version of this wrote
+       * `xoxb-…` and `xapp-…`, which is what a real one looks like, and GitHub
+       * push protection rejected the push: the pattern is the pattern whether
+       * the digits behind it mean anything or not. It was right to. A
+       * repository that has taught itself to allow Slack-token-shaped strings
+       * is a repository that will not stop the next one that is real.
+       *
+       * Nothing here needs the shape. The product stores whatever it is given
+       * and the checks only ask whether something is stored, so a sentence
+       * serves - and it says what it is to anybody who finds it in a database.
+       */
+      secret: 'seed-fixture-bot-credential-not-a-real-slack-token',
+      appToken: 'seed-fixture-app-credential-not-a-real-slack-token',
     },
   },
 );
@@ -1144,10 +1168,11 @@ for (const input of ['SUP-4471', 'SUP-4468', 'SUP-4470', 'SUP-4455', 'SUP-4462']
  * has to match is the trigger the graph was drawn around, so this is the event
  * Slack would have delivered.
  *
- * The reply step still has no bot token to send with, and that is fine: the
- * action reports that it sent nothing and the run completes. A skipped step
- * with a reason on it is a better picture than a failure, because it is what an
- * installation with one integration still to configure actually looks like.
+ * The reply step still sends nothing, and that is fine: the connection now
+ * carries a bot token but Slack refuses it, so the action reports that it sent
+ * nothing and the run completes. A skipped step with a reason on it is a better
+ * picture than a failure, because it is what an installation with one
+ * integration still to configure actually looks like.
  *
  * Three of them rather than one, and each naming a different ticket, because
  * the session node in the graph keys on `trigger.ticket`: one event is one

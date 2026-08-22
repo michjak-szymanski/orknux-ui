@@ -125,6 +125,25 @@ for (const [name, path] of PAGES) {
   );
 }
 
-record(seen >= 200, `${seen} controls were actually tried, which is enough of the product to mean something`);
+/*
+ * The floor, and what it is a floor against.
+ *
+ * It exists so that a sweep which silently found nothing - a selector that
+ * stopped matching, a sign-in that failed, a page that never drew - cannot
+ * report seventeen pages of green. It is not a measure of how much product
+ * there is.
+ *
+ * It was 200, and 200 was measured on the machine this was written on, whose
+ * database has years of workspaces in it and offers 241. A seeded installation
+ * offers 144, so the first time CI ran this it failed here - with every one of
+ * those 144 controls having answered the pointer correctly on all seventeen
+ * pages. The check was right about the product and wrong about itself.
+ *
+ * 120 is under what the seed produces and far above what any of the failures
+ * this guards against would leave behind, which is the only two things it has
+ * to be. Calibrate it against the smallest real installation it runs on, never
+ * against a developer's.
+ */
+record(seen >= 120, `${seen} controls were actually tried, which is enough of the product to mean something`);
 
 await finish(browser);

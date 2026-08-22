@@ -83,6 +83,25 @@ const { browser, page } = await open({ viewport: { width: 1440, height: 1000 } }
  */
 await page.goto(`${BASE}/workspace/${WORKSPACE}/issues/new`, { waitUntil: 'domcontentloaded' });
 if (await drawn(page, 'the new issue form')) {
+  /*
+   * Wait for the section, then read the page.
+   *
+   * `drawn()` answers as soon as the form is up, and the attachments section is
+   * not part of it yet: it renders behind `attachmentsAllowed`, which arrives
+   * with the workspace's settings a moment later. Reading `body` on the instant
+   * therefore read a page with no attachments section in it at all, and both
+   * assertions below failed - the line missing and the (?) missing, which reads
+   * exactly like the feature having been removed.
+   *
+   * It surfaced on 2026-08-22 in a full-suite run and not in three runs of this
+   * check alone, which is the signature of a race rather than a defect: alone
+   * the settings query wins, under load it does not.
+   *
+   * The wait is on the section's own label rather than on "Nothing attached
+   * yet." Waiting for the thing being asserted would make the assertion say
+   * nothing - it could only pass or time out.
+   */
+  await page.getByText('Attachments', { exact: true }).first().waitFor({ timeout: 20_000 });
   const body = await page.locator('body').innerText();
   record(body.includes('Nothing attached yet.'), 'the attachments line says the state');
   record(

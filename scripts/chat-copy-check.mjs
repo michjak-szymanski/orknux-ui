@@ -1,5 +1,5 @@
 /**
- * Where the copy control sits, and how it is revealed, on both voices.
+ * Where the copy control sits on a sent message.
  *
  * The button was the first child of `.userRow`, before the bubble's own
  * wrapper - so on a right-aligned sent message it was drawn in the empty gutter
@@ -11,11 +11,12 @@
  * column rather than under the message: its top must be below the bubble's
  * bottom, and its right edge must be the bubble's right edge and not the log's.
  *
- * The third is the other half of issue #188. A sent message hid its button with
- * `visibility` and revealed it on `:hover`; an answer faded a row in on
- * `:hover` or `:focus-within`. Same control, two mechanisms, and only one of
- * them reachable from a keyboard. This asserts they now resolve to the same
- * computed opacity in the same state, which is what a shared class buys.
+ * The third asserts it is revealed by hovering rather than merely happening to
+ * be on screen, since a control that is always drawn would pass the two above
+ * without anything having been fixed.
+ *
+ * The other half of issue #188 - that the two voices hide and show by the same
+ * rule - is `chat-copy-answer-check`, which needs a model to have answered.
  */
 import { BASE, WORKSPACE, open, record, drawn, finish } from './suite/harness.mjs';
 
@@ -75,22 +76,18 @@ if (await drawn(page, 'the chat log')) {
     `hovering the sent message reveals it: opacity ${placed.opacity}`,
   );
 
-  // The same gesture on the other voice, read the same way.
-  await page.locator('button[aria-label="Copy this answer"]').first().hover();
-  await page.waitForTimeout(300);
-  const both = await page.evaluate(() => ({
-    sent: getComputedStyle(
-      document.querySelector('button[aria-label="Copy this message"]').parentElement,
-    ).opacity,
-    answer: getComputedStyle(
-      document.querySelector('button[aria-label="Copy this answer"]').parentElement,
-    ).opacity,
-  }));
-  record(
-    both.answer === '1' && both.sent === '0',
-    `and the two voices hide and show by the same rule: with the answer hovered, ` +
-      `answer ${both.answer}, sent ${both.sent}`,
-  );
+  /*
+   * The two-voice rule moved to `chat-copy-answer-check`, because it needs an
+   * answer and this check does not.
+   *
+   * A seeded installation has no model it can reach, so its chats are a
+   * question with nothing after it. This waited on `Copy this answer`, timed
+   * out after thirty seconds and reported the placement of the sent control as
+   * broken - three good assertions lost to a fourth that could never run.
+   *
+   * The suite already has a word for this: `needs: ['model']`. What it did not
+   * have was a way to say that of half a check, so the half became its own.
+   */
 }
 
 await finish(browser);

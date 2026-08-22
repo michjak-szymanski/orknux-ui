@@ -61,7 +61,21 @@ record(
  * "ORKNUX" off the nav bar - a word that is on screen and is in no turn - and
  * the check then failed the find for correctly not finding it.
  */
-const said = await page.locator('[data-find], .assistantRow, [class*="assistantBody"]').first().innerText();
+/*
+ * Any turn, not the answer's.
+ *
+ * This waited on an assistant row, and a seeded installation has none: the
+ * fixture's model cannot be reached from a CI runner, so the chats it builds
+ * are a question with nothing after it. The check then hung for thirty seconds
+ * on a locator that was never going to resolve and reported it as a failure of
+ * the header.
+ *
+ * Reading the sent turn instead is not a weaker test - find searches the whole
+ * conversation and a word the person typed is as valid a needle as a word the
+ * model wrote. It is also the half that always exists, which is what a check
+ * that has to run against an empty installation needs.
+ */
+const said = await page.locator('[class*="userBody"], [class*="assistantBody"]').first().innerText();
 const needle = said.split(/\s+/).find((word) => /^[a-zA-Z]{6,}$/.test(word)) ?? '';
 record(needle !== '', `there is a word in this chat worth looking for ("${needle}")`);
 

@@ -656,10 +656,29 @@ export const TESTS = [
     /*
      * Reads the chat the seed builds, found by title rather than by id. It
      * asserts two things about one control because either alone passes for the
-     * wrong reason: under the bubble, and sharing its right edge. The third and
-     * fourth are the other half of issue #188 - a sent message and an answer
-     * were revealed by two different mechanisms, and only one of them was
-     * reachable from a keyboard.
+     * wrong reason: under the bubble, and sharing its right edge. The third is
+     * that hovering reveals it, since a control that is always drawn would pass
+     * the first two without anything having been fixed.
+     */
+  },
+  {
+    name: 'chat-copy-answer-check',
+    what: 'the sent message and the answer hide and show their copy control by the same rule',
+    needs: ['model'],
+    ci: false,
+    /*
+     * The other half of issue #188, split off because it needs an answer to
+     * measure and the check it came from does not.
+     *
+     * On 2026-08-22 this was one check, and the first CI run of the browser job
+     * failed it: a seeded installation has no model it can reach, so its chats
+     * are a question with nothing after it, and the wait for `Copy this answer`
+     * timed out and reported the *sent* control as broken. Three assertions
+     * that CI can prove were being lost to a fourth it never can.
+     *
+     * Naming the gap rather than hiding it: nothing unattended proves the
+     * answer side. Closing it needs a fixture with a stored answer, which needs
+     * either a model CI can reach or a way to write a turn without one.
      */
   },
   {
