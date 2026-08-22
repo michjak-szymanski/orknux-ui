@@ -69,8 +69,9 @@ refresh comes back to the list you were reading instead of to the top of Open.
 the form empties and stays put, keeping the assignee and the labels you had just
 set.
 
-The command palette knows the open issues too, by their title and by their
-number, so typing `12` there finds #12.
+**Quick actions** knows the open issues too, by their title and by their
+number, so typing `12` there finds #12 — and **Create issue** is in the same
+list, for the one you notice while looking at something else.
 
 ## One issue
 

@@ -2,7 +2,7 @@
  * An installation with chat switched off stops offering chat's settings.
  *
  * Issue #201. The switch is on the admin's settings screen and it already did
- * most of its job: the Chat tab goes, the search box stops listing it, and the page
+ * most of its job: the Chat tab goes, Quick actions stops listing it, and the page
  * itself says an administrator turned it off. What stayed behind was the
  * workspace's own Chat card - a model for naming chats, a model for the
  * microphone in a chat, a model to read an answer in a chat aloud - three
@@ -41,14 +41,14 @@ async function settingsPage() {
   }));
 }
 
-/** Whether the top bar offers the Chat section, and whether the search box lists it. */
+/** Whether the top bar offers the Chat section, and whether Quick actions lists it. */
 async function chatOffered() {
   await page.goto(`${BASE}/workspace/${WORKSPACE}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('input[aria-label="Search or create"]', { timeout: 20_000 });
+  await page.waitForSelector('input[aria-label="Quick actions"]', { timeout: 20_000 });
   await page.waitForTimeout(1200);
   const inBar = await page.locator('nav[aria-label="Sections"] a', { hasText: 'Chat' }).count();
-  await page.click('input[aria-label="Search or create"]');
-  await page.fill('input[aria-label="Search or create"]', 'chat');
+  await page.click('input[aria-label="Quick actions"]');
+  await page.fill('input[aria-label="Quick actions"]', 'chat');
   await page.waitForTimeout(400);
   const rows = await page.$$eval('ul[role="listbox"] [role="option"]', (all) =>
     all.map((one) => [...one.querySelectorAll('span')][1]?.textContent?.trim() ?? ''),
@@ -101,7 +101,7 @@ try {
   record(offered.inBar === 0, `the top bar offers no Chat link (${offered.inBar} found)`);
   record(
     !offered.rows.includes('Chat'),
-    `and the search box does not list it either (${offered.rows.join(', ') || 'nothing'})`,
+    `and Quick actions does not list it either (${offered.rows.join(', ') || 'nothing'})`,
   );
 
   await page.goto(`${BASE}/chat`, { waitUntil: 'domcontentloaded' });

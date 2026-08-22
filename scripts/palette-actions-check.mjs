@@ -1,5 +1,5 @@
 /**
- * The search box offers things to do, not only places to be - and says so.
+ * Quick actions offers things to do, not only places to be - and is named for it.
  *
  * Issue #218, whose description was one line: "- Create issue". The box in the
  * top bar could take you to the issue list, and starting one from there was two
@@ -14,7 +14,7 @@
  */
 import { BASE, WORKSPACE, open, record, finish } from './suite/harness.mjs';
 
-const BOX = 'input[aria-label="Search or create"]';
+const BOX = 'input[aria-label="Quick actions"]';
 
 const { browser, page } = await open({ viewport: { width: 1440, height: 1000 } });
 
@@ -40,12 +40,17 @@ record(
   `the box no longer calls itself Go to ("${named.placeholder}" / "${named.aria}")`,
 );
 record(
-  /search/i.test(named.placeholder) && /creat/i.test(named.placeholder),
-  `and says both halves of what it does ("${named.placeholder}")`,
+  /quick actions/i.test(named.placeholder),
+  `it is called Quick actions, which is what the person who asked for it calls it ("${named.placeholder}")`,
 );
+/*
+ * And read out as what is printed in it. Two names for one box is two boxes to
+ * anybody using a screen reader, who then hears one thing and is told another
+ * by whoever is helping them.
+ */
 record(
-  named.aria.trim() !== '' && named.placeholder.replace(/…|\.\.\./g, '').trim().startsWith(named.aria.trim()),
-  `what it is read out as matches what is printed in it ("${named.aria}")`,
+  named.aria.trim() !== '' && named.placeholder.replace(/…|\.\.\./g, '').trim() === named.aria.trim(),
+  `what it is read out as is what is printed in it ("${named.aria}")`,
 );
 
 await page.waitForSelector(BOX, { timeout: 20_000 });
@@ -163,8 +168,17 @@ const preferences = (await page.evaluate(() => document.querySelector('main')?.i
 
 record(!/go to/i.test(preferences), 'Preferences does not call the shortcut Go To either');
 record(
-  /Search Shortcut/i.test(preferences),
-  `it names the shortcut after the box it opens (${/(\S+ Shortcut)/i.exec(preferences)?.[1] ?? 'nothing found'})`,
+  /Quick Actions Shortcut/i.test(preferences),
+  `it names the shortcut after the box it opens (${/([A-Za-z]+ ?[A-Za-z]* Shortcut)/.exec(preferences)?.[1] ?? 'nothing found'})`,
+);
+/*
+ * Title case here and sentence case in the box, which is not a drift: every
+ * label on that page is title case. What would be drift is a different *word*,
+ * so it is the word that is asserted.
+ */
+record(
+  !/search shortcut/i.test(preferences),
+  'and does not still call it the Search shortcut, which it was for one commit',
 );
 
 await finish(browser);

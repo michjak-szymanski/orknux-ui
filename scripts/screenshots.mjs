@@ -616,7 +616,7 @@ const SHOTS = [
      */
     path: `/workspace/${ws}`,
     prepare: async (page) => {
-      const box = 'input[aria-label="Search or create"]';
+      const box = 'input[aria-label="Quick actions"]';
       await page.click(box);
       await page.type(box, 's', { delay: 40 });
       await page.waitForSelector('ul[role="listbox"]', { timeout: 10_000 });

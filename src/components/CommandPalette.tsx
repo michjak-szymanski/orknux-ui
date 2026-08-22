@@ -114,8 +114,8 @@ function rank(one: Command, needle: string): number {
 }
 
 /**
- * Search, from the top bar: anywhere to go, anything the workspace holds, and a
- * few things to start.
+ * Quick actions: the box in the top bar. Anywhere to go, anything the workspace
+ * holds, and a few things to start.
  *
  * The product is wide — a workspace alone has a dozen screens — and finding one
  * means knowing which section it lives under. This is the other way round: type
@@ -126,8 +126,10 @@ function rank(one: Command, needle: string): number {
  * `navigation.ts` still say `goTo` — that field answers "can this page be gone
  * to by name", which is as true as it ever was. What changed is the box: it
  * offers actions as well as destinations now, and a label promising only the
- * second was a label that lied about half the list. `Search or create…`, since
- * both halves have to be in it and the mark beside it is a magnifier.
+ * second was a label that lied about half the list. The name is the reporter's
+ * own words for it, and it is the name everywhere — the placeholder, what a
+ * screen reader reads, the keystroke in Preferences and the manual — because
+ * one thing with two names is two things to everyone who did not build it.
  *
  * Pages and the workspace's own contents. The pages are fixed and knowable and
  * cost nothing; the names of workflows, actions, agents and the rest are fetched
@@ -316,8 +318,8 @@ export function CommandPalette({ workspacePath, showAdmin = true, showChat = tru
           ref={inputRef}
           className={styles.input}
           value={text}
-          placeholder="Search or create…"
-          aria-label="Search or create"
+          placeholder="Quick actions…"
+          aria-label="Quick actions"
           onFocus={() => setOpen(true)}
           onChange={(event) => {
             setText(event.target.value);

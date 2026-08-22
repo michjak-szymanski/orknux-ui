@@ -72,7 +72,7 @@ export type PageElement = (session: SessionUser, onSignOut: () => void) => React
  * either.
  *
  * That is the point. A page used to be added by writing a route, and appearing in
- * the search box was a second, separate, forgettable step — which was duly forgotten twice.
+ * Quick actions was a second, separate, forgettable step — which was duly forgotten twice.
  * Now the two halves cannot be written apart from each other.
  */
 export const PAGE_ELEMENTS: Record<PagePath, PageElement> = {

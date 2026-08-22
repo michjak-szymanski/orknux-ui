@@ -126,7 +126,7 @@ export function App() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       {/*
-        Every page, from the one list that also feeds the search box. Written out as
+        Every page, from the one list that also feeds Quick actions. Written out as
         forty-nine near-identical blocks before this, each repeating the same guard —
         which is how two pages came to exist without ever appearing in the palette.
         A page is now one entry in `navigation.ts` and one element in `routes.tsx`,
