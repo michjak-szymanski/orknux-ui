@@ -18,3 +18,68 @@
   gap: var(--space-6);
   min-width: 0;
 }
+
+/*
+ * The reading of the schedule, under the schedule.
+ *
+ * The frame paints it: it carries `fieldHint` too, so it is the same grey and
+ * the same size as everything else a field says for itself on whichever
+ * surface is holding the form. What is here is only what the frames cannot
+ * know - that this particular line is rewritten on every keystroke.
+ *
+ * Hence the fixed height. A hint that wraps to two lines when the sentence
+ * grows and back to one when it shrinks moves the Timezone select and the
+ * Save button underneath it while somebody is typing, which is the single
+ * thing that makes a live description feel broken. One line, always, clipped
+ * with the whole of it on the `title` - and `min-height` as well as `height`,
+ * because an empty answer must hold the same room as a full one.
+ */
+.cronReading {
+  height: 18px;
+  min-height: 18px;
+  overflow: hidden;
+  line-height: 18px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/*
+ * Refused, in the two ways the server refuses it: an expression it cannot parse
+ * and one that parses and never comes round. Both are errors about what is in
+ * the field rather than descriptions of it, and an error is painted as one.
+ */
+.cronReadingWrong {
+  color: var(--color-danger);
+}
+
+/*
+ * The six positions, inside the (?) beside the field.
+ *
+ * In the note rather than under the field because it is an explanation of the
+ * field and that is where explanations go - see UI-DESIGN-RULES.md. It is a
+ * table in all but name: the position, what it is, and what it takes.
+ */
+.cronLegend {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: var(--space-2) var(--space-8);
+  margin: var(--space-8) 0;
+}
+
+.cronLegendRow {
+  display: contents;
+}
+
+.cronLegendAt {
+  font-family: var(--font-mono);
+  color: var(--color-text-muted);
+}
+
+.cronLegendLabel {
+  color: var(--color-text-primary);
+}
+
+.cronLegendAccepts {
+  font-family: var(--font-mono);
+  color: var(--color-text-secondary);
+}

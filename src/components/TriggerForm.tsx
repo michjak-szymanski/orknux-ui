@@ -28,6 +28,7 @@ import type { WorkspaceFunction } from '../api/functions';
 import { NEW_OBJECT, createObject, fetchWorkspaceObjects } from '../api/objects';
 import type { WorkflowObject } from '../api/objects';
 import { ConditionDialog } from './ConditionDialog';
+import { CRON_FIELDS, describeCron } from './cronText';
 import { DefinitionPicker } from './DefinitionPicker';
 import { FieldHint } from './FieldHint';
 import { IconField } from './IconField';
@@ -234,6 +235,18 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
     ],
     [conditions],
   );
+
+  /*
+   * What the schedule in the box actually does, said back in English.
+   *
+   * Derived rather than kept in state, and derived from `cron` itself, so it
+   * cannot lag the field by a keystroke: a reading that describes what was
+   * typed a moment ago is a reading that is wrong exactly when somebody is
+   * relying on it. Memoised on the string only because it is recomputed on
+   * every render of a form with a dozen other fields in it.
+   */
+  const reading = useMemo(() => describeCron(cron), [cron]);
+
   const complete =
     name.trim() !== '' &&
     (incoming
@@ -622,7 +635,21 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                   <label className={styles.label} htmlFor="trigger-cron">
                     Schedule
                   </label>
-                  <FieldHint label="Schedule">A cron expression defining when the trigger fires.</FieldHint>
+                  <FieldHint label="Schedule">
+                    A cron expression defining when the trigger fires. Six fields, in this order:
+                    <span className={own.cronLegend}>
+                      {CRON_FIELDS.map((field) => (
+                        <span key={field.position} className={own.cronLegendRow}>
+                          <span className={own.cronLegendAt}>{field.position}</span>
+                          <span className={own.cronLegendLabel}>{field.label}</span>
+                          <span className={own.cronLegendAccepts}>{field.accepts}</span>
+                        </span>
+                      ))}
+                    </span>
+                    Five fields are read from the minute, with the second at zero — so{' '}
+                    <code>0 2 * * *</code> and <code>0 0 2 * * *</code> are the same schedule. Both{' '}
+                    <code>0</code> and <code>7</code> are Sunday.
+                  </FieldHint>
                 </span>
                 <div className={styles.inputWrapper}>
                   <input
@@ -632,10 +659,35 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                     type="text"
                     placeholder="0 2 * * *"
                     value={cron}
+                    aria-describedby="trigger-cron-reading"
                     onChange={(event) => setCron(event.target.value)}
                     required
                   />
                 </div>
+                {/*
+                  What the expression does, under the expression.
+
+                  In the open rather than behind the (?), because it is not an
+                  explanation of the field - it is the result of what was just
+                  typed into it, which the rules file keeps in the open for the
+                  same reason an error stays in the open.
+
+                  One line, always, whatever it says. It is recomputed on every
+                  keystroke, and a hint that grows to two lines and back pushes
+                  the Timezone select and the buttons below it up and down under
+                  the pointer - which is precisely what makes a live reading feel
+                  broken rather than helpful. The full sentence is on the title
+                  for the rare one long enough to be clipped.
+                */}
+                <p
+                  id="trigger-cron-reading"
+                  className={`${styles.fieldHint} ${own.cronReading} ${
+                    reading.state === 'unreadable' || reading.state === 'unreachable' ? own.cronReadingWrong : ''
+                  }`}
+                  title={reading.text}
+                >
+                  {reading.text}
+                </p>
               </div>
 
               <div className={styles.field}>

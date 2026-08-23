@@ -425,6 +425,29 @@ export const TESTS = [
 
   // --- pages that are pages -------------------------------------------------
   {
+    name: 'cron-reading-check',
+    what: 'a cron expression reading back as English while it is typed, on both surfaces that ask for one',
+    needs: ['workspace'],
+    /*
+     * Issue #203 made a cron of seconds a schedule the server keeps rather than
+     * one it merely accepts, and started refusing an expression that parses and
+     * never comes round. The field now says what the expression does, and the
+     * (?) beside it names the six positions in the server's own order.
+     *
+     * Two of its assertions are the ones worth having, and neither shows in a
+     * screenshot. It types a character that ruins a good expression and asserts
+     * the sentence changes: a reading held in state and updated a render late
+     * reads exactly like a reading and is a lie at the one moment somebody is
+     * relying on it. And it measures the top of the Timezone field across the
+     * longest and shortest readings there are, because a hint that wraps to two
+     * lines and back moves everything under it while somebody is typing.
+     *
+     * It builds its own scheduled trigger over GraphQL for the second surface -
+     * the settings card - and removes it again, since the seed does not promise
+     * one with a known expression in it.
+     */
+  },
+  {
     name: 'docs-zoom-check',
     what: 'a picture in the manual opens at full size, and keeps its colours on white',
     needs: ['session'],
