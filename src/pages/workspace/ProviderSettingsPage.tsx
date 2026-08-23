@@ -17,10 +17,10 @@ import type { SessionUser } from '../../api/session';
 import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
-import { DefinitionPicker } from '../../components/DefinitionPicker';
 import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
-import { RevealToggle } from '../../components/RevealToggle';
+import { SecretField, useSecretField } from '../../components/SecretField';
+import type { SecretSource } from '../../components/SecretField';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import { useWorkspaceVariables } from './workspaceVariables';
@@ -42,22 +42,7 @@ const PROVIDER_TYPES: ProviderType[] = [
 /** The versions Azure OpenAI is commonly pinned to; the field still accepts any. */
 const API_VERSIONS = ['2024-06-01', '2024-08-01-preview', '2024-10-21', '2025-01-01-preview'];
 
-/** Stands in for a stored credential until the caller asks to see it. */
-const MASK = '••••••••••••••••';
-
 const DEFAULT_SCOPE = 'https://cognitiveservices.azure.com/.default';
-
-/**
- * Where the credential comes from, and the two are exclusive.
- *
- * Not a checkbox reading "use a workspace secret" beside a key box, because
- * that arrangement leaves both fields on screen at once and invites somebody to
- * fill in both - which the server refuses, correctly, as a caller who has not
- * chosen. A pair of tabs can only be in one of its states, so the form cannot
- * express the thing that would be rejected, and only the field belonging to the
- * chosen half is asked for.
- */
-type Credential = 'OWN' | 'VARIABLE';
 
 /** What each type's endpoint usually looks like, as a hint and nothing more. */
 function endpointHint(type: ProviderType): string {
@@ -100,23 +85,16 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
   const [clientId, setClientId] = useState('');
   const [scope, setScope] = useState(DEFAULT_SCOPE);
   /**
-   * Which of the two this provider's credential is. A new one keeps its own
-   * copy, which is what nearly every provider does.
-   */
-  const [credential, setCredential] = useState<Credential>('OWN');
-  /** The workspace secret it reads from; empty while none is chosen. */
-  const [variableId, setVariableId] = useState('');
-  // Null while a stored credential is untouched, so saving leaves it alone.
-  const [secret, setSecret] = useState<string | null>(adding ? '' : null);
-  const [revealed, setRevealed] = useState(false);
-  /**
-   * What was revealed, kept so it can be put back out of sight.
+   * The one secret this provider has, whatever it is called this minute.
    *
-   * Hiding is only offered while the field still holds exactly this: once it
-   * has been typed into, covering it again would either throw the typing away
-   * or leave an edit pending behind a row of dots.
+   * A provider keeps a single secret column, serving the API key or the Entra
+   * client secret and never both at once — so there is one of these here. It is
+   * a handle rather than four pieces of state on this page because a card with
+   * two secrets is two calls to `useSecretField` and nothing else: a Slack
+   * connection's bot token and app token would each get their own, each
+   * answering for itself.
    */
-  const [revealedValue, setRevealedValue] = useState<string | null>(null);
+  const key = useSecretField({ stored: !adding });
 
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -194,41 +172,28 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
     setTenantId(found.tenantId ?? '');
     setClientId(found.clientId ?? '');
     setScope(found.scope ?? DEFAULT_SCOPE);
-    setCredential(found.secretVariableId === null ? 'OWN' : 'VARIABLE');
-    setVariableId(found.secretVariableId ?? '');
-    setSecret(null);
-    setRevealed(false);
-    setRevealedValue(null);
+    key.reset({ stored: found.secretSet, variable: found.secretVariableId });
   }
 
-  /**
-   * Moving the credential from one kind to the other, and what each move does
-   * to the key box.
-   *
-   * Going to its own key from a reference has to empty that box. Left holding
-   * null it would mean "leave the stored credential alone", which for a
-   * provider that has no key of its own is a save that changes nothing and
-   * reads as the tab not having worked. Coming back to a provider that *does*
-   * hold a key, null is exactly right and is left where it is.
-   */
-  function chooseOwn() {
-    setCredential('OWN');
-    if (provider?.secretSet !== true) setSecret((held) => held ?? '');
-    setSaveError(null);
-    setSaved(false);
-  }
-
-  function chooseVariable() {
-    setCredential('VARIABLE');
+  /** Which of the two the key field is, and what it costs this form. */
+  function chooseSource(next: SecretSource) {
+    key.choose(next);
     // Reaching for the list is a reason to read it again: somebody about to
     // point a provider at a secret has often just been to Variables to make it.
-    refreshVariables();
+    if (next === 'VARIABLE') refreshVariables();
     setSaveError(null);
     setSaved(false);
   }
 
   const azure = type === 'AZURE_OPENAI';
   const entra = azure && authMethod === 'ENTRA_ID';
+  /*
+   * What the one secret field is called, which the authentication method
+   * decides. The choice of where it comes from is that field's whatever it is
+   * called this minute, so the label goes to the field and the field names the
+   * control - rather than a card-level word standing in for both.
+   */
+  const secretLabel = entra ? 'Client Secret' : 'API Key';
 
   /**
    * The secrets this workspace keeps, and only those.
@@ -269,13 +234,12 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
 
   /** What the form will not send, said before it is sent rather than after. */
   function refused(): string | null {
-    if (credential === 'VARIABLE' && variableId === '') {
-      return 'Choose the workspace secret this provider reads its key from.';
-    }
+    if (key.unchosen) return `Choose the workspace secret this provider reads its ${secretLabel} from.`;
     return null;
   }
 
   function values() {
+    const sending = key.sending;
     return {
       name: name.trim(),
       type,
@@ -283,20 +247,23 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
       // Only Azure OpenAI offers Entra ID, so anything else is a key.
       authMethod: azure ? authMethod : ('API_KEY' as ProviderAuthMethod),
       /*
-       * One of the two, never both and never neither by accident.
+       * The key field's answer, in the names this mutation gives it.
        *
-       * A variable sent drops any copy the provider held and a key sent drops
-       * any reference, so the exclusivity is the server's rule as much as this
+       * One of the two, never both and never neither by accident. A variable
+       * sent drops any copy the provider held and a key sent drops any
+       * reference, so the exclusivity is the server's rule as much as this
        * form's - and sending the pair is a BAD_REQUEST rather than something
-       * resolved by precedence. On its own key, `secret` left out is still what
-       * says "leave the stored one alone"; that is the behaviour this whole
-       * field has always had and the easiest thing here to break.
+       * resolved by precedence. Which of the three it is - the variable, a new
+       * key, or nothing at all - is the field's own to work out, because that
+       * is the rule a second secret field on a card would otherwise write out a
+       * second time and slightly differently. Nothing sent is what says "leave
+       * the stored one alone", and it is the easiest thing here to break.
        */
-      ...(credential === 'VARIABLE'
-        ? { secretVariableId: variableId }
-        : secret === null
-          ? {}
-          : { secret }),
+      ...(sending === null
+        ? {}
+        : 'variable' in sending
+          ? { secretVariableId: sending.variable }
+          : { secret: sending.value }),
       apiVersion: azure ? apiVersion : null,
       deploymentName: azure ? deploymentName.trim() || null : null,
       region: azure ? region.trim() || null : null,
@@ -375,10 +342,7 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
   async function handleReveal() {
     if (providerId === undefined) return;
     try {
-      const stored = await revealProviderSecret(providerId);
-      setSecret(stored ?? '');
-      setRevealedValue(stored ?? '');
-      setRevealed(true);
+      key.show((await revealProviderSecret(providerId)) ?? '');
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : 'Could not reveal the credentials.');
     }
@@ -400,7 +364,6 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
     }
   }
 
-  const secretLabel = entra ? 'Client Secret' : 'API Key';
 
   return (
     <AppShell
@@ -620,148 +583,58 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
             )}
 
             {/*
-              Where the credential comes from. Every provider type offers both,
-              so this is asked of all of them and not only of Azure.
+              The key, and where it comes from - one field, asked for one way at
+              a time.
+
+              The choice used to be a pair of tabs above this card, and it read
+              as a mode of the card because that is where it was. That is
+              harmless here by accident: a provider keeps one secret, serving
+              whichever of the two names this field has. It would be useless on
+              a card with two, so the control has moved onto the field it
+              governs and is named after it. See components/SecretField.tsx.
             */}
-            <div className={styles.field}>
-              <span className={styles.labelWithHint}>
-                <span className={styles.label}>Credential</span>
-                <FieldHint label="Credential">
-                  {credential === 'OWN'
-                    ? 'This provider keeps its own copy of the key, encrypted here. Nothing else reads it, and changing it changes this provider only.'
-                    : 'This provider reads one of the workspace’s secrets instead of keeping a copy. Several providers can read the same one, and rotating the key is then one edit on the Variables page rather than one on each of them. The secret is read at the moment the provider is called, so a new value is in use immediately.'}
-                </FieldHint>
-              </span>
-              <div className={styles.segmented} role="tablist" aria-label="Credential">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={credential === 'OWN'}
-                  className={credential === 'OWN' ? styles.segmentActive : styles.segment}
-                  onClick={chooseOwn}
-                >
-                  Its own key
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={credential === 'VARIABLE'}
-                  className={credential === 'VARIABLE' ? styles.segmentActive : styles.segment}
-                  onClick={chooseVariable}
-                >
-                  A workspace secret
-                </button>
-              </div>
-            </div>
+            <SecretField
+              id="provider-secret"
+              label={secretLabel}
+              required
+              field={key}
+              options={offered}
+              variablesPath={`/workspace/${workspaceId}/variables`}
+              placeholder={entra ? 'Client secret' : 'sk-…'}
+              hint={
+                entra
+                  ? 'Register an app in Azure AD → App registrations → Certificates & secrets.'
+                  : azure
+                    ? 'Found in Azure Portal → Resource → Keys and Endpoint.'
+                    : 'The key the provider issued for this workspace.'
+              }
+              onSource={chooseSource}
+              onValue={() => {
+                setSaveError(null);
+                setSaved(false);
+              }}
+              onVariable={() => {
+                setSaveError(null);
+                setSaved(false);
+              }}
+              /* There is nothing stored to reveal until the provider exists. */
+              onReveal={adding ? undefined : () => void handleReveal()}
+              /*
+                A reference pointing at nothing, said in words about the
+                variable and inside the field that holds it.
 
-            {/*
-              A reference pointing at nothing, said in words about the variable.
-
-              It is an error and stays in the open - see UI-DESIGN-RULES.md. The
-              sentence names the secret as the thing that is wrong and says the
-              endpoint is not, because the failure this replaces is a provider
-              reporting "check the endpoint" for a reason that has nothing to do
-              with the endpoint, which is what issue #211 was.
-            */}
-            {provider?.secretVariableMissing === true && (
-              <p className={styles.credentialAlarm} role="alert" data-secret-missing="">
-                The workspace secret this provider read is gone, so it has no key to call with. Its
-                endpoint is fine. Point it at another secret below, or give it a key of its own.
-              </p>
-            )}
-
-            {credential === 'VARIABLE' ? (
-              <div className={styles.field}>
-                <span className={styles.labelWithHint}>
-                  <label className={styles.label} htmlFor="provider-secret-variable">
-                    Workspace Secret <span className={styles.required}>*</span>
-                  </label>
-                  <FieldHint label="Workspace Secret">
-                    One of the workspace’s variables, of kind Secret; values are not offered, because a
-                    value is read with the variable listing. It is held by identity rather than by name,
-                    so renaming it or moving it to another catalog does not disturb this provider — and
-                    it cannot be deleted while a provider reads it. Make one on the{' '}
-                    <Link to={`/workspace/${workspaceId}/variables`}>Variables</Link> page.
-                  </FieldHint>
-                </span>
-                <DefinitionPicker
-                  id="provider-secret-variable"
-                  value={variableId}
-                  options={offered}
-                  onChoose={(chosen) => {
-                    setVariableId(chosen);
-                    setSaveError(null);
-                    setSaved(false);
-                  }}
-                  placeholder={
-                    offered.length === 0 ? 'This workspace has no secrets yet' : 'Choose a secret…'
-                  }
-                  searchPlaceholder="Search secrets…"
-                  ariaLabel="Search workspace secrets"
-                />
-              </div>
-            ) : (
-              <div className={styles.field}>
-                <span className={styles.labelWithHint}>
-                  <label className={styles.label} htmlFor="provider-secret">
-                    {secretLabel} <span className={styles.required}>*</span>
-                  </label>
-                  {/* Where to go and get the thing this box wants. */}
-                  <FieldHint label={secretLabel}>
-                    {entra
-                      ? 'Register an app in Azure AD → App registrations → Certificates & secrets'
-                      : azure
-                        ? 'Found in Azure Portal → Resource → Keys and Endpoint'
-                        : 'The key the provider issued for this workspace.'}
-                  </FieldHint>
-                </span>
-                <div className={styles.secretRow}>
-                  <input
-                    id="provider-secret"
-                    className={`${styles.input} ${styles.inputMono}`}
-                    type={revealed || secret === '' ? 'text' : 'password'}
-                    value={secret ?? MASK}
-                    onChange={(event) => setSecret(event.target.value)}
-                    onFocus={() => {
-                      // Typing replaces the stored one rather than editing a mask.
-                      if (secret === null) setSecret('');
-                    }}
-                    placeholder={entra ? 'Client secret' : 'sk-…'}
-                  />
-                  {/*
-                    The eye the variables page and the connection form use, in
-                    place of the word this one had. It was also the only one of
-                    the four that could not be undone: `Reveal` put the key on the
-                    screen and then went away, so it stayed there until the page
-                    was loaded again.
-  
-                    Offered while the field still holds the mask or exactly what
-                    was revealed. After that it is an edit, and hiding it would
-                    either throw the typing away or leave a pending change behind
-                    a row of dots.
-                  */}
-                  {!adding &&
-                    provider?.secretSet === true &&
-                    (!revealed || secret === revealedValue) && (
-                      <RevealToggle
-                        shown={revealed && secret === revealedValue}
-                        label="API key"
-                        onToggle={() => {
-                          if (revealed && secret === revealedValue) {
-                            // Null, not empty: it is what tells the save to leave
-                            // the stored key alone.
-                            setSecret(null);
-                            setRevealed(false);
-                            setRevealedValue(null);
-                          } else {
-                            void handleReveal();
-                          }
-                        }}
-                      />
-                    )}
-                </div>
-              </div>
-            )}
+                It is an error and stays in the open - see UI-DESIGN-RULES.md.
+                The sentence names the secret as the thing that is wrong and
+                says the endpoint is not, because the failure this replaces is a
+                provider reporting "check the endpoint" for a reason that has
+                nothing to do with the endpoint, which is what issue #211 was.
+              */
+              broken={
+                provider?.secretVariableMissing === true
+                  ? `The workspace secret this ${secretLabel} was read from is gone, so this provider has nothing to call with. Its endpoint is fine. Point this field at another secret, or give it a key of its own.`
+                  : null
+              }
+            />
 
             {entra && (
               <div className={styles.field}>

@@ -1018,7 +1018,15 @@ export const TESTS = [
     what: "a provider's key is its own or a workspace secret it reads, and the two do not spill into each other",
     needs: ['workspace'],
     /*
-     * Issue #232. The dangerous half is not the new field, it is the old one:
+     * Issue #232, and where the choice ended up. It was a pair of tabs above
+     * the Authentication card, which reads as a mode of the card; it is a
+     * property of the one field it decides, so the placement is measured here
+     * too - the tabs inside the field block, on the label's own line, directly
+     * above the single control that block draws, and named after that field. A
+     * provider has one secret column and a Slack connection has two, and a
+     * card-level mode has nothing to say about the second.
+     *
+     * The dangerous half is not the new field, it is the old one:
      * "a key is stored, leave it alone" is a null secret behind a row of dots,
      * and every way of offering a variable instead has a way of turning that
      * into "clear the key". So the credential is read back off the server after
@@ -1043,7 +1051,7 @@ export const TESTS = [
   },
   {
     name: 'slack-target-check',
-    what: 'a Slack action saying what the connection can see, without ever refusing what is typed',
+    what: 'both places a Slack target is typed saying what the connection can see, and neither refusing it',
     needs: ['workspace'],
     /*
      * Issue #176's checking half. `slackTarget` answers three ways and the
@@ -1067,6 +1075,18 @@ export const TESTS = [
      * variables and the schema honest. The three outcomes themselves are forced
      * in the browser, because being found needs a Slack workspace to be found
      * in. Its connections and its action are its own, and swept at the end.
+     *
+     * Every one of those claims is then made a second time against the workflow
+     * editor's node panel, which is where the report came from: the form
+     * defines a send, a node binds the target of one step of it, and the panel
+     * said nothing at all. The box is one component now, so the second surface
+     * is what keeps it one - a shared piece of code nothing reads twice proves
+     * nothing. Two claims are only about the panel. A parameter on the
+     * Reference tab is read out of the run, so there is nothing to check before
+     * the run and no box is drawn; and `target` is only a Slack channel when
+     * the action behind the node sends through a Slack connection, which it
+     * proves against a send through a mail server that has the same parameter
+     * under the same name. It makes its own workflow and takes it away again.
      */
   },
   {

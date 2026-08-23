@@ -1,7 +1,17 @@
 /**
  * A model provider's credential: its own key, or a workspace secret it reads.
  *
- * Issue #232. The server takes one of the two and refuses the pair, so the form
+ * Issue #232, and the second answer to it. The choice was a pair of tabs above
+ * the Authentication card, which reads as a mode of the card because that is
+ * where it was; it is a property of the one field it decides. So the placement
+ * is measured here as well as the behaviour: the tabs stand inside the field
+ * block that holds the box, on the label's own line, directly above the one
+ * control that block draws, and they are named after that field rather than
+ * after the card. A card with two secrets is then two of these and no
+ * ambiguity - which is the whole reason for the move, since a provider has one
+ * secret column and a Slack connection has two.
+ *
+ * The server takes one of the two and refuses the pair, so the form
  * has to be a thing that cannot ask for both — and the whole of the risk is in
  * the field that was already there. "A key is stored, leave it alone" is
  * spelled as a `null` secret and drawn as a row of dots, and every arrangement
@@ -134,9 +144,21 @@ const plain = await makeVariable('plain', 'VALUE', 'not-a-secret');
 
 // ------------------------------------------------------------- reading a form
 
-/** The two tabs, and which of them is on. Read off ARIA rather than off a class. */
-async function tabs() {
-  const list = page.locator('[role="tablist"][aria-label="Credential"]');
+/**
+ * One field's pair of tabs.
+ *
+ * Found by the name that field gives them rather than by a word about the card.
+ * That is not pedantry about a selector: it is the assertion. A control called
+ * "Credential" belongs to whatever is around it, and there is no answer to
+ * "which secret is this about" on a card with two; a control called after the
+ * API Key can only be the API Key's.
+ */
+const sourceTabs = (label = 'API Key') =>
+  page.locator(`[role="tablist"][aria-label="Where the ${label} comes from"]`);
+
+/** Which of them is offered and which is on. Read off ARIA, not off a class. */
+async function tabs(label = 'API Key') {
+  const list = sourceTabs(label);
   if ((await list.count()) === 0) return null;
   return list.evaluate((node) => {
     const all = Array.from(node.querySelectorAll('[role="tab"]'));
@@ -147,20 +169,67 @@ async function tabs() {
   });
 }
 
+/**
+ * Where those tabs stand in relation to the field they govern.
+ *
+ * Containment first - the block holding the box holds the tabs - and then how
+ * that block reads: one control and one choice in it, the label above both, and
+ * the tabs on the label's line rather than in a row of their own. The numbers
+ * are here because "it moved" is not the claim; the claim is that it moved onto
+ * something, and a check that only asserted the tabs were somewhere else would
+ * pass on them being at the foot of the page.
+ */
+async function placement(label, controlId) {
+  return page.evaluate(
+    ({ label, controlId }) => {
+      const list = document.querySelector(`[role="tablist"][aria-label="Where the ${label} comes from"]`);
+      const control = document.getElementById(controlId);
+      if (list === null || control === null) return null;
+      const named = document.querySelector(`label[for="${controlId}"]`);
+
+      /* The field is the nearest thing around the control that holds the tabs
+         as well. If there is none, they are not in the same field. */
+      let field = control.parentElement;
+      while (field !== null && !field.contains(list)) field = field.parentElement;
+
+      /* Whatever the tabs themselves stand in. On the field's own label line
+         that holds the field's label and no control at all; above a card it
+         holds a label of its own, which is the arrangement being ruled out. */
+      const line = list.parentElement;
+      const controls = (node) =>
+        node.querySelectorAll('input, select, textarea, [aria-haspopup="listbox"]').length;
+
+      const box = (node) => node.getBoundingClientRect();
+      const middle = (node) => (box(node).top + box(node).bottom) / 2;
+      return {
+        shared: field !== null,
+        controls: field === null ? 0 : controls(field),
+        tablists: field === null ? 0 : field.querySelectorAll('[role="tablist"]').length,
+        named: named?.textContent?.trim() ?? null,
+        withTheLabel: line !== null && named !== null && line.contains(named) && controls(line) === 0,
+        onTheLabelsLine: named === null ? false : Math.abs(middle(list) - middle(named)) <= 12,
+        above: box(list).bottom <= box(control).top,
+        gap: box(control).top - box(list).bottom,
+      };
+    },
+    { label, controlId },
+  );
+}
+
 const keyBox = () => page.locator('#provider-secret');
 const picker = () => page.locator('#provider-secret-variable');
 
-/** Chooses one of the two, and gives the form a moment to draw the other field. */
-async function choose(which) {
-  await page.getByRole('tab', { name: which, exact: true }).click();
+/** Chooses one of the two, on the field named, and lets the form redraw. */
+async function choose(which, label = 'API Key') {
+  await sourceTabs(label).getByRole('tab', { name: which, exact: true }).click();
   await page.waitForTimeout(200);
 }
 
 /** Opens the picker, optionally narrows it, and reads every row it offers. */
-async function offered(typed = '') {
+async function offered(typed = '', label = 'API Key') {
   // Only if it is shut: the trigger toggles, so opening an open one closes it.
   if ((await page.locator('[role="listbox"]').count()) === 0) await picker().click();
-  const search = page.locator('input[aria-label="Search workspace secrets"]');
+  const search = page.locator(`input[aria-label="Search workspace secrets for the ${label}"]`);
   await search.waitFor({ state: 'visible', timeout: 10_000 });
   if (typed !== '') await search.fill(typed);
   await page.waitForTimeout(200);
@@ -226,27 +295,92 @@ await atForm(`${models}/providers/new`);
 
 const fresh = await tabs();
 if (fresh === null) {
-  record(false, 'the new-provider form offers no choice of credential at all: there is no Credential tablist');
+  record(false, "the new-provider form offers no choice at all: the API Key field has no pair of tabs");
 } else {
   record(
-    fresh.names.join(' | ') === 'Its own key | A workspace secret',
-    `the form offers both credentials as a pair of tabs: ${fresh.names.join(' | ')}`,
+    fresh.names.join(' | ') === 'Its own value | A workspace secret',
+    `the field offers both as a pair of tabs: ${fresh.names.join(' | ')}`,
   );
   record(
-    fresh.on.length === 1 && fresh.on[0] === 'Its own key',
-    `exactly one is chosen, and a new provider starts on its own key: ${JSON.stringify(fresh.on)}`,
+    fresh.on.length === 1 && fresh.on[0] === 'Its own value',
+    `exactly one is chosen, and a new provider starts on its own value: ${JSON.stringify(fresh.on)}`,
   );
 }
 
 record(
   (await keyBox().count()) === 1 && (await picker().count()) === 0,
-  'on its own key the form asks for a key and does not ask for a variable',
+  'on its own value the form asks for a key and does not ask for a variable',
 );
+
+// --------------------------------------------- and whose choice it is: the field's
+
+/* What was rejected, gone. The tabs were called Credential and stood above the
+   card; a card-level mode is the thing this change is about, so its absence is
+   asserted rather than assumed. */
+record(
+  (await page.locator('[role="tablist"][aria-label="Credential"]').count()) === 0,
+  'there is no Credential tablist above the card any more: the choice is not a mode of the card',
+);
+
+const where = await placement('API Key', 'provider-secret');
+if (where === null) {
+  record(false, 'the API Key field has no tabs of its own, so nothing about where they stand can be read');
+} else {
+  record(where.shared, 'the tabs stand inside the same field block as the box they decide');
+  record(
+    where.controls === 1 && where.tablists === 1,
+    `and that block holds one control and one choice, so which field the choice is about cannot be in doubt: ${where.controls} control(s), ${where.tablists} choice(s)`,
+  );
+  record(
+    (where.named ?? '').startsWith('API Key'),
+    `the label above both is the field's own name: ${JSON.stringify(where.named)}`,
+  );
+  record(
+    where.withTheLabel,
+    'the tabs stand on that label’s line — the same line, holding the label and no control of its own',
+  );
+  record(
+    where.onTheLabelsLine,
+    'and they are drawn level with it, which is what makes them read as the label’s field and not as the card’s',
+  );
+  record(
+    where.above && where.gap < 40,
+    `and directly above the box, with nothing between them: ${Math.round(where.gap)}px`,
+  );
+}
+
+/*
+ * Whatever the field is called, the choice is that field's.
+ *
+ * The name of this field changes with the authentication method - the same
+ * column is the API Key or the Entra client secret - and the control has to
+ * follow it, because on a card with two secrets the name is the only thing
+ * saying which one is being answered.
+ */
+await page.selectOption('#provider-type', 'AZURE_OPENAI');
+await page.getByRole('tab', { name: 'Service Principal', exact: true }).click();
+await page.waitForTimeout(300);
+const asSecret = await placement('Client Secret', 'provider-secret');
+record(
+  asSecret !== null && asSecret.shared && (asSecret.named ?? '').startsWith('Client Secret'),
+  `on Entra ID the field is a Client Secret and its tabs are named after that: ${JSON.stringify(asSecret?.named)}`,
+);
+record(
+  (await sourceTabs('API Key').count()) === 0,
+  'and the API Key tabs went with the API Key: one choice per field, never one per card',
+);
+
+/* Back to a plain form for the rest of it. */
+await atForm(`${models}/providers/new`);
 
 await choose('A workspace secret');
 record(
   (await picker().count()) === 1 && (await keyBox().count()) === 0,
   'on a workspace secret the key box is gone, so the form cannot send the pair the server refuses',
+);
+record(
+  (await placement('API Key', 'provider-secret-variable'))?.shared === true,
+  'and the tabs are in the picker’s field just as they were in the box’s: the field is the same field',
 );
 
 // ------------------------------------------------------- only secrets, picked
@@ -334,7 +468,10 @@ record((await reveal(own.id)) === FIRST_KEY, 'and it is the key that was typed')
 // ---------------------------- the assertion this check exists for: leave alone
 
 await atForm(`${models}/providers/${own.id}`);
-record((await tabs())?.on?.[0] === 'Its own key', 'reopened, the form knows which of the two this provider is');
+record(
+  (await tabs())?.on?.[0] === 'Its own value',
+  'reopened, the field knows which of the two this provider is',
+);
 record(
   (await keyBox().inputValue()) === MASK,
   'the stored key is drawn as a mask rather than as an empty box, which is what says there is one',
@@ -369,10 +506,10 @@ await page.reload({ waitUntil: 'domcontentloaded' });
 await page.waitForSelector('#provider-name', { timeout: 30_000 });
 await page.waitForTimeout(400);
 record((await tabs())?.on?.[0] === 'A workspace secret', 'reopened, it knows it is reading a secret');
-await choose('Its own key');
+await choose('Its own value');
 record(
   (await keyBox().inputValue()) === '',
-  'coming back to its own key the box is empty rather than masked: there is no stored key to leave alone',
+  'coming back to its own value the box is empty rather than masked: there is no stored key to leave alone',
 );
 
 await keyBox().fill(SECOND_KEY);

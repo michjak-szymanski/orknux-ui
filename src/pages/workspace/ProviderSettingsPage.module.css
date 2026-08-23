@@ -215,40 +215,6 @@
   color: var(--color-text-primary);
 }
 
-/*
- * A credential reference that points at nothing.
- *
- * Painted as the alarm it is rather than as a note under a field: this is the
- * one thing on the page that explains a provider with no key, and a provider
- * that cannot say why it has no key is how "check the endpoint" gets believed.
- * Full width and above the field it is about, so it cannot be scrolled out of
- * sight by the control it sends the reader to.
- */
-.credentialAlarm {
-  margin: 0;
-  padding: var(--space-10) var(--space-12);
-  background: var(--color-danger-soft);
-  border: 1px solid var(--color-danger-border);
-  border-radius: var(--radius-6);
-  font-size: var(--text-md);
-  color: var(--color-text-primary);
-}
-
-.secretRow {
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: 100%;
-}
-
-/*
- * `.revealButton` was here: a green word floated over the right-hand end of the
- * key field. Issue #191 replaced it with `RevealToggle`, which is a flex child
- * of the row rather than something laid over it - so the row's own
- * `position: relative` is now the only thing left of the arrangement, and it is
- * harmless.
- */
-
 /* ---- Footer ---- */
 
 .footer {

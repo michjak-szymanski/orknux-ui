@@ -42,11 +42,21 @@ untouched.
 `http://localhost:11434` is the address of Ollama's own API and answers `404`
 to both of the calls made here; the hint in the form says so.
 
-A provider's **credential** is one of two things, and they are exclusive. It
-either keeps its own copy of the key, which is what nearly every provider does
-and what has always happened here; or it reads one of the workspace's
+The key a provider calls with is one of two things, and they are exclusive. It
+is either the provider's own value, which is what nearly every provider has and
+what has always happened here; or it is read from one of the workspace's
 **variables** — a secret, not a value — that somebody else maintains. Every
-provider type offers both, and the form asks which before it asks for anything.
+provider type offers both.
+
+The choice belongs to the field, not to the form. It sits beside the name of the
+box it decides — **Its own value** or **A workspace secret**, next to *API Key*,
+or next to *Client Secret* where the authentication method makes it one — and
+only the control belonging to the half chosen is drawn: a box to type into, or a
+list of the workspace's secrets to pick from. That is on purpose and it is not
+only tidiness. A form holding a key and a reference at once is a form somebody
+fills in twice, and the pair is refused; and where something asks for two
+secrets, as a Slack connection does with its bot token and its app token, each
+one answers for itself rather than both being decided by a switch above them.
 
 Reading a secret is worth it wherever one key is behind more than one provider.
 Three providers on one OpenAI key meant typing it into each of them, and
@@ -431,6 +441,11 @@ tokens where they were, and go on listening exactly as they did.
 **A Slack action's User and Channel fields are checked as you type them.** Under
 the field, orknux says whether that connection can see what is there — the name
 Slack gave it back when it could, and a note when it could not.
+
+The same answer appears in the workflow editor, under a node's **target**
+parameter, since that is where a step names who it is writing to. Only on the
+**Value** tab: a **Reference** is read out of the run when the run reaches it, so
+there is nothing to look up beforehand.
 
 There are three answers rather than two, and the third is the one that catches
 people out. A bot token set up only to post carries no permission to look
