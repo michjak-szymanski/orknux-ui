@@ -3,8 +3,16 @@
  *
  * Issue #176's checking half. `slackTarget` answers a question about a user or
  * a channel with one of three outcomes and a sentence ready to show, and this
- * drives the interface that shows it. The three are not three shades of the
- * same thing, and every claim here is about keeping them apart:
+ * drives the two interfaces that show it: the action form, where a send is
+ * defined, and the workflow editor's node panel, where one step of a workflow
+ * binds its own target. The second is where the report came from - the form had
+ * been given the answer and the panel had not - and both are driven here rather
+ * than in two files, because the whole reason the box is one component is that
+ * the two must not drift, and a shared piece of code only one check reads
+ * proves nothing about the other.
+ *
+ * The three outcomes are not three shades of the same thing, and every claim
+ * here is about keeping them apart:
  *
  *   1. The sentence arrives unaltered. Every outcome is asserted as an exact
  *      string against what came back on the wire, because the server's wording
@@ -30,6 +38,15 @@
  *      grows and shrinks under the pointer is what makes a live one feel broken.
  *   6. It is not a request per keystroke, and it is not asked at all about a
  *      connection that is not Slack or a field with nothing in it.
+ *   7. The panel asks about the one parameter that is a Slack target, and only
+ *      when it is one. Not `threadTs`, which is a timestamp sitting two boxes
+ *      away under the same connection; not a target on the Reference tab, whose
+ *      value arrives at run time from elsewhere in the graph, so there is
+ *      nothing to check before the run and the name being read is not a channel
+ *      name; and not a target on a node whose action sends through a mail
+ *      server, because a node binds where a message goes but never which
+ *      connection it goes through. Each of those is silence rather than an
+ *      empty box, and none of them is a question put to the server.
  *
  * The first leg runs against the real server with no interception at all: a
  * Slack connection with no bot token stored, which is answered `UNCHECKED` in
@@ -56,6 +73,8 @@ const stamp = Date.now();
 const SLACK = `zz scratch slack target ${stamp}`;
 const MAIL = `zz scratch mail target ${stamp}`;
 const ACTION = `zz scratch slack action ${stamp}`;
+const MAIL_ACTION = `zz scratch mail action ${stamp}`;
+const WORKFLOW_NAME = `zz scratch target workflow ${stamp}`;
 
 /**
  * The answers the browser is given for the three outcomes.
@@ -110,7 +129,17 @@ let asked = [];
 let slow = null;
 const HELD = 1500;
 
-const box = () => page.locator('#action-target-answer');
+/**
+ * Which answer box the assertions are about.
+ *
+ * Two surfaces ask the same question now - the action form, where a send is
+ * defined, and the workflow editor's node panel, where one step binds its own
+ * target - and every claim below is a claim about both. So the box is named
+ * once and pointed at each in turn, rather than the whole file being written
+ * twice with one selector changed.
+ */
+let ANSWER = 'action-target-answer';
+const box = () => page.locator(`#${ANSWER}`);
 const said = async () => ((await box().count()) === 0 ? '' : (await box().innerText()).trim());
 const outcomeOf = () => box().getAttribute('data-outcome');
 const saveButton = () => page.locator('dialog[open] button[type="submit"]');
@@ -137,10 +166,13 @@ function apart(one, other) {
   return Math.max(...a.map((value, at) => Math.abs(value - b[at])));
 }
 
+/** The field the target is typed into, on whichever surface is being read. */
+let FIELD = '#action-target-name';
+
 /** Type into the target field one character at a time, as somebody would. */
 async function type(text) {
-  await page.fill('#action-target-name', '');
-  await page.locator('#action-target-name').pressSequentially(text, { delay: 30 });
+  await page.fill(FIELD, '');
+  await page.locator(FIELD).pressSequentially(text, { delay: 30 });
 }
 
 /**
@@ -154,8 +186,8 @@ async function type(text) {
 async function settled(expected) {
   await page
     .waitForFunction(
-      (wanted) => document.querySelector('#action-target-answer')?.innerText.trim() === wanted,
-      expected,
+      ([id, wanted]) => document.querySelector(`#${id}`)?.innerText.trim() === wanted,
+      [ANSWER, expected],
       { timeout: 10_000 },
     )
     .catch(() => {});
@@ -164,6 +196,10 @@ async function settled(expected) {
 let slackId = null;
 let mailId = null;
 let actionId = null;
+/** A send through the mail server, which has a `target` and cannot be asked about. */
+let mailActionId = null;
+/** Somewhere to put a node, made here and taken away again. */
+let workflowId = null;
 
 try {
   /* ---------------------------------------------------------------- fixture */
@@ -435,10 +471,206 @@ try {
   actionId = saved?.id ?? null;
   record(saved !== undefined, 'and the action saved');
   record(saved?.targetName === 'nowhere', `with the target as typed (${JSON.stringify(saved?.targetName ?? null)})`);
+
+  /* ------------------------------------------ the same answer, in the editor */
+
+  /*
+   * Where issue #176 was actually reported from.
+   *
+   * The action form defines a send; a node in a workflow binds the `target` of
+   * one step of it, which is where somebody typing a channel name most often
+   * is, and until now that panel said nothing at all. Everything asserted above
+   * is asserted again here, against the same interception, because the point of
+   * lifting the box out of the dialog is that the two cannot drift - and a
+   * shared component nothing reads on the second surface would prove nothing.
+   *
+   * Two things are this surface's own and are asserted only here: a parameter
+   * on the Reference tab is read out of the run and so has nothing to check
+   * before the run, and a `target` is only a Slack channel when the action
+   * behind the node sends through a Slack connection.
+   */
+
+  /*
+   * A send with the same `target` parameter, through the mail server. Nothing
+   * about a node says which connection it goes through - it binds where the
+   * message goes and what it says, and the connection stays the definition's -
+   * so this is how a panel that read the parameter's name and nothing else
+   * would be caught.
+   */
+  mailActionId = (
+    await call(`mutation ($input: CreateActionInput!) { createAction(input: $input) { id } }`, {
+      input: {
+        workspaceId: WORKSPACE,
+        name: MAIL_ACTION,
+        type: 'EXECUTE',
+        subtype: 'OUTGOING_CONNECTION',
+        connectionId: mailId,
+        connectionAction: 'SEND_MESSAGE',
+        content: 'Something to say.',
+        target: 'CHANNEL',
+        targetName: 'general',
+      },
+    })
+  ).createAction.id;
+
+  workflowId = (
+    await call(`mutation ($input: CreateWorkflowInput!) { createWorkflow(input: $input) { id } }`, {
+      input: { workspaceId: WORKSPACE, name: WORKFLOW_NAME, description: 'Scratch, for the target check.' },
+    })
+  ).createWorkflow.id;
+
+  await page.goto(`${BASE}/workspace/${WORKSPACE}/workflows/${workflowId}/editor`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await page.getByRole('button', { name: /^Add node/ }).waitFor({ timeout: 30_000 });
+  await page.waitForTimeout(1500);
+
+  // An Action node on the canvas, through the Add menu - the same way the
+  // editor check puts an Object one there.
+  await page.getByRole('button', { name: /^Add node/ }).click();
+  await page.getByRole('menuitem', { name: 'Action', exact: true }).click();
+  await page.waitForTimeout(1200);
+
+  /** Points the node at a definition, and waits for the parameters it seeds. */
+  async function bind(named) {
+    await page.locator('#node-action').click();
+    await page.waitForTimeout(400);
+    await page.locator('[role="option"]', { hasText: new RegExp(`^${named}`) }).first().click();
+    await page.waitForSelector('#node-mapping-target', { timeout: 20_000 });
+    await page.waitForTimeout(800);
+  }
+
+  await bind(ACTION);
+
+  ANSWER = 'node-mapping-target-answer';
+  FIELD = '#node-mapping-target';
+
+  record((await box().count()) === 1, 'the node panel answers about the target it binds, which is the whole report');
+
+  /*
+   * A parameter that is not the target, on the same node and the same Slack
+   * connection. `threadTs` is the message a reply threads onto and is a
+   * timestamp; a panel that asked about every box whose name it did not
+   * recognise would be asking Slack whether a timestamp is a channel.
+   */
+  record(
+    (await page.locator('#node-mapping-threadTs-answer').count()) === 0,
+    'and about that parameter only - nothing is said under threadTs',
+  );
+  asked = [];
+  await page.fill('#node-mapping-threadTs', '');
+  await page.locator('#node-mapping-threadTs').pressSequentially('general', { delay: 30 });
+  await page.waitForTimeout(1200);
+  record(asked.length === 0, `nor asked about it (${JSON.stringify(asked)})`);
+
+  /* --------------------------------------- the three, under the node's field */
+
+  await type('general');
+  await settled(ANSWERS.general.message);
+  const nodeFound = await colourOf(box());
+  record((await said()) === ANSWERS.general.message, 'node panel FOUND: the sentence, verbatim');
+  record((await outcomeOf()) === 'FOUND', 'node panel FOUND: drawn as itself');
+  record(
+    apart(nodeFound, hintColour) >= 40,
+    `node panel FOUND: painted as a confirmation (${nodeFound} against ${hintColour})`,
+  );
+  await page.screenshot({ path: shot('slack-target-node-found.png') });
+
+  await type('nowhere');
+  await settled(ANSWERS.nowhere.message);
+  const nodeAdvice = await colourOf(box());
+  record((await said()) === ANSWERS.nowhere.message, 'node panel NOT_FOUND: the sentence, verbatim, advice and all');
+  record((await outcomeOf()) === 'NOT_FOUND', 'node panel NOT_FOUND: drawn as itself');
+  record(
+    apart(nodeAdvice, dangerColour) >= 40,
+    `node panel NOT_FOUND: not the colour a refusal is painted (${nodeAdvice} against ${dangerColour})`,
+  );
+  record(apart(nodeAdvice, nodeFound) >= 40, 'node panel NOT_FOUND: and not the colour a confirmation is');
+  await page.screenshot({ path: shot('slack-target-node-not-found.png') });
+
+  await type('scopeless');
+  await settled(ANSWERS.scopeless.message);
+  const nodeUnchecked = await colourOf(box());
+  record((await said()) === ANSWERS.scopeless.message, 'node panel UNCHECKED: the whole sentence, unsummarised');
+  record((await outcomeOf()) === 'UNCHECKED', 'node panel UNCHECKED: drawn as itself');
+  record(apart(nodeUnchecked, hintColour) === 0, `node panel UNCHECKED: kept the ordinary hint grey (${nodeUnchecked})`);
+  await page.screenshot({ path: shot('slack-target-node-unchecked.png') });
+
+  /* ---------------------------------------------- it does not move the panel */
+
+  /*
+   * The same claim as the Create Action button above, made against what the
+   * panel puts under the answer: the next parameter's own box. A hint that
+   * grows and shrinks pushes the rest of the node's parameters around under the
+   * pointer, which is what makes a live answer feel broken.
+   */
+  const nodeTops = [];
+  const nodeHeights = [];
+  for (const typed of ['', 'general', 'scopeless', '']) {
+    if (typed === '') {
+      await page.fill(FIELD, '');
+      await page.waitForTimeout(700);
+    } else {
+      await type(typed);
+      await settled(ANSWERS[typed].message);
+    }
+    nodeTops.push(Math.round((await page.locator('#node-mapping-threadTs').boundingBox()).y));
+    nodeHeights.push(Math.round((await box().boundingBox()).height));
+  }
+  console.log(`threadTs sat at y = ${nodeTops.join(', ')}`);
+  console.log(`the panel's answer was ${nodeHeights.join(', ')} tall`);
+  record(new Set(nodeTops).size === 1, 'nothing below the answer moves as the answer changes, in the panel too');
+  record(new Set(nodeHeights).size === 1, 'because the room it takes there is the same whatever it says, and empty');
+
+  /* -------------------------------------------- a reference is not a channel */
+
+  /*
+   * On the Reference tab the value arrives at run time from somewhere else in
+   * the graph - a trigger's event, an agent's answer - so there is nothing here
+   * to ask Slack about before the run, and the name of the field being read is
+   * not the name of a channel. Saying a channel could not be found about it
+   * would be both wrong and alarming, so nothing is said: not an empty box, no
+   * box at all.
+   */
+  await type('general');
+  await settled(ANSWERS.general.message);
+  asked = [];
+  const targetSource = page.locator('div[role="group"][aria-label="target source"]');
+  await targetSource.getByRole('button', { name: 'Reference' }).click();
+  await page.waitForTimeout(1200);
+  record((await box().count()) === 0, 'a referenced target is not answered about at all');
+  record(asked.length === 0, `and nothing is asked about it (${JSON.stringify(asked)})`);
+  await page.screenshot({ path: shot('slack-target-node-reference.png') });
+
+  // Back again: the tab is a switch and not a one-way door.
+  await targetSource.getByRole('button', { name: 'Value' }).click();
+  await page.waitForTimeout(600);
+  await type('nowhere');
+  await settled(ANSWERS.nowhere.message);
+  record((await said()) === ANSWERS.nowhere.message, 'and it answers again on the Value tab');
+
+  /* ------------------------------ a target that is not a Slack target */
+
+  /*
+   * The same parameter, called the same thing, on a node whose action sends
+   * through the mail server. The panel has to read the action behind the node
+   * to know whether there is anybody to ask, and here there is not: nothing is
+   * said and nothing is asked, because a sentence about some other connection
+   * under this field would be worse than silence.
+   */
+  asked = [];
+  await bind(MAIL_ACTION);
+  await page.fill(FIELD, '');
+  await page.locator(FIELD).pressSequentially('general', { delay: 30 });
+  await page.waitForTimeout(1200);
+  record((await box().count()) === 0, 'a send through a connection that is not Slack is not answered about');
+  record(asked.length === 0, `and nothing is asked about it either (${JSON.stringify(asked)})`);
 } finally {
   await page.unroute('**/graphql').catch(() => {});
   for (const [query, variables] of [
+    ['mutation ($id: ID!) { removeWorkflow(id: $id) }', { id: workflowId }],
     ['mutation ($id: ID!) { deleteAction(id: $id) }', { id: actionId }],
+    ['mutation ($id: ID!) { deleteAction(id: $id) }', { id: mailActionId }],
     // A connection the workspace added itself has nothing to fall back on, so
     // disconnecting it is how one goes - there is no delete for it.
     ['mutation ($id: ID!) { disconnectWorkspaceConnection(id: $id) }', { id: slackId }],

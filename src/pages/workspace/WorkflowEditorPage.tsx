@@ -52,11 +52,13 @@ import type {
 import type { SessionUser } from '../../api/session';
 import { fetchWorkspaceActions } from '../../api/actions';
 import { fetchWorkspaceAgents } from '../../api/agents';
-import type { Action } from '../../api/actions';
+import type { Action, MessageTarget } from '../../api/actions';
 import type { Agent } from '../../api/agents';
 import { fetchWorkspaceConditions } from '../../api/conditions';
 import type { Condition } from '../../api/conditions';
 import { startExecution } from '../../api/executions';
+import { fetchWorkspaceConnections } from '../../api/integrations';
+import type { WorkspaceConnection } from '../../api/integrations';
 import { createObject, fetchWorkspaceObjects } from '../../api/objects';
 import type { WorkflowObject } from '../../api/objects';
 import { fetchWorkspaceTriggers } from '../../api/triggers';
@@ -93,6 +95,7 @@ import { FieldPicker } from '../../components/FieldPicker';
 import type { FieldOption } from '../../components/FieldPicker';
 import { Icon, IconPickerDialog } from '../../components/IconPicker';
 import { Loader } from '../../components/Loader';
+import { SlackTargetAnswer } from '../../components/SlackTargetAnswer';
 import { TrashIcon } from '../../components/TrashIcon';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import {
@@ -251,6 +254,19 @@ const AGENT_PARAMETERS = ['prompt', 'systemPrompt'];
  * node leads to, so it reads what that node was handed.
  */
 const SESSION_PARAMETERS = ['sessionKeyPrefix', 'sessionKey'];
+
+/**
+ * Where a send goes, which is the one parameter a Slack connection can be asked
+ * about.
+ *
+ * The server's name for it, from `ActionParameters`: a node binding this is
+ * binding the channel or the member a message is addressed to, and the run
+ * falls back to the definition's own target where the node leaves it empty. The
+ * name alone means nothing - a function argument may perfectly well be called
+ * `target` - so `slackSend` below establishes that the action is a send through
+ * a Slack connection before this name means anything at all.
+ */
+const TARGET_PARAMETER = 'target';
 
 /** How long a graph has to stop changing before it is worth asking about. */
 const PREVIEW_PAUSE_MS = 400;
@@ -1975,6 +1991,17 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     );
   }, [ports, setNodes]);
   const [actions, setActions] = useState<Action[]>([]);
+  /*
+   * The workspace's connections, held only to answer one question: whether the
+   * connection an action sends through is a Slack one.
+   *
+   * The action carries the id and the name of its connection but not what kind
+   * of thing it is, and only Slack can be asked about a user or a channel. So
+   * the list is here rather than a lookup per selected node - one query with
+   * the other catalogues, against a handful of rows, instead of a fetch every
+   * time somebody clicks a node.
+   */
+  const [connections, setConnections] = useState<WorkspaceConnection[]>([]);
   const [conditions, setConditions] = useState<Condition[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [objects, setObjects] = useState<WorkflowObject[]>([]);
@@ -2205,6 +2232,10 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     fetchWorkspaceActions(workspaceId, 0, ACTION_PAGE_SIZE)
       .then((page) => setActions(page.content))
       .catch(() => setActions([]));
+    // Not a catalogue anything is picked from here: see `slackSend` below.
+    fetchWorkspaceConnections(workspaceId)
+      .then(setConnections)
+      .catch(() => setConnections([]));
 
     fetchWorkspaceAgents(workspaceId, 0, AGENT_PAGE_SIZE)
       .then((page) => setAgents(page.content))
@@ -2727,6 +2758,52 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       held === null || held.name !== NODE_KIND_LABEL[held.kind] ? held : { ...held, name: chosen },
     );
   }, [draft, actions, triggers, conditions, agents, objects]);
+
+  /* ------------------------------------------- what the connection can see */
+
+  /**
+   * The Slack send this node's `target` parameter would go through, or null.
+   *
+   * Three things have to be true before there is anything to ask, and each of
+   * them is a thing the node itself does not say:
+   *
+   *   - the node points at an action, and that action is a send through a
+   *     connection - `OUTGOING_CONNECTION`. That subtype is what makes a
+   *     parameter called `target` the place a message goes; a function whose
+   *     author happened to call an argument `target` is not a Slack channel and
+   *     must never be asked about as one. `ActionParameters` on the server
+   *     names the same parameter, and its being the send's destination is the
+   *     same fact from the other side of the wire.
+   *   - the action names a connection, which is what the run sends through. A
+   *     node cannot override it: it binds what is said and who it goes to, and
+   *     the connection stays the definition's. So the definition is where the
+   *     answer to "which connection" is, and there is nowhere else to look.
+   *   - that connection is a Slack one. Only Slack can be asked about a user or
+   *     a channel, and the action carries the connection's id and name but not
+   *     its type, which is why the workspace's connections are held above.
+   *
+   * Null wherever any of that cannot be established - an action that has not
+   * loaded yet, a definition naming no connection, a connection this browser
+   * has not been told the type of - and null means nothing is said. Guessing
+   * would put a sentence about some other connection under the field, or claim
+   * a channel cannot be seen without knowing who was asked.
+   *
+   * Which of the two kinds is asked about is the definition's too: a node binds
+   * the name, and whether that name is a channel or a member is settled where
+   * the action is written.
+   */
+  const slackSend = useMemo((): { connectionId: string; target: MessageTarget } | null => {
+    if (draft === null || draft.kind !== 'ACTION' || draft.actionId === null) return null;
+
+    const action = actions.find((one) => one.id === draft.actionId);
+    if (action === undefined || action.subtype !== 'OUTGOING_CONNECTION') return null;
+    if (action.connectionId === null || action.target === null) return null;
+
+    const connection = connections.find((held) => held.id === action.connectionId);
+    if (connection === undefined || connection.type !== 'SLACK') return null;
+
+    return { connectionId: connection.id, target: action.target };
+  }, [draft, actions, connections]);
 
   /**
    * Picking a saved shape seeds the fields it has.
@@ -4209,23 +4286,55 @@ Change the keystroke in Preferences.`}
                                   }
                                 />
                               ) : (
-                                <div className={styles.inputWrapper}>
-                                  <input
-                                    id={`node-mapping-${mapping.name}`}
-                                    className={`${styles.input} ${styles.parameterValue}`}
-                                    value={mapping.expression}
-                                    placeholder={parameterPlaceholder(draft, mapping.name)}
-                                    spellCheck={false}
-                                    onChange={(event) =>
-                                      setDraft({
-                                        ...draft,
-                                        mappings: draft.mappings.map((held, at) =>
-                                          at === index ? { ...held, expression: event.target.value } : held,
-                                        ),
-                                      })
-                                    }
-                                  />
-                                </div>
+                                <>
+                                  <div className={styles.inputWrapper}>
+                                    <input
+                                      id={`node-mapping-${mapping.name}`}
+                                      className={`${styles.input} ${styles.parameterValue}`}
+                                      value={mapping.expression}
+                                      placeholder={parameterPlaceholder(draft, mapping.name)}
+                                      spellCheck={false}
+                                      aria-describedby={
+                                        slackSend !== null && mapping.name === TARGET_PARAMETER
+                                          ? `node-mapping-${mapping.name}-answer`
+                                          : undefined
+                                      }
+                                      onChange={(event) =>
+                                        setDraft({
+                                          ...draft,
+                                          mappings: draft.mappings.map((held, at) =>
+                                            at === index ? { ...held, expression: event.target.value } : held,
+                                          ),
+                                        })
+                                      }
+                                    />
+                                  </div>
+                                  {/*
+                                    What the connection can see, under the box
+                                    it was typed into - the same answer the
+                                    action form gives, drawn by the same
+                                    component, because this is where somebody
+                                    naming a channel most often is. A node is
+                                    one step of one workflow, and its target is
+                                    the half of a send worth varying per step.
+
+                                    Only on this tab. A reference is read at run
+                                    time out of whatever the run is carrying by
+                                    then, so there is nothing here to ask about,
+                                    and saying a field could not be found about
+                                    the *name* of a reference would be alarming
+                                    and wrong.
+                                  */}
+                                  {slackSend !== null && mapping.name === TARGET_PARAMETER && (
+                                    <SlackTargetAnswer
+                                      id={`node-mapping-${mapping.name}-answer`}
+                                      className={styles.fieldNote}
+                                      connectionId={slackSend.connectionId}
+                                      target={slackSend.target}
+                                      name={mapping.expression}
+                                    />
+                                  )}
+                                </>
                               )}
                             </div>
                           ))}

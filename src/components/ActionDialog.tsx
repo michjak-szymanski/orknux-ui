@@ -32,8 +32,8 @@ import {
   validFunctionName,
 } from '../api/functions';
 import type { WorkspaceFunction } from '../api/functions';
-import { checkSlackTarget, fetchWorkspaceConnections } from '../api/integrations';
-import type { SlackTargetCheck, SlackTargetOutcome, WorkspaceConnection } from '../api/integrations';
+import { fetchWorkspaceConnections } from '../api/integrations';
+import type { WorkspaceConnection } from '../api/integrations';
 import { fetchVariables } from '../api/variables';
 import type { Variable } from '../api/variables';
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
@@ -46,7 +46,7 @@ import type { HeaderRow } from './HeaderRowsEditor';
 import { IconField } from './IconField';
 import { OpenDefinitionIcon } from './OpenDefinitionIcon';
 import { PanelClose, panelEscape } from './PanelClose';
-import own from './ActionDialog.module.css';
+import { SlackTargetAnswer } from './SlackTargetAnswer';
 import styles from './Dialog.module.css';
 
 export interface ActionDialogProps {
@@ -123,23 +123,6 @@ function sentRows(rows: HeaderRow[]): ActionHeaderInput[] {
  */
 const NEW_FUNCTION_ROW = { value: NEW_FUNCTION, label: '+ New function' };
 const NEW_CONDITION_ROW = { value: NEW_CONDITION, label: '+ New condition' };
-
-/**
- * How long the target field must be still before Slack is asked about it.
- *
- * Every one of these is a round trip and a lookup at Slack's end, so it is not
- * one per keystroke. The same pause the memory slider waits before asking what
- * a share works out to: long enough that typing a channel name is one question
- * and not twelve, short enough that stopping shows the answer at once.
- */
-const TARGET_PAUSE = 150;
-
-/** One class per outcome, so the form draws all three and never the absence of one. */
-const TARGET_CLASS: Record<SlackTargetOutcome, string> = {
-  FOUND: own.targetFound,
-  NOT_FOUND: own.targetNotFound,
-  UNCHECKED: own.targetUnchecked,
-};
 
 /**
  * Create Action, and the same form again for editing one.
@@ -402,62 +385,14 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
     [connections, connectionId],
   );
 
-  /** Whether this field is one that can be asked about at all. */
-  const asking = subtype === 'OUTGOING_CONNECTION' && slackConnection !== null;
-
   /**
-   * Exactly what the answer on screen would have to be an answer *to*.
+   * Whether this field is one that can be asked about at all.
    *
-   * Everything the question is made of, in one string: the connection, which of
-   * the two fields, and what is typed. Nothing is asked while it is null -
-   * nothing typed is nothing to say, and a lookup of an empty field is a round
-   * trip to be told so.
+   * Read here as well as inside the box, because the field points its
+   * `aria-describedby` at a box that is only there when there is something to
+   * describe it with.
    */
-  const typedTarget = targetName.trim();
-  const askingOf = asking && typedTarget !== '' ? slackConnection : null;
-  const question = askingOf === null ? null : [askingOf.id, target, typedTarget].join(' ');
-
-  const [answered, setAnswered] = useState<{ question: string; check: SlackTargetCheck } | null>(null);
-
-  /*
-   * The answer, asked for once the field has been still for a moment.
-   *
-   * Two things keep a stale answer off the screen, and they are two because one
-   * of them is not enough. `current` stops a slow reply to a question nobody is
-   * asking any more from being stored at all - the same guard the memory
-   * preview uses, and the same reason. What it cannot do is decide what is
-   * *drawn*: between a keystroke and the reply to it, the answer in state is a
-   * true answer to the previous text, and printing it beside the new text is
-   * the same lie as a description that lags the field by a keystroke. So the
-   * answer is kept with the question it belongs to and drawn only while that
-   * question is still the one being asked.
-   */
-  useEffect(() => {
-    if (askingOf === null || question === null) return;
-
-    let current = true;
-    const timer = setTimeout(() => {
-      checkSlackTarget(askingOf.id, target, typedTarget)
-        .then((check) => {
-          if (current) setAnswered({ question, check });
-        })
-        .catch(() => {
-          // A question that could not be put is not an answer about the field.
-          // The box goes quiet rather than saying something about the typing on
-          // the strength of a request that never arrived.
-          if (current) setAnswered(null);
-        });
-    }, TARGET_PAUSE);
-
-    return () => {
-      current = false;
-      clearTimeout(timer);
-    };
-    // `question` is made of the other three, so it is what changes when they do.
-  }, [question, askingOf, target, typedTarget]);
-
-  /** The answer, but only while it is an answer to what is in the field now. */
-  const answer = answered !== null && answered.question === question ? answered.check : null;
+  const asking = subtype === 'OUTGOING_CONNECTION' && slackConnection !== null;
 
   const complete =
     name.trim() !== '' &&
@@ -773,13 +708,12 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                   while this is the result of what somebody just typed, which
                   the rules file keeps visible beside an error and a status.
 
-                  The server's sentence, printed as it arrives and never
-                  reworded. It is written to be shown - it says which connection
-                  was asked, what it could not see, and, when the question could
-                  not be put at all, which scope to add to the Slack app and why
-                  sending never needed it. Saying any of that again here would
-                  be a second copy to keep true, and the picker over these same
-                  endpoints will show this same sentence.
+                  The box itself is shared with the workflow editor's node
+                  panel, which asks the same question about the `target` one
+                  step binds. Everything that had to be alike in the two - the
+                  server's sentence printed as it arrives, the three colours,
+                  the pause, the room kept for the answer - is alike by being
+                  one piece of code rather than by being remembered twice.
 
                   None of it refuses anything. `complete` above does not read
                   this, the field stays free text, and Save stays live on every
@@ -787,42 +721,13 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                   this bot was never invited to, or somebody who joined a minute
                   ago, as it is a typo.
                 */}
-                {asking && (
-                  <p
-                    id="action-target-answer"
-                    className={`${styles.fieldHint} ${own.targetAnswer} ${
-                      answer === null ? '' : TARGET_CLASS[answer.outcome]
-                    }`}
-                    data-outcome={answer?.outcome ?? (question === null ? 'nothing' : 'asking')}
-                    aria-live="polite"
-                  >
-                    {answer === null ? (
-                      question === null ? (
-                        ''
-                      ) : (
-                        'Checking…'
-                      )
-                    ) : (
-                      <>
-                        {/*
-                          Which thing matched, when the sentence does not
-                          already open with it. `general` typed and `#general`
-                          found is the whole value of a confirmation, and the
-                          server's wording leads with it today - so this draws
-                          nothing now and keeps the naming if that ever changes.
-                        */}
-                        {answer.outcome === 'FOUND' &&
-                          answer.label !== null &&
-                          !answer.message.startsWith(answer.label) && (
-                            <>
-                              <strong className={own.targetLabel}>{answer.label}</strong>{' '}
-                            </>
-                          )}
-                        {answer.message}
-                      </>
-                    )}
-                  </p>
-                )}
+                <SlackTargetAnswer
+                  id="action-target-answer"
+                  className={styles.fieldHint}
+                  connectionId={asking ? slackConnection?.id ?? null : null}
+                  target={target}
+                  name={targetName}
+                />
               </div>
             </>
           )}

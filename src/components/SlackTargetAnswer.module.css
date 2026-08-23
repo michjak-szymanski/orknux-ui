@@ -1,9 +1,18 @@
 /*
- * The one part of this dialog's look that is its own.
+ * The look of the answer a Slack target field gives back about what has just
+ * been typed into it.
  *
- * Everything else comes from `Dialog.module.css`, which every dialog shares.
- * What is here is the answer a Slack target field gives back about what has
- * just been typed into it, and no other form has one.
+ * It was `ActionDialog.module.css` while the action form was the only place
+ * that asked. The node parameter panel binds the same `target` for one step of
+ * one workflow, and that is where somebody typing a channel name most often is,
+ * so it asks too - and the three outcomes are drawn from here for both. A
+ * second copy of these colours would be a second thing to keep true, in exactly
+ * the way a second copy of the server's sentence would be.
+ *
+ * Everything that is a surface's own is left to the surface: the caller passes
+ * its own hint class alongside, so this reads at the size a dialog's hints read
+ * at inside the dialog and at the size the panel's notes read at inside the
+ * panel. What is here is only what has to be the same in both.
  */
 
 /*
@@ -33,6 +42,12 @@
  * is anything in it: eight would be a hand's width of nothing under every field
  * nobody has typed into yet, to spare the longest of the three outcomes a
  * scroll. Three holds a confirmation whole and most of a piece of advice.
+ *
+ * The line height is set here rather than inherited, so that three lines is
+ * three lines on both surfaces - the panel's notes are set smaller than the
+ * dialog's hints, and a height in pixels that came out as three lines in one
+ * place and three and a third in the other would be a box with a sliver of a
+ * fourth line showing.
  */
 .targetAnswer {
   height: 54px;
@@ -43,12 +58,21 @@
 }
 
 /*
+ * Each outcome's colour is written against `.targetAnswer` as well, so that it
+ * is the outcome and not the caller's hint class that decides what this is
+ * painted. Both surfaces hand over a class that sets a colour of its own -
+ * being ordinary hints, they are muted - and which of the two won would
+ * otherwise come down to the order two stylesheets happen to be bundled in.
+ * A confirmation that came out grey because of that would be silent.
+ */
+
+/*
  * Found: quiet, and the only one of the three that is a confirmation.
  *
  * Green because it is the one outcome that settles anything - Slack named the
  * thing, and the sentence says which thing.
  */
-.targetFound {
+.targetAnswer.targetFound {
   color: var(--color-success);
 }
 
@@ -62,7 +86,7 @@
  * field stays free text, the Save button stays live, and this says what it
  * knows without pretending to know more.
  */
-.targetNotFound {
+.targetAnswer.targetNotFound {
   color: var(--color-amber);
 }
 
@@ -70,12 +94,14 @@
  * Unchecked: the question was never put, so nothing here is about what was
  * typed and nothing here is about the connection being broken.
  *
- * It keeps the ordinary hint grey it inherits from `fieldHint` - it has no
+ * It keeps the ordinary hint grey the surface's own class gives it - it has no
  * colour of its own, because a verdict is exactly what it is not. Named all the
- * same, so that the outcome the form is drawing is always one class rather than
- * sometimes a class and sometimes the absence of one.
+ * same, so that the outcome being drawn is always one class rather than
+ * sometimes a class and sometimes the absence of one, and stated in the token
+ * rather than left to inheritance so that it is grey beside a hint class that
+ * is not.
  */
-.targetUnchecked {
+.targetAnswer.targetUnchecked {
   color: var(--color-text-muted);
 }
 
