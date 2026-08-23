@@ -629,6 +629,45 @@ export const TESTS = [
      */
   },
   {
+    name: 'voice-turn-taking-check',
+    what: "the workspace's voice turn-taking: the three boxes, the bounds, and a turn that really ends on them",
+    needs: ['workspace'],
+    /*
+     * Issue #256. Voice mode kept answering while somebody was still talking,
+     * three times over two numbers, and the numbers behind it are a judgement
+     * about how people talk rather than a fact about audio - so a workspace can
+     * move them, and the server stores only a departure from what the interface
+     * already does.
+     *
+     * Two assertions are worth the whole check. The first is that an empty box
+     * names voice mode's own value, read out of VoiceMode.tsx by the check
+     * rather than written into it: a settings page holding its own copy of 2.5
+     * seconds goes on saying 2.5 seconds after that file says something else,
+     * which is a form lying about the product it configures, and nothing else
+     * here would notice.
+     *
+     * The second is why this drives audio at all. A setting that is stored and
+     * never read is worse than no setting, and every other assertion here would
+     * pass on a page that saved three numbers nothing consults. So the panel is
+     * given a fake microphone - a file that speaks for a moment and then stops
+     * - and the turn is timed twice: once with nothing set, where it has to end
+     * on voice mode's own pause, and once with a longer pause set, where it has
+     * to end that much later. How far, not whether: a turn that merely took
+     * longer would pass on a slow machine.
+     *
+     * The other two settings are asserted stored, cleared and bounded rather
+     * than heard. The sensitivity cannot be defeated by a loud tone - a fixed
+     * level qualifies a voice on its own, deliberately, so a silent room is not
+     * absurdly sensitive - and the unattended microphone's floor is five
+     * minutes, which is not a thing to sit in front of. What can be measured
+     * about those two is measured from the source instead: the watching loop
+     * has to read all three off the workspace, and a constant put back in the
+     * middle of it fails here.
+     *
+     * Both models, the chat and the settings are put back afterwards.
+     */
+  },
+  {
     name: 'agent-grants-check',
     what: "an agent's grants: bounded, searchable, and explained behind a (?), on the page and in the panel",
     needs: ['workflow'],

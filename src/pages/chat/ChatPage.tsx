@@ -54,7 +54,7 @@ import { AppShell } from '../../components/AppShell';
 import { CatalogueNote, useCatalogue } from '../../components/Catalogue';
 import { VoiceMeter } from '../../components/VoiceMeter';
 import { VoiceMode } from '../../components/VoiceMode';
-import type { VoiceModeHandle, VoicePhase } from '../../components/VoiceMode';
+import type { VoiceModeHandle, VoicePhase, VoiceTurnTaking } from '../../components/VoiceMode';
 import { Loader } from '../../components/Loader';
 import { Markdown } from '../../components/Markdown';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -541,6 +541,17 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
    */
   const [voicePhase, setVoicePhase] = useState<VoicePhase>('listening');
   const voiceControls = useRef<VoiceModeHandle>(null);
+  /**
+   * What this workspace has decided about how a turn ends, or nothing.
+   *
+   * Read here rather than in the panel because this is already the one place
+   * that asks the server about the workspace — it is the same request that
+   * decides whether voice mode is offered at all — and a panel that fetched
+   * again would be asking twice for the same answer, once per time somebody
+   * enters voice mode. Null in any of the three is the workspace having decided
+   * nothing, and the panel is what knows what that then means.
+   */
+  const [turnTaking, setTurnTaking] = useState<VoiceTurnTaking | null>(null);
 
   useEffect(() => {
     if (workspaceId === null) return;
@@ -548,10 +559,22 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
       .then((held) => {
         setHears(held?.transcriptionModelId != null);
         setReads(held?.speechModelId != null);
+        setTurnTaking(
+          held === null
+            ? null
+            : {
+                pauseEndsTurnMs: held.voicePauseEndsTurnMs,
+                speechOverRoomPercent: held.voiceSpeechOverRoomPercent,
+                unattendedMicrophoneMs: held.voiceUnattendedMicrophoneMs,
+              },
+        );
       })
       .catch(() => {
         setHears(false);
         setReads(false);
+        // Nothing rather than a guess: null in all three is exactly "the
+        // workspace has decided nothing", which is the panel's own numbers.
+        setTurnTaking(null);
       });
   }, [workspaceId]);
 
@@ -1969,6 +1992,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
           <VoiceMode
             ref={voiceControls}
             workspaceId={workspaceId}
+            turnTaking={turnTaking}
             onSay={handleVoiceTurn}
             onPhase={setVoicePhase}
             onClose={() => setVoice(false)}

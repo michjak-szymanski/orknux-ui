@@ -16,6 +16,7 @@ import {
   setWorkspaceQuickChatWrites,
   setWorkspaceSpeechModel,
   setWorkspaceTranscriptionModel,
+  setWorkspaceVoiceTurnTaking,
 } from '../../api/workspaces';
 import type { Workspace } from '../../api/workspaces';
 import chevronDown12Icon from '../../assets/chevron-down-12.svg';
@@ -23,6 +24,7 @@ import { AppShell } from '../../components/AppShell';
 import { CatalogueNote, useCatalogue } from '../../components/Catalogue';
 import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
+import { VOICE_TURN_TAKING_DEFAULTS } from '../../components/VoiceMode';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { useInstallation } from '../../session/installation';
 import { shellUser } from '../../session/user';
@@ -63,6 +65,46 @@ const DEFAULT_SHARE = 0;
  * trip. The same pause the agent form uses, for the same reason.
  */
 const PREVIEW_PAUSE = 150;
+
+/*
+ * The one place the workspace's units become a person's, and back.
+ *
+ * The server stores milliseconds and a percentage because those are the units
+ * voice mode itself works in, and nothing converts at the boundary - a
+ * conversion there would be a second opinion about what 2.5 seconds is. But
+ * nobody setting a pause is thinking in milliseconds, so the boxes below are in
+ * seconds and in minutes, and these two functions are the whole of that
+ * translation: the placeholders, what is loaded into a box, and what a save
+ * sends all go through them.
+ */
+
+/** How much of the stored unit makes one of the unit a box is typed in. */
+const A_SECOND = 1_000;
+const A_MINUTE = 60_000;
+
+/** A percentage is already what a person reads, so it converts by nothing. */
+const AS_IS = 1;
+
+/**
+ * What a box shows for a stored value, and nothing at all for a workspace that
+ * has decided nothing.
+ *
+ * Rounded to two places so a tenth of a second states exactly and nothing
+ * beyond it appears: 2,500 ms is "2.5" rather than "2.50", which is a number
+ * nobody typed.
+ */
+function inBox(stored: number | null, per: number): string {
+  return stored === null ? '' : String(Math.round((stored / per) * 100) / 100);
+}
+
+/**
+ * And back. An empty box is nothing decided, which is what clears the setting
+ * and puts voice mode back on its own value.
+ */
+function asStored(typed: string, per: number): number | null {
+  const said = Number(typed);
+  return typed.trim() === '' || Number.isNaN(said) ? null : Math.round(said * per);
+}
 
 /** Grouped the way the server groups them in its own sentences. */
 function thousands(count: number): string {
@@ -193,6 +235,27 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
   const [memoryError, setMemoryError] = useState<string | null>(null);
   const [memorySaving, setMemorySaving] = useState(false);
 
+  /*
+   * The Voice card - issue #256.
+   *
+   * Its own draft and its own saved-and-failed states, for the reason the two
+   * cards above have theirs: three boxes are typed into and then saved
+   * together, so the card holds something the workspace does not for as long as
+   * that takes, and a refusal about it has to appear beside those boxes rather
+   * than in whichever card a select was last used in.
+   *
+   * Strings rather than numbers, because empty is a value here and 0 is not
+   * one: empty is the workspace having decided nothing, which is where every
+   * workspace starts and what clearing a box goes back to. A number state would
+   * have to invent something to mean that.
+   */
+  const [pause, setPause] = useState('');
+  const [overRoom, setOverRoom] = useState('');
+  const [unattended, setUnattended] = useState('');
+  const [voiceSaved, setVoiceSaved] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [voiceSaving, setVoiceSaving] = useState(false);
+
   useEffect(() => {
     if (workspaceId === '') return;
     fetchWorkspace(workspaceId)
@@ -201,6 +264,9 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         setName(found?.name ?? '');
         setDescription(found?.description ?? '');
         setShare(found?.defaultMemoryShare ?? null);
+        setPause(inBox(found?.voicePauseEndsTurnMs ?? null, A_SECOND));
+        setOverRoom(inBox(found?.voiceSpeechOverRoomPercent ?? null, AS_IS));
+        setUnattended(inBox(found?.voiceUnattendedMicrophoneMs ?? null, A_MINUTE));
       })
       .catch((cause: unknown) => {
         setError(cause instanceof Error ? cause.message : 'Could not load the workspace.');
@@ -326,6 +392,44 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       setMemoryError(cause instanceof Error ? cause.message : 'Could not save that.');
     } finally {
       setMemorySaving(false);
+    }
+  }
+
+  /**
+   * How a turn ends here, saved.
+   *
+   * All three go on every call because that is what the mutation takes and what
+   * lets a box be emptied at all: null clears one, and a form that sent only
+   * what had changed would have no way to say "back to the default".
+   *
+   * Whatever comes back is what the boxes then hold, so what is on screen after
+   * a save is what the workspace really has rather than what was typed at it.
+   * Nothing here judges a value first: the bounds are the server's and are
+   * stated in the sentence it refuses with, and a copy of them on this page
+   * would be a second opinion about what may be saved.
+   */
+  async function listenLike() {
+    if (voiceSaving) return;
+
+    setVoiceSaving(true);
+    setVoiceError(null);
+    setVoiceSaved(false);
+    try {
+      const updated = await setWorkspaceVoiceTurnTaking(
+        workspaceId,
+        asStored(pause, A_SECOND),
+        asStored(overRoom, AS_IS),
+        asStored(unattended, A_MINUTE),
+      );
+      setWorkspace(updated);
+      setPause(inBox(updated.voicePauseEndsTurnMs, A_SECOND));
+      setOverRoom(inBox(updated.voiceSpeechOverRoomPercent, AS_IS));
+      setUnattended(inBox(updated.voiceUnattendedMicrophoneMs, A_MINUTE));
+      setVoiceSaved(true);
+    } catch (cause) {
+      setVoiceError(cause instanceof Error ? cause.message : 'Could not save that.');
+    } finally {
+      setVoiceSaving(false);
     }
   }
 
@@ -848,6 +952,169 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
           )}
         </div>
 
+      </section>
+      )}
+
+      {/*
+        How voice mode decides somebody has finished talking - issue #256.
+
+        Beside the chat's own card and drawn under the same condition, because
+        voice mode is a chat screen and nothing else: with chat switched off
+        these three configure a panel nobody in this installation can open. A
+        card of its own rather than three more fields on the one above, for the
+        reason Quick Chat is one - that card chooses models, and this is a
+        judgement about how people talk. Read as one list they would look like
+        three more things to point at a model.
+
+        It is here at all because getting one of these wrong ends somebody's
+        sentence for them, which was reported three times over two numbers, and
+        neither is a fact about audio that one answer settles: it is a room, a
+        microphone and a person, and those differ.
+
+        Empty is not zero. Every box is empty until somebody decides otherwise,
+        which leaves voice mode on its own value - and the empty box says what
+        that value is rather than this page pretending to hold it.
+      */}
+      {hasChat && (
+      <section className={styles.card}>
+        <div className={styles.sectionTitle}>
+          <span className={styles.labelWithHint}>
+            <h2 className={styles.sectionHeading}>Voice</h2>
+            {/*
+              Against the card rather than a field: what an empty box means is
+              true of all three and a footnote to none of them.
+            */}
+            <FieldHint label="Voice">
+              How the hands-free voice panel decides you have finished talking, so it can answer without
+              you pressing anything between turns. Leave a box empty and voice mode uses its own value,
+              which is what every workspace does until somebody changes one &mdash; the empty box says
+              what that value is. None of this touches the microphone beside Send, which records until
+              you press it again.
+            </FieldHint>
+          </span>
+          <div className={styles.rule} />
+        </div>
+
+        <div className={styles.field}>
+          <span className={styles.labelWithHint}>
+            <label className={styles.label} htmlFor="voice-pause">
+              Pause Before It Answers
+            </label>
+            <FieldHint label="Pause Before It Answers">
+              How long you can go quiet, once it has heard you speak, before it takes that as your turn
+              ending and sends what you said. Raise it if it answers while you are still talking: people
+              stop to think in the middle of a sentence, and every one of those stops is this clock
+              running. Lower it if it sits there after you have finished. Nothing is sent while a room is
+              merely quiet &mdash; this only starts once somebody has spoken.
+            </FieldHint>
+          </span>
+          <div className={styles.inputWrapper}>
+            <input
+              id="voice-pause"
+              className={styles.input}
+              type="number"
+              inputMode="decimal"
+              step={0.1}
+              value={pause}
+              placeholder={`Default — ${inBox(VOICE_TURN_TAKING_DEFAULTS.pauseEndsTurnMs, A_SECOND)}`}
+              disabled={workspace === null}
+              onChange={(event) => {
+                setVoiceSaved(false);
+                setPause(event.target.value);
+              }}
+            />
+            <span className={styles.unit}>seconds</span>
+          </div>
+        </div>
+
+        <div className={styles.field}>
+          <span className={styles.labelWithHint}>
+            <label className={styles.label} htmlFor="voice-over-room">
+              Voice Above The Room
+            </label>
+            <FieldHint label="Voice Above The Room">
+              How far above the room&rsquo;s own noise a sound has to stand to count as a voice rather
+              than as the room &mdash; 300 is three times the room. Turn this down if it stops while you
+              are still talking, and if you speak quietly or sit away from the microphone. Turn it up in a
+              room with something going on in it, where a fan or a conversation behind you is heard as you
+              and the turn never ends at all. The room is measured as it is actually heard, which is why
+              this travels between microphones in a way a fixed loudness does not.
+            </FieldHint>
+          </span>
+          <div className={styles.inputWrapper}>
+            <input
+              id="voice-over-room"
+              className={styles.input}
+              type="number"
+              inputMode="numeric"
+              step={10}
+              value={overRoom}
+              placeholder={`Default — ${inBox(VOICE_TURN_TAKING_DEFAULTS.speechOverRoomPercent, AS_IS)}`}
+              disabled={workspace === null}
+              onChange={(event) => {
+                setVoiceSaved(false);
+                setOverRoom(event.target.value);
+              }}
+            />
+            <span className={styles.unit}>%</span>
+          </div>
+        </div>
+
+        <div className={styles.field}>
+          <span className={styles.labelWithHint}>
+            <label className={styles.label} htmlFor="voice-unattended">
+              Unattended Microphone
+            </label>
+            <FieldHint label="Unattended Microphone">
+              How long an open microphone stays open when nothing else has ended the turn. A fuse rather
+              than a limit on how much you may say: the pause above is what ends a turn, and this fires
+              only where no pause ever came &mdash; a microphone left open in an empty room, or a room
+              noisy enough to be heard as somebody talking. Every value here that looked like a
+              reasonable limit on a turn turned out to cut somebody off in the middle of a thought, so it
+              sits well past anything anybody says in one breath.
+            </FieldHint>
+          </span>
+          <div className={styles.inputWrapper}>
+            <input
+              id="voice-unattended"
+              className={styles.input}
+              type="number"
+              inputMode="numeric"
+              step={1}
+              value={unattended}
+              placeholder={`Default — ${inBox(VOICE_TURN_TAKING_DEFAULTS.unattendedMicrophoneMs, A_MINUTE)}`}
+              disabled={workspace === null}
+              onChange={(event) => {
+                setVoiceSaved(false);
+                setUnattended(event.target.value);
+              }}
+            />
+            <span className={styles.unit}>minutes</span>
+          </div>
+        </div>
+
+        {/*
+          The server's own sentence, which names what is allowed rather than
+          reporting that something was refused. Nothing on this page decides
+          what may be saved, so this is the only place a bound is ever stated.
+        */}
+        {voiceError !== null && (
+          <p className={styles.error} role="alert">
+            {voiceError}
+          </p>
+        )}
+
+        <div className={styles.formActions}>
+          {voiceSaved && voiceError === null && <p className={styles.saved}>Saved.</p>}
+          <button
+            type="button"
+            className={styles.save}
+            onClick={() => void listenLike()}
+            disabled={workspace === null || voiceSaving}
+          >
+            {voiceSaving ? 'Saving…' : 'Save Changes'}
+          </button>
+        </div>
       </section>
       )}
 

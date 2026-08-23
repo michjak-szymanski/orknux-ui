@@ -64,9 +64,27 @@ The panel is one large circle, and the circle is the state:
 | Breathing on its own | **Thinking** — the model has your turn |
 | Ringing outward | **Speaking** — reading the answer back |
 
-A turn ends when you stop talking: about a second of quiet, once it has heard
-speech, is taken as your turn ending — nothing is sent while a room is merely
-quiet. A turn that runs past thirty seconds is sent anyway.
+A turn ends when you stop talking: two and a half seconds of quiet, once it has
+heard speech, is taken as your turn ending — nothing is sent while a room is
+merely quiet. What counts as speech is measured against the room rather than
+against a fixed loudness, so a quiet voice in a quiet room is still a voice. A
+microphone nothing else has closed gives up after ten minutes, which is a fuse
+for one left open in an empty room and not a limit on how much you may say.
+
+A workspace can move all three, under **Workspace Settings → Voice**, because
+none of them is a fact about audio that one answer settles — it is a room, a
+microphone and a person, and those differ:
+
+| Setting | What it does |
+| --- | --- |
+| Pause before it answers | How long you can go quiet before it answers. Raise it if it cuts in while you are still talking; lower it if it sits there after you have finished |
+| Voice above the room | How far above the room's own noise a sound has to stand to count as a voice. Turn it down if it stops while you are still talking, or if you speak quietly; up where a fan or a conversation behind you is heard as you and the turn never ends |
+| Unattended microphone | How long an open microphone stays open where no pause ever comes |
+
+Each box is empty until somebody sets it, and empty is voice mode's own value —
+what the empty box says. Emptying one again puts it back rather than leaving it
+on whatever was set last. A value outside what is allowed is refused when it is
+saved, in a sentence naming what is allowed.
 
 Tapping the circle interrupts: while it is speaking, it stops and listens;
 while it is listening, it takes what you have said so far as the whole turn.

@@ -60,12 +60,38 @@ export interface Workspace {
    * and why the form setting it previews against one model at a time.
    */
   defaultMemoryShare: number | null;
+  /**
+   * How long a pause has to run, after somebody has been talking, before voice
+   * mode decides they have finished and sends what it heard.
+   *
+   * Null means the workspace has decided nothing, which is where every
+   * workspace starts, and voice mode uses its own pause. The server holds no
+   * default of its own on purpose: what a workspace that has decided nothing
+   * gets belongs to `VoiceMode`, which is the half that can judge it, and a
+   * second copy of that number on the server would be the two drifting apart.
+   */
+  voicePauseEndsTurnMs: number | null;
+  /**
+   * How far above the room's own noise a sound has to stand to count as a
+   * voice, as a percentage — 300 is three times the room.
+   *
+   * Lower is more sensitive. Null means the workspace has decided nothing.
+   */
+  voiceSpeechOverRoomPercent: number | null;
+  /**
+   * How long an open microphone stays open when nothing else has ended the
+   * turn.
+   *
+   * A fuse rather than a limit on how much anybody may say: the pause above is
+   * what ends a turn. Null means the workspace has decided nothing.
+   */
+  voiceUnattendedMicrophoneMs: number | null;
 }
 
 const WORKSPACE_FIELDS =
   'id name description roles { id name } adminRoles { id name } administered ' +
   'companionModelId transcriptionModelId speechModelId quickChatModelId quickChatMayWrite ' +
-  'defaultMemoryShare';
+  'defaultMemoryShare voicePauseEndsTurnMs voiceSpeechOverRoomPercent voiceUnattendedMicrophoneMs';
 
 /** Just enough of a role to name it where a workspace lists what opens it. */
 export interface WorkspaceRole {
@@ -173,6 +199,49 @@ export async function setWorkspaceDefaultMemoryShare(
     { workspaceId, share },
   );
   return data.setWorkspaceDefaultMemoryShare;
+}
+
+/**
+ * How voice mode decides somebody has finished talking, here.
+ *
+ * All three are stated on every call and null clears one, which puts it back on
+ * voice mode's own value rather than leaving it on whatever was set last — the
+ * same rule `setWorkspaceDefaultMemoryShare` follows, and what lets a form
+ * offer "the default" as a thing to choose rather than a thing to remember.
+ *
+ * The units are the interface's own — milliseconds and a percentage — because
+ * nothing converts at the boundary. Seconds and minutes are what a person
+ * setting this is thinking in, and that translation happens on the one form
+ * that shows them; see `WorkspaceSettingsPage`.
+ *
+ * Each is refused outside its bounds with a sentence naming what is allowed.
+ * Those bounds live on the server and nowhere else: a copy here would be a
+ * second opinion about what may be saved, and the refusal is what this form
+ * prints either way.
+ */
+export async function setWorkspaceVoiceTurnTaking(
+  workspaceId: string,
+  pauseEndsTurnMs: number | null,
+  speechOverRoomPercent: number | null,
+  unattendedMicrophoneMs: number | null,
+): Promise<Workspace> {
+  const data = await graphql<{ setWorkspaceVoiceTurnTaking: Workspace }>(
+    `mutation SetWorkspaceVoiceTurnTaking(
+       $workspaceId: ID!
+       $pauseEndsTurnMs: Int
+       $speechOverRoomPercent: Int
+       $unattendedMicrophoneMs: Int
+     ) {
+       setWorkspaceVoiceTurnTaking(
+         workspaceId: $workspaceId
+         pauseEndsTurnMs: $pauseEndsTurnMs
+         speechOverRoomPercent: $speechOverRoomPercent
+         unattendedMicrophoneMs: $unattendedMicrophoneMs
+       ) { ${WORKSPACE_FIELDS} }
+     }`,
+    { workspaceId, pauseEndsTurnMs, speechOverRoomPercent, unattendedMicrophoneMs },
+  );
+  return data.setWorkspaceVoiceTurnTaking;
 }
 
 export type WorkspaceOperationType = 'ADD' | 'REMOVE' | 'RENAME';

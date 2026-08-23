@@ -20,8 +20,29 @@ import styles from './VoiceMode.module.css';
  */
 export type VoicePhase = 'listening' | 'thinking' | 'speaking';
 
+/**
+ * What a workspace has decided about how a turn ends, in the units it states
+ * them in. Any of the three may be null, which is what a workspace that has
+ * decided nothing sends, and null takes the value below.
+ */
+export interface VoiceTurnTaking {
+  pauseEndsTurnMs: number | null;
+  speechOverRoomPercent: number | null;
+  unattendedMicrophoneMs: number | null;
+}
+
 export interface VoiceModeProps {
   workspaceId: string;
+  /**
+   * What this workspace has decided about turn-taking, or nothing.
+   *
+   * A workspace can move these because the numbers below are a judgement about
+   * how people talk rather than a fact about audio, and getting one wrong ends
+   * somebody's sentence for them. Whatever it has not decided stays on the
+   * value defined here — which is why the server stores only a departure and
+   * holds no default of its own.
+   */
+  turnTaking?: VoiceTurnTaking | null;
   /**
    * Sends what was heard and resolves with the answer, to be read back.
    *
@@ -82,6 +103,10 @@ const SPEECH_OVER_ROOM = 2.5;
  * rather than a fact about audio, so it is the first number to move if this
  * still cuts somebody off - together with SPEECH_LEVEL above, since the two
  * decide the same thing between them.
+ *
+ * And because it is a judgement rather than a fact, a workspace may take it
+ * somewhere else: this is what it starts from and falls back to, not the only
+ * answer. See VOICE_TURN_TAKING_DEFAULTS below.
  */
 const SILENCE_MS = 2_500;
 
@@ -103,6 +128,43 @@ const SILENCE_MS = 2_500;
  */
 const LONGEST_TURN_MS = 600_000;
 
+/**
+ * The three above, in the units a workspace states a decision about them in.
+ *
+ * The one place anything outside this file may learn what "the default" is.
+ * The settings form that offers these has to say what happens when nothing is
+ * set, and the only honest way for it to say so is to read the numbers that
+ * would really be used — a copy typed into that form would go on saying 2.5
+ * seconds long after this file said something else, which is a form that lies
+ * about the product it configures.
+ *
+ * `SPEECH_OVER_ROOM` is a ratio where it is used and a percentage here, because
+ * the percentage is what a person reads and what the workspace stores; the
+ * multiplication is the whole of the conversion and it lives here.
+ *
+ * `SPEECH_LEVEL` is deliberately not among them. It and the ratio decide the
+ * same thing and are OR'd together, and the fixed level is only there so that a
+ * silent room is not absurdly sensitive — every breath is three times nothing.
+ * It is a guard against the ratio's failure mode rather than a knob, and
+ * offering it would be offering the same question twice.
+ */
+export const VOICE_TURN_TAKING_DEFAULTS = {
+  pauseEndsTurnMs: SILENCE_MS,
+  speechOverRoomPercent: SPEECH_OVER_ROOM * 100,
+  unattendedMicrophoneMs: LONGEST_TURN_MS,
+} as const;
+
+/** What is really in force: whatever the workspace decided, else the above. */
+function inForce(chosen: VoiceTurnTaking | null | undefined) {
+  return {
+    pauseMs: chosen?.pauseEndsTurnMs ?? VOICE_TURN_TAKING_DEFAULTS.pauseEndsTurnMs,
+    overRoom:
+      (chosen?.speechOverRoomPercent ?? VOICE_TURN_TAKING_DEFAULTS.speechOverRoomPercent) / 100,
+    unattendedMs:
+      chosen?.unattendedMicrophoneMs ?? VOICE_TURN_TAKING_DEFAULTS.unattendedMicrophoneMs,
+  };
+}
+
 /** Below this, the circle is still: a room's own noise is not a voice. */
 const VISIBLE_LEVEL = 0.01;
 
@@ -123,7 +185,7 @@ const SENTENCE_END = /[.!?…]["')\]]*(?=\s)|\n/g;
  */
 const SHORTEST_TO_SPEAK = 24;
 
-export function VoiceMode({ workspaceId, onSay, onClose, onPhase, ref }: VoiceModeProps) {
+export function VoiceMode({ workspaceId, turnTaking, onSay, onClose, onPhase, ref }: VoiceModeProps) {
   const [phase, setPhase] = useState<VoicePhase>('listening');
   const [level, setLevel] = useState(0);
   const [heard, setHeard] = useState<string | null>(null);
@@ -162,6 +224,32 @@ export function VoiceMode({ workspaceId, onSay, onClose, onPhase, ref }: VoiceMo
   useEffect(() => {
     say.current = onSay;
   }, [onSay]);
+  /*
+   * What the workspace decided, held in a ref for the reason the sender above
+   * is.
+   *
+   * The frame that watches the level was made when the turn began, and the page
+   * that hands these down re-renders on every chunk of every answer — so a
+   * dependency on them would tear the loop down mid-sentence over a number that
+   * has not changed. Read every frame rather than captured at the start of a
+   * turn, which also means a setting saved in another tab reaches the turn
+   * already running instead of the one after it.
+   *
+   * The three primitives are the effect's dependencies rather than the object
+   * around them, because that object is built fresh on every one of those
+   * renders and is a new object each time whatever it holds.
+   */
+  const pauseSetting = turnTaking?.pauseEndsTurnMs ?? null;
+  const overRoomSetting = turnTaking?.speechOverRoomPercent ?? null;
+  const unattendedSetting = turnTaking?.unattendedMicrophoneMs ?? null;
+  const decided = useRef(inForce(turnTaking));
+  useEffect(() => {
+    decided.current = inForce({
+      pauseEndsTurnMs: pauseSetting,
+      speechOverRoomPercent: overRoomSetting,
+      unattendedMicrophoneMs: unattendedSetting,
+    });
+  }, [pauseSetting, overRoomSetting, unattendedSetting]);
   const stream = useRef<MediaStream | null>(null);
   const recorder = useRef<MediaRecorder | null>(null);
   /**
@@ -398,6 +486,10 @@ export function VoiceMode({ workspaceId, onSay, onClose, onPhase, ref }: VoiceMo
       const now = performance.now();
       floor = loudness < floor ? loudness : floor * 0.999 + loudness * 0.001;
 
+      // Whatever is in force this frame: the workspace's, where it has decided
+      // anything, and the constants above where it has not.
+      const { pauseMs, overRoom, unattendedMs } = decided.current;
+
       /*
        * Clear of the room, or loud in its own right.
        *
@@ -407,12 +499,12 @@ export function VoiceMode({ workspaceId, onSay, onClose, onPhase, ref }: VoiceMo
        * easier to satisfy wins, so a quiet voice in a quiet room passes on the
        * ratio and a normal voice in a noisy one passes on the level.
        */
-      if (loudness > Math.max(floor * SPEECH_OVER_ROOM, VISIBLE_LEVEL) || loudness > SPEECH_LEVEL) {
+      if (loudness > Math.max(floor * overRoom, VISIBLE_LEVEL) || loudness > SPEECH_LEVEL) {
         spokeAt = now;
       }
 
-      const quietLongEnough = spokeAt !== null && now - spokeAt > SILENCE_MS;
-      const goneOnTooLong = now - startedAt > LONGEST_TURN_MS;
+      const quietLongEnough = spokeAt !== null && now - spokeAt > pauseMs;
+      const goneOnTooLong = now - startedAt > unattendedMs;
       if (quietLongEnough || (goneOnTooLong && spokeAt !== null)) {
         held.stop();
         return;

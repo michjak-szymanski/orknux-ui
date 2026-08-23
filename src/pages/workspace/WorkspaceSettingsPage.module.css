@@ -146,6 +146,20 @@ select.input {
   background-color: var(--color-bg);
 }
 
+/*
+ * The unit a box is typed in, inside the box rather than under it.
+ *
+ * Part of the field's label and not an explanation of it - "2.5" means nothing
+ * without it - which is why it stays in the open while everything the Voice
+ * card has to teach is behind the (?). One word, so it cannot grow into a
+ * paragraph under a control by accident.
+ */
+.unit {
+  flex: 0 0 auto;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
 /* A switch under the field it qualifies, rather than a field of its own. */
 .checkRow {
   display: flex;
