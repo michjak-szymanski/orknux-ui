@@ -259,7 +259,7 @@ export function SecretField({
             className={reading ? styles.source : styles.sourceOn}
             onClick={() => onSource('OWN')}
           >
-            Its own value
+            Value
           </button>
           <button
             type="button"
@@ -268,7 +268,7 @@ export function SecretField({
             className={reading ? styles.sourceOn : styles.source}
             onClick={() => onSource('VARIABLE')}
           >
-            A workspace secret
+            Reference
           </button>
         </div>
       </div>

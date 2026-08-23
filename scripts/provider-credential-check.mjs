@@ -298,11 +298,11 @@ if (fresh === null) {
   record(false, "the new-provider form offers no choice at all: the API Key field has no pair of tabs");
 } else {
   record(
-    fresh.names.join(' | ') === 'Its own value | A workspace secret',
+    fresh.names.join(' | ') === 'Value | Reference',
     `the field offers both as a pair of tabs: ${fresh.names.join(' | ')}`,
   );
   record(
-    fresh.on.length === 1 && fresh.on[0] === 'Its own value',
+    fresh.on.length === 1 && fresh.on[0] === 'Value',
     `exactly one is chosen, and a new provider starts on its own value: ${JSON.stringify(fresh.on)}`,
   );
 }
@@ -373,7 +373,7 @@ record(
 /* Back to a plain form for the rest of it. */
 await atForm(`${models}/providers/new`);
 
-await choose('A workspace secret');
+await choose('Reference');
 record(
   (await picker().count()) === 1 && (await keyBox().count()) === 0,
   'on a workspace secret the key box is gone, so the form cannot send the pair the server refuses',
@@ -469,7 +469,7 @@ record((await reveal(own.id)) === FIRST_KEY, 'and it is the key that was typed')
 
 await atForm(`${models}/providers/${own.id}`);
 record(
-  (await tabs())?.on?.[0] === 'Its own value',
+  (await tabs())?.on?.[0] === 'Value',
   'reopened, the field knows which of the two this provider is',
 );
 record(
@@ -490,7 +490,7 @@ record(
 
 // ----------------------------------------------- moving from one to the other
 
-await choose('A workspace secret');
+await choose('Reference');
 await pick(held);
 await save('Save Changes');
 
@@ -505,8 +505,8 @@ record((await reveal(own.id)) === null, 'and there is nothing of its own left to
 await page.reload({ waitUntil: 'domcontentloaded' });
 await page.waitForSelector('#provider-name', { timeout: 30_000 });
 await page.waitForTimeout(400);
-record((await tabs())?.on?.[0] === 'A workspace secret', 'reopened, it knows it is reading a secret');
-await choose('Its own value');
+record((await tabs())?.on?.[0] === 'Reference', 'reopened, it knows it is reading a secret');
+await choose('Value');
 record(
   (await keyBox().inputValue()) === '',
   'coming back to its own value the box is empty rather than masked: there is no stored key to leave alone',
@@ -521,7 +521,7 @@ record((await reveal(own.id)) === SECOND_KEY, 'and stores the key that was typed
 
 // -------------------------------- what the check says when the secret is empty
 
-await choose('A workspace secret');
+await choose('Reference');
 await pick(empty);
 await save('Save Changes');
 await page.getByRole('button', { name: 'Test Connection', exact: true }).click();

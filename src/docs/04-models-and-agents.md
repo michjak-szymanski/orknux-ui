@@ -49,7 +49,7 @@ what has always happened here; or it is read from one of the workspace's
 provider type offers both.
 
 The choice belongs to the field, not to the form. It sits beside the name of the
-box it decides — **Its own value** or **A workspace secret**, next to *API Key*,
+box it decides — **Value** or **Reference**, next to *API Key*,
 or next to *Client Secret* where the authentication method makes it one — and
 only the control belonging to the half chosen is drawn: a box to type into, or a
 list of the workspace's secrets to pick from. That is on purpose and it is not
