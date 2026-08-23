@@ -94,11 +94,19 @@
   overscroll-behavior: contain;
 }
 
+/*
+ * A row: the mark saying which kind it is, and then the name.
+ *
+ * A row across rather than a column down, because the kind belongs at the head
+ * of the row and the name and the real name belong stacked under each other.
+ * `flex-start` and not `center`: a member with a real name is a two-line row,
+ * and a mark centred against two lines sits between them, pointing at neither.
+ */
 .option {
   display: flex;
   flex: none;
-  flex-direction: column;
-  gap: var(--space-2);
+  align-items: flex-start;
+  gap: var(--space-6);
   padding: var(--space-6) var(--space-8);
   background: none;
   border: 0;
@@ -106,6 +114,34 @@
   font: inherit;
   text-align: left;
   cursor: pointer;
+}
+
+/*
+ * Which of the two the row is.
+ *
+ * Muted and twelve pixels, which is the whole of what it costs a row about two
+ * hundred wide in the node panel. It is deliberately quieter than the name: the
+ * name is what is being read and chosen, and the mark is what is seen without
+ * being read. `SlackTargetKind` says why it is a mark at all.
+ *
+ * Nudged down by a hair and not centred, so it sits on the first line of a name
+ * that wraps rather than floating above it, and `flex: none` because a mark that
+ * squeezed to make room for a long channel name would be a different size on
+ * different rows.
+ */
+.optionKind {
+  flex: none;
+  margin-top: 2px;
+  color: var(--color-text-muted);
+}
+
+/* The name and, under it, whatever Slack calls the member. */
+.optionText {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
 }
 
 /*

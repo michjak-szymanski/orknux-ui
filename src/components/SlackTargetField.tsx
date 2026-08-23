@@ -3,9 +3,10 @@ import type { KeyboardEvent } from 'react';
 
 import type { MessageTarget } from '../api/actions';
 import { fetchSlackSuggestions } from '../api/integrations';
-import type { SlackSuggestions } from '../api/integrations';
+import type { SlackSuggestion, SlackSuggestions } from '../api/integrations';
 import { Marked } from './DefinitionPicker';
 import { SlackTargetAnswer, TARGET_PAUSE } from './SlackTargetAnswer';
+import { SlackTargetKind } from './SlackTargetKind';
 import own from './SlackTargetField.module.css';
 
 export interface SlackTargetFieldProps {
@@ -22,8 +23,28 @@ export interface SlackTargetFieldProps {
    * field that behaves like any other.
    */
   connectionId: string | null;
-  /** Which of the two things is being named, or null when that is not known. */
+  /**
+   * Which of the two things is being named, or null when that is not known.
+   *
+   * Null is a narrowing left off and never a reason to say nothing. Both halves
+   * of the connection are then read into one list and both are asked about, and
+   * the rows and the answer say which kind each turned out to be - which is the
+   * only thing a field over an action that has not settled its kind could
+   * usefully do. It used to be the second half of a guard, and the guard drew
+   * nothing at all.
+   */
   target: MessageTarget | null;
+  /**
+   * What a taken row turned out to be, for a surface that has somewhere to put
+   * it.
+   *
+   * A row carries the same `target` `createAction` takes, so taking one settles
+   * the kind as well as the name. The action dialog owns that kind and sets it;
+   * the node panel does not - a node binds where a message goes and the
+   * definition keeps whether that is a channel or a member - so it passes
+   * nothing and the row only fills the field.
+   */
+  onPick?: (target: MessageTarget) => void;
   /** What the answer under the field is called, for `aria-describedby`. */
   answerId: string;
   /** The surface's own class for a text input. */
@@ -55,6 +76,17 @@ export interface SlackTargetFieldProps {
  * here will ever hold. A picker that refused them would be wrong more often than
  * the typos it caught.
  *
+ * **It does not need to be told which kind it is naming.** Slack does not
+ * differentiate when sending - one `chat.postMessage` takes a channel id or a
+ * user id, a direct message being a conversation - and the kind only ever chose
+ * which of its two endpoints answered a lookup. So a field over an action that
+ * has not settled its kind asks without one: both are read, one list comes back
+ * holding channels and members together, each row says which it is, and taking a
+ * row settles the kind as well as the name for whatever surface has somewhere to
+ * put it. The alternative was what issue #176 was reported as - a panel that
+ * asked nothing, and therefore said nothing, to somebody whose bot token could
+ * not read one of the two halves.
+ *
  * The two answers under one field are kept apart by where they are drawn, which
  * is the only way to have both without stacking two paragraphs under a text box.
  * Under the field, in the answer box, is what is known about *what was typed* -
@@ -71,6 +103,7 @@ export function SlackTargetField({
   onChange,
   connectionId,
   target,
+  onPick,
   answerId,
   className,
   wrapperClassName,
@@ -78,7 +111,18 @@ export function SlackTargetField({
   placeholder,
   spellCheck,
 }: SlackTargetFieldProps) {
-  const suggesting = connectionId !== null && target !== null;
+  /*
+   * Whether there is anybody to ask, which is the whole of the condition.
+   *
+   * It used to require a kind as well, and that was the bug in issue #176: an
+   * action whose target kind had never been set left `target` null, so the panel
+   * asked nothing and drew nothing, and somebody whose bot token was missing
+   * `users:read` was told that by silence. The kind was never needed to ask -
+   * it only ever chose which of Slack's two endpoints did the looking up - so
+   * the field falls quiet only where it genuinely cannot ask, which is where no
+   * Slack connection could be resolved.
+   */
+  const suggesting = connectionId !== null;
 
   /** Whether the list is being offered at all. Focus opens it; Escape and a pick close it. */
   const [open, setOpen] = useState(false);
@@ -119,7 +163,7 @@ export function SlackTargetField({
    * it asks for the first few of everything, which is what a picker shows when
    * it opens.
    */
-  const question = suggesting && open ? [connectionId, target, typed].join(' ') : null;
+  const question = suggesting && open ? [connectionId, target ?? 'BOTH', typed].join(' ') : null;
 
   /*
    * The same two guards the answer box keeps, for the same two reasons.
@@ -132,7 +176,7 @@ export function SlackTargetField({
    * it answers and drawn only while that is still the question.
    */
   useEffect(() => {
-    if (question === null || connectionId === null || target === null) return;
+    if (question === null || connectionId === null) return;
 
     let current = true;
     const timer = setTimeout(() => {
@@ -209,10 +253,20 @@ export function SlackTargetField({
     setAbove(under < height + 8 && field.top > under);
   }, [showing, rows.length, note]);
 
-  /** Puts a row in the field, which is the whole of what picking does. */
-  function take(name: string) {
-    onChange(name);
-    setTaken(name);
+  /**
+   * Puts a row in the field, and tells the surface what kind it was.
+   *
+   * The name is the whole of what picking does to *this* field, and the kind is
+   * what it does to the form around it where there is one to do it to. A row
+   * knows which of the two it is and it is the same value an action is saved
+   * with, so a person who has just picked `@alice` out of a merged list should
+   * not then have to find the Target control and say "user" as well - they have
+   * already said it, by picking her.
+   */
+  function take(row: SlackSuggestion) {
+    onChange(row.name);
+    setTaken(row.name);
+    onPick?.(row.target);
     setOpen(false);
     setAt(-1);
   }
@@ -260,7 +314,7 @@ export function SlackTargetField({
       // form, and a field that swallowed it would be a field that cannot save.
       if (row === undefined) return;
       event.preventDefault();
-      take(row.name);
+      take(row);
       return;
     }
 
@@ -367,17 +421,31 @@ export function SlackTargetField({
                     }}
                     // Under the pointer as well as under the arrows: a hand and
                     // a keyboard must not disagree about which row is next.
+                    data-target={row.target}
                     onMouseMove={() => setAt(index)}
-                    onClick={() => take(row.name)}
+                    onClick={() => take(row)}
                   >
-                    <span className={own.optionName}>
-                      <Marked text={row.name} needle={typed} />
-                    </span>
-                    {row.realName !== null && row.realName !== '' && (
-                      <span className={own.optionReal}>
-                        <Marked text={row.realName} needle={typed} />
+                    {/*
+                      Which of the two this row is, before the name is read.
+
+                      One list holds both now, so a row that did not say would
+                      leave somebody to work it out from the sigil buried in a
+                      highlighted name - see `SlackTargetKind` for why that is
+                      not enough and why this is a mark rather than a word or a
+                      heading. `data-target` says the same thing to anything
+                      reading the page rather than looking at it.
+                    */}
+                    <SlackTargetKind className={own.optionKind} target={row.target} />
+                    <span className={own.optionText}>
+                      <span className={own.optionName}>
+                        <Marked text={row.name} needle={typed} />
                       </span>
-                    )}
+                      {row.realName !== null && row.realName !== '' && (
+                        <span className={own.optionReal}>
+                          <Marked text={row.realName} needle={typed} />
+                        </span>
+                      )}
+                    </span>
                   </button>
                 ))}
               </div>

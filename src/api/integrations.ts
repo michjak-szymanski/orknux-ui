@@ -334,15 +334,34 @@ export interface SlackTargetCheck {
   id: string | null;
   /** What Slack calls it, when it was found: `#general`, `Alice Adams`. */
   label: string | null;
+  /**
+   * Which of the two it turned out to be, when it was found, and null
+   * otherwise.
+   *
+   * The answer to a question asked without a `target`. A caller holding a name
+   * and no kind is told which it is rather than having to ask twice to find
+   * out, and it is the same value `createAction` takes - so a form that has one
+   * can fill it in.
+   */
+  target: MessageTarget | null;
 }
 
+/*
+ * `$target` is nullable here, which is the whole of issue #176 on the wire.
+ * Slack does not differentiate when sending - one `chat.postMessage` takes a
+ * channel id or a user id - and the split only ever described which endpoint
+ * does the looking up. Sent null, both are asked and the answers merged, and
+ * `target` on the answer says which it was. A field whose kind is not settled
+ * asks without one rather than asking nothing.
+ */
 const SLACK_TARGET_QUERY = `
-  query SlackTarget($connectionId: ID!, $target: MessageTarget!, $name: String!) {
+  query SlackTarget($connectionId: ID!, $target: MessageTarget, $name: String!) {
     slackTarget(connectionId: $connectionId, target: $target, name: $name) {
       outcome
       message
       id
       label
+      target
     }
   }
 `;
@@ -354,10 +373,14 @@ const SLACK_TARGET_QUERY = `
  * `targetName` stays free text whatever it answers. `name` is sent exactly as
  * it was typed - `#general`, `@alice`, an address, an id pasted out of Slack -
  * because the server is the one that knows what each of those means.
+ *
+ * `target` narrows the question and is not needed to ask it. Null asks about
+ * both and is told which the name turned out to be, which is what a field
+ * standing over an action that has not settled its kind has to send.
  */
 export async function checkSlackTarget(
   connectionId: string,
-  target: MessageTarget,
+  target: MessageTarget | null,
   name: string,
 ): Promise<SlackTargetCheck> {
   const data = await graphql<{ slackTarget: SlackTargetCheck }>(SLACK_TARGET_QUERY, {
@@ -374,6 +397,15 @@ export interface SlackSuggestion {
   id: string;
   /** What the field is filled with when this is taken: `#general`, `@alice`. */
   name: string;
+  /**
+   * Which of the two this row is.
+   *
+   * On the row rather than on the list, because one list holds both when the
+   * question was asked without a kind, and a row that cannot say which it is
+   * can be neither drawn nor acted on. It is the same value `createAction`
+   * takes, so taking a row settles the kind as well as the name.
+   */
+  target: MessageTarget;
   /**
    * What Slack calls the member, where that says something the handle does not.
    *
@@ -417,12 +449,19 @@ export interface SlackSuggestions {
   complete: boolean;
 }
 
+/*
+ * `$target` is nullable for the reason it is nullable on the check above, and
+ * with one more consequence: omitted, one list comes back holding channels and
+ * members together, each row saying which it is. It does not read a third list
+ * - the two per-connection lists are the ones already cached - so a merged
+ * question costs no more than a narrowed one.
+ */
 const SLACK_SUGGESTIONS_QUERY = `
-  query SlackSuggestions($connectionId: ID!, $target: MessageTarget!, $typed: String) {
+  query SlackSuggestions($connectionId: ID!, $target: MessageTarget, $typed: String) {
     slackSuggestions(connectionId: $connectionId, target: $target, typed: $typed) {
       outcome
       message
-      matches { id name realName }
+      matches { id name target realName }
       complete
     }
   }
@@ -444,10 +483,14 @@ const SLACK_SUGGESTIONS_QUERY = `
  * correct values will never appear in it: an id pasted out of somebody else's
  * message, a member who joined a minute ago, a private channel this bot was
  * never invited to.
+ *
+ * `target` narrows the list and is not needed to ask for one. Null offers both
+ * kinds in one list, ordered together - exact, then what starts with the
+ * typing, then what contains it - with each row carrying its own kind.
  */
 export async function fetchSlackSuggestions(
   connectionId: string,
-  target: MessageTarget,
+  target: MessageTarget | null,
   typed: string,
 ): Promise<SlackSuggestions> {
   const data = await graphql<{ slackSuggestions: SlackSuggestions }>(SLACK_SUGGESTIONS_QUERY, {

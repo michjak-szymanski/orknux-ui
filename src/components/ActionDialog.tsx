@@ -721,7 +721,26 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                   value={targetName}
                   onChange={setTargetName}
                   connectionId={asking ? slackConnection?.id ?? null : null}
+                  /*
+                    The kind, because this form has one. It is the control
+                    directly above, it is saved with the action, and a form that
+                    knows which of the two it means should say so - the question
+                    is then a narrower one and the list is a list of the kind
+                    being named. Only a caller that genuinely does not know sends
+                    null, and that is the node panel, whose action may never have
+                    settled it.
+                  */
                   target={target}
+                  /*
+                    And picking settles it, in both directions. A row carries the
+                    same value the Target control above holds and the same one
+                    `createAction` is given, so taking `@alice` out of the list
+                    while that control says Channel sets it to User rather than
+                    saving a member's handle as a channel name. Somebody who
+                    picked her has already said which she is; asking them to say
+                    it again in the control above is the form not listening.
+                  */
+                  onPick={setTarget}
                   answerId="action-target-answer"
                   answerClassName={styles.fieldHint}
                 />

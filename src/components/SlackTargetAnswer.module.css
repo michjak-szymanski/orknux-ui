@@ -119,3 +119,20 @@
   color: var(--color-text-body);
   font-weight: 600;
 }
+
+/*
+ * Which of the two a name turned out to be, when nobody said which to ask about.
+ *
+ * `SlackTargetCheck.target`, drawn as the mark the list draws on its rows - a
+ * confirmation and the row it could have been picked from are the same claim,
+ * and looking alike is how somebody knows that. It follows the sentence's colour
+ * rather than the muted grey it takes in the list, because here it is part of a
+ * `FOUND` and the whole line is painted as a confirmation; a grey mark in front
+ * of a green sentence would read as belonging to neither.
+ *
+ * Aligned on the text rather than on the box: this sits inline in a paragraph
+ * that scrolls, so it rides the first line the way a word would.
+ */
+.targetKind {
+  vertical-align: -1px;
+}

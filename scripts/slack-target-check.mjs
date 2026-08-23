@@ -79,6 +79,37 @@
  *      saves, so Enter takes a row only once the arrows have put it on one.
  *      And, as with the answer: debounced, never stale, and it moves nothing.
  *
+ * ---------------------------------------------------------------------------
+ * And asking without being told which kind it is, which is the rest of #176
+ *
+ * The report was that the check "does not work on users", and the cause was not
+ * the member lookup. The panel worked the kind out of the action's definition,
+ * and where the definition had none it concluded there was nobody to ask - so a
+ * connection whose bot token was missing `users:read` answered somebody with
+ * silence, which is the one thing an `UNCHECKED` explicitly is not. The kind was
+ * never needed to ask: it only ever chose which of Slack's two endpoints did the
+ * looking up, and Slack does not differentiate when sending.
+ *
+ *  13. A field that does not know the kind asks anyway, and both surfaces are
+ *      measured on the wire rather than on the screen: the node panel sends no
+ *      `target` where its definition has none, and the action dialog still sends
+ *      one, because it has a Target control above the field and saves that value
+ *      with the action. Silence is left to the one case that deserves it, which
+ *      is no Slack connection to ask.
+ *  14. One list can hold both kinds, so every row says which it is - carried on
+ *      the row, drawn as a mark, and named for anything that is listening rather
+ *      than looking. All three are asserted separately: a row that knew and did
+ *      not show would pass one of them. Taking a row then fills the field and,
+ *      in the dialog, settles the Target control with it - measured against a
+ *      member offered while that control says Channel, so that a form assuming
+ *      its own answer cannot pass by doing nothing. In the panel it settles
+ *      nothing, and the definition is read back to prove it. The answer under
+ *      the field says which kind a typed name turned out to be, in the same mark
+ *      the rows draw, and only where the question did not already say. And a
+ *      connection that can read one of the two halves offers everything from the
+ *      half it can read, says in one line which half is missing, and leaves the
+ *      name `UNCHECKED` rather than ruling on it.
+ *
  * The first leg runs against the real server with no interception at all, and
  * puts both questions to it: a Slack connection with no bot token stored, which
  * is answered `UNCHECKED` in one sentence without anything having to reach
@@ -106,6 +137,16 @@ const SLACK = `zz scratch slack target ${stamp}`;
 const MAIL = `zz scratch mail target ${stamp}`;
 const ACTION = `zz scratch slack action ${stamp}`;
 const MAIL_ACTION = `zz scratch mail action ${stamp}`;
+/**
+ * A Slack send whose `target` was never set, which is the shape issue #176 was
+ * actually reported about.
+ *
+ * `createAction` does not insist on one - the run falls back, and plenty of
+ * actions arrive from an import or an API call without it - and the panel used
+ * to read a missing kind as "there is nobody to ask" and draw nothing at all. A
+ * bot token missing `users:read` was therefore reported to somebody as silence.
+ */
+const KINDLESS_ACTION = `zz scratch kindless slack action ${stamp}`;
 const WORKFLOW_NAME = `zz scratch target workflow ${stamp}`;
 
 /**
@@ -125,15 +166,36 @@ const ANSWERS = {
     message: `#general is a channel ${SLACK} can see.`,
     id: 'C0123456789',
     label: '#general',
+    target: 'CHANNEL',
   },
   // A found thing whose sentence does not open with what Slack calls it. The
   // label is the half that says which thing matched - `alice` typed, `Alice
   // Adams` found - so it has to be on screen either way.
+  //
+  // And the one that is a member rather than a channel, which is what makes it
+  // the answer worth putting to a field that never said which it wanted:
+  // `target` is the half of the answer that says which of the two it turned out
+  // to be, and it is the same value an action is saved with.
   alice: {
     outcome: 'FOUND',
     message: `A member of ${SLACK} answers to that.`,
     id: 'U0123456789',
     label: 'Alice Adams',
+    target: 'USER',
+  },
+  /*
+   * The half-readable connection, which is the case the merged question exists
+   * to get right. One of the two lookups answered and the other was refused, so
+   * a name absent from the half that could be read is not a name that does not
+   * exist - it is `UNCHECKED`, and the sentence names the scope that is actually
+   * missing and no others.
+   */
+  halfblind: {
+    outcome: 'UNCHECKED',
+    message:
+      `Channels were searched and halfblind is not one; members were not, because the bot token on ` +
+      `${SLACK} does not carry users:read. Add it to the Slack app and reinstall it to have members ` +
+      'checked here.',
   },
   nowhere: {
     outcome: 'NOT_FOUND',
@@ -153,7 +215,13 @@ const ANSWERS = {
   },
 };
 
-const FALLBACK = { outcome: 'NOT_FOUND', message: 'Nothing here answers to that.', id: null, label: null };
+const FALLBACK = {
+  outcome: 'NOT_FOUND',
+  message: 'Nothing here answers to that.',
+  id: null,
+  label: null,
+  target: null,
+};
 
 /**
  * The lists the browser is given, keyed by what was typed to ask for them.
@@ -173,9 +241,24 @@ const FALLBACK = { outcome: 'NOT_FOUND', message: 'Nothing here answers to that.
 const TRUNCATED = 'Showing the first 25 that match - keep typing to narrow it down.';
 const NOTHING_LIKE_IT = 'No channel here answers to that; a private one this bot was never invited to looks the same.';
 const NO_SCOPE = 'No suggestions: the bot token on this connection does not carry channels:read.';
+/**
+ * The line a half-readable connection comes back with.
+ *
+ * One list was read and the other refused, so what is offered is real and
+ * incomplete at the same time. This is the case the merged question has to get
+ * right: the alternative to saying so is passing half a Slack off as all of it,
+ * and the first member it does not hold costs somebody the thing the picker was
+ * for.
+ */
+const CHANNELS_ONLY = "Channels only - this connection's bot token is missing the users:read scope.";
 
 /** Rows in the shape the server sends them, with an id apiece to key them by. */
-const rowsOf = (names) => names.map((name, at) => ({ id: `C01234567${at}`, name, realName: null }));
+const rowsOf = (names) =>
+  names.map((name, at) => ({ id: `C01234567${at}`, name, target: 'CHANNEL', realName: null }));
+
+/** The same for members, whose rows say `USER` and often carry a real name. */
+const membersOf = (people) =>
+  people.map(([name, realName], at) => ({ id: `U01234567${at}`, name, target: 'USER', realName }));
 
 /** More than the twenty-five that come back, which is what `complete: false` is for. */
 const MANY = Array.from({ length: 25 }, (_, at) => `#team-${at + 1}`);
@@ -190,20 +273,99 @@ const SUGGESTED = {
     outcome: 'FOUND',
     message: '',
     complete: true,
-    matches: [{ id: 'U0123456789', name: '@alice', realName: 'Alice Adams' }],
+    matches: membersOf([['@alice', 'Alice Adams']]),
   },
   e: { outcome: 'FOUND', message: TRUNCATED, complete: false, matches: rowsOf(MANY) },
   nowhere: { outcome: 'NOT_FOUND', message: NOTHING_LIKE_IT, complete: true, matches: [] },
   scopeless: { outcome: 'UNCHECKED', message: NO_SCOPE, complete: false, matches: [] },
 };
 
+/**
+ * The lists a question asked *without* a kind comes back with.
+ *
+ * One list holding channels and members together, ordered against each other by
+ * how well they match rather than piled into two heaps - which is the whole
+ * reason a row has to say which it is. Keyed by the same typing as `SUGGESTED`
+ * above and chosen instead of it when `target` arrived null, so that the two
+ * questions are answered as the server answers them: differently.
+ */
+const MERGED = {
+  '': {
+    outcome: 'FOUND',
+    message: '',
+    complete: true,
+    matches: [
+      ...rowsOf(['#general', '#general-chat']),
+      ...membersOf([['@alice', 'Alice Adams'], ['@gene', null]]),
+      ...rowsOf(['#design']),
+    ],
+  },
+  /*
+   * The row that makes the case: `#general` and `@gene` both answer to `gen`,
+   * they are two lines apart, and the only thing that says one is a room and the
+   * other is a person is what the row draws off its own `target`.
+   */
+  gen: {
+    outcome: 'FOUND',
+    message: '',
+    complete: true,
+    matches: [...rowsOf(['#general', '#general-chat']), ...membersOf([['@gene', 'Gene Kim']])],
+  },
+  alice: {
+    outcome: 'FOUND',
+    message: '',
+    complete: true,
+    matches: membersOf([['@alice', 'Alice Adams']]),
+  },
+  /* A connection that can read one of the two halves: real rows, and the line. */
+  halfblind: {
+    outcome: 'FOUND',
+    message: CHANNELS_ONLY,
+    complete: false,
+    matches: rowsOf(['#halfblind-ops', '#halfblind-alerts']),
+  },
+};
+
 /** Nothing matched and nothing to say about it, which is no list at all. */
 const NO_LIST = { outcome: 'NOT_FOUND', message: '', complete: true, matches: [] };
 
+/**
+ * Whether a query asks for a field *inside* a selection rather than merely
+ * naming it as an argument.
+ *
+ * The interception below answers with a fixture, and a fixture is not a server:
+ * left to itself it hands back every field whether or not the query asked for
+ * one, so a screen could draw a value it never requested and every assertion
+ * here would still pass. Against the real server that screen draws nothing. So
+ * the fixture is trimmed to what was actually asked for, and `target` - the
+ * whole of what issue #176 added to the wire - has to be in the query for any
+ * claim about it to hold.
+ */
+const selects = (query, block, field) => new RegExp(`${block}[^{]*{[^}]*\\b${field}\\b`).test(query);
+
 /** Every question that actually reached the wire, in order. */
 let asked = [];
+/**
+ * Which kind each of those questions named, in the same order, `null` for one
+ * that named none.
+ *
+ * The point of issue #176 on the wire: a field that knows the kind still sends
+ * it and gets the narrower question, and a field that does not sends nothing
+ * rather than asking nothing.
+ */
+let askedTargets = [];
 /** Every list asked for, in order, by what was typed to ask for it. */
 let suggested = [];
+/** And which kind each list was asked for, `null` where it was asked for both. */
+let suggestedTargets = [];
+/**
+ * Every mutation that reached the wire, by name.
+ *
+ * Only one claim needs it, and it is a claim about something *not* happening: a
+ * node panel must not write the action's kind back when a row is picked, because
+ * a node binds one step and the definition is shared by every other.
+ */
+let mutated = [];
 /** A name whose answer is deliberately slow, and how slow. */
 let slow = null;
 /** The same, for a list: the typing whose list is held back. */
@@ -241,6 +403,43 @@ const listNote = async () => {
   const line = page.locator(`${FIELD}-suggestions > p`);
   return (await line.count()) === 0 ? '' : (await line.innerText()).trim();
 };
+
+/**
+ * Which kind each row says it is, in order.
+ *
+ * Read off `data-target` rather than off the shape drawn, because this is the
+ * value the row was given and the value picking it hands back; what is *drawn*
+ * from it is asserted separately, and separately is the point - a row that knew
+ * and did not show would pass one of the two.
+ */
+const rowKinds = () => options().evaluateAll((rows) => rows.map((row) => row.dataset.target));
+/** The mark on each row that says the same thing to a person. */
+const rowMarks = () => page.locator(`${FIELD}-suggestions [role="option"] svg`);
+/** What each of those marks is called, for somebody who is listening rather than looking. */
+const markNames = () => rowMarks().evaluateAll((marks) => marks.map((mark) => mark.getAttribute('aria-label')));
+/**
+ * The shape one of them actually draws, with the whitespace of the source taken
+ * out, or null where nothing is drawn at all.
+ *
+ * Null rather than a wait that expires: a mark that is missing is a claim to
+ * report as failed, and a check that hangs for thirty seconds and then throws
+ * says nothing about which claim it was.
+ */
+const shapeOf = async (locator) => ((await locator.count()) === 0 ? null : locator.evaluate(drawing));
+const drawing = (mark) => mark.innerHTML.replace(/[\n\t ]+/g, '');
+const markShape = (index) => shapeOf(rowMarks().nth(index));
+/**
+ * Whether the server's line about the list is drawn whole rather than clipped.
+ *
+ * The wording is asserted word for word elsewhere; this asks the other question,
+ * which is whether all of those words are on the screen. It is a real risk in
+ * the node panel, where a row is about two hundred pixels wide and one line of
+ * the server's prose is several lines of this one's.
+ */
+const noteIsWhole = () =>
+  page
+    .locator(`${FIELD}-suggestions > p`)
+    .evaluate((note) => note.scrollHeight <= note.clientHeight && note.scrollWidth <= note.clientWidth);
 
 /** Wait until the list holds this many rows. Waits rather than asserts; see `settled`. */
 async function listed(count) {
@@ -318,6 +517,8 @@ let mailId = null;
 let actionId = null;
 /** A send through the mail server, which has a `target` and cannot be asked about. */
 let mailActionId = null;
+/** A Slack send with no `target` at all, which can be asked about all the same. */
+let kindlessActionId = null;
 /** Somewhere to put a node, made here and taken away again. */
 let workflowId = null;
 
@@ -382,9 +583,18 @@ try {
   await choose('action-connection', SLACK);
   await page.fill('#action-target-name', '');
   await page.waitForTimeout(900);
-  record((await box().count()) === 1, 'a Slack connection gets the answer box, before anything is typed');
-  record((await said()) === '', 'and it says nothing, because nothing has been typed');
-  record((await outcomeOf()) === 'nothing', 'the box knows it is holding no answer');
+  /*
+   * Nothing typed is no question, and no question is no box - not an empty one
+   * holding room for an answer that is not coming.
+   *
+   * The room below is reserved so the form does not move while an answer arrives
+   * and changes length, and `5ea3cdc` established that it is worth paying for
+   * only while a question is actually out: held open on an empty field it was a
+   * gap between this field and the next that nothing would ever fill, which on a
+   * node's parameter panel reads as an unexplained margin because that is what
+   * it was.
+   */
+  record((await box().count()) === 0, 'a field with nothing in it draws no answer box at all');
 
   /* ------------------------------------------- the real server, uninterrupted */
 
@@ -461,27 +671,47 @@ try {
 
     if (query.includes('slackSuggestions')) {
       const typed = body.variables?.typed ?? '';
+      const kind = body.variables?.target ?? null;
       suggested.push(typed);
+      suggestedTargets.push(kind);
       if (slowList === typed) await new Promise((wake) => setTimeout(wake, HELD));
+      /*
+       * A merged question is answered as the server answers it, which is not
+       * the narrowed answer with a field added. Keying the two apart here is
+       * what stops a check from passing because the interception could not tell
+       * the difference either.
+       */
+      const list = (kind === null ? MERGED[typed] : undefined) ?? SUGGESTED[typed] ?? NO_LIST;
+      // Trimmed to what the query asked for; see `selects`.
+      const rows = selects(query, 'matches', 'target')
+        ? list.matches
+        : list.matches.map(({ target, ...rest }) => rest);
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ data: { slackSuggestions: SUGGESTED[typed] ?? NO_LIST } }),
+        body: JSON.stringify({ data: { slackSuggestions: { ...list, matches: rows } } }),
       });
       return;
     }
 
     if (!query.includes('slackTarget')) {
+      if (query.trimStart().startsWith('mutation')) {
+        mutated.push(query.match(/([A-Za-z]+)\s*\(input:/)?.[1] ?? query.slice(0, 40));
+      }
       await route.continue();
       return;
     }
     const name = body.variables?.name ?? '';
     asked.push(name);
+    askedTargets.push(body.variables?.target ?? null);
     if (slow === name) await new Promise((wake) => setTimeout(wake, HELD));
+    const check = { id: null, label: null, target: null, ...(ANSWERS[name] ?? FALLBACK) };
+    // Trimmed to what the query asked for; see `selects`.
+    if (!selects(query, 'slackTarget', 'target')) delete check.target;
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ data: { slackTarget: { id: null, label: null, ...(ANSWERS[name] ?? FALLBACK) } } }),
+      body: JSON.stringify({ data: { slackTarget: check } }),
     });
   });
 
@@ -500,6 +730,25 @@ try {
     `FOUND: painted as a confirmation (${foundColour} against ${hintColour})`,
   );
   await page.screenshot({ path: shot('slack-target-found.png') });
+
+  /*
+   * And the dialog still asks the narrower question.
+   *
+   * The kind stopped being *required* to ask; it did not stop being worth
+   * sending. This form has a Target control directly above the field and saves
+   * that value with the action, so it knows which of the two it means - and a
+   * form that knows and asks about both would get a member's handle confirmed
+   * under a field it is about to save as a channel name. Only a caller that
+   * genuinely does not know sends nothing.
+   */
+  record(
+    askedTargets.at(-1) === 'CHANNEL',
+    `the dialog asks about the kind its Target control names (${JSON.stringify(askedTargets.at(-1))})`,
+  );
+  record(
+    (await box().locator('svg').count()) === 0,
+    'and the answer does not draw the kind back at it, the question having named it',
+  );
 
   // The label, when the sentence does not lead with it.
   await type('alice');
@@ -562,21 +811,26 @@ try {
    */
   const tops = [];
   const heights = [];
-  for (const typed of ['', 'general', 'nowhere', 'scopeless', '']) {
-    if (typed === '') {
-      await page.fill('#action-target-name', '');
-      await page.waitForTimeout(600);
-    } else {
-      await type(typed);
-      await settled(ANSWERS[typed].message);
-    }
+  for (const typed of ['general', 'nowhere', 'scopeless', 'general']) {
+    await type(typed);
+    await settled(ANSWERS[typed].message);
     tops.push(Math.round((await saveButton().boundingBox()).y));
     heights.push(Math.round((await box().boundingBox()).height));
   }
   console.log(`Create Action sat at y = ${tops.join(', ')}`);
   console.log(`the answer was ${heights.join(', ')} tall`);
   record(new Set(tops).size === 1, 'nothing below the answer moves as the answer changes');
-  record(new Set(heights).size === 1, 'because the room it takes is the same whatever it says, and empty');
+  record(new Set(heights).size === 1, 'because the room it takes is the same whatever it says');
+
+  /*
+   * And the room is given back when there is no longer a question out. That is
+   * the other half of the same rule: the reservation buys stillness while an
+   * answer is on its way, and buys nothing at all under a field nobody has typed
+   * into.
+   */
+  await page.fill('#action-target-name', '');
+  await page.waitForTimeout(700);
+  record((await box().count()) === 0, 'and given back when the field is emptied, rather than left as a gap');
 
   /* ---------------------------------------------- and does not lag the field */
 
@@ -735,7 +989,13 @@ try {
   await page.waitForTimeout(900);
   record(asked.length === 0, `nothing is asked about a name that came off the list (${JSON.stringify(asked)})`);
   record((await said()) === '', `and nothing is said about it either (${JSON.stringify(await said())})`);
-  record((await outcomeOf()) === 'picked', 'the box says why it is quiet rather than looking unanswered');
+  /*
+   * Quiet, and not holding room to be quiet in. The reservation under the field
+   * buys stillness while an answer is on its way; a name off the list has no
+   * answer coming, so there is nothing to hold room for and the box goes rather
+   * than sitting there empty - `5ea3cdc`, and the same rule as an empty field.
+   */
+  record((await box().count()) === 0, 'and no room is held for an answer that is not coming');
 
   // Edited again, and it is typing again.
   await page.locator(FIELD).press('End');
@@ -752,6 +1012,39 @@ try {
     (await page.inputValue(FIELD)) === '#general-chat',
     `a row takes a click too (${await page.inputValue(FIELD)})`,
   );
+
+  // ---- and taking a row settles the kind as well as the name
+
+  /*
+   * A row carries the same `target` an action is saved with, so picking one says
+   * both things at once - which one, and which kind it is. This form owns that
+   * kind: it is the control directly above the field. So it takes the row's
+   * answer rather than keeping its own.
+   *
+   * The row offered here is a member while the control says Channel, which is
+   * the case that tells the two apart. A form that assumed its own control was
+   * right would save Alice's handle as a channel name and pass this check by
+   * doing nothing; a form that reads the row changes the control, and that is
+   * what is measured.
+   */
+  record((await page.inputValue('#action-target')) === 'CHANNEL', 'the Target control says Channel to begin with');
+  await type('alice');
+  await listed(1);
+  record((await rowKinds())[0] === 'USER', 'and the row offered is a member, not a channel');
+  await options().nth(0).click();
+  record((await page.inputValue(FIELD)) === '@alice', `taking her fills the field (${await page.inputValue(FIELD)})`);
+  record(
+    (await page.inputValue('#action-target')) === 'USER',
+    `and settles the kind with it, rather than leaving a member to be saved as a channel (${await page.inputValue('#action-target')})`,
+  );
+  record(
+    (await page.locator('label[for="action-target-name"]').innerText()).trim() === 'User',
+    'which the field says out loud: its label follows the kind that was just settled',
+  );
+
+  // Put back, the rest of this being about channels.
+  await page.selectOption('#action-target', 'CHANNEL');
+  await page.waitForTimeout(300);
 
   // ---- a partial list says so
 
@@ -890,6 +1183,30 @@ try {
     })
   ).createAction.id;
 
+  /*
+   * The shape the report came in about: a Slack send whose kind was never set.
+   *
+   * `createAction` does not insist on one and plenty of actions arrive without
+   * it, and the panel used to read a missing kind as "there is nobody to ask" -
+   * so it asked nothing, drew nothing, and somebody whose bot token was missing
+   * `users:read` was told that by silence. Made here with `target` left out
+   * rather than set to null in a form, because that is how one really turns up.
+   */
+  kindlessActionId = (
+    await call(`mutation ($input: CreateActionInput!) { createAction(input: $input) { id target } }`, {
+      input: {
+        workspaceId: WORKSPACE,
+        name: KINDLESS_ACTION,
+        type: 'EXECUTE',
+        subtype: 'OUTGOING_CONNECTION',
+        connectionId: slackId,
+        connectionAction: 'SEND_MESSAGE',
+        content: 'Something to say.',
+        targetName: 'general',
+      },
+    })
+  ).createAction.id;
+
   workflowId = (
     await call(`mutation ($input: CreateWorkflowInput!) { createWorkflow(input: $input) { id } }`, {
       input: { workspaceId: WORKSPACE, name: WORKFLOW_NAME, description: 'Scratch, for the target check.' },
@@ -989,12 +1306,27 @@ try {
    */
 
   suggested = [];
+  suggestedTargets = [];
   await type('gen');
   await listed(2);
   record((await list().count()) === 1, 'the node panel offers the list too');
   record(
     JSON.stringify(await offers()) === JSON.stringify(['#general', '#general-chat']),
     `narrowed by what was typed into the node (${JSON.stringify(await offers())})`,
+  );
+  /*
+   * And narrowed by the kind, because this node's action has one. A node cannot
+   * override it - it binds where a message goes and the connection and the kind
+   * stay the definition's - so where the definition says Channel, that is what
+   * is asked for.
+   */
+  record(
+    suggestedTargets.at(-1) === 'CHANNEL',
+    `and by the kind the definition settled (${JSON.stringify(suggestedTargets.at(-1))})`,
+  );
+  record(
+    (await rowKinds()).every((kind) => kind === 'CHANNEL'),
+    'so every row in it is a channel, and each says so',
   );
   await page.screenshot({ path: shot('slack-suggest-node-list.png') });
 
@@ -1007,14 +1339,24 @@ try {
   asked = [];
   await page.waitForTimeout(900);
   record(asked.length === 0, 'a name off the list is not then asked about here either');
-  record((await outcomeOf()) === 'picked', 'and the answer box is quiet for the same stated reason');
+  record((await box().count()) === 0, 'and the panel holds no room for it either, for the same reason');
 
-  const panelWithout = Math.round((await page.locator('#node-mapping-threadTs').boundingBox()).y);
   await type('e');
   await listed(25);
   record((await listNote()) === TRUNCATED, 'a cut list says so in the panel, in the server\'s words');
   record((await list().getAttribute('data-complete')) === 'false', 'and knows it is not the whole of what matched');
+  /*
+   * Measured with the list open against the same field with it dismissed, and
+   * not against an empty field: emptying the field takes the answer box away
+   * with it, which moves the panel for a reason that has nothing to do with the
+   * list. What is being asserted here is that the list floats over the panel
+   * rather than pushing it, so the only thing allowed to differ between the two
+   * readings is the list.
+   */
   const panelWith = Math.round((await page.locator('#node-mapping-threadTs').boundingBox()).y);
+  await page.locator(FIELD).press('Escape');
+  await page.waitForTimeout(400);
+  const panelWithout = Math.round((await page.locator('#node-mapping-threadTs').boundingBox()).y);
   console.log(`threadTs sat at y = ${panelWith} under the longest list, ${panelWithout} without it`);
   record(panelWith === panelWithout, 'and the parameters under it do not move to make room');
 
@@ -1034,21 +1376,20 @@ try {
    */
   const nodeTops = [];
   const nodeHeights = [];
-  for (const typed of ['', 'general', 'scopeless', '']) {
-    if (typed === '') {
-      await page.fill(FIELD, '');
-      await page.waitForTimeout(700);
-    } else {
-      await type(typed);
-      await settled(ANSWERS[typed].message);
-    }
+  for (const typed of ['general', 'scopeless', 'general']) {
+    await type(typed);
+    await settled(ANSWERS[typed].message);
     nodeTops.push(Math.round((await page.locator('#node-mapping-threadTs').boundingBox()).y));
     nodeHeights.push(Math.round((await box().boundingBox()).height));
   }
   console.log(`threadTs sat at y = ${nodeTops.join(', ')}`);
   console.log(`the panel's answer was ${nodeHeights.join(', ')} tall`);
   record(new Set(nodeTops).size === 1, 'nothing below the answer moves as the answer changes, in the panel too');
-  record(new Set(nodeHeights).size === 1, 'because the room it takes there is the same whatever it says, and empty');
+  record(new Set(nodeHeights).size === 1, 'because the room it takes there is the same whatever it says');
+
+  await page.fill(FIELD, '');
+  await page.waitForTimeout(700);
+  record((await box().count()) === 0, 'and the panel gives that room back on an empty field, being no margin');
 
   /* -------------------------------------------- a reference is not a channel */
 
@@ -1080,6 +1421,196 @@ try {
   await settled(ANSWERS.nowhere.message);
   record((await said()) === ANSWERS.nowhere.message, 'and it answers again on the Value tab');
 
+  /* ------------------- a node whose action never said which kind it addresses */
+
+  /*
+   * Issue #176's actual defect, and the leg that would have caught it.
+   *
+   * The report was that the check "does not work on users", and the cause was
+   * not the member lookup: the panel worked the kind out of the definition, and
+   * where the definition had none it concluded there was nobody to ask. So a
+   * connection whose bot token was missing `users:read` answered with silence,
+   * which is the one thing an `UNCHECKED` explicitly is not.
+   *
+   * The kind was never needed to ask. It only ever chose which of Slack's two
+   * endpoints did the looking up, and Slack itself does not differentiate when
+   * sending - one `chat.postMessage` takes a channel id or a user id, a direct
+   * message being a conversation. Left off, both are read, the answers are
+   * merged, and each row and each answer says which kind it turned out to be.
+   */
+  await bind(KINDLESS_ACTION);
+
+  asked = [];
+  askedTargets = [];
+  suggested = [];
+  suggestedTargets = [];
+
+  await type('gen');
+  await listed(3);
+
+  record(
+    suggestedTargets.at(-1) === null,
+    `a node whose action has no kind asks for both rather than asking for nothing (${JSON.stringify(suggestedTargets.at(-1))})`,
+  );
+  record(askedTargets.at(-1) === null, 'and puts the question about the typing the same way');
+  record((await box().count()) === 1, 'so the panel has something to say under the field, which is the whole report');
+  record((await list().count()) === 1, 'and something to offer in it');
+
+  // ---- one list, and every row visibly one kind or the other
+
+  const kinds = await rowKinds();
+  record(
+    JSON.stringify(kinds) === JSON.stringify(['CHANNEL', 'CHANNEL', 'USER']),
+    `one list holding channels and members together, each row carrying its own kind (${JSON.stringify(kinds)})`,
+  );
+  record(
+    JSON.stringify(await offers()) === JSON.stringify(['#general', '#general-chat', '@gene']),
+    `in the order the server sent them, rather than sorted into two heaps (${JSON.stringify(await offers())})`,
+  );
+
+  /*
+   * Carrying it is not drawing it. `#general` and `@gene` are two rows apart and
+   * both answer to `gen`, and a list where the only difference between a room
+   * and a person is one character buried in a highlighted name is a list
+   * somebody picks the wrong row out of. So the mark is measured: that there is
+   * one per row, that the two kinds draw different shapes, that each is big
+   * enough and far enough from what it is drawn on to be seen, and that it says
+   * which it is to somebody who is listening rather than looking.
+   */
+  record((await rowMarks().count()) === 3, `every row draws a mark (${await rowMarks().count()} of 3)`);
+  record(
+    JSON.stringify(await markNames()) === JSON.stringify(['Channel', 'Channel', 'User']),
+    `and names it, so a row read aloud is not two rows read alike (${JSON.stringify(await markNames())})`,
+  );
+  const channelShape = await markShape(0);
+  const memberShape = await markShape(2);
+  record(channelShape !== memberShape, 'and the two kinds are not the same shape drawn twice');
+  record(channelShape !== null && (await markShape(1)) === channelShape, 'while two rows of a kind are');
+
+  const surfaceColour = await tokenColour('--color-surface');
+  const markSeen =
+    (await rowMarks().nth(2).count()) === 0
+      ? { colour: 'none', width: 0, height: 0 }
+      : await rowMarks()
+          .nth(2)
+          .evaluate((mark) => {
+            const drawn = mark.getBoundingClientRect();
+            return {
+              colour: getComputedStyle(mark).color,
+              width: Math.round(drawn.width),
+              height: Math.round(drawn.height),
+            };
+          });
+  console.log(`the mark is ${markSeen.width}x${markSeen.height}, painted ${markSeen.colour} on ${surfaceColour}`);
+  record(markSeen.width >= 10 && markSeen.height >= 10, `and it is a mark somebody can see (${markSeen.width}px)`);
+  record(
+    apart(markSeen.colour, surfaceColour) >= 40,
+    `painted far enough from the list under it (${markSeen.colour} against ${surfaceColour})`,
+  );
+  await page.screenshot({ path: shot('slack-suggest-merged.png') });
+
+  // ---- taking either kind fills the field, and neither edits the definition
+
+  await options().nth(2).click();
+  record((await page.inputValue(FIELD)) === '@gene', `a member is taken (${await page.inputValue(FIELD)})`);
+
+  await type('gen');
+  await listed(3);
+  await options().nth(0).click();
+  record((await page.inputValue(FIELD)) === '#general', `and a channel is taken (${await page.inputValue(FIELD)})`);
+
+  /*
+   * And the definition is left alone. The action dialog takes a picked row's
+   * kind because it owns that kind; a node does not - it binds where one step's
+   * message goes, and the action is shared with every other step that runs it.
+   * A panel that quietly filled in the definition's `target` would be one node
+   * editing everybody's action from a field that says nothing about doing so.
+   */
+  const untouched = (
+    await call(
+      `query ($w: ID!) {
+         workspaceActions(workspaceId: $w, page: 0, size: 200) { content { id name target } }
+       }`,
+      { w: WORKSPACE },
+    )
+  ).workspaceActions.content.find((one) => one.name === KINDLESS_ACTION);
+  record(
+    untouched?.target === null,
+    `and the definition's kind is still unset, a node binding a name and not the action (${JSON.stringify(untouched?.target ?? null)})`,
+  );
+
+  // ---- and the answer says which kind a typed name turned out to be
+
+  /*
+   * `SlackTargetCheck.target`, which is the half of the answer that only a
+   * question asked without a kind is missing. `alice` typed into this node comes
+   * back found, and *what she is* is then the useful part - drawn as the mark
+   * the rows draw, so that a name confirmed here and a row picked there are
+   * recognisably the same claim.
+   */
+  await type('alice');
+  await settled([ANSWERS.alice.label, ANSWERS.alice.message].join(' '));
+  record((await said()).includes(ANSWERS.alice.message), 'the sentence is still whole and still the server\'s');
+  record(
+    (await box().getAttribute('data-target')) === 'USER',
+    `and the answer says which of the two it turned out to be (${await box().getAttribute('data-target')})`,
+  );
+  const answerMark = box().locator('svg');
+  record((await answerMark.count()) === 1, 'drawn, and drawn once');
+  record((await answerMark.getAttribute('aria-label')) === 'User', 'and named the same way a row names it');
+  record(
+    (await shapeOf(answerMark)) === memberShape && memberShape !== null,
+    'in the same shape a row draws, a confirmation and the row it came from being one claim',
+  );
+  // The list put away first, it being what stands over the answer while it is open.
+  await page.locator(FIELD).press('Escape');
+  await page.waitForTimeout(300);
+  record((await said()).includes(ANSWERS.alice.message), 'and it is still there once the list is out of the way');
+  await page.screenshot({ path: shot('slack-target-node-merged.png') });
+
+  // ---- a connection that can read one of the two halves
+
+  /*
+   * The case the merged question exists to get right, and the one the report
+   * came in about. One lookup answered and the other was refused: everything
+   * from the half that could be read is still offered, the list says which half
+   * is missing, and the name is `UNCHECKED` rather than ruled on - because a
+   * name absent from the half that could be read is not a name that does not
+   * exist.
+   */
+  await type('halfblind');
+  await noted(CHANNELS_ONLY);
+  record((await options().count()) === 2, `everything the readable half holds is still offered (${await options().count()})`);
+  record(
+    (await rowKinds()).every((kind) => kind === 'CHANNEL'),
+    'all of it from that half, and each row saying so',
+  );
+  record((await listNote()) === CHANNELS_ONLY, `and the reason, verbatim: ${JSON.stringify(await listNote())}`);
+  /*
+   * And drawn whole. The server holds this to one line of under 120 characters;
+   * the node panel is about two hundred pixels wide, so one line of prose is
+   * several lines of screen there, and the thing that must not happen is the
+   * rest being clipped away. The line above already pins it word for word - this
+   * pins that all of those words are on the screen.
+   */
+  record(
+    await noteIsWhole(),
+    'and the whole of it is drawn rather than cut to fit the panel it is in',
+  );
+  record(
+    (await list().getAttribute('data-complete')) === 'false',
+    'and it does not pass half a Slack off as the whole of it',
+  );
+
+  await settled(ANSWERS.halfblind.message);
+  record((await said()) === ANSWERS.halfblind.message, 'the name is answered too, in the server\'s own sentence');
+  record(
+    (await outcomeOf()) === 'UNCHECKED',
+    `as UNCHECKED and not as a verdict - the half that could be read is not the whole (${await outcomeOf()})`,
+  );
+  record((await page.inputValue(FIELD)) === 'halfblind', 'and the field carries on as the plain text it is');
+  await page.screenshot({ path: shot('slack-suggest-node-halfblind.png') });
+
   /* ------------------------------ a target that is not a Slack target */
 
   /*
@@ -1105,6 +1636,7 @@ try {
     ['mutation ($id: ID!) { removeWorkflow(id: $id) }', { id: workflowId }],
     ['mutation ($id: ID!) { deleteAction(id: $id) }', { id: actionId }],
     ['mutation ($id: ID!) { deleteAction(id: $id) }', { id: mailActionId }],
+    ['mutation ($id: ID!) { deleteAction(id: $id) }', { id: kindlessActionId }],
     // A connection the workspace added itself has nothing to fall back on, so
     // disconnecting it is how one goes - there is no delete for it.
     ['mutation ($id: ID!) { disconnectWorkspaceConnection(id: $id) }', { id: slackId }],
