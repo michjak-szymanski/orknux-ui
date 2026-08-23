@@ -144,6 +144,18 @@
   overflow-wrap: anywhere;
 }
 
+/*
+ * What the search matched, in the same soft brand wash the agent's grant lists
+ * mark their hits with - one look for one meaning across the interface. A
+ * `<mark>` is yellow-on-black by default, which belongs to no theme here, so
+ * both halves of it are said rather than only the background.
+ */
+.mark {
+  border-radius: var(--radius-4);
+  background: var(--color-accent-brand-soft);
+  color: var(--color-text-primary);
+}
+
 /* The way to make one reads as an offer rather than as another name in the list. */
 .optionCreate .optionLabel {
   color: var(--color-accent-brand);

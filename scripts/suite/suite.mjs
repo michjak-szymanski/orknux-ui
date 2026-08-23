@@ -990,6 +990,29 @@ export const TESTS = [
      */
   },
   {
+    name: 'provider-credential-check',
+    what: "a provider's key is its own or a workspace secret it reads, and the two do not spill into each other",
+    needs: ['workspace'],
+    /*
+     * Issue #232. The dangerous half is not the new field, it is the old one:
+     * "a key is stored, leave it alone" is a null secret behind a row of dots,
+     * and every way of offering a variable instead has a way of turning that
+     * into "clear the key". So the credential is read back off the server after
+     * every move - created, renamed, moved to a secret, moved back - and the
+     * stored key is compared byte for byte with what was typed rather than
+     * inferred from a boolean.
+     *
+     * One state is put in front of the page rather than made: a reference
+     * pointing at nothing has no route through the API, and the check asserts
+     * that as well, by trying both of the deletions that would produce one and
+     * measuring the refusals. What it then reads is the real answer with the
+     * flag the server sets on a reference it could not resolve.
+     *
+     * Its own catalog, variables and providers, all under a scratch name, swept
+     * at both ends of the run.
+     */
+  },
+  {
     name: 'slack-connection-check',
     what: 'one Slack connection type, made through the dialog and finished on its page',
     needs: ['workspace'],

@@ -39,7 +39,28 @@ export interface ModelProvider {
   status: ProviderStatus;
   lastCheckMessage: string | null;
   lastCheckedAt: string | null;
+  /** Whether it holds a credential of its own. False for one reading a variable. */
   secretSet: boolean;
+  /**
+   * The workspace variable secret it reads its credential from, or null when it
+   * keeps its own copy. Those are the two, and they are exclusive.
+   */
+  secretVariableId: string | null;
+  /**
+   * What that variable is called and which catalog holds it, so a screen can
+   * name the reference without asking again. Both null when there is no
+   * reference — and also when there is one pointing at nothing, which is what
+   * `secretVariableMissing` is for.
+   */
+  secretVariableName: string | null;
+  secretVariableCatalog: string | null;
+  /**
+   * A reference pointing at nothing. Deleting a variable a provider reads is
+   * refused, so this should not happen — but a restore or a database edited by
+   * hand can produce one, and a provider that cannot say why it has no key is
+   * the failure worth reporting rather than assuming away.
+   */
+  secretVariableMissing: boolean;
 }
 
 export interface Model {
@@ -97,7 +118,8 @@ export interface ModelUsage {
 
 const PROVIDER_FIELDS =
   'id workspaceId name type endpoint authMethod apiVersion deploymentName region tenantId clientId scope ' +
-  'status lastCheckMessage lastCheckedAt secretSet';
+  'status lastCheckMessage lastCheckedAt secretSet ' +
+  'secretVariableId secretVariableName secretVariableCatalog secretVariableMissing';
 const MODEL_FIELDS =
   'id providerId workspaceId providerName name modelId kind contextWindow maxOutput enabled ' +
   'tokenLimit resetInterval requestsPerMinute inputCostPerMillion outputCostPerMillion voice';
@@ -163,8 +185,17 @@ export interface ProviderInput {
   type: ProviderType;
   endpoint: string;
   authMethod: ProviderAuthMethod;
-  /** Undefined leaves a stored credential alone; empty clears it. */
+  /** Undefined leaves a stored credential alone; empty clears it, reference and all. */
   secret?: string;
+  /**
+   * Points the provider at a workspace variable secret, dropping any copy it
+   * held. Undefined leaves the credential as it is.
+   *
+   * Never sent together with `secret`: the server refuses the pair rather than
+   * resolving it by precedence, because sending both is a caller who has not
+   * chosen between the two.
+   */
+  secretVariableId?: string;
   apiVersion?: string | null;
   deploymentName?: string | null;
   region?: string | null;

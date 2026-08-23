@@ -42,9 +42,35 @@ untouched.
 `http://localhost:11434` is the address of Ollama's own API and answers `404`
 to both of the calls made here; the hint in the form says so.
 
+A provider's **credential** is one of two things, and they are exclusive. It
+either keeps its own copy of the key, which is what nearly every provider does
+and what has always happened here; or it reads one of the workspace's
+**variables** — a secret, not a value — that somebody else maintains. Every
+provider type offers both, and the form asks which before it asks for anything.
+
+Reading a secret is worth it wherever one key is behind more than one provider.
+Three providers on one OpenAI key meant typing it into each of them, and
+rotating it meant remembering which ones; pointed at a secret instead, the
+rotation is one edit on the **Variables** page. The secret is read at the moment
+the provider is called, so a new value is in use immediately, with nothing to
+save here.
+
+The reference is held by identity rather than by name. Renaming the variable, or
+moving it to another catalog, does not disturb the provider — and deleting it is
+refused while any provider reads it, naming the ones that do. Only a secret will
+do: a value is returned with the variable listing, and a key on a listing is a
+key on a screen.
+
+A provider reading a secret has no key of its own to reveal; reveal it from the
+**Variables** page, where the reading is recorded against the secret.
+
 A provider's page is also where it is tested. The status is the answer to the
 last check, not a guess: a provider with no credential fails the check rather
-than waiting to fail at the first question.
+than waiting to fail at the first question. Where the credential is a reference
+that has come apart — a restore, or a database edited by hand — the provider
+says so in words about the variable, on its row and on its page. That is
+deliberate. A provider that cannot read its key fails a check exactly the way an
+unreachable one does, and "check the endpoint" is the wrong afternoon.
 
 ## Workspace models
 

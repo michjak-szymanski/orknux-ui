@@ -2,6 +2,33 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
 import styles from './DefinitionPicker.module.css';
+import { segments } from './searchMatches';
+
+/**
+ * A row's text with the typed part picked out.
+ *
+ * By the matcher the manual's search and the agent's grant lists already use,
+ * so no two places in the interface can disagree about what matched. It earns
+ * its place here rather than being decoration: the rows this picker offers are
+ * often alike on purpose — a variable's name repeated across catalogs, four
+ * functions differing in one word — and a list that shows *which* letters
+ * answered the search is the difference between choosing and guessing.
+ */
+function Marked({ text, needle }: { text: string; needle: string }) {
+  return (
+    <>
+      {segments(text, needle).map((part, index) =>
+        part.match ? (
+          <mark key={index} className={styles.mark}>
+            {part.text}
+          </mark>
+        ) : (
+          <span key={index}>{part.text}</span>
+        ),
+      )}
+    </>
+  );
+}
 
 /** One definition a field can be pointed at. */
 export interface DefinitionOption {
@@ -255,9 +282,17 @@ export function DefinitionPicker({
                 setOpen(false);
               }}
             >
-              <span className={styles.optionLabel}>{row.label}</span>
+              {/*
+                The row that makes a new one is never filtered, so marking it
+                would put a highlight on a word nobody searched for.
+              */}
+              <span className={styles.optionLabel}>
+                {create !== null && index === 0 ? row.label : <Marked text={row.label} needle={search} />}
+              </span>
               {row.hint !== undefined && row.hint !== '' && (
-                <span className={styles.optionHint}>{row.hint}</span>
+                <span className={styles.optionHint}>
+                  {create !== null && index === 0 ? row.hint : <Marked text={row.hint} needle={search} />}
+                </span>
               )}
             </button>
           ))}

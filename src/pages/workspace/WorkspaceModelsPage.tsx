@@ -120,12 +120,34 @@ export function WorkspaceModelsPage({ session, onSignOut }: WorkspaceModelsPageP
             className={`${styles.row} ${styles.rowOpens}`}
             onClick={() => navigate(`/workspace/${workspaceId}/models/providers/${provider.id}`)}
           >
-            <Link
-              className={`${styles.colProvider} ${styles.openName}`}
-              to={`/workspace/${workspaceId}/models/providers/${provider.id}`}
-            >
-              {provider.name}
-            </Link>
+            <span className={`${styles.colProvider} ${styles.providerName}`}>
+              <Link
+                className={styles.openName}
+                to={`/workspace/${workspaceId}/models/providers/${provider.id}`}
+              >
+                {provider.name}
+              </Link>
+              {/*
+                Where this provider's key comes from, where that is not "its
+                own" - which is the state of the thing being looked at rather
+                than an explanation of it, so it is printed.
+
+                The broken one is said in words about the secret and says the
+                endpoint is not the problem, because a provider that has lost
+                its credential fails a check exactly the way an unreachable one
+                does, and the row is where that gets read as an address to go
+                and fix. That is issue #211 in its other clothes.
+              */}
+              {provider.secretVariableMissing ? (
+                <span className={styles.secretGone} data-secret-missing="">
+                  Its workspace secret is gone — not its endpoint
+                </span>
+              ) : provider.secretVariableName !== null ? (
+                <span className={styles.secretFrom} data-secret-variable="">
+                  Reads {provider.secretVariableName} · {provider.secretVariableCatalog}
+                </span>
+              ) : null}
+            </span>
             <span className={`${styles.colGrow} ${styles.endpoint}`}>{provider.endpoint}</span>
             <span className={styles.colStatus}>
               <span
