@@ -76,7 +76,7 @@ import pencilIcon from '../../assets/pencil.svg';
 import playIcon from '../../assets/play.svg';
 import plusIcon from '../../assets/plus.svg';
 import redoIcon from '../../assets/redo.svg';
-import refreshIcon from '../../assets/refresh-cw.svg';
+import rotateIcon from '../../assets/rotate-cw.svg';
 import saveIcon from '../../assets/save.svg';
 import undoIcon from '../../assets/undo.svg';
 import { ActionDialog } from '../../components/ActionDialog';
@@ -1267,18 +1267,23 @@ function GraphNodeView({ data, selected }: NodeProps) {
         the other is three reaches away behind the panel. The thing being judged
         is the node on the canvas, so the control is on the node.
 
-        In its top-right corner rather than on a bar above it. The bar was as
+        At its top-right corner rather than on a bar above it. The bar was as
         wide as the node and stood off its top edge, which on a graph of any
         density is over the line coming into the node above - so selecting a
         node covered part of the picture the selection was made to look at. A
         corner covers nothing, and it is the corner every application puts the
         control that acts on the thing you are looking at.
 
-        Inside the node, clear of both things that could be under it: the meta
-        row keeps room on its right so an agent's lit dot is never behind this,
-        and the inset leaves the resizer's corner control its own square. The
-        node is dragged by its body, so `nodrag` is what keeps a press here from
-        being a drag of the node instead of a turn.
+        Outside that corner rather than inset within it. Inset, it stood over
+        the node's own first line and cost the meta row a fifth of its width in
+        clearance; and the glyph read as refresh, which on a control drawn on
+        top of a node is a fair guess at "reload this". Off the corner
+        diagonally, it is clear of the node, clear of the resizer's corner
+        control - which is a six-pixel square centred exactly on that corner -
+        and clear of the handles, which are on the facing edges and not here.
+
+        The node is dragged by its body, so `nodrag` is what keeps a press here
+        from being a drag of the node instead of a turn.
       */}
       {turn !== null && selected && (
         <button
@@ -1291,7 +1296,7 @@ function GraphNodeView({ data, selected }: NodeProps) {
           title={`Turn the node (R) — ${facingName}`}
           aria-label={`Turn the node (R) — ${facingName}`}
         >
-          <img src={refreshIcon} alt="" aria-hidden="true" />
+          <img src={rotateIcon} alt="" aria-hidden="true" />
         </button>
       )}
       {/*

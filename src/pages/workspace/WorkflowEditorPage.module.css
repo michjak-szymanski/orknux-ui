@@ -415,16 +415,16 @@
   padding: var(--space-14) var(--space-16);
 }
 
+/*
+ * The right end used to be given up to the turn control, which was drawn in the
+ * node's corner over this row: twenty-two pixels of clearance on every node,
+ * selected or not, so that an agent's lit dot never ended up behind it. The
+ * control now floats outside the node, and the row has its width back.
+ */
 .metaRow {
   display: flex;
   align-items: center;
   gap: var(--space-8);
-  /*
-   * Room at the right end for the turn control, which is drawn in the node's
-   * corner over this row. Kept whether the node is selected or not, so that
-   * selecting one does not shuffle the row underneath the control that appears.
-   */
-  padding-right: 22px;
 }
 
 /* Whatever else the row holds, the dot stays at the far end. */
@@ -1285,21 +1285,36 @@ select.input {
 /*
  * Turning, on the node being turned.
  *
- * In the selected node's top-right corner, which is where a control that acts
+ * At the selected node's top-right corner, which is where a control that acts
  * on what you are looking at is looked for. It used to be a labelled button on
  * a bar above the node, about as wide as the node itself and standing off its
  * top edge - so selecting a node put a grey slab over whatever was above it,
  * which on a graph of any density is the line coming in from the node before.
  *
- * The inset is what keeps it off the resizer's corner control, and `.metaRow`
- * keeps a matching gap on its right so an agent's lit dot never ends up behind
- * it. Above the node's own content, because the name can wrap up to it.
+ * Then it was inset inside that corner, and it was in the way there: it stood
+ * over the node's own first line, so `.metaRow` had to give up twenty-two
+ * pixels of its width to keep an agent's lit dot from ending up behind it, and
+ * a control drawn on top of a node reads as acting on the node's contents.
+ * It floats off the corner instead - `bottom` and `left` measured from the far
+ * edges, so the whole 20px square is outside the node's border box on both
+ * axes. The eight resolves against the padding box, which the node's own 1px
+ * border sits outside of, so what is actually measured on the screen is seven.
+ *
+ * Neither number is arbitrary. The resizer's top-right control is a six-pixel
+ * square centred on the corner, so it reaches three pixels out along each axis;
+ * seven clears it with room left over, and a press at the middle of this button
+ * lands on this button. The node's own handles are on its facing edges - the
+ * middle of a side - and are not near this at all.
+ *
+ * Nothing clips it: `.node` sets no overflow, and React Flow lifts a selected
+ * node above its neighbours, so a button hanging over the gap between two nodes
+ * is drawn over the one beside it rather than under it.
  */
 .turnNode {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  z-index: 2;
+  bottom: calc(100% + 8px);
+  left: calc(100% + 8px);
+  z-index: 6;
   display: inline-flex;
   align-items: center;
   justify-content: center;
