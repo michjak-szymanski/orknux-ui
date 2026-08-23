@@ -49,14 +49,50 @@ export interface VoiceModeHandle {
   interrupt: () => void;
 }
 
-/** Loud enough to be somebody talking rather than a room being quiet. */
-const SPEECH_LEVEL = 0.045;
+/**
+ * Loud enough to be somebody talking rather than a room being quiet.
+ *
+ * This was 0.045, which is a good level for the middle of a word and a poor one
+ * for the end of a phrase. A voice falls away as a sentence closes, and under
+ * this line the silence clock starts - so somebody pausing between clauses was
+ * cut off while they were still speaking, quietly. It sits just above the level
+ * the circle already treats as a room rather than a voice.
+ */
+const SPEECH_LEVEL = 0.02;
 
-/** Quiet for this long, after speech, ends the turn. */
-const SILENCE_MS = 1_200;
+/**
+ * How far above the room's own noise counts as a voice.
+ *
+ * Speech is several times the level of the room it is spoken in, whatever that
+ * room is - which is why this travels between microphones where a fixed level
+ * does not.
+ */
+const SPEECH_OVER_ROOM = 2.5;
 
-/** No single turn runs longer than this, however quiet it never gets. */
-const LONGEST_TURN_MS = 30_000;
+/**
+ * Quiet for this long, after speech, ends the turn.
+ *
+ * 1.2 seconds is shorter than an ordinary pause. People stop to think in the
+ * middle of a sentence, and every one of those stops was read as "your go" -
+ * the turn ended, what had been said so far was sent, and the rest was spoken
+ * to a microphone that was no longer listening.
+ *
+ * Two and a half seconds is long enough for a clause break and still short
+ * enough to feel like a conversation. It is a judgement about how people talk
+ * rather than a fact about audio, so it is the first number to move if this
+ * still cuts somebody off - together with SPEECH_LEVEL above, since the two
+ * decide the same thing between them.
+ */
+const SILENCE_MS = 2_500;
+
+/**
+ * No single turn runs longer than this, however quiet it never gets.
+ *
+ * A backstop against a room that never falls silent, not a limit on how much
+ * somebody may say. Thirty seconds was the second way to be cut off mid
+ * sentence: it is a short answer to a question but a very short explanation.
+ */
+const LONGEST_TURN_MS = 120_000;
 
 /** Below this, the circle is still: a room's own noise is not a voice. */
 const VISIBLE_LEVEL = 0.01;
@@ -326,6 +362,22 @@ export function VoiceMode({ workspaceId, onSay, onClose, onPhase, ref }: VoiceMo
     const startedAt = performance.now();
     let spokeAt: number | null = null;
 
+    /*
+     * What this room sounds like with nobody talking.
+     *
+     * A fixed level cannot answer "is somebody speaking": it is a question about
+     * a microphone, a room and a voice, and those differ by more than the
+     * numbers between one person's setup and another's. Held at a fixed 0.045 it
+     * cut people off in the middle of a sentence - not because they had stopped,
+     * but because their voice had dropped under a line drawn for somebody else's
+     * equipment.
+     *
+     * So the line is drawn from what is actually heard. The floor follows the
+     * quiet parts quickly and the loud parts barely at all, which makes it the
+     * room rather than the voice; speech is what stands well clear of it.
+     */
+    let floor = SPEECH_LEVEL;
+
     const watch = () => {
       if (!live.current || recorder.current !== held) return;
       analyser.getFloatTimeDomainData(samples);
@@ -335,7 +387,20 @@ export function VoiceMode({ workspaceId, onSay, onClose, onPhase, ref }: VoiceMo
       setLevel(loudness < VISIBLE_LEVEL ? 0 : Math.min(1, loudness * 6));
 
       const now = performance.now();
-      if (loudness > SPEECH_LEVEL) spokeAt = now;
+      floor = loudness < floor ? loudness : floor * 0.999 + loudness * 0.001;
+
+      /*
+       * Clear of the room, or loud in its own right.
+       *
+       * Two ways to count, because either alone fails somewhere. A ratio alone
+       * makes a silent room absurdly sensitive - every breath is three times
+       * nothing. A fixed level alone is what was here before. Whichever is
+       * easier to satisfy wins, so a quiet voice in a quiet room passes on the
+       * ratio and a normal voice in a noisy one passes on the level.
+       */
+      if (loudness > Math.max(floor * SPEECH_OVER_ROOM, VISIBLE_LEVEL) || loudness > SPEECH_LEVEL) {
+        spokeAt = now;
+      }
 
       const quietLongEnough = spokeAt !== null && now - spokeAt > SILENCE_MS;
       const goneOnTooLong = now - startedAt > LONGEST_TURN_MS;
