@@ -1,7 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 
-import type { MessageTarget } from '../api/actions';
 import { fetchSlackSuggestions } from '../api/integrations';
 import type { SlackSuggestion, SlackSuggestions } from '../api/integrations';
 import { Marked } from './DefinitionPicker';
@@ -23,28 +22,6 @@ export interface SlackTargetFieldProps {
    * field that behaves like any other.
    */
   connectionId: string | null;
-  /**
-   * Which of the two things is being named, or null when that is not known.
-   *
-   * Null is a narrowing left off and never a reason to say nothing. Both halves
-   * of the connection are then read into one list and both are asked about, and
-   * the rows and the answer say which kind each turned out to be - which is the
-   * only thing a field over an action that has not settled its kind could
-   * usefully do. It used to be the second half of a guard, and the guard drew
-   * nothing at all.
-   */
-  target: MessageTarget | null;
-  /**
-   * What a taken row turned out to be, for a surface that has somewhere to put
-   * it.
-   *
-   * A row carries the same `target` `createAction` takes, so taking one settles
-   * the kind as well as the name. The action dialog owns that kind and sets it;
-   * the node panel does not - a node binds where a message goes and the
-   * definition keeps whether that is a channel or a member - so it passes
-   * nothing and the row only fills the field.
-   */
-  onPick?: (target: MessageTarget) => void;
   /** What the answer under the field is called, for `aria-describedby`. */
   answerId: string;
   /** The surface's own class for a text input. */
@@ -76,16 +53,16 @@ export interface SlackTargetFieldProps {
  * here will ever hold. A picker that refused them would be wrong more often than
  * the typos it caught.
  *
- * **It does not need to be told which kind it is naming.** Slack does not
- * differentiate when sending - one `chat.postMessage` takes a channel id or a
- * user id, a direct message being a conversation - and the kind only ever chose
- * which of its two endpoints answered a lookup. So a field over an action that
- * has not settled its kind asks without one: both are read, one list comes back
- * holding channels and members together, each row says which it is, and taking a
- * row settles the kind as well as the name for whatever surface has somewhere to
- * put it. The alternative was what issue #176 was reported as - a panel that
- * asked nothing, and therefore said nothing, to somebody whose bot token could
- * not read one of the two halves.
+ * **It is never told which kind it is naming, because nothing knows.** Slack does
+ * not differentiate when sending - one `chat.postMessage` takes a channel id or
+ * a user id, a direct message being a conversation - and the kind only ever
+ * chose which of its two endpoints answered a lookup. Nothing stores it now: an
+ * action holds a name and a send resolves that name when it goes. So both
+ * surfaces ask without one, one list comes back holding channels and members
+ * together, and each row and each answer says which kind it turned out to be.
+ * The alternative was what issue #176 was reported as - a panel that asked
+ * nothing, and therefore said nothing, to somebody whose bot token could not
+ * read one of the two halves.
  *
  * The two answers under one field are kept apart by where they are drawn, which
  * is the only way to have both without stacking two paragraphs under a text box.
@@ -102,8 +79,6 @@ export function SlackTargetField({
   value,
   onChange,
   connectionId,
-  target,
-  onPick,
   answerId,
   className,
   wrapperClassName,
@@ -118,9 +93,9 @@ export function SlackTargetField({
    * action whose target kind had never been set left `target` null, so the panel
    * asked nothing and drew nothing, and somebody whose bot token was missing
    * `users:read` was told that by silence. The kind was never needed to ask -
-   * it only ever chose which of Slack's two endpoints did the looking up - so
-   * the field falls quiet only where it genuinely cannot ask, which is where no
-   * Slack connection could be resolved.
+   * it only ever chose which of Slack's two endpoints did the looking up, and
+   * it is not stored at all any more - so the field falls quiet only where it
+   * genuinely cannot ask, which is where no Slack connection could be resolved.
    */
   const suggesting = connectionId !== null;
 
@@ -157,13 +132,12 @@ export function SlackTargetField({
   /**
    * Everything the list on screen would have to be a list *for*.
    *
-   * The connection, the kind, and what is typed - and null while the list is
-   * closed, which is what stops a field nobody is picking from asking anything.
-   * An empty `typed` is a question all the same, and the only one here that is:
-   * it asks for the first few of everything, which is what a picker shows when
-   * it opens.
+   * The connection and what is typed - and null while the list is closed, which
+   * is what stops a field nobody is picking from asking anything. An empty
+   * `typed` is a question all the same, and the only one here that is: it asks
+   * for the first few of everything, which is what a picker shows when it opens.
    */
-  const question = suggesting && open ? [connectionId, target ?? 'BOTH', typed].join(' ') : null;
+  const question = suggesting && open ? [connectionId, typed].join(' ') : null;
 
   /*
    * The same two guards the answer box keeps, for the same two reasons.
@@ -180,7 +154,12 @@ export function SlackTargetField({
 
     let current = true;
     const timer = setTimeout(() => {
-      fetchSlackSuggestions(connectionId, target, typed)
+      /*
+       * Asked without a kind, always. There is nothing left to narrow it with -
+       * an action holds a name and no kind beside it - so one list comes back
+       * holding channels and members together and each row says which it is.
+       */
+      fetchSlackSuggestions(connectionId, null, typed)
         .then((answer) => {
           if (current) setOffered({ question, answer });
         })
@@ -195,8 +174,8 @@ export function SlackTargetField({
       current = false;
       clearTimeout(timer);
     };
-    // `question` is made of the other three, so it is what changes when they do.
-  }, [question, connectionId, target, typed]);
+    // `question` is made of the other two, so it is what changes when they do.
+  }, [question, connectionId, typed]);
 
   /** The list, but only while it is a list for what is in the field now. */
   const answer = offered !== null && offered.question === question ? offered.answer : null;
@@ -254,19 +233,18 @@ export function SlackTargetField({
   }, [showing, rows.length, note]);
 
   /**
-   * Puts a row in the field, and tells the surface what kind it was.
+   * Puts a row in the field, and does nothing else at all.
    *
-   * The name is the whole of what picking does to *this* field, and the kind is
-   * what it does to the form around it where there is one to do it to. A row
-   * knows which of the two it is and it is the same value an action is saved
-   * with, so a person who has just picked `@alice` out of a merged list should
-   * not then have to find the Target control and say "user" as well - they have
-   * already said it, by picking her.
+   * The name is the whole of what picking does, on both surfaces. It used to
+   * hand the row's kind back to the action dialog as well, because the dialog
+   * had a Channel/User control to settle - and that control is gone, nothing
+   * storing the kind any more. A row that is a person and a row that is a
+   * channel therefore leave the same thing behind them: what was picked, in the
+   * field, ready to be resolved when the message goes.
    */
   function take(row: SlackSuggestion) {
     onChange(row.name);
     setTaken(row.name);
-    onPick?.(row.target);
     setOpen(false);
     setAt(-1);
   }
@@ -458,7 +436,6 @@ export function SlackTargetField({
         id={answerId}
         className={answerClassName}
         connectionId={connectionId}
-        target={target}
         name={value}
         picked={taken !== null && taken === value}
       />

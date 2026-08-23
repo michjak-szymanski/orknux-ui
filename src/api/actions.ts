@@ -16,6 +16,16 @@ export type ActionSubtype =
 
 export type ConnectionActionKind = 'SEND_MESSAGE' | 'REPLY_IN_THREAD' | 'CREATE_ISSUE' | 'UPDATE_ISSUE';
 
+/**
+ * Which of Slack's two kinds of name something turned out to be.
+ *
+ * Nothing on an action holds it. A send resolves the name it is given to Slack's
+ * own id before it posts, so whether that name belongs to a channel or to a
+ * person is found out at the time rather than filled in on a form. What is left
+ * of it is a description: the optional narrowing on `slackTarget` and
+ * `slackSuggestions`, and the kind their answers report - which is what draws
+ * the mark beside a row and beside a name that was found.
+ */
 export type MessageTarget = 'CHANNEL' | 'USER';
 
 /**
@@ -51,7 +61,14 @@ export interface Action {
   connectionName: string | null;
   connectionAction: ConnectionActionKind | null;
   content: string | null;
-  target: MessageTarget | null;
+  /**
+   * Where a send goes, as it was typed: "#general", "general", "@alice",
+   * "alice", an address or an id.
+   *
+   * One field and no kind beside it. Sending resolves the name through the same
+   * listing the field's suggestions and its check read, so neither a sigil nor a
+   * setting saved alongside is needed to reach a channel or a person.
+   */
   targetName: string | null;
   /** A mail's recipients and copy list, comma-separated, and what it is about. */
   emailTo: string | null;
@@ -102,7 +119,7 @@ export interface ActionHeader {
 
 const ACTION_FIELDS = `
   id workspaceId name type subtype subtypeLabel
-  connectionId connectionName connectionAction content target targetName
+  connectionId connectionName connectionAction content targetName
   emailTo emailCc emailSubject emailReplyTo
   url method headers headersReadable headerRows { name value variableId variableName }
   functionId functionName mappings { argument expression }
@@ -173,7 +190,7 @@ export interface ActionInput {
   connectionId?: string | null;
   connectionAction?: ConnectionActionKind | null;
   content?: string | null;
-  target?: MessageTarget | null;
+  /** Where a send goes, as typed. No kind goes with it - sending resolves the name itself. */
   targetName?: string | null;
   emailTo?: string | null;
   emailCc?: string | null;

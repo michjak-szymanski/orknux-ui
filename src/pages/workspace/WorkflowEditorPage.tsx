@@ -52,7 +52,7 @@ import type {
 import type { SessionUser } from '../../api/session';
 import { fetchWorkspaceActions } from '../../api/actions';
 import { fetchWorkspaceAgents } from '../../api/agents';
-import type { Action, MessageTarget } from '../../api/actions';
+import type { Action } from '../../api/actions';
 import type { Agent } from '../../api/agents';
 import { fetchWorkspaceConditions } from '../../api/conditions';
 import type { Condition } from '../../api/conditions';
@@ -2762,7 +2762,8 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   /* ------------------------------------------- what the connection can see */
 
   /**
-   * The Slack send this node's `target` parameter would go through, or null.
+   * The Slack connection this node's `target` parameter would send through, or
+   * null.
    *
    * Three things have to be true before there is anything to ask, and each of
    * them is a thing the node itself does not say:
@@ -2788,23 +2789,19 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
    * would put a sentence about some other connection under the field, or claim
    * a channel cannot be seen without knowing who was asked.
    *
-   * Which of the two kinds is asked about is the definition's too: a node binds
-   * the name, and whether that name is a channel or a member is settled where
-   * the action is written.
-   *
-   * **Not knowing that kind is not one of the three things.** An action whose
-   * `target` was never set used to make this null, so the panel asked nothing
-   * and drew nothing - which is issue #176 as it was reported: somebody whose
-   * bot token was missing `users:read` was told so by silence, and silence is
-   * indistinguishable from a connection nobody has anything to say about. The
-   * kind only ever chose which of Slack's two endpoints did the looking up, and
-   * the server no longer needs it - omitted, both are asked, the answers are
-   * merged, and each answer says which kind it turned out to be. So the kind
-   * travels where the definition has one and is null where it has not, and the
-   * question is put either way. The one thing that still silences this panel is
-   * the one thing that always should: no Slack connection to ask.
+   * **Which kind is named is nobody's business here, and used to be a fourth
+   * thing.** The definition carried a Channel/User setting, an action whose
+   * setting was never made left it null, and this concluded from that that there
+   * was nobody to ask - so the panel asked nothing and drew nothing, which is
+   * issue #176 as it was reported: somebody whose bot token was missing
+   * `users:read` was told so by silence, and silence is indistinguishable from a
+   * connection nobody has anything to say about. The kind only ever chose which
+   * of Slack's two endpoints did the looking up; the setting is gone, sending
+   * resolves the name it is given, and both endpoints are read for every
+   * question. The one thing that still silences this panel is the one thing that
+   * always should: no Slack connection to ask.
    */
-  const slackSend = useMemo((): { connectionId: string; target: MessageTarget | null } | null => {
+  const slackSend = useMemo((): string | null => {
     if (draft === null || draft.kind !== 'ACTION' || draft.actionId === null) return null;
 
     const action = actions.find((one) => one.id === draft.actionId);
@@ -2814,7 +2811,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     const connection = connections.find((held) => held.id === action.connectionId);
     if (connection === undefined || connection.type !== 'SLACK') return null;
 
-    return { connectionId: connection.id, target: action.target };
+    return connection.id;
   }, [draft, actions, connections]);
 
   /**
@@ -4332,29 +4329,7 @@ Change the keystroke in Preferences.`}
                                   spellCheck={false}
                                   connectionId={
                                     slackSend !== null && mapping.name === TARGET_PARAMETER
-                                      ? slackSend.connectionId
-                                      : null
-                                  }
-                                  /*
-                                    The definition's kind where it has one, and
-                                    null where it has not - a narrowing left off
-                                    rather than a question left unasked. The rows
-                                    and the answer then say which kind each
-                                    turned out to be, which is the most this
-                                    panel can honestly know.
-
-                                    Nothing is handed back on a pick. The action
-                                    dialog takes the kind because it owns it;
-                                    nothing about a node says whether the name it
-                                    binds is a channel or a member, and the run
-                                    reads that off the definition. A panel that
-                                    quietly set it would be one step of one
-                                    workflow editing the action every other step
-                                    shares.
-                                  */
-                                  target={
-                                    slackSend !== null && mapping.name === TARGET_PARAMETER
-                                      ? slackSend.target
+                                      ? slackSend
                                       : null
                                   }
                                   answerId={`node-mapping-${mapping.name}-answer`}

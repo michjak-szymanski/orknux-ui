@@ -438,21 +438,34 @@ names — whichever was picked, it listened the moment it held an app-level toke
 Connections stored as Socket Mode became Slack connections on upgrade, both
 tokens where they were, and go on listening exactly as they did.
 
-**A Slack action's User and Channel fields are checked as you type them.** Under
-the field, orknux says whether that connection can see what is there — the name
-Slack gave it back when it could, and a note when it could not.
+**A Slack action has one Target field, and it takes a channel or a person.** You
+are not asked which: type a name, a handle, an address or an id, with or without
+its `#` or `@`, and the send resolves it when the message goes. There used to be
+a **Channel**/**User** dropdown beside the field, and nothing read it to send
+anything — its only real job was choosing which of Slack's two lookups answered a
+question about what you had typed, and those lookups are one now. What was left
+was a control that changed nothing when the workflow ran, narrowed the list of
+suggestions to half of what it could offer, and got the check wrong whenever it
+disagreed with the name beside it. Actions saved with the old setting keep their
+target names and go on sending to them.
+
+**What you type is checked as you type it.** Under the field, orknux says whether
+that connection can see what is there — the name Slack gave it back when it
+could, a mark saying whether it turned out to be a channel or a person, and a
+note when it could not.
 
 The same answer appears in the workflow editor, under a node's **target**
 parameter, since that is where a step names who it is writing to. Only on the
 **Value** tab: a **Reference** is read out of the run when the run reaches it, so
 there is nothing to look up beforehand.
 
-**The same fields offer what that connection can see.** A list opens under the
-field with the channels or people that match what has been typed so far —
-narrowing as you type, driven by the arrow keys, taken with Enter or a click, and
-put away with Escape. Taking one fills the field in, and nothing more happens to
-it: the check goes quiet afterwards, because a name Slack has just offered is not
-a name worth asking Slack about.
+**The same field offers what that connection can see.** A list opens under it
+with the channels *and* the people that match what has been typed so far — one
+list, each row marked with which of the two it is — narrowing as you type, driven
+by the arrow keys, taken with Enter or a click, and put away with Escape. Taking
+one fills the field in, and nothing more happens to it: the check goes quiet
+afterwards, because a name Slack has just offered is not a name worth asking
+Slack about.
 
 It suggests and it never fences. Anything can still be typed whether or not the
 list holds it, and plenty of correct things never will: an id pasted out of

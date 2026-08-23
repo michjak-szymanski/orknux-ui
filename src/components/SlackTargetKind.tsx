@@ -44,8 +44,8 @@ import type { MessageTarget } from '../api/actions';
  * It carries its own name rather than being `aria-hidden`. This stands inside a
  * `role="option"`, and a row read aloud as "#general" when the row under it is
  * read aloud as "@general" is exactly the ambiguity the mark exists to remove -
- * so the mark is in the accessible name too, in the words the action dialog's
- * own Target control uses.
+ * so the mark is in the accessible name too, in Slack's own two words for the
+ * two things.
  */
 export function SlackTargetKind({ target, className }: { target: MessageTarget; className?: string }) {
   return (

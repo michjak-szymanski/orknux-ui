@@ -792,7 +792,6 @@ const { createAction: replyInThread } = await gql(
       subtype: 'OUTGOING_CONNECTION',
       connectionId: slack.id,
       connectionAction: 'REPLY_IN_THREAD',
-      target: 'CHANNEL',
       icon: 'slack',
     },
   },

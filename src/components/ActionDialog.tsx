@@ -20,7 +20,6 @@ import type {
   ActionType,
   ArgumentMapping,
   ConnectionActionKind,
-  MessageTarget,
 } from '../api/actions';
 import { NEW_CONDITION, fetchWorkspaceConditions } from '../api/conditions';
 import type { Condition } from '../api/conditions';
@@ -144,7 +143,6 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
   const [connectionId, setConnectionId] = useState('');
   const [connectionAction, setConnectionAction] = useState<ConnectionActionKind>('SEND_MESSAGE');
   const [content, setContent] = useState('');
-  const [target, setTarget] = useState<MessageTarget>('CHANNEL');
   const [targetName, setTargetName] = useState('');
   const [emailTo, setEmailTo] = useState('');
   const [emailCc, setEmailCc] = useState('');
@@ -215,7 +213,6 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
       setConnectionId(action?.connectionId ?? '');
       setConnectionAction(action?.connectionAction ?? 'SEND_MESSAGE');
       setContent(action?.content ?? '');
-      setTarget(action?.target ?? 'CHANNEL');
       setTargetName(action?.targetName ?? '');
       setEmailTo(action?.emailTo ?? '');
       setEmailCc(action?.emailCc ?? '');
@@ -438,7 +435,6 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
         // A mail's body is the same column a message's text is, which is why one
         // field feeds both.
         content: subtype === 'OUTGOING_CONNECTION' || subtype === 'SEND_EMAIL' ? content : null,
-        target: subtype === 'OUTGOING_CONNECTION' ? target : null,
         targetName: subtype === 'OUTGOING_CONNECTION' ? targetName : null,
         emailTo: subtype === 'SEND_EMAIL' ? emailTo : null,
         emailCc: subtype === 'SEND_EMAIL' ? emailCc : null,
@@ -667,34 +663,36 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                 </div>
               </div>
 
-              <div className={styles.field}>
-                <label className={styles.label} htmlFor="action-target">
-                  Target
-                </label>
-                <div className={styles.inputWrapper}>
-                  <select
-                    id="action-target"
-                    className={`${styles.input} ${styles.select}`}
-                    value={target}
-                    onChange={(event) => setTarget(event.target.value as MessageTarget)}
-                  >
-                    <option value="CHANNEL">Channel</option>
-                    <option value="USER">User</option>
-                  </select>
-                  <img src={chevronDown12Icon} alt="" width={12} height={12} />
-                </div>
-              </div>
+              {/*
+                One field, and no control saying which of the two it names.
 
+                There was a Channel/User dropdown above this, and nothing read it
+                to send anything: `OutgoingMessages.send` takes the destination as
+                a string. All it ever did was choose which Slack endpoint answered
+                a lookup, and the two lookups have merged - so what was left was a
+                control that changed nothing at run time, narrowed the list under
+                the field, and got the lookup wrong whenever it was unset or set
+                wrong. Sending now resolves whatever it is given through the same
+                listing this field's suggestions read, so a channel and a person
+                are typed into the same box and neither needs to be announced
+                first.
+              */}
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="action-target-name">
-                  {target === 'CHANNEL' ? 'Channel Name' : 'User'}
-                </label>
+                <span className={styles.labelWithHint}>
+                  <label className={styles.label} htmlFor="action-target-name">
+                    Target
+                  </label>
+                  <FieldHint label="Target">
+                    Type or pick a channel or a person — a name, a handle, an address or an id is
+                    found either way, with or without its # or @.
+                  </FieldHint>
+                </span>
                 {/*
                   What the connection can see, offered in the field and said
                   under it, as it is typed.
 
-                  In the open rather than behind the (?) for the reason the cron
-                  reading is: an explanation of a field is teaching and hides,
+                  In the open rather than behind the (?) above for the reason the
+                  cron reading is: what the (?) holds is teaching and hides,
                   while this is the result of what somebody just typed, which
                   the rules file keeps visible beside an error and a status.
 
@@ -717,30 +715,10 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                   id="action-target-name"
                   className={styles.input}
                   wrapperClassName={styles.inputWrapper}
-                  placeholder={target === 'CHANNEL' ? '#notifications' : '@someone'}
+                  placeholder="#notifications or @someone"
                   value={targetName}
                   onChange={setTargetName}
                   connectionId={asking ? slackConnection?.id ?? null : null}
-                  /*
-                    The kind, because this form has one. It is the control
-                    directly above, it is saved with the action, and a form that
-                    knows which of the two it means should say so - the question
-                    is then a narrower one and the list is a list of the kind
-                    being named. Only a caller that genuinely does not know sends
-                    null, and that is the node panel, whose action may never have
-                    settled it.
-                  */
-                  target={target}
-                  /*
-                    And picking settles it, in both directions. A row carries the
-                    same value the Target control above holds and the same one
-                    `createAction` is given, so taking `@alice` out of the list
-                    while that control says Channel sets it to User rather than
-                    saving a member's handle as a channel name. Somebody who
-                    picked her has already said which she is; asking them to say
-                    it again in the control above is the form not listening.
-                  */
-                  onPick={setTarget}
                   answerId="action-target-answer"
                   answerClassName={styles.fieldHint}
                 />

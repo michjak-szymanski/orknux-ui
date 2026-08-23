@@ -338,10 +338,9 @@ export interface SlackTargetCheck {
    * Which of the two it turned out to be, when it was found, and null
    * otherwise.
    *
-   * The answer to a question asked without a `target`. A caller holding a name
-   * and no kind is told which it is rather than having to ask twice to find
-   * out, and it is the same value `createAction` takes - so a form that has one
-   * can fill it in.
+   * The answer to a question asked without a `target`, which is how every
+   * caller asks: an action holds a name and no kind, so this is what a form
+   * draws a mark from rather than something it saves.
    */
   target: MessageTarget | null;
 }
@@ -374,9 +373,9 @@ const SLACK_TARGET_QUERY = `
  * it was typed - `#general`, `@alice`, an address, an id pasted out of Slack -
  * because the server is the one that knows what each of those means.
  *
- * `target` narrows the question and is not needed to ask it. Null asks about
- * both and is told which the name turned out to be, which is what a field
- * standing over an action that has not settled its kind has to send.
+ * `target` narrows the question and is not needed to ask it. Every field here
+ * sends null - nothing stores a kind for one to send - so both are asked and
+ * the answer says which the name turned out to be.
  */
 export async function checkSlackTarget(
   connectionId: string,
@@ -484,9 +483,10 @@ const SLACK_SUGGESTIONS_QUERY = `
  * message, a member who joined a minute ago, a private channel this bot was
  * never invited to.
  *
- * `target` narrows the list and is not needed to ask for one. Null offers both
- * kinds in one list, ordered together - exact, then what starts with the
- * typing, then what contains it - with each row carrying its own kind.
+ * `target` narrows the list and is not needed to ask for one. Every field here
+ * sends null, so one list comes back holding both kinds, ordered together -
+ * exact, then what starts with the typing, then what contains it - with each
+ * row carrying its own kind.
  */
 export async function fetchSlackSuggestions(
   connectionId: string,

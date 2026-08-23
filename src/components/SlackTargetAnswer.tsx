@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 
-import type { MessageTarget } from '../api/actions';
 import { checkSlackTarget } from '../api/integrations';
 import type { SlackTargetCheck, SlackTargetOutcome } from '../api/integrations';
 import { SlackTargetKind } from './SlackTargetKind';
@@ -37,15 +36,6 @@ export interface SlackTargetAnswerProps {
   className?: string;
   /** The Slack connection to ask, or null to ask nobody and say nothing. */
   connectionId: string | null;
-  /**
-   * Which of the two things is being named, or null when that is not known.
-   *
-   * Null narrows nothing and silences nothing: both are asked, the answers are
-   * merged, and the check says which kind the name turned out to be. It used to
-   * mean no question was put at all, which is what issue #176 was reported as -
-   * a panel that said nothing where it had nothing to say it about.
-   */
-  target: MessageTarget | null;
   /** What is in the field, exactly as it was typed. */
   name: string;
   /**
@@ -85,29 +75,28 @@ export interface SlackTargetAnswerProps {
  * will never come is the interface promising something it cannot do.
  *
  * A connection and no kind is not that case, and treating it as one was the
- * defect. The kind only ever chose which of Slack's two endpoints answered;
- * without it both do, and the answer says which the name turned out to be. So
- * the question is put whenever there is somebody to put it to.
+ * defect. The kind only ever chose which of Slack's two endpoints answered, and
+ * nothing stores one now; both are asked, and the answer says which the name
+ * turned out to be. So the question is put whenever there is somebody to put it
+ * to.
  */
 export function SlackTargetAnswer({
   id,
   className,
   connectionId,
-  target,
   name,
   picked = false,
 }: SlackTargetAnswerProps) {
   /**
    * Exactly what the answer on screen would have to be an answer *to*.
    *
-   * Everything the question is made of, in one string: the connection, which of
-   * the two kinds, and what is typed. Nothing is asked while it is null -
-   * nothing typed is nothing to say, and a lookup of an empty field is a round
-   * trip to be told so.
+   * Everything the question is made of, in one string: the connection and what
+   * is typed. Nothing is asked while it is null - nothing typed is nothing to
+   * say, and a lookup of an empty field is a round trip to be told so.
    */
   const typed = name.trim();
   const asking = connectionId !== null;
-  const question = asking && typed !== '' && !picked ? [connectionId, target ?? 'BOTH', typed].join(' ') : null;
+  const question = asking && typed !== '' && !picked ? [connectionId, typed].join(' ') : null;
 
   const [answered, setAnswered] = useState<{ question: string; check: SlackTargetCheck } | null>(null);
 
@@ -129,7 +118,12 @@ export function SlackTargetAnswer({
 
     let current = true;
     const timer = setTimeout(() => {
-      checkSlackTarget(connectionId, target, typed)
+      /*
+       * Asked without a kind, always: nothing on an action says which of the two
+       * a name is, so both are looked up and the answer says which it turned out
+       * to be.
+       */
+      checkSlackTarget(connectionId, null, typed)
         .then((check) => {
           if (current) setAnswered({ question, check });
         })
@@ -145,8 +139,8 @@ export function SlackTargetAnswer({
       current = false;
       clearTimeout(timer);
     };
-    // `question` is made of the other three, so it is what changes when they do.
-  }, [question, connectionId, target, typed]);
+    // `question` is made of the other two, so it is what changes when they do.
+  }, [question, connectionId, typed]);
 
   if (!asking) return null;
 
@@ -172,9 +166,8 @@ export function SlackTargetAnswer({
       data-outcome={answer?.outcome ?? 'asking'}
       /*
         Which kind the name turned out to be, for anything reading the page. Null
-        on every outcome but FOUND, and on a FOUND to a question that named the
-        kind it is the kind that was named - which is why the mark beside it is
-        drawn only where the question did not.
+        on every outcome but FOUND, the question never naming a kind for the
+        answer to hand back.
       */
       data-target={answer?.target ?? undefined}
       aria-live="polite"
@@ -184,19 +177,13 @@ export function SlackTargetAnswer({
       ) : (
         <>
           {/*
-            Which of the two it turned out to be, where the question did not say.
-
-            This is `SlackTargetCheck.target` and it is the half of the answer a
-            field with no kind set does not otherwise have: `alice` typed into a
-            node whose action never said whether it addresses channels or people
-            comes back found, and *what it is* is then the useful part. The same
-            mark the list draws, so a name confirmed here and a row picked there
-            are recognisably the same claim.
-
-            Not drawn where the kind was in the question. There it would say back
-            what was already known, beside a sentence that says it in words.
+            Which of the two it turned out to be, which is the half of the answer
+            nothing else here can supply: `alice` typed into a field that names a
+            channel and a person alike comes back found, and *what she is* is then
+            the useful part. The same mark the list draws, so a name confirmed
+            here and a row picked there are recognisably the same claim.
           */}
-          {answer.outcome === 'FOUND' && target === null && answer.target !== null && (
+          {answer.outcome === 'FOUND' && answer.target !== null && (
             <>
               <SlackTargetKind className={own.targetKind} target={answer.target} />{' '}
             </>

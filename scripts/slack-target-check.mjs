@@ -80,7 +80,7 @@
  *      And, as with the answer: debounced, never stale, and it moves nothing.
  *
  * ---------------------------------------------------------------------------
- * And asking without being told which kind it is, which is the rest of #176
+ * And never being told which kind it is, which is the rest of #176
  *
  * The report was that the check "does not work on users", and the cause was not
  * the member lookup. The panel worked the kind out of the action's definition,
@@ -88,27 +88,32 @@
  * connection whose bot token was missing `users:read` answered somebody with
  * silence, which is the one thing an `UNCHECKED` explicitly is not. The kind was
  * never needed to ask: it only ever chose which of Slack's two endpoints did the
- * looking up, and Slack does not differentiate when sending.
+ * looking up, and Slack does not differentiate when sending. So it is not stored
+ * at all any more - an action holds a name, and the send resolves that name when
+ * the message goes - and the Channel/User control that used to sit above the
+ * field has gone with it.
  *
- *  13. A field that does not know the kind asks anyway, and both surfaces are
- *      measured on the wire rather than on the screen: the node panel sends no
- *      `target` where its definition has none, and the action dialog still sends
- *      one, because it has a Target control above the field and saves that value
- *      with the action. Silence is left to the one case that deserves it, which
- *      is no Slack connection to ask.
- *  14. One list can hold both kinds, so every row says which it is - carried on
- *      the row, drawn as a mark, and named for anything that is listening rather
+ *  13. Neither surface tells the server which kind it is asking about, and both
+ *      are measured on the wire rather than on the screen: no `target` travels
+ *      with either question, from the dialog or from the panel. There is nothing
+ *      left to send one from, and a narrowing put back would be a list cut to
+ *      half of what the connection can offer, chosen by a form that has no way
+ *      of knowing which half is right. Silence is left to the one case that
+ *      deserves it, which is no Slack connection to ask.
+ *  14. One list holds both kinds, so every row says which it is - carried on the
+ *      row, drawn as a mark, and named for anything that is listening rather
  *      than looking. All three are asserted separately: a row that knew and did
- *      not show would pass one of them. Taking a row then fills the field and,
- *      in the dialog, settles the Target control with it - measured against a
- *      member offered while that control says Channel, so that a form assuming
- *      its own answer cannot pass by doing nothing. In the panel it settles
- *      nothing, and the definition is read back to prove it. The answer under
- *      the field says which kind a typed name turned out to be, in the same mark
- *      the rows draw, and only where the question did not already say. And a
- *      connection that can read one of the two halves offers everything from the
- *      half it can read, says in one line which half is missing, and leaves the
- *      name `UNCHECKED` rather than ruling on it.
+ *      not show would pass one of them. Taking a row fills the field and does
+ *      nothing else, on either surface: the dialog has no Target control left to
+ *      settle, which is asserted as an absence so that the dropdown coming back
+ *      is a failure rather than a silent return, and the panel leaves the
+ *      definition exactly as it found it, which is read back over the wire. The
+ *      answer under the field says which kind a typed name turned out to be, in
+ *      the same mark the rows draw, on both surfaces - the question never naming
+ *      one, there is nowhere else that could be learned from. And a connection
+ *      that can read one of the two halves offers everything from the half it
+ *      can read, says in one line which half is missing, and leaves the name
+ *      `UNCHECKED` rather than ruling on it.
  *
  * The first leg runs against the real server with no interception at all, and
  * puts both questions to it: a Slack connection with no bot token stored, which
@@ -137,16 +142,15 @@ const SLACK = `zz scratch slack target ${stamp}`;
 const MAIL = `zz scratch mail target ${stamp}`;
 const ACTION = `zz scratch slack action ${stamp}`;
 const MAIL_ACTION = `zz scratch mail action ${stamp}`;
-/**
- * A Slack send whose `target` was never set, which is the shape issue #176 was
- * actually reported about.
+/*
+ * There is no second Slack action here any more.
  *
- * `createAction` does not insist on one - the run falls back, and plenty of
- * actions arrive from an import or an API call without it - and the panel used
- * to read a missing kind as "there is nobody to ask" and draw nothing at all. A
- * bot token missing `users:read` was therefore reported to somebody as silence.
+ * There used to be a "kindless" one, made through the API with `target` left
+ * out, because that was the shape issue #176 was reported about and the shape a
+ * form could not produce. Every action is that shape now - the column is gone -
+ * so a fixture named for it would be describing a distinction the product no
+ * longer has, and the leg that used it runs against the ordinary action instead.
  */
-const KINDLESS_ACTION = `zz scratch kindless slack action ${stamp}`;
 const WORKFLOW_NAME = `zz scratch target workflow ${stamp}`;
 
 /**
@@ -252,44 +256,39 @@ const NO_SCOPE = 'No suggestions: the bot token on this connection does not carr
  */
 const CHANNELS_ONLY = "Channels only - this connection's bot token is missing the users:read scope.";
 
-/** Rows in the shape the server sends them, with an id apiece to key them by. */
+/**
+ * Rows in the shape the server sends them, with an id apiece to key them by.
+ *
+ * The id is made from the name rather than from where the row sits in the list,
+ * because one list now holds channels and members built by two calls: numbered
+ * by position, the first channel and the first member after it would carry the
+ * same id, which is the one thing the server promises a row's id is not.
+ */
+const fixtureId = (prefix, name) => `${prefix}${name.replace(/[^a-z0-9]/gi, '').toUpperCase()}`;
 const rowsOf = (names) =>
-  names.map((name, at) => ({ id: `C01234567${at}`, name, target: 'CHANNEL', realName: null }));
+  names.map((name) => ({ id: fixtureId('C', name), name, target: 'CHANNEL', realName: null }));
 
 /** The same for members, whose rows say `USER` and often carry a real name. */
 const membersOf = (people) =>
-  people.map(([name, realName], at) => ({ id: `U01234567${at}`, name, target: 'USER', realName }));
+  people.map(([name, realName]) => ({ id: fixtureId('U', name), name, target: 'USER', realName }));
 
 /** More than the twenty-five that come back, which is what `complete: false` is for. */
 const MANY = Array.from({ length: 25 }, (_, at) => `#team-${at + 1}`);
 
+/**
+ * One map and not two, there being one question to answer.
+ *
+ * These were kept apart while a caller could narrow the list to one kind: a
+ * merged answer is not the narrowed one with a field added, and keying the two
+ * apart here was what stopped a check from passing because the interception
+ * could not tell the difference either. Nothing narrows now - no caller has a
+ * kind to narrow with - so every list holds channels and members together,
+ * ordered against each other by how well they match rather than piled into two
+ * heaps, which is the whole reason a row has to say which it is.
+ */
 const SUGGESTED = {
   // Nothing typed: the first few of everything, which is what a picker shows
   // when it opens rather than an empty box waiting to be earned.
-  '': { outcome: 'FOUND', message: '', complete: true, matches: rowsOf(['#general', '#general-chat', '#engineering', '#design', '#random']) },
-  gen: { outcome: 'FOUND', message: '', complete: true, matches: rowsOf(['#general', '#general-chat']) },
-  general: { outcome: 'FOUND', message: '', complete: true, matches: rowsOf(['#general']) },
-  alice: {
-    outcome: 'FOUND',
-    message: '',
-    complete: true,
-    matches: membersOf([['@alice', 'Alice Adams']]),
-  },
-  e: { outcome: 'FOUND', message: TRUNCATED, complete: false, matches: rowsOf(MANY) },
-  nowhere: { outcome: 'NOT_FOUND', message: NOTHING_LIKE_IT, complete: true, matches: [] },
-  scopeless: { outcome: 'UNCHECKED', message: NO_SCOPE, complete: false, matches: [] },
-};
-
-/**
- * The lists a question asked *without* a kind comes back with.
- *
- * One list holding channels and members together, ordered against each other by
- * how well they match rather than piled into two heaps - which is the whole
- * reason a row has to say which it is. Keyed by the same typing as `SUGGESTED`
- * above and chosen instead of it when `target` arrived null, so that the two
- * questions are answered as the server answers them: differently.
- */
-const MERGED = {
   '': {
     outcome: 'FOUND',
     message: '',
@@ -311,12 +310,16 @@ const MERGED = {
     complete: true,
     matches: [...rowsOf(['#general', '#general-chat']), ...membersOf([['@gene', 'Gene Kim']])],
   },
+  general: { outcome: 'FOUND', message: '', complete: true, matches: rowsOf(['#general']) },
   alice: {
     outcome: 'FOUND',
     message: '',
     complete: true,
     matches: membersOf([['@alice', 'Alice Adams']]),
   },
+  e: { outcome: 'FOUND', message: TRUNCATED, complete: false, matches: rowsOf(MANY) },
+  nowhere: { outcome: 'NOT_FOUND', message: NOTHING_LIKE_IT, complete: true, matches: [] },
+  scopeless: { outcome: 'UNCHECKED', message: NO_SCOPE, complete: false, matches: [] },
   /* A connection that can read one of the two halves: real rows, and the line. */
   halfblind: {
     outcome: 'FOUND',
@@ -517,8 +520,6 @@ let mailId = null;
 let actionId = null;
 /** A send through the mail server, which has a `target` and cannot be asked about. */
 let mailActionId = null;
-/** A Slack send with no `target` at all, which can be asked about all the same. */
-let kindlessActionId = null;
 /** Somewhere to put a node, made here and taken away again. */
 let workflowId = null;
 
@@ -607,10 +608,12 @@ try {
    */
   const truly = (
     await call(
-      `query ($c: ID!, $t: MessageTarget!, $n: String!) {
+      `query ($c: ID!, $t: MessageTarget, $n: String!) {
          slackTarget(connectionId: $c, target: $t, name: $n) { outcome message }
        }`,
-      { c: slackId, t: 'CHANNEL', n: 'general' },
+      // Null, which is the only way the interface asks: nothing stores a kind
+      // for a field to narrow with, so both halves are searched every time.
+      { c: slackId, t: null, n: 'general' },
     )
   ).slackTarget;
 
@@ -622,12 +625,12 @@ try {
    */
   const trulyOffered = (
     await call(
-      `query ($c: ID!, $t: MessageTarget!, $typed: String) {
+      `query ($c: ID!, $t: MessageTarget, $typed: String) {
          slackSuggestions(connectionId: $c, target: $t, typed: $typed) {
            outcome message complete matches { id name realName }
          }
        }`,
-      { c: slackId, t: 'CHANNEL', typed: 'general' },
+      { c: slackId, t: null, typed: 'general' },
     )
   ).slackSuggestions;
 
@@ -676,12 +679,15 @@ try {
       suggestedTargets.push(kind);
       if (slowList === typed) await new Promise((wake) => setTimeout(wake, HELD));
       /*
-       * A merged question is answered as the server answers it, which is not
-       * the narrowed answer with a field added. Keying the two apart here is
-       * what stops a check from passing because the interception could not tell
-       * the difference either.
+       * A narrowed question is answered as the server would answer it, which is
+       * the half that was asked for and not the whole list with a field added.
+       * Nothing here should ever ask for a half - the assertions on
+       * `suggestedTargets` say so on the wire - and this is the same claim from
+       * the other side: a surface that starts narrowing again is caught by what
+       * it draws as well as by what it sent.
        */
-      const list = (kind === null ? MERGED[typed] : undefined) ?? SUGGESTED[typed] ?? NO_LIST;
+      const held = SUGGESTED[typed] ?? NO_LIST;
+      const list = kind === null ? held : { ...held, matches: held.matches.filter((row) => row.target === kind) };
       // Trimmed to what the query asked for; see `selects`.
       const rows = selects(query, 'matches', 'target')
         ? list.matches
@@ -732,22 +738,28 @@ try {
   await page.screenshot({ path: shot('slack-target-found.png') });
 
   /*
-   * And the dialog still asks the narrower question.
+   * And the dialog asks about both halves, because there is nothing left to
+   * narrow with.
    *
-   * The kind stopped being *required* to ask; it did not stop being worth
-   * sending. This form has a Target control directly above the field and saves
-   * that value with the action, so it knows which of the two it means - and a
-   * form that knows and asks about both would get a member's handle confirmed
-   * under a field it is about to save as a channel name. Only a caller that
-   * genuinely does not know sends nothing.
+   * The Target control above this field is gone: nothing read it to send
+   * anything, and all it did here was cut the question - and the list - to one
+   * of Slack's two lookups, chosen by a form that could not know which of them
+   * the name belonged to. So the question goes without a kind and comes back
+   * saying which the name turned out to be, which is the half of the answer
+   * that is now worth having.
    */
   record(
-    askedTargets.at(-1) === 'CHANNEL',
-    `the dialog asks about the kind its Target control names (${JSON.stringify(askedTargets.at(-1))})`,
+    askedTargets.at(-1) === null,
+    `the dialog names no kind in the question (${JSON.stringify(askedTargets.at(-1))})`,
+  );
+  const dialogMark = box().locator('svg');
+  record(
+    (await dialogMark.count()) === 1,
+    `and the answer draws which kind it turned out to be (${await dialogMark.count()} marks)`,
   );
   record(
-    (await box().locator('svg').count()) === 0,
-    'and the answer does not draw the kind back at it, the question having named it',
+    (await dialogMark.getAttribute('aria-label')) === 'Channel',
+    `named as the rows name it (${await dialogMark.getAttribute('aria-label')})`,
   );
 
   // The label, when the sentence does not lead with it.
@@ -910,18 +922,37 @@ try {
     `and it opens on the first few of everything (${JSON.stringify(await offers())})`,
   );
   record(suggested.includes(''), 'which is a list asked for with nothing typed, and not an empty box waiting');
+  /*
+   * Everything, and not everything of one kind. The dialog used to open on the
+   * channels alone, because the control above the field said Channel - so a form
+   * whose author meant to address a person was shown a picker with no people in
+   * it and no way to say so.
+   */
+  record(
+    suggestedTargets.at(-1) === null,
+    `and asked for without a kind, so it holds both (${JSON.stringify(suggestedTargets.at(-1))})`,
+  );
+  record(
+    new Set(await rowKinds()).size === 2,
+    `channels and members in the one list (${JSON.stringify(await rowKinds())})`,
+  );
 
   // ---- and narrows, saying which letters answered
 
   await type('gen');
-  await listed(2);
+  await listed(3);
   record(
-    JSON.stringify(await offers()) === JSON.stringify(['#general', '#general-chat']),
-    `typing narrows it to what matches (${JSON.stringify(await offers())})`,
+    JSON.stringify(await offers()) === JSON.stringify(['#general', '#general-chat', '@gene']),
+    `typing narrows it to what matches, of either kind (${JSON.stringify(await offers())})`,
   );
   const marks = await page.locator(`${FIELD}-suggestions mark`).allInnerTexts();
+  /*
+   * Four and not three: `@gene` answers to the typing in her handle and again in
+   * "Gene Kim", and both lines of a row are marked. The letters are compared
+   * without their case for the same reason they are matched without it.
+   */
   record(
-    marks.length === 2 && marks.every((one) => one === 'gen'),
+    marks.length === 4 && marks.every((one) => one.toLowerCase() === 'gen'),
     `and marks the letters that answered, by the matcher the rest of the interface marks with (${JSON.stringify(marks)})`,
   );
   await page.screenshot({ path: shot('slack-suggest-list.png') });
@@ -954,7 +985,7 @@ try {
   // ---- driven from the keyboard
 
   await type('gen');
-  await listed(2);
+  await listed(3);
   record((await cursor()) === null, 'the list opens on no row, so Enter still belongs to the form');
 
   await page.locator(FIELD).press('ArrowDown');
@@ -1006,45 +1037,50 @@ try {
 
   // The same by hand, because a picker a pointer cannot use is half a picker.
   await type('gen');
-  await listed(2);
+  await listed(3);
   await options().nth(1).click();
   record(
     (await page.inputValue(FIELD)) === '#general-chat',
     `a row takes a click too (${await page.inputValue(FIELD)})`,
   );
 
-  // ---- and taking a row settles the kind as well as the name
+  // ---- and taking a row fills the field, whichever kind it is
 
   /*
-   * A row carries the same `target` an action is saved with, so picking one says
-   * both things at once - which one, and which kind it is. This form owns that
-   * kind: it is the control directly above the field. So it takes the row's
-   * answer rather than keeping its own.
+   * Picking a member out of this list used to do a second thing: it wrote the
+   * row's kind into the Channel/User control above the field, because the form
+   * saved that kind with the action and a member's handle stored as a channel
+   * name was a message that went nowhere. There is no such control and no such
+   * column now - a send resolves the name it is given - so a member and a
+   * channel leave exactly the same thing behind them, which is what was picked.
    *
-   * The row offered here is a member while the control says Channel, which is
-   * the case that tells the two apart. A form that assumed its own control was
-   * right would save Alice's handle as a channel name and pass this check by
-   * doing nothing; a form that reads the row changes the control, and that is
-   * what is measured.
+   * Asserted as an absence as well as a behaviour. The dropdown coming back
+   * would be a screen that narrows the list again and asks the server a question
+   * about half a Slack, and it would pass every other claim here in silence.
    */
-  record((await page.inputValue('#action-target')) === 'CHANNEL', 'the Target control says Channel to begin with');
-  await type('alice');
-  await listed(1);
-  record((await rowKinds())[0] === 'USER', 'and the row offered is a member, not a channel');
-  await options().nth(0).click();
-  record((await page.inputValue(FIELD)) === '@alice', `taking her fills the field (${await page.inputValue(FIELD)})`);
   record(
-    (await page.inputValue('#action-target')) === 'USER',
-    `and settles the kind with it, rather than leaving a member to be saved as a channel (${await page.inputValue('#action-target')})`,
+    (await page.locator('#action-target').count()) === 0,
+    'there is no Channel/User control on the form at all',
   );
   record(
-    (await page.locator('label[for="action-target-name"]').innerText()).trim() === 'User',
-    'which the field says out loud: its label follows the kind that was just settled',
+    (await page.locator('label[for="action-target-name"]').innerText()).trim() === 'Target',
+    'and the one field is called Target, naming neither kind',
   );
 
-  // Put back, the rest of this being about channels.
-  await page.selectOption('#action-target', 'CHANNEL');
-  await page.waitForTimeout(300);
+  await type('alice');
+  await listed(1);
+  record((await rowKinds())[0] === 'USER', 'the row offered for a person is a member, not a channel');
+  await options().nth(0).click();
+  record((await page.inputValue(FIELD)) === '@alice', `taking her fills the field (${await page.inputValue(FIELD)})`);
+
+  await type('general');
+  await listed(1);
+  record((await rowKinds())[0] === 'CHANNEL', 'and the row offered for a room is a channel');
+  await options().nth(0).click();
+  record(
+    (await page.inputValue(FIELD)) === '#general',
+    `which fills the same field the same way (${await page.inputValue(FIELD)})`,
+  );
 
   // ---- a partial list says so
 
@@ -1177,31 +1213,6 @@ try {
         connectionId: mailId,
         connectionAction: 'SEND_MESSAGE',
         content: 'Something to say.',
-        target: 'CHANNEL',
-        targetName: 'general',
-      },
-    })
-  ).createAction.id;
-
-  /*
-   * The shape the report came in about: a Slack send whose kind was never set.
-   *
-   * `createAction` does not insist on one and plenty of actions arrive without
-   * it, and the panel used to read a missing kind as "there is nobody to ask" -
-   * so it asked nothing, drew nothing, and somebody whose bot token was missing
-   * `users:read` was told that by silence. Made here with `target` left out
-   * rather than set to null in a form, because that is how one really turns up.
-   */
-  kindlessActionId = (
-    await call(`mutation ($input: CreateActionInput!) { createAction(input: $input) { id target } }`, {
-      input: {
-        workspaceId: WORKSPACE,
-        name: KINDLESS_ACTION,
-        type: 'EXECUTE',
-        subtype: 'OUTGOING_CONNECTION',
-        connectionId: slackId,
-        connectionAction: 'SEND_MESSAGE',
-        content: 'Something to say.',
         targetName: 'general',
       },
     })
@@ -1308,25 +1319,27 @@ try {
   suggested = [];
   suggestedTargets = [];
   await type('gen');
-  await listed(2);
+  await listed(3);
   record((await list().count()) === 1, 'the node panel offers the list too');
   record(
-    JSON.stringify(await offers()) === JSON.stringify(['#general', '#general-chat']),
-    `narrowed by what was typed into the node (${JSON.stringify(await offers())})`,
+    JSON.stringify(await offers()) === JSON.stringify(['#general', '#general-chat', '@gene']),
+    `narrowed by what was typed into the node and by nothing else (${JSON.stringify(await offers())})`,
   );
   /*
-   * And narrowed by the kind, because this node's action has one. A node cannot
-   * override it - it binds where a message goes and the connection and the kind
-   * stay the definition's - so where the definition says Channel, that is what
-   * is asked for.
+   * And narrowed by the typing alone. The definition used to carry a kind and
+   * this panel used to pass it on, so a node under an action set to Channel was
+   * offered channels and nothing else - and a node under an action whose kind
+   * had never been set was offered nothing at all, which is the report. There is
+   * no kind to pass on now, so both halves are read here exactly as they are in
+   * the dialog: one list, and each row saying which of the two it is.
    */
   record(
-    suggestedTargets.at(-1) === 'CHANNEL',
-    `and by the kind the definition settled (${JSON.stringify(suggestedTargets.at(-1))})`,
+    suggestedTargets.at(-1) === null,
+    `with no kind in the question (${JSON.stringify(suggestedTargets.at(-1))})`,
   );
   record(
-    (await rowKinds()).every((kind) => kind === 'CHANNEL'),
-    'so every row in it is a channel, and each says so',
+    JSON.stringify(await rowKinds()) === JSON.stringify(['CHANNEL', 'CHANNEL', 'USER']),
+    `so it holds both kinds, each row carrying its own (${JSON.stringify(await rowKinds())})`,
   );
   await page.screenshot({ path: shot('slack-suggest-node-list.png') });
 
@@ -1421,7 +1434,7 @@ try {
   await settled(ANSWERS.nowhere.message);
   record((await said()) === ANSWERS.nowhere.message, 'and it answers again on the Value tab');
 
-  /* ------------------- a node whose action never said which kind it addresses */
+  /* ---------------------- a node under an action that names neither kind */
 
   /*
    * Issue #176's actual defect, and the leg that would have caught it.
@@ -1435,22 +1448,25 @@ try {
    * The kind was never needed to ask. It only ever chose which of Slack's two
    * endpoints did the looking up, and Slack itself does not differentiate when
    * sending - one `chat.postMessage` takes a channel id or a user id, a direct
-   * message being a conversation. Left off, both are read, the answers are
-   * merged, and each row and each answer says which kind it turned out to be.
+   * message being a conversation. It is not stored at all now, so every action
+   * is the shape this leg needed a special fixture for: both halves are read,
+   * the answers are merged, and each row and each answer says which kind it
+   * turned out to be.
    */
-  await bind(KINDLESS_ACTION);
-
   asked = [];
   askedTargets = [];
   suggested = [];
   suggestedTargets = [];
+  // Cleared here, so that what is read back below is what picking a row did and
+  // not what saving the action in the dialog did an hour of assertions ago.
+  mutated = [];
 
   await type('gen');
   await listed(3);
 
   record(
     suggestedTargets.at(-1) === null,
-    `a node whose action has no kind asks for both rather than asking for nothing (${JSON.stringify(suggestedTargets.at(-1))})`,
+    `a node under an action that names no kind asks for both rather than asking for nothing (${JSON.stringify(suggestedTargets.at(-1))})`,
   );
   record(askedTargets.at(-1) === null, 'and puts the question about the typing the same way');
   record((await box().count()) === 1, 'so the panel has something to say under the field, which is the whole report');
@@ -1520,30 +1536,36 @@ try {
   record((await page.inputValue(FIELD)) === '#general', `and a channel is taken (${await page.inputValue(FIELD)})`);
 
   /*
-   * And the definition is left alone. The action dialog takes a picked row's
-   * kind because it owns that kind; a node does not - it binds where one step's
-   * message goes, and the action is shared with every other step that runs it.
-   * A panel that quietly filled in the definition's `target` would be one node
-   * editing everybody's action from a field that says nothing about doing so.
+   * And the definition is left alone. A node binds where one step's message
+   * goes; the action behind it is shared with every other step that runs it, so
+   * a panel that wrote what was picked back into the definition would be one
+   * node editing everybody's action from a field that says nothing about doing
+   * so. Measured twice, because the two say different things: nothing that
+   * writes an action reached the wire at all, and the definition still holds
+   * what the dialog saved before any of this was picked.
    */
+  record(
+    !mutated.includes('updateAction'),
+    `picking a row writes no action, on either kind (${JSON.stringify(mutated)})`,
+  );
   const untouched = (
     await call(
       `query ($w: ID!) {
-         workspaceActions(workspaceId: $w, page: 0, size: 200) { content { id name target } }
+         workspaceActions(workspaceId: $w, page: 0, size: 200) { content { id name targetName } }
        }`,
       { w: WORKSPACE },
     )
-  ).workspaceActions.content.find((one) => one.name === KINDLESS_ACTION);
+  ).workspaceActions.content.find((one) => one.name === ACTION);
   record(
-    untouched?.target === null,
-    `and the definition's kind is still unset, a node binding a name and not the action (${JSON.stringify(untouched?.target ?? null)})`,
+    untouched?.targetName === 'nowhere',
+    `and the definition still names what it was saved with (${JSON.stringify(untouched?.targetName ?? null)})`,
   );
 
   // ---- and the answer says which kind a typed name turned out to be
 
   /*
-   * `SlackTargetCheck.target`, which is the half of the answer that only a
-   * question asked without a kind is missing. `alice` typed into this node comes
+   * `SlackTargetCheck.target`, which is the half of the answer nothing else can
+   * supply now that no question names a kind. `alice` typed into this node comes
    * back found, and *what she is* is then the useful part - drawn as the mark
    * the rows draw, so that a name confirmed here and a row picked there are
    * recognisably the same claim.
@@ -1636,7 +1658,6 @@ try {
     ['mutation ($id: ID!) { removeWorkflow(id: $id) }', { id: workflowId }],
     ['mutation ($id: ID!) { deleteAction(id: $id) }', { id: actionId }],
     ['mutation ($id: ID!) { deleteAction(id: $id) }', { id: mailActionId }],
-    ['mutation ($id: ID!) { deleteAction(id: $id) }', { id: kindlessActionId }],
     // A connection the workspace added itself has nothing to fall back on, so
     // disconnecting it is how one goes - there is no delete for it.
     ['mutation ($id: ID!) { disconnectWorkspaceConnection(id: $id) }', { id: slackId }],
