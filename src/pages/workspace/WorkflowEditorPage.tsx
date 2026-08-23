@@ -99,6 +99,7 @@ import {
   matches,
   useAddShortcut,
   useDuplicateShortcut,
+  usePublishShortcut,
   useRedoShortcut,
   useSaveShortcut,
   useTurnShortcut,
@@ -2937,6 +2938,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   const redoKey = useRedoShortcut();
   const copyKey = useDuplicateShortcut();
   const addKey = useAddShortcut();
+  const publishKey = usePublishShortcut();
 
   /** Read by the keyboard handler, which must not start a second save. */
   const busyRef = useRef(busy);
@@ -3168,6 +3170,40 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       if (!matches(event, copyKey)) return;
       event.preventDefault();
       duplicate();
+    }
+
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  });
+
+  /**
+   * Publishing from the keyboard, Ctrl+Enter until somebody changes it in
+   * Preferences - issue #233.
+   *
+   * The editor could be saved, stepped back, copied from and added to without
+   * touching the mouse, and then the one press that makes any of it live had to
+   * be aimed at a square in the corner.
+   *
+   * Bound the way saving is: on the window, in the capture phase, so it works
+   * wherever the caret is, and rebound every render so it publishes the graph as
+   * it stands rather than an older one. `preventDefault` because a modified
+   * Enter inside the panel's text boxes should not also do whatever the browser
+   * would have done with it.
+   *
+   * `busy` is the button's own disabled condition and is read from a ref, not
+   * closed over, so holding the keys down cannot start a second publish on top
+   * of the one in flight - the same rule the save shortcut follows, and the same
+   * reason. It is deliberately the *whole* of the condition: Publish is not
+   * disabled when there is nothing new to publish, it only goes quiet, because
+   * publishing a graph that is already published is a real thing to want. A key
+   * that refused where the button agrees would be a second opinion about when
+   * this is allowed, and the button's is the one that is on screen.
+   */
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (!matches(event, publishKey)) return;
+      event.preventDefault();
+      if (!busyRef.current) void handlePublish();
     }
 
     window.addEventListener('keydown', onKey, true);
@@ -3565,6 +3601,15 @@ Change the keystroke in Preferences.`}
           */}
           <ToolButton
             label="Publish"
+            /*
+              The keystroke on the tooltip, for the reason Save's and
+              Duplicate's are: nobody finds out a shortcut exists without being
+              told, and this is the control they are already looking at when
+              they would want one. Read from the setting the handler obeys, so
+              somebody who changed it in Preferences is shown what they chose.
+            */
+            shortcut={publishKey}
+            note="Change the keystroke in Preferences."
             className={unpublished ? styles.publishButton : styles.publishButtonQuiet}
             onClick={() => void handlePublish()}
             disabled={busy}

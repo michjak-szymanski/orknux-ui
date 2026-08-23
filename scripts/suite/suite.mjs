@@ -65,6 +65,20 @@ export const TESTS = [
      */
   },
   {
+    name: 'publish-shortcut-check',
+    what: 'publishing a workflow from the keyboard, and the Publish control saying which keys',
+    needs: ['workspace'],
+    /*
+     * Issue #233. Builds a one-node workflow of its own and removes it, so no
+     * workflow anybody else's check reads is published by running this - and
+     * the name carries a timestamp, because removing a workflow keeps its
+     * definition and the name with it.
+     *
+     * Publishes are counted off the wire. A badge reading Published cannot tell
+     * one publish from two, and one of the assertions is about exactly that.
+     */
+  },
+  {
     name: 'editor-check',
     what: 'typing in a field name keeps focus, and does not delete the node behind it',
     needs: ['workflow'],

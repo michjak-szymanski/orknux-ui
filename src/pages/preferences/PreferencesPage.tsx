@@ -18,6 +18,7 @@ import {
   DEFAULT_UNDO_SHORTCUT,
   DEFAULT_REDO_SHORTCUT,
   DEFAULT_DUPLICATE_SHORTCUT,
+  DEFAULT_PUBLISH_SHORTCUT,
   DEFAULT_SAVE_SHORTCUT,
   setFormatShortcut,
   setTurnShortcut,
@@ -25,6 +26,7 @@ import {
   setUndoShortcut,
   setRedoShortcut,
   setDuplicateShortcut,
+  setPublishShortcut,
   setPaletteShortcut,
   setSaveShortcut,
   usable,
@@ -34,6 +36,7 @@ import {
   useUndoShortcut,
   useRedoShortcut,
   useDuplicateShortcut,
+  usePublishShortcut,
   usePaletteShortcut,
   useSaveShortcut,
 } from '../../session/shortcut';
@@ -62,13 +65,14 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
   const undo = useUndoShortcut();
   const redo = useRedoShortcut();
   const duplicate = useDuplicateShortcut();
+  const publish = usePublishShortcut();
   /**
    * Which shortcut the next keystroke belongs to, or null while none is being
-   * recorded. Not a boolean: there are three of these now, and they share the one
+   * recorded. Not a boolean: there are nine of these now, and they share the one
    * listener — one per shortcut would fight over the same keypress.
    */
   const [recording, setRecording] = useState<
-    'palette' | 'save' | 'format' | 'turn' | 'add' | 'undo' | 'redo' | 'duplicate' | null
+    'palette' | 'save' | 'format' | 'turn' | 'add' | 'undo' | 'redo' | 'duplicate' | 'publish' | null
   >(null);
   const [refused, setRefused] = useState<string | null>(null);
 
@@ -113,6 +117,7 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
       else if (recording === 'undo') setUndoShortcut(said);
       else if (recording === 'redo') setRedoShortcut(said);
       else if (recording === 'duplicate') setDuplicateShortcut(said);
+      else if (recording === 'publish') setPublishShortcut(said);
       else setFormatShortcut(said);
       setRecording(null);
       setRefused(null);
@@ -663,6 +668,44 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                 )}
               </div>
               {recording === 'duplicate' && (
+                <p className={styles.settingNote}>Press the combination you want. Escape leaves it as it is.</p>
+              )}
+            </div>
+
+            <div className={styles.setting}>
+              <span className={styles.labelWithHint}>
+                <span className={styles.settingLabel} id="publish-shortcut">
+                  Publish Shortcut
+                </span>
+                <FieldHint label="Publish Shortcut">
+                  Saves the workflow on the canvas and makes that version the one that runs, without
+                  reaching for the toolbar. A modifier is required here, unlike the two canvas keys
+                  above: publishing changes what everybody else&apos;s runs do, which is not something
+                  a single letter should be able to do by accident.
+                </FieldHint>
+              </span>
+              <div className={styles.options}>
+                <button
+                  type="button"
+                  className={recording === 'publish' ? styles.optionCurrent : styles.option}
+                  onClick={() => {
+                    setRefused(null);
+                    setRecording((held) => (held === 'publish' ? null : 'publish'));
+                  }}
+                >
+                  {recording === 'publish' ? 'Press any keys…' : publish}
+                </button>
+                {publish !== DEFAULT_PUBLISH_SHORTCUT && recording !== 'publish' && (
+                  <button
+                    type="button"
+                    className={styles.option}
+                    onClick={() => setPublishShortcut(DEFAULT_PUBLISH_SHORTCUT)}
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+              {recording === 'publish' && (
                 <p className={styles.settingNote}>Press the combination you want. Escape leaves it as it is.</p>
               )}
             </div>

@@ -8,6 +8,7 @@ const UNDO_KEY = 'orknux.undoShortcut';
 const REDO_KEY = 'orknux.redoShortcut';
 const DUPLICATE_KEY = 'orknux.duplicateShortcut';
 const ADD_KEY = 'orknux.addShortcut';
+const PUBLISH_KEY = 'orknux.publishShortcut';
 
 /** What opens the palette when nothing has been chosen. */
 export const DEFAULT_SHORTCUT = 'Ctrl+Q';
@@ -75,6 +76,31 @@ export const DEFAULT_DUPLICATE_SHORTCUT = 'Ctrl+D';
 export const DEFAULT_ADD_SHORTCUT = 'A';
 
 /**
+ * What publishes the workflow on screen when nothing has been chosen.
+ *
+ * Ctrl+Enter, which is what "commit this, I have finished" already means almost
+ * everywhere a person types: a message goes, a comment is posted, a cell runs.
+ * Publishing is the end of a piece of work in exactly that sense - the graph
+ * stops being a draft and becomes the one that runs - so the keystroke is the
+ * habit rather than a new thing to learn.
+ *
+ * Not a bare letter, unlike turning and adding. Those are done four times in a
+ * row on a canvas and undone as easily; publishing makes a change everybody
+ * else's runs will see, and a stray keypress on a canvas should not be able to
+ * do that. A modifier is the difference between a gesture and an accident.
+ *
+ * Nothing else claims it. The editor's other keystrokes are Ctrl+S, Ctrl+Z,
+ * Ctrl+Shift+Z, Ctrl+Y, Ctrl+D, R, A and Escape; the palette is Ctrl+Q; the
+ * format shortcut is Ctrl+Shift+F; React Flow's own keys are Backspace, Shift,
+ * Space and the platform modifier. Plain Enter is taken all over the product -
+ * it sends a chat message, adds a label, takes up a row in a picker - and
+ * Shift+Enter is a newline in every box that has one, but neither of those is
+ * this: the browser gives Ctrl+Enter no meaning of its own in a text box, which
+ * is why it is free to be given one here.
+ */
+export const DEFAULT_PUBLISH_SHORTCUT = 'Ctrl+Enter';
+
+/**
  * Which keystroke opens the command palette, written the way it is shown:
  * modifiers in a fixed order, then the key — `Ctrl+Q`, `Ctrl+Shift+P`, `Alt+G`.
  *
@@ -139,6 +165,7 @@ const undoing = remembered(UNDO_KEY, DEFAULT_UNDO_SHORTCUT);
 const redoing = remembered(REDO_KEY, DEFAULT_REDO_SHORTCUT);
 const duplicating = remembered(DUPLICATE_KEY, DEFAULT_DUPLICATE_SHORTCUT);
 const addingNode = remembered(ADD_KEY, DEFAULT_ADD_SHORTCUT);
+const publishing = remembered(PUBLISH_KEY, DEFAULT_PUBLISH_SHORTCUT);
 
 export function paletteShortcut(): Shortcut {
   return palette.get();
@@ -234,6 +261,18 @@ export function setAddShortcut(next: Shortcut): void {
 
 export function useAddShortcut(): Shortcut {
   return addingNode.use();
+}
+
+export function publishShortcut(): Shortcut {
+  return publishing.get();
+}
+
+export function setPublishShortcut(next: Shortcut): void {
+  publishing.set(next);
+}
+
+export function usePublishShortcut(): Shortcut {
+  return publishing.use();
 }
 
 /** One key, named as somebody would read it rather than as the browser sends it. */
