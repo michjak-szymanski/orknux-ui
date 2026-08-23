@@ -89,10 +89,19 @@ const SILENCE_MS = 2_500;
  * No single turn runs longer than this, however quiet it never gets.
  *
  * A backstop against a room that never falls silent, not a limit on how much
- * somebody may say. Thirty seconds was the second way to be cut off mid
- * sentence: it is a short answer to a question but a very short explanation.
+ * somebody may say.
+ *
+ * It has now cut somebody off twice. Thirty seconds is a short answer to a
+ * question and a very short explanation; two minutes still stopped a person
+ * mid-sentence while they were working through a thought out loud. Both were
+ * this number being read as a limit when it is only a fuse.
+ *
+ * Ten minutes is past anything a person says in one breath and well short of a
+ * microphone left open in an empty room until the tab is closed - which is the
+ * only thing this is here to catch. The pause above is what actually ends a
+ * turn, and it should be allowed to.
  */
-const LONGEST_TURN_MS = 120_000;
+const LONGEST_TURN_MS = 600_000;
 
 /** Below this, the circle is still: a room's own noise is not a voice. */
 const VISIBLE_LEVEL = 0.01;
