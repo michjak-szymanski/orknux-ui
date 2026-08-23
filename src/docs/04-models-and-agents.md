@@ -216,16 +216,38 @@ depends on what that agent's tools give back: one reading whole files needs a
 different allowance from one reading issue lists, and both may be pointed at the
 same model.
 
-Left at **Default** an agent gets a fixed allowance that knows nothing of the
-window, which is what every agent had before this could be set. Moving the
-slider shows what the share works out to against the model chosen just above it,
-in tokens — approximate ones: they are counted in characters, the only unit
-every model agrees on, and reported at four characters to the token. A share the
-model cannot give is refused before it is saved, with a sentence naming that
-model and its numbers, because the alternative is finding out on somebody's turn
-when the provider refuses the request. Choose the model first: until there is
-one, there is no window to take a share of and the slider says so by staying
-where it is.
+Left at **Default** an agent has set no share of its own, and what it gets then
+is decided one step further out. Moving the slider shows what the share works
+out to against the model chosen just above it, in tokens — approximate ones:
+they are counted in characters, the only unit every model agrees on, and
+reported at four characters to the token. A share the model cannot give is
+refused before it is saved, with a sentence naming that model and its numbers,
+because the alternative is finding out on somebody's turn when the provider
+refuses the request. Choose the model first: until there is one, there is no
+window to take a share of and the slider says so by staying where it is.
+
+There are three steps, and they are consulted in this order: **the agent's own
+share, then the workspace's default, then the built-in allowance.** An agent
+that has answered for itself is never overruled by the two below it. One that
+has not follows **Default Session Memory** on the workspace's settings page,
+under Agents; and where the workspace has decided nothing either — which is what
+every workspace does until somebody sets it — the fixed built-in allowance
+applies, which is what every agent had before any of this could be set. So an
+agent at Default says which of the two it landed on, under the slider: *the
+workspace's 25%*, or *the built-in allowance*.
+
+The workspace's default is set the same way, on the same track, and it is a
+percentage for the same reason — except that here the argument is stronger,
+because a workspace runs several models at once whose windows differ by an order
+of magnitude, and a share is the only unit that can be stated once and mean
+something against all of them. Which is also why it is judged on the bounds
+alone: refusing a default because the smallest model in the workspace could not
+give it would refuse a setting that is right for every other model in it, and
+for agents that may never use that one. The refusals that name a model still
+happen, against the model an agent actually uses, where its budget is worked
+out. To see what the default would mean on any one of them, pick it under
+**Worked Out Against** — the figures are that model's, and changing the picker
+changes nothing that is saved.
 
 **Continue in chat** is how a person joins a conversation the agents have been
 having. The chat it opens is bound to this session and holds what was already

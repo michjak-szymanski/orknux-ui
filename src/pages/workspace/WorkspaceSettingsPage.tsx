@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 
+import { fetchMemoryBudget } from '../../api/agents';
+import type { SessionMemoryBudget } from '../../api/agents';
 import { answers, fetchModels } from '../../api/models';
 import type { Model } from '../../api/models';
 import type { SessionUser } from '../../api/session';
@@ -9,6 +11,7 @@ import {
   fetchWorkspace,
   updateWorkspace,
   setWorkspaceCompanionModel,
+  setWorkspaceDefaultMemoryShare,
   setWorkspaceQuickChatModel,
   setWorkspaceQuickChatWrites,
   setWorkspaceSpeechModel,
@@ -32,11 +35,84 @@ export interface WorkspaceSettingsPageProps {
 }
 
 /**
+ * The widest share the track offers, which is the server's own ceiling.
+ *
+ * The server is what enforces it — a share past this comes back refused, in a
+ * sentence saying why, and that refusal is drawn below whether or not the track
+ * can reach it. This is where the track ends, not a second copy of the rule; if
+ * the two ever part company it is the refusal that is right.
+ */
+const MAX_SHARE = 50;
+
+/**
+ * Where the track reads "Default": the position that means nothing is set.
+ *
+ * Zero rather than a switch beside the slider, exactly as on the agent, because
+ * the two states are one question — a workspace either has a default share for
+ * its agents or it has none — and zero is the only honest resting place for a
+ * slider with nothing set, since every other position is a percentage nobody
+ * chose. A workspace that has never been given one reads Default, sends null,
+ * and leaves every agent in it exactly where it was.
+ */
+const DEFAULT_SHARE = 0;
+
+/**
+ * How long the slider must be still before its preview is asked for.
+ *
+ * A range input fires on every step of a drag and each one of these is a round
+ * trip. The same pause the agent form uses, for the same reason.
+ */
+const PREVIEW_PAUSE = 150;
+
+/** Grouped the way the server groups them in its own sentences. */
+function thousands(count: number): string {
+  return count.toLocaleString('en-US');
+}
+
+/**
+ * What a share works out to, in the server's numbers and under the server's
+ * names for them.
+ *
+ * Nothing is computed here and nothing may be: every figure below is one the
+ * API sent, and the same calculation is what the mutation judges a share with.
+ * A second copy of it in the browser would eventually disagree, and the one
+ * that drifted would be this.
+ *
+ * `toolResults` is not drawn, for the reason the agent's card does not draw it:
+ * it is a ceiling on a query rather than an allowance, deliberately more than
+ * can ever fit, and beside three numbers that are budgets it would read as a
+ * fourth budget.
+ */
+function Figures({ budget }: { budget: SessionMemoryBudget }) {
+  return (
+    <dl className={styles.budget}>
+      <div className={styles.budgetRow}>
+        <dt>Altogether</dt>
+        <dd>{thousands(budget.totalTokens)} tokens</dd>
+      </div>
+      <div className={styles.budgetRow}>
+        <dt>Conversation</dt>
+        <dd>
+          {thousands(budget.conversationTokens)} tokens, {budget.turns} turns
+        </dd>
+      </div>
+      <div className={styles.budgetRow}>
+        <dt>Tool results</dt>
+        <dd>
+          {thousands(budget.toolResultTokens)} tokens, longest {thousands(budget.longestResultTokens)}
+        </dd>
+      </div>
+    </dl>
+  );
+}
+
+/**
  * What the workspace decides for itself.
  *
- * Two cards. The models it uses for its own small jobs, which anybody who can
- * see the workspace may choose, and above them its name and description, which
- * only somebody who administers *this* workspace may change.
+ * Its name and description at the top, which only somebody who administers
+ * *this* workspace may change; then what it decides for its agents; then the
+ * models it uses for its own small jobs, which anybody who can see the
+ * workspace may choose.
  *
  * That card is here rather than only in the Admin section because this is where
  * a workspace administrator can actually get to. They are not an installation
@@ -97,6 +173,26 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
   const [namingError, setNamingError] = useState<string | null>(null);
   const [naming, setNaming] = useState(false);
 
+  /*
+   * The Agents card - issue #226.
+   *
+   * Its own draft and its own saved-and-failed states rather than the shared
+   * pair above, for the reason the General card has its own: a slider is
+   * dragged and then saved, so it has a moment of holding something the
+   * workspace does not, and a message about that save has to appear beside it
+   * rather than in whichever card the last select was in.
+   */
+  const [share, setShare] = useState<number | null>(null);
+  /** Whether that share may be saved at all, which is the bounds and nothing else. */
+  const [verdict, setVerdict] = useState<SessionMemoryBudget | null>(null);
+  /** Which model the figures are figures for; '' is none, and shows none. */
+  const [against, setAgainst] = useState('');
+  /** What the share would mean for that one model. */
+  const [preview, setPreview] = useState<SessionMemoryBudget | null>(null);
+  const [memorySaved, setMemorySaved] = useState(false);
+  const [memoryError, setMemoryError] = useState<string | null>(null);
+  const [memorySaving, setMemorySaving] = useState(false);
+
   useEffect(() => {
     if (workspaceId === '') return;
     fetchWorkspace(workspaceId)
@@ -104,6 +200,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         setWorkspace(found);
         setName(found?.name ?? '');
         setDescription(found?.description ?? '');
+        setShare(found?.defaultMemoryShare ?? null);
       })
       .catch((cause: unknown) => {
         setError(cause instanceof Error ? cause.message : 'Could not load the workspace.');
@@ -121,6 +218,116 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
     skip: workspaceId === '',
   });
   const models: Model[] = modelCatalogue.items;
+
+  /**
+   * The models an agent could be pointed at, which are the ones a share of a
+   * window means anything against.
+   *
+   * The agent form's own filter, so the model somebody previews the default
+   * against is one an agent in this workspace could actually be given.
+   */
+  const answering = models.filter(answers);
+
+  /*
+   * Something to preview against as soon as there is anything to preview.
+   *
+   * The first model rather than none, because a figures panel that appears only
+   * after a second choice is one most readers never see - and the whole
+   * difficulty this card has is that a percentage means a different number of
+   * tokens on every model, which is a thing to be shown rather than waited for.
+   * Which model it starts on does not matter; the picker beside the figures
+   * says which one they belong to, and changing it is one press.
+   */
+  useEffect(() => {
+    if (against !== '' || answering.length === 0) return;
+    setAgainst(answering[0].id);
+  }, [against, answering]);
+
+  /*
+   * Two questions about the drafted share, asked after the drag has stopped.
+   *
+   * They are two calls because they are two questions, and only one of them
+   * decides anything. `workspaceDefault: true` is the judgement that matters -
+   * whether this may be saved - and the server deliberately makes it on the
+   * bounds alone, so its figures are the built-in allowance's rather than this
+   * default's and are only worth printing at the Default position, where the
+   * built-in allowance is exactly what agents get.
+   *
+   * The other is the same question an agent asks: what this share works out to
+   * against one particular model. That is where the figures come from once a
+   * share is set, and it is a preview in the strict sense - a workspace default
+   * is not tied to a model and nothing that comes back from it can stop a save.
+   *
+   * Cancelled on the way out, so a slow answer to a share nobody is asking for
+   * any more cannot land on top of a newer one.
+   */
+  useEffect(() => {
+    if (workspaceId === '') return;
+
+    let current = true;
+    const timer = setTimeout(() => {
+      const asking = [
+        fetchMemoryBudget(workspaceId, null, share, true),
+        share === null || against === ''
+          ? Promise.resolve(null)
+          : fetchMemoryBudget(workspaceId, against, share),
+      ] as const;
+
+      Promise.all(asking)
+        .then(([bounds, shown]) => {
+          if (!current) return;
+          setVerdict(bounds);
+          setPreview(shown);
+        })
+        .catch(() => {
+          // The preview is not the setting. A failure here leaves the figures
+          // off rather than putting a second error on a card that has its own.
+          if (!current) return;
+          setVerdict(null);
+          setPreview(null);
+        });
+    }, PREVIEW_PAUSE);
+
+    return () => {
+      current = false;
+      clearTimeout(timer);
+    };
+  }, [workspaceId, share, against]);
+
+  /**
+   * Why this default cannot be saved, in the server's words, or null.
+   *
+   * The bounds and nothing else, because that is all the mutation checks. A
+   * model that could not give this share says so in the preview below and does
+   * not stop the save: refusing a default because the smallest model in the
+   * workspace could not give it would refuse a setting that is right for every
+   * other model in it, and for agents that may never use that one.
+   */
+  const refusal = verdict?.refusal ?? null;
+
+  /**
+   * The default agents here fall back to, saved.
+   *
+   * Null clears it, which is what the Default position sends, and puts every
+   * agent that sets nothing back on the built-in allowance.
+   */
+  async function remember() {
+    if (memorySaving || refusal !== null) return;
+
+    setMemorySaving(true);
+    setMemoryError(null);
+    setMemorySaved(false);
+    try {
+      const updated = await setWorkspaceDefaultMemoryShare(workspaceId, share);
+      setWorkspace(updated);
+      setShare(updated.defaultMemoryShare);
+      setMemorySaved(true);
+    } catch (cause) {
+      setMemoryError(cause instanceof Error ? cause.message : 'Could not save that.');
+    } finally {
+      setMemorySaving(false);
+    }
+  }
 
   async function hear(modelId: string) {
     setAbout('chat');
@@ -318,6 +525,173 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
           </div>
         </form>
       )}
+
+      {/*
+        What the workspace decides for its agents - issue #226.
+
+        A card of its own, above the two below it, because those two are about
+        one screen each and this is about every agent in the workspace. It is
+        the middle step of three: an agent's own share, then this, then the
+        built-in allowance. The per-agent setting is the right place to make an
+        exception and the wrong place to state a policy - an installation that
+        had decided its agents should remember more than the built-in allowance
+        was saying so once per agent, again on every agent made afterwards, and
+        could read the decision back only by opening every one of them.
+      */}
+      <section className={styles.card}>
+        <div className={styles.sectionTitle}>
+          <h2 className={styles.sectionHeading}>Agents</h2>
+          <div className={styles.rule} />
+        </div>
+
+        {/*
+          The control and its readout, kept close together and kept apart.
+
+          The slider is the field; everything under it - the figures, the model
+          they were worked out against, the sentence where there are no figures
+          to give - is the card reading back what the field now holds, and it is
+          drawn beside the field rather than inside it. That is not a detail of
+          spacing: what a field prints under its own control is where an
+          explanation hides when nobody wants to write a (?), which is what
+          `hint-prose-check` reads. This is a readout, so it is not in there.
+        */}
+        <div className={styles.memory}>
+          <div className={styles.field}>
+            <span className={styles.labelWithHint}>
+              <label className={styles.label} htmlFor="workspace-memory-share">
+                Default Session Memory
+              </label>
+              <FieldHint label="Default Session Memory">
+                How much of its model&rsquo;s context window one of an agent&rsquo;s sessions may hand
+                back on its next turn: what was said in it, and what its tools last returned. This is
+                what agents here are given when they set no share of their own — an agent that has set
+                one keeps it. At Default nothing is decided and those agents get a fixed built-in
+                allowance, which is what every workspace does until somebody sets this. It is a
+                percentage rather than a count of tokens because the workspace runs several models
+                whose windows differ by an order of magnitude, so the same share is a different number
+                of tokens on each of them: the figures below are for the one model named beside them,
+                and the picker changes which. A share a particular model cannot give is refused where
+                that agent&rsquo;s budget is worked out, not here. Token figures are approximate — they
+                are counted in characters and reported at four characters to the token.
+              </FieldHint>
+            </span>
+
+            <div className={styles.shareRow}>
+              <input
+                id="workspace-memory-share"
+                className={styles.shareSlider}
+                type="range"
+                min={DEFAULT_SHARE}
+                max={MAX_SHARE}
+                step={1}
+                value={share ?? DEFAULT_SHARE}
+                disabled={workspace === null}
+                onChange={(event) => {
+                  const at = Number(event.target.value);
+                  setMemorySaved(false);
+                  setShare(at === DEFAULT_SHARE ? null : at);
+                }}
+                aria-valuetext={share === null ? 'Default' : `${share}%`}
+              />
+              <output className={styles.shareValue} htmlFor="workspace-memory-share">
+                {share === null ? 'Default' : `${share}%`}
+              </output>
+            </div>
+          </div>
+
+          {/*
+            The refusal, or what the share means - never both.
+
+            Which of three things is drawn is the whole of this card's honest
+            problem, so it is worth saying plainly:
+
+            - refused: the bounds sentence, in the server's own words. The track
+              cannot reach a share outside them, so this is the safety net for
+              the ceiling above having drifted from the server's - and it is the
+              only thing here that turns Save off.
+            - Default: the built-in allowance's own figures, which is exactly
+              what agents get when the workspace decides nothing, and the one
+              case where the figures depend on no model at all. There is nothing
+              to work them out against, so nothing is offered to choose.
+            - a share: what it works out to against one model, named. This is
+              the honest difficulty of this setting - a share that is generous
+              on a 200,000-token window is impossible on an 8,000-token one, and
+              the server deliberately refuses a default on account of neither -
+              and the answer taken here is to show it rather than to hide it or
+              to invent a refusal this screen does not own. The figures are one
+              model's and say whose; the picker changes which model, and changes
+              nothing that is saved.
+          */}
+          {refusal !== null ? (
+            <p className={styles.shareRefusal} role="alert">
+              {refusal}
+            </p>
+          ) : share === null ? (
+            verdict !== null && <Figures budget={verdict} />
+          ) : (
+            <>
+              <div className={styles.previewPick}>
+                <label className={styles.label} htmlFor="workspace-memory-against">
+                  Worked Out Against
+                </label>
+                <div className={styles.inputWrapper}>
+                  <select
+                    id="workspace-memory-against"
+                    className={`${styles.input} ${styles.select}`}
+                    value={against}
+                    onChange={(event) => setAgainst(event.target.value)}
+                  >
+                    <option value="">None — no figures shown</option>
+                    {answering.map((model) => (
+                      <option key={model.id} value={model.id}>
+                        {model.name}
+                      </option>
+                    ))}
+                  </select>
+                  <img src={chevronDown12Icon} alt="" width={12} height={12} />
+                </div>
+              </div>
+
+              {/*
+                What that one model would make of it. Its refusal is printed
+                where its figures would have been, because it is the answer to
+                the same question - and it does not stop the save, since this
+                default is not that model's and the agents it applies to may
+                never use it.
+              */}
+              {preview !== null &&
+                (preview.refusal !== null ? (
+                  <p className={styles.shareNote}>{preview.refusal}</p>
+                ) : (
+                  <Figures budget={preview} />
+                ))}
+            </>
+          )}
+        </div>
+
+        {memoryError !== null && (
+          <p className={styles.error} role="alert">
+            {memoryError}
+          </p>
+        )}
+
+        <div className={styles.formActions}>
+          {memorySaved && memoryError === null && <p className={styles.saved}>Saved.</p>}
+          {/*
+            A refused share stops the save here as well as at the server. Not
+            instead of: the mutation refuses it from the same calculation, and
+            this is only the card saying so before the press rather than after.
+          */}
+          <button
+            type="button"
+            className={styles.save}
+            onClick={() => void remember()}
+            disabled={workspace === null || memorySaving || refusal !== null}
+          >
+            {memorySaving ? 'Saving…' : 'Save Changes'}
+          </button>
+        </div>
+      </section>
 
       {/*
         A chat's own settings, drawn only where the installation has a chat.

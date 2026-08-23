@@ -44,11 +44,28 @@ export interface Workspace {
    * default, including for a workspace that has already chosen a model.
    */
   quickChatMayWrite: boolean;
+  /**
+   * What agents here are given when they set no share of their own, as a
+   * percentage of their model's context window.
+   *
+   * The middle step of three — an agent's own share, then this, then the
+   * built-in allowance. Null means the workspace has decided nothing, which is
+   * what every workspace does until somebody sets it, and leaves those agents
+   * exactly where they were. An agent with a share of its own never consults it.
+   *
+   * A percentage rather than a count of tokens because a workspace runs several
+   * models at once whose windows differ by an order of magnitude: a share is
+   * the only unit that can be stated once here and mean something against all
+   * of them. Which is also why it means a different number of tokens on each,
+   * and why the form setting it previews against one model at a time.
+   */
+  defaultMemoryShare: number | null;
 }
 
 const WORKSPACE_FIELDS =
   'id name description roles { id name } adminRoles { id name } administered ' +
-  'companionModelId transcriptionModelId speechModelId quickChatModelId quickChatMayWrite';
+  'companionModelId transcriptionModelId speechModelId quickChatModelId quickChatMayWrite ' +
+  'defaultMemoryShare';
 
 /** Just enough of a role to name it where a workspace lists what opens it. */
 export interface WorkspaceRole {
@@ -129,6 +146,33 @@ export async function setWorkspaceQuickChatWrites(
     { workspaceId, allowed },
   );
   return data.setWorkspaceQuickChatWrites;
+}
+
+/**
+ * What agents here fall back to when they set no share of their own.
+ *
+ * Null clears it, which puts every agent that sets nothing back on the built-in
+ * allowance rather than leaving them on the last value — the same rule the
+ * agent's own share follows, and what lets a slider offer the default as a
+ * position to drag back to.
+ *
+ * Only the bounds refuse it, and they refuse it in the same sentence the agent
+ * form is refused with, from the same calculation on the server. Nothing that
+ * needs a model is checked, because a default is tied to none: refusing one
+ * because the smallest model in the workspace could not give it would refuse a
+ * setting that is right for every other model in it.
+ */
+export async function setWorkspaceDefaultMemoryShare(
+  workspaceId: string,
+  share: number | null,
+): Promise<Workspace> {
+  const data = await graphql<{ setWorkspaceDefaultMemoryShare: Workspace }>(
+    `mutation SetWorkspaceDefaultMemoryShare($workspaceId: ID!, $share: Int) {
+       setWorkspaceDefaultMemoryShare(workspaceId: $workspaceId, share: $share) { ${WORKSPACE_FIELDS} }
+     }`,
+    { workspaceId, share },
+  );
+  return data.setWorkspaceDefaultMemoryShare;
 }
 
 export type WorkspaceOperationType = 'ADD' | 'REMOVE' | 'RENAME';

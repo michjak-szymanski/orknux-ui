@@ -98,10 +98,15 @@ const MAX_SHARE = 50;
  * Where the track reads "Default" - the position that means nothing is set.
  *
  * Zero rather than a checkbox beside the slider, because the two states are one
- * question: an agent either has a share of the window or has the built-in
- * allowance, and dragging off the end of the track into "no share" is that
- * question asked once. It is also the only honest resting place for a slider
- * with nothing set - any other position would be a percentage nobody chose.
+ * question: an agent either has a share of its own or takes whatever it is
+ * given, and dragging off the end of the track into "no share" is that question
+ * asked once. It is also the only honest resting place for a slider with
+ * nothing set - any other position would be a percentage nobody chose.
+ *
+ * What being given means changed under it: an agent at Default now follows its
+ * workspace's default where there is one, and only falls to the built-in
+ * allowance where there is not. The position did not move; the figures under it
+ * say which of the two it landed on.
  */
 const DEFAULT_SHARE = 0;
 
@@ -325,8 +330,8 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
   const [tools, setTools] = useState<string[]>(agent.tools);
   const [icon, setIcon] = useState<string | null>(agent.icon ?? null);
   /**
-   * The share of the model's window a session may take back, or null for the
-   * built-in default - issue #226.
+   * The share of the model's window a session may take back, or null to follow
+   * the workspace's default - issue #226.
    */
   const [share, setShare] = useState<number | null>(agent.memoryShare);
   /** What that share works out to, as the server works it out. Null until asked. */
@@ -429,8 +434,27 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
    *
    * Printed as it arrives and never reworded: it names the model and its
    * numbers, and it is the same sentence the mutation would raise.
+   *
+   * Only where the share is this agent's own. Once an agent that sets nothing
+   * falls through to its workspace's default, the preview can come back refused
+   * about a share this form never asked for - most ordinarily on an agent with
+   * no model yet, where the answer is "choose a model first" - and that is not
+   * a reason to refuse the save. `updateAgent` agrees: it judges `memoryShare`
+   * only when one was sent, so a form disabling Save here would be refusing
+   * what the server would have accepted. What happens to a refused inherited
+   * share is written below, where it is drawn.
    */
-  const refusal = budget?.refusal ?? null;
+  const refusal = asked === null ? null : (budget?.refusal ?? null);
+
+  /**
+   * The same sentence when it is about the share this agent inherits.
+   *
+   * Not a refusal of anything on this form, so it neither hides the figures nor
+   * stops the save - it is why the figures below are the built-in allowance's
+   * rather than the workspace's share, which would otherwise be a silent
+   * disagreement between this card and the workspace's settings page.
+   */
+  const inheritedRefusal = asked === null ? (budget?.refusal ?? null) : null;
 
   useEffect(() => {
     if (addingServer) newServerRef.current?.focus();
@@ -627,10 +651,13 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
             </label>
             <FieldHint label="Session Memory">
               How much of the chosen model&rsquo;s context window one of this agent&rsquo;s sessions may
-              hand back on its next turn: what was said in it, and what its tools last returned. The
-              default is a fixed allowance that knows nothing of the window; a share is worked out from
-              it, which is why a model has to be chosen before one can be set. Token figures are
-              approximate — they are counted in characters and reported at four characters to the token.
+              hand back on its next turn: what was said in it, and what its tools last returned. At
+              Default this agent follows whatever its workspace has decided for the agents in it, and
+              where the workspace has decided nothing either, a fixed built-in allowance that knows
+              nothing of the window; the figures below say which of the two it is. A share is worked out
+              from the window, which is why a model has to be chosen before one can be set. Token
+              figures are approximate — they are counted in characters and reported at four characters
+              to the token.
             </FieldHint>
           </span>
 
@@ -673,6 +700,30 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
           ) : (
             budget !== null && (
               <dl className={own.budget}>
+                {/*
+                  Where the figures below are coming from, and only at Default.
+
+                  Default used to mean one thing - the built-in allowance - and
+                  now means whichever of two things the workspace has decided.
+                  An agent sitting at Default in a workspace with a default of
+                  25% is being shown that workspace's 25% worked out against
+                  this model, not the built-in allowance, and the difference is
+                  the only thing on this card a reader cannot get at by looking:
+                  it is `inherited` on the budget, and this row is the one place
+                  it is said. Where the agent has a share of its own the source
+                  is the slider directly above, so the row would be restating
+                  the control.
+                */}
+                {asked === null && (
+                  <div className={own.budgetRow}>
+                    <dt>Default is</dt>
+                    <dd>
+                      {budget.inherited && budget.share !== null && budget.refusal === null
+                        ? `the workspace's ${budget.share}%`
+                        : 'the built-in allowance'}
+                    </dd>
+                  </div>
+                )}
                 <div className={own.budgetRow}>
                   <dt>Altogether</dt>
                   <dd>{thousands(budget.totalTokens)} tokens</dd>
@@ -692,6 +743,17 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
                 </div>
               </dl>
             )
+          )}
+
+          {/*
+            Why the row above says the built-in allowance in a workspace that
+            has a default: this model cannot give that default, so this agent
+            does not get it. The server's own sentence, printed plainly rather
+            than as an alert - nothing here is refused, and there is nothing on
+            this form to put right except the model above it.
+          */}
+          {refusal === null && inheritedRefusal !== null && (
+            <p className={own.inheritedNote}>{inheritedRefusal}</p>
           )}
         </div>
 

@@ -214,3 +214,74 @@ select.input {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ---- The default session memory agents here fall back to (issue #226) ---- */
+
+/*
+ * The same six rules the agent's own slider wears, composed from the one file
+ * that holds them. Two screens set this one quantity - an agent's share, and
+ * the workspace default it falls back to - and somebody who has set one has to
+ * recognise the other, which is exactly what a second copy of these rules would
+ * eventually take away.
+ */
+.shareRow {
+  composes: shareRow from '../../styles/memoryShare.module.css';
+}
+
+.shareSlider {
+  composes: shareSlider from '../../styles/memoryShare.module.css';
+}
+
+.shareValue {
+  composes: shareValue from '../../styles/memoryShare.module.css';
+}
+
+.budget {
+  composes: budget from '../../styles/memoryShare.module.css';
+}
+
+.budgetRow {
+  composes: budgetRow from '../../styles/memoryShare.module.css';
+}
+
+.shareRefusal {
+  composes: shareRefusal from '../../styles/memoryShare.module.css';
+}
+
+/*
+ * What one model would make of the default, where it cannot make anything of
+ * it. Not a refusal - the setting is judged on the bounds alone - so not the
+ * colour a refusal wears.
+ */
+.shareNote {
+  composes: shareNote from '../../styles/memoryShare.module.css';
+}
+
+/*
+ * The slider and the card's reading of it, held together.
+ *
+ * The card's own gap is the distance between one setting and the next, which is
+ * too far between a control and the figures it just produced - they are one
+ * thing being looked at. So they are one flex child of the card, spaced the way
+ * a field spaces its own parts.
+ */
+.memory {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+/*
+ * Which model the figures below are figures for.
+ *
+ * A field in shape and not one in what it does: nothing it is set to is saved.
+ * The workspace's default is one percentage for every model in the workspace,
+ * and this only chooses which of them the reader is being shown it against.
+ */
+.previewPick {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  margin-top: var(--space-4);
+}

@@ -562,6 +562,35 @@ export const TESTS = [
      */
   },
   {
+    name: 'workspace-memory-check',
+    what: "the workspace's default session memory, what it means per model, and the agent that inherits it",
+    needs: ['workspace'],
+    /*
+     * The follow-up half of #226. The share stayed on the agent and gained a
+     * step behind it - agent, then workspace, then the built-in allowance - so
+     * there are two screens now and one quantity, and the seam between them is
+     * what this drives: a default set on the workspace's settings page has to
+     * turn up on an agent that set nothing, named as inherited, and clearing it
+     * has to put that agent back on the built-in allowance.
+     *
+     * The assertion worth the whole check is the one about two models. It makes
+     * a 200,000-token window and an 8,000-token one and asks the same 25% of
+     * both: the second cannot give it, the screen has to say so in the server's
+     * words, and Save has to stay on - because the server judges a workspace
+     * default on the bounds alone, deliberately, and a screen that invented a
+     * per-model refusal there would refuse a default that is right for every
+     * other model in the workspace. A screen that quietly blocked the save
+     * would pass every other assertion here.
+     *
+     * It also reaches past the track's own end once, on purpose. The track
+     * stops at the server's ceiling so a share outside the bounds cannot be
+     * dragged to; the refusal slot beneath is the safety net for those two
+     * copies of the ceiling parting company, and a safety net nothing ever
+     * tests is one nobody knows is torn. Both models, the agent and the default
+     * are put back afterwards.
+     */
+  },
+  {
     name: 'agent-grants-check',
     what: "an agent's grants: bounded, searchable, and explained behind a (?), on the page and in the panel",
     needs: ['workflow'],

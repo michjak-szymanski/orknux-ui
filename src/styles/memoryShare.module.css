@@ -1,0 +1,120 @@
+/*
+ * The session-memory slider, what it works out to, and why it cannot be saved.
+ *
+ * There are two screens that set this one quantity and there will not be a
+ * third: an agent's own share of its model's context window, and the workspace
+ * default that agent falls back to when it sets none. The same number, in the
+ * same unit, obeying the same bounds - so a person who has set one has to
+ * recognise the other on sight, and that recognition is what would go first if
+ * these rules were copied into two stylesheets and one of them was tidied.
+ *
+ * Written where the row squares are written, and for the reason that file
+ * gives: copies do not drift because somebody decides they should, they drift
+ * because the next person edits the file in front of them and no file in front
+ * of them is the control.
+ */
+
+/*
+ * The slider and what it currently says, on one row.
+ *
+ * The value is a fixed column on the right rather than laid out by its own
+ * width: it steps between "Default", "7%" and "50%", and letting it size itself
+ * moves the end of the track every time somebody drags across those.
+ */
+.shareRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+/*
+ * `accent-color` rather than a track and a thumb built out of pseudo-elements.
+ *
+ * It is one property, it follows the theme's own token, and it leaves the
+ * control the browser's - which is the one that already answers the arrow keys,
+ * Home and End, and is the shape whoever is using it recognises.
+ */
+.shareSlider {
+  flex: 1 0 0;
+  min-width: 0;
+  accent-color: var(--color-accent-brand);
+  cursor: pointer;
+}
+
+.shareSlider:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.shareValue {
+  flex: none;
+  width: 56px;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  text-align: right;
+}
+
+/*
+ * What the share works out to. Figures rather than a sentence: every one of
+ * them is a number the server sent, and the words beside them are the names
+ * that server gives them.
+ */
+.budget {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: var(--space-8) 0 0;
+}
+
+.budgetRow {
+  display: flex;
+  gap: var(--space-8);
+  font-size: var(--text-sm);
+}
+
+.budgetRow dt {
+  flex: none;
+  width: 104px;
+  color: var(--color-text-muted);
+}
+
+.budgetRow dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  color: var(--color-text-secondary);
+}
+
+/*
+ * Why a share cannot be saved, in the server's own words.
+ *
+ * Drawn as the warning it is rather than as a note under a field: it is the
+ * reason Save is refusing, and it names the bound - or the model - it broke.
+ */
+.shareRefusal {
+  margin: var(--space-8) 0 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-danger);
+}
+
+/*
+ * The server's own sentence where nothing has been refused.
+ *
+ * Both screens have somewhere to be told that a share does not work against a
+ * particular model without that being a refusal of anything on the form. On the
+ * agent it is the workspace's default arriving at a model that cannot give it,
+ * so the figures above are the built-in allowance's; on the workspace it is the
+ * model somebody is previewing against, which decides nothing that gets saved.
+ *
+ * Muted rather than red, and that is the whole reason it is a second class.
+ * Danger on this product means the save in front of you will not go through -
+ * it is drawn beside a Save that has gone grey - and a sentence in the same red
+ * above a Save that still works teaches the reader to stop believing the red.
+ */
+.shareNote {
+  margin: var(--space-8) 0 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}

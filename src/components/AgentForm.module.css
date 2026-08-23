@@ -289,85 +289,43 @@
 /* ---- Session memory (issue #226) ---- */
 
 /*
- * The slider and what it currently says, on one row.
- *
- * The value is a fixed column on the right rather than laid out by its own
- * width: it steps between "Default", "7%" and "50%", and letting it size itself
- * moves the end of the track every time somebody drags across those.
+ * The slider, the figures under it and the refusal beside them are the
+ * workspace default's as well, so they are written once - see the note at the
+ * top of that file. Composed rather than imported wholesale so this stylesheet
+ * still names every class the markup here uses.
  */
 .shareRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-12);
+  composes: shareRow from '../styles/memoryShare.module.css';
 }
 
-/*
- * `accent-color` rather than a track and a thumb built out of pseudo-elements.
- *
- * It is one property, it follows the theme's own token, and it leaves the
- * control the browser's - which is the one that already answers the arrow keys,
- * Home and End, and is the shape whoever is using it recognises.
- */
 .shareSlider {
-  flex: 1 0 0;
-  min-width: 0;
-  accent-color: var(--color-accent-brand);
-  cursor: pointer;
-}
-
-.shareSlider:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
+  composes: shareSlider from '../styles/memoryShare.module.css';
 }
 
 .shareValue {
-  flex: none;
-  width: 56px;
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  color: var(--color-text-primary);
-  text-align: right;
+  composes: shareValue from '../styles/memoryShare.module.css';
 }
 
-/*
- * What the share works out to. Figures rather than a sentence: every one of
- * them is a number the server sent, and the words beside them are the names
- * that server gives them.
- */
 .budget {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  margin: var(--space-8) 0 0;
+  composes: budget from '../styles/memoryShare.module.css';
 }
 
 .budgetRow {
-  display: flex;
-  gap: var(--space-8);
-  font-size: var(--text-sm);
+  composes: budgetRow from '../styles/memoryShare.module.css';
 }
 
-.budgetRow dt {
-  flex: none;
-  width: 104px;
-  color: var(--color-text-muted);
-}
-
-.budgetRow dd {
-  margin: 0;
-  font-family: var(--font-mono);
-  color: var(--color-text-secondary);
+.shareRefusal {
+  composes: shareRefusal from '../styles/memoryShare.module.css';
 }
 
 /*
- * Why a share cannot be saved, in the server's own words.
+ * Why an inherited share did not reach this agent, in the server's words.
  *
- * Drawn as the warning it is rather than as a note under a field: it is the
- * reason Save is refusing, and it names the model and its numbers.
+ * Deliberately not `.shareRefusal`: nothing on this form has been refused. The
+ * workspace has a default, this agent's model cannot give it, so the figures
+ * above are the built-in allowance's - and the only thing on this card that
+ * could change that is the model picker further up.
  */
-.shareRefusal {
-  margin: var(--space-8) 0 0;
-  font-size: var(--text-sm);
-  line-height: 1.5;
-  color: var(--color-danger);
+.inheritedNote {
+  composes: shareNote from '../styles/memoryShare.module.css';
 }

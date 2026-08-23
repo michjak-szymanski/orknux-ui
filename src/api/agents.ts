@@ -36,7 +36,11 @@ export interface Agent {
   icon: string | null;
   /**
    * How much of its model's context window one of its sessions may take back,
-   * as a percentage of that window. Null is the built-in default.
+   * as a percentage of that window. Null follows the workspace's
+   * `defaultMemoryShare`, and where that is null too, the built-in allowance -
+   * so null does not mean this agent has no share, only that it set none.
+   * `memoryBudget.share` is the one that applies and `memoryBudget.inherited`
+   * says which of the two it came from.
    *
    * One number rather than five: how many turns come back, how much of them,
    * how much of what its tools returned and how much of any one result are all
@@ -59,6 +63,18 @@ export interface Agent {
 export interface SessionMemoryBudget {
   /** The share asked for; null when nothing is set and the default applies. */
   share: number | null;
+  /**
+   * True when `share` is the workspace's default rather than the agent's own.
+   *
+   * The one thing a form cannot work out for itself. An agent that sets nothing
+   * no longer lands on the built-in allowance — it lands on its workspace's
+   * default where there is one — so a screen showing the figures for a share
+   * the agent never set has to say which of the two it is looking at.
+   *
+   * Always false for the preview asked with `workspaceDefault`, which is
+   * setting that default rather than inheriting it.
+   */
+  inherited: boolean;
   /** The model's context window in tokens, or null where it has none recorded. */
   contextWindow: number | null;
   /** True when the share and the window produced the figures; false when the default did. */
@@ -131,11 +147,17 @@ const DELETE_AGENT_MUTATION = `
 `;
 
 const MEMORY_BUDGET_FIELDS =
-  'share contextWindow derived totalTokens conversationTokens toolResultTokens longestResultTokens turns toolResults refusal';
+  'share inherited contextWindow derived totalTokens conversationTokens toolResultTokens ' +
+  'longestResultTokens turns toolResults refusal';
 
 const MEMORY_BUDGET_QUERY = `
-  query MemoryBudget($workspaceId: ID!, $modelId: ID, $share: Int) {
-    memoryBudget(workspaceId: $workspaceId, modelId: $modelId, share: $share) { ${MEMORY_BUDGET_FIELDS} }
+  query MemoryBudget($workspaceId: ID!, $modelId: ID, $share: Int, $workspaceDefault: Boolean) {
+    memoryBudget(
+      workspaceId: $workspaceId
+      modelId: $modelId
+      share: $share
+      workspaceDefault: $workspaceDefault
+    ) { ${MEMORY_BUDGET_FIELDS} }
   }
 `;
 
@@ -182,7 +204,7 @@ export async function updateAgent(
     icon?: string | null;
     /**
      * How much of the model's window a session may take back, 1 to 50, or null
-     * for the built-in default.
+     * to follow whatever the workspace says.
      *
      * Sent whenever the form saves rather than left out to mean "leave it
      * alone", which is the rule the icon above follows and what lets a screen
@@ -207,16 +229,28 @@ export async function updateAgent(
  * It never fails. A share that could not be saved comes back with `refusal`
  * set, which is why a slider can say why while it is being dragged instead of
  * finding out at Save — or, worse, at the provider.
+ *
+ * `workspaceDefault` asks the other question about the same setting, and it is
+ * a flag on this query rather than a query of its own because the server made
+ * it one: a workspace's default is not tied to a model, so it is judged on the
+ * bounds alone and `modelId` is ignored. What comes back then is the *bounds
+ * verdict* and nothing else worth printing — the figures are the built-in
+ * allowance's rather than the default's, because there is no window to work one
+ * out against. A form wanting to show what a default would mean against one
+ * particular model asks this same function again with that model and no flag,
+ * which is the per-agent question and comes back with the per-agent answer.
  */
 export async function fetchMemoryBudget(
   workspaceId: string,
   modelId: string | null,
   share: number | null,
+  workspaceDefault = false,
 ): Promise<SessionMemoryBudget> {
   const data = await graphql<{ memoryBudget: SessionMemoryBudget }>(MEMORY_BUDGET_QUERY, {
     workspaceId,
     modelId,
     share,
+    workspaceDefault,
   });
   return data.memoryBudget;
 }
