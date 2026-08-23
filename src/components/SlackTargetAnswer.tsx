@@ -138,6 +138,18 @@ export function SlackTargetAnswer({
 
   if (!asking) return null;
 
+  /*
+   * Nothing typed, or a name taken off the list: no question is out and none is
+   * coming, so there is nothing to hold room for.
+   *
+   * The height below exists so the form does not move under somebody while an
+   * answer arrives and changes length. That is worth the reservation only while
+   * an answer is actually on its way. Held open on an empty field it is a gap
+   * between this field and the next with nothing that will ever fill it, which
+   * is what it looked like: a margin nobody could explain.
+   */
+  if (question === null) return null;
+
   /** The answer, but only while it is an answer to what is in the field now. */
   const answer = answered !== null && answered.question === question ? answered.check : null;
 
@@ -145,15 +157,11 @@ export function SlackTargetAnswer({
     <p
       id={id}
       className={`${className ?? ''} ${own.targetAnswer} ${answer === null ? '' : TARGET_CLASS[answer.outcome]}`}
-      data-outcome={answer?.outcome ?? (picked ? 'picked' : question === null ? 'nothing' : 'asking')}
+      data-outcome={answer?.outcome ?? 'asking'}
       aria-live="polite"
     >
       {answer === null ? (
-        question === null ? (
-          ''
-        ) : (
-          'Checking…'
-        )
+        'Checking…'
       ) : (
         <>
           {/*
