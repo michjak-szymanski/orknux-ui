@@ -1051,7 +1051,7 @@ export const TESTS = [
   },
   {
     name: 'slack-target-check',
-    what: 'both places a Slack target is typed saying what the connection can see, and neither refusing it',
+    what: 'both places a Slack target is typed offering what the connection can see and saying what it makes of it, and neither refusing anything',
     needs: ['workspace'],
     /*
      * Issue #176's checking half. `slackTarget` answers three ways and the
@@ -1087,6 +1087,24 @@ export const TESTS = [
      * the action behind the node sends through a Slack connection, which it
      * proves against a send through a mail server that has the same parameter
      * under the same name. It makes its own workflow and takes it away again.
+     *
+     * The suggesting half is the rest of #176 and is checked in the same file,
+     * because it is the same field: `slackSuggestions` offers what the
+     * connection can see against what has been typed so far, on both surfaces,
+     * by the same component. The claims that earn their place are the ones a
+     * picker gets wrong. A truncated list is asked for and the server's line
+     * about being truncated is read off the screen, verbatim and at the head of
+     * the list, where it cannot be scrolled past - a list that quietly leaves
+     * things out teaches somebody it is the whole of what exists. An
+     * `UNCHECKED` draws the reason and no rows, an empty list being the one
+     * thing an unchecked answer does not know. It types something in no list,
+     * keeps it and saves it. It takes a row by keyboard and by pointer, and
+     * proves the check goes quiet afterwards by counting the questions that
+     * reach the wire, because two answers saying the same thing under one field
+     * is what the first round of this was rejected for. And it measures the
+     * Create Action button and the next parameter under the longest list there
+     * is: a list that pushed the form down would move the button somebody is
+     * reaching for.
      */
   },
   {

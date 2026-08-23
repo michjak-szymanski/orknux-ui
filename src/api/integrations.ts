@@ -368,6 +368,96 @@ export async function checkSlackTarget(
   return data.slackTarget;
 }
 
+/** One user or channel a connection can see, offered for somebody to take. */
+export interface SlackSuggestion {
+  /** Slack's own id - `C0123456789`, `U0123456789`. Unique, and what a row is keyed by. */
+  id: string;
+  /** What the field is filled with when this is taken: `#general`, `@alice`. */
+  name: string;
+  /**
+   * What Slack calls the member, where that says something the handle does not.
+   *
+   * Null for a channel, whose one name is `name`, and null for a member whose
+   * name only repeats their handle - so a second line is drawn only where there
+   * is a second thing to say.
+   */
+  realName: string | null;
+}
+
+/**
+ * What a Slack connection has to offer against what has been typed so far.
+ *
+ * The same three outcomes as the check, meaning the same things, so one field
+ * can carry both answers without a second vocabulary. None of it is a verdict:
+ * `matches` is what was worth offering and never what may be entered.
+ */
+export interface SlackSuggestions {
+  outcome: SlackTargetOutcome;
+  /**
+   * One line, ready to show, and empty when there is nothing worth saying -
+   * which is the usual answer.
+   *
+   * Printed as it arrives and never reworded, like the check's. The server
+   * says something in exactly three cases and each of them is a case a list on
+   * its own would get wrong: `UNCHECKED`, where this is the reason there are no
+   * suggestions at all; `NOT_FOUND`, where it is the caveat that keeps an empty
+   * list from reading as a verdict; and a `FOUND` that is not complete, where
+   * it says the list was cut and narrowing will find the rest.
+   */
+  message: string;
+  /** Best first: what the typing matches exactly, then starts with, then contains. */
+  matches: SlackSuggestion[];
+  /**
+   * Whether `matches` is everything that matches.
+   *
+   * False when Slack was not read to the end, and false when more matched than
+   * came back. Both mean the same thing to somebody typing - there may be more
+   * - and neither is ever a reason to refuse what they type.
+   */
+  complete: boolean;
+}
+
+const SLACK_SUGGESTIONS_QUERY = `
+  query SlackSuggestions($connectionId: ID!, $target: MessageTarget!, $typed: String) {
+    slackSuggestions(connectionId: $connectionId, target: $target, typed: $typed) {
+      outcome
+      message
+      matches { id name realName }
+      complete
+    }
+  }
+`;
+
+/**
+ * The users or channels a Slack connection can see that match what is typed.
+ *
+ * The reading half of the same two endpoints the check puts a question to, and
+ * cheap in a way the check is not: each connection's list is read from Slack
+ * once and filtered in memory, so this is a lookup in a map rather than a call
+ * to Slack, and a picker may ask it on a pause between keystrokes.
+ *
+ * `typed` is sent exactly as it stands, sigil and all - the server strips the
+ * `#` or the `@` before matching - and an empty one asks for the first few of
+ * everything, which is what a picker shows when it opens.
+ *
+ * It suggests and never gates. Nothing that saves reads this, and plenty of
+ * correct values will never appear in it: an id pasted out of somebody else's
+ * message, a member who joined a minute ago, a private channel this bot was
+ * never invited to.
+ */
+export async function fetchSlackSuggestions(
+  connectionId: string,
+  target: MessageTarget,
+  typed: string,
+): Promise<SlackSuggestions> {
+  const data = await graphql<{ slackSuggestions: SlackSuggestions }>(SLACK_SUGGESTIONS_QUERY, {
+    connectionId,
+    target,
+    typed,
+  });
+  return data.slackSuggestions;
+}
+
 export async function fetchMcpServers(workspaceId: string): Promise<McpServer[]> {
   const data = await graphql<{ mcpServers: McpServer[] }>(MCP_SERVERS_QUERY, { workspaceId });
   return data.mcpServers;

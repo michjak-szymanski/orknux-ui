@@ -13,8 +13,14 @@ import { segments } from './searchMatches';
  * often alike on purpose — a variable's name repeated across catalogs, four
  * functions differing in one word — and a list that shows *which* letters
  * answered the search is the difference between choosing and guessing.
+ *
+ * Exported for the Slack target field, whose rows are the same problem with the
+ * same answer: names alike but for a word, narrowed by what somebody typed.
+ * What a match looks like is one rule in one stylesheet for the same reason the
+ * matcher is one function - two lists marking a hit two ways would be two
+ * answers to "which letters did I just find".
  */
-function Marked({ text, needle }: { text: string; needle: string }) {
+export function Marked({ text, needle }: { text: string; needle: string }) {
   return (
     <>
       {segments(text, needle).map((part, index) =>

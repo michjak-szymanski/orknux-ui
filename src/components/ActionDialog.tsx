@@ -46,7 +46,7 @@ import type { HeaderRow } from './HeaderRowsEditor';
 import { IconField } from './IconField';
 import { OpenDefinitionIcon } from './OpenDefinitionIcon';
 import { PanelClose, panelEscape } from './PanelClose';
-import { SlackTargetAnswer } from './SlackTargetAnswer';
+import { SlackTargetField } from './SlackTargetField';
 import styles from './Dialog.module.css';
 
 export interface ActionDialogProps {
@@ -689,44 +689,41 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                 <label className={styles.label} htmlFor="action-target-name">
                   {target === 'CHANNEL' ? 'Channel Name' : 'User'}
                 </label>
-                <div className={styles.inputWrapper}>
-                  <input
-                    id="action-target-name"
-                    className={styles.input}
-                    type="text"
-                    placeholder={target === 'CHANNEL' ? '#notifications' : '@someone'}
-                    value={targetName}
-                    aria-describedby={asking ? 'action-target-answer' : undefined}
-                    onChange={(event) => setTargetName(event.target.value)}
-                  />
-                </div>
                 {/*
-                  What the connection can see, under the field, as it is typed.
+                  What the connection can see, offered in the field and said
+                  under it, as it is typed.
 
                   In the open rather than behind the (?) for the reason the cron
                   reading is: an explanation of a field is teaching and hides,
                   while this is the result of what somebody just typed, which
                   the rules file keeps visible beside an error and a status.
 
-                  The box itself is shared with the workflow editor's node
-                  panel, which asks the same question about the `target` one
-                  step binds. Everything that had to be alike in the two - the
-                  server's sentence printed as it arrives, the three colours,
-                  the pause, the room kept for the answer - is alike by being
-                  one piece of code rather than by being remembered twice.
+                  The field, its list and its answer are shared with the
+                  workflow editor's node panel, which binds the same `target`
+                  for one step of one workflow. Everything that had to be alike
+                  in the two - the server's sentence printed as it arrives, the
+                  three colours, the pause, the room kept for the answer, what
+                  the arrows do in the list - is alike by being one piece of
+                  code rather than by being remembered twice.
 
                   None of it refuses anything. `complete` above does not read
-                  this, the field stays free text, and Save stays live on every
-                  outcome - because a NOT_FOUND is as often a private channel
-                  this bot was never invited to, or somebody who joined a minute
-                  ago, as it is a typo.
+                  any of it, the field stays free text whether or not what is in
+                  it was ever offered, and Save stays live on every outcome -
+                  because a NOT_FOUND is as often a private channel this bot was
+                  never invited to, or somebody who joined a minute ago, as it
+                  is a typo.
                 */}
-                <SlackTargetAnswer
-                  id="action-target-answer"
-                  className={styles.fieldHint}
+                <SlackTargetField
+                  id="action-target-name"
+                  className={styles.input}
+                  wrapperClassName={styles.inputWrapper}
+                  placeholder={target === 'CHANNEL' ? '#notifications' : '@someone'}
+                  value={targetName}
+                  onChange={setTargetName}
                   connectionId={asking ? slackConnection?.id ?? null : null}
                   target={target}
-                  name={targetName}
+                  answerId="action-target-answer"
+                  answerClassName={styles.fieldHint}
                 />
               </div>
             </>

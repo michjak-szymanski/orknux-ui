@@ -1,0 +1,170 @@
+/*
+ * The list a Slack target field offers under itself.
+ *
+ * Its own stylesheet rather than classes handed in by the form around it, for
+ * the reason `DefinitionPicker.module.css` has one: this stands in a modal
+ * painted from Dialog.module.css and in the workflow editor's node panel
+ * painted from that page, and a look described twice is a look that eventually
+ * differs. What is genuinely the surface's - the input's own class, the box
+ * around it, the size an aside reads at - is still the surface's and is handed
+ * in.
+ *
+ * It is deliberately the picker's look and not a second one. The rows, the
+ * cursor, the mark on what matched and the line under an empty list are the
+ * same shapes at the same sizes, because they are the same thing: a list
+ * narrowed by typing. Somebody who has used the function picker has used this.
+ */
+
+/*
+ * What the list is measured from.
+ *
+ * The surfaces pad the box they draw around an input - twelve pixels of it -
+ * and an absolutely placed list anchored inside that padding would stand a
+ * hand's width narrower than the field it belongs to, which reads as a
+ * different control rather than as that field's list. So the anchor is a plain
+ * block around the whole field, and the list spans it edge to edge.
+ *
+ * The answer box is deliberately not inside this. It is the field's next
+ * sibling, exactly where it has always been, so the gap the form puts between
+ * a field and its aside is the gap it was.
+ */
+.field {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+/*
+ * Over the page rather than in the flow.
+ *
+ * A list that pushed the form down would move the button somebody is about to
+ * press, and this one appears and disappears while they type - which is the
+ * single thing that makes a live interface feel broken. It is the same reason
+ * the answer box below keeps its room whether or not it has anything in it.
+ */
+.menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  max-height: 280px;
+  margin-top: var(--space-4);
+  padding: var(--space-8);
+  overflow: hidden;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  box-shadow: var(--shadow-modal);
+}
+
+/*
+ * The same list, opened upwards.
+ *
+ * A target is the last field of the action dialog and the last thing in a
+ * scrolling panel, which is to say it is usually near the bottom of the window
+ * - and a list drawn downwards from there is a list somebody cannot see. The
+ * component measures and turns it over. The alternative, scrolling the form to
+ * make room, moves everything being read to show something only glanced at.
+ */
+.menuAbove {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: var(--space-4);
+}
+
+/*
+ * The rows, and the only part of this that scrolls.
+ *
+ * The line above them does not, which is the whole reason it is a box of its
+ * own: twenty-five rows in a list this tall means six are in view, and a
+ * sentence saying the list was cut, written under the twenty-fifth, is a
+ * sentence nobody will ever be told.
+ */
+.rows {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.option {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-8);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-4);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/*
+ * The whole name, over as many lines as it takes. A channel name cut to
+ * `#platform-incident…` above another cut to `#platform-incident…` is a list
+ * nobody can choose from, and the narrowest frame this stands in is the node
+ * panel, which leaves a row about 200px wide.
+ */
+.optionName {
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+/*
+ * Who a handle belongs to, where Slack knows something the handle does not say.
+ *
+ * Never drawn for a channel and never drawn where it would only repeat the
+ * handle - the server decides that, and sends null rather than a second copy.
+ */
+.optionReal {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.option:hover {
+  background: var(--color-surface-raised);
+}
+
+/*
+ * The row the arrows are on - the same treatment as hover, because they are the
+ * same thing said two ways: a hand and a keyboard must never disagree about
+ * which row is next.
+ */
+.optionAt {
+  background: var(--color-surface-raised);
+  outline: 1px solid var(--color-accent-brand);
+}
+
+/*
+ * What the server says about the list, at the head of it.
+ *
+ * One line, its own words, and the only place a partial list can admit to being
+ * partial. It is drawn inside the list rather than under the field on purpose:
+ * under the field is what is known about what was *typed*, and stacking a
+ * second paragraph there was tried and read as noise. A sentence about the list
+ * belongs against the list.
+ *
+ * Above the rows and outside their scroll, so that it is read rather than
+ * scrolled past - see `.rows`. No fixed height, unlike the answer box under the
+ * field: this is not rewritten under something somebody is reaching for, it is
+ * one line of a box already floating over the form, so it can be as tall as it
+ * is without moving anything at all.
+ */
+.note {
+  margin: 0;
+  flex: none;
+  padding: var(--space-8);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}

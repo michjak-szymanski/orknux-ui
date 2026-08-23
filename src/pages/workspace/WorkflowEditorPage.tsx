@@ -95,7 +95,7 @@ import { FieldPicker } from '../../components/FieldPicker';
 import type { FieldOption } from '../../components/FieldPicker';
 import { Icon, IconPickerDialog } from '../../components/IconPicker';
 import { Loader } from '../../components/Loader';
-import { SlackTargetAnswer } from '../../components/SlackTargetAnswer';
+import { SlackTargetField } from '../../components/SlackTargetField';
 import { TrashIcon } from '../../components/TrashIcon';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import {
@@ -4286,55 +4286,59 @@ Change the keystroke in Preferences.`}
                                   }
                                 />
                               ) : (
-                                <>
-                                  <div className={styles.inputWrapper}>
-                                    <input
-                                      id={`node-mapping-${mapping.name}`}
-                                      className={`${styles.input} ${styles.parameterValue}`}
-                                      value={mapping.expression}
-                                      placeholder={parameterPlaceholder(draft, mapping.name)}
-                                      spellCheck={false}
-                                      aria-describedby={
-                                        slackSend !== null && mapping.name === TARGET_PARAMETER
-                                          ? `node-mapping-${mapping.name}-answer`
-                                          : undefined
-                                      }
-                                      onChange={(event) =>
-                                        setDraft({
-                                          ...draft,
-                                          mappings: draft.mappings.map((held, at) =>
-                                            at === index ? { ...held, expression: event.target.value } : held,
-                                          ),
-                                        })
-                                      }
-                                    />
-                                  </div>
-                                  {/*
-                                    What the connection can see, under the box
-                                    it was typed into - the same answer the
-                                    action form gives, drawn by the same
-                                    component, because this is where somebody
-                                    naming a channel most often is. A node is
-                                    one step of one workflow, and its target is
-                                    the half of a send worth varying per step.
+                                /*
+                                  What the connection can see: offered in the
+                                  box and said under it - the same field the
+                                  action form draws, by the same component,
+                                  because this is where somebody naming a
+                                  channel most often is. A node is one step of
+                                  one workflow, and its target is the half of a
+                                  send worth varying per step.
 
-                                    Only on this tab. A reference is read at run
-                                    time out of whatever the run is carrying by
-                                    then, so there is nothing here to ask about,
-                                    and saying a field could not be found about
-                                    the *name* of a reference would be alarming
-                                    and wrong.
-                                  */}
-                                  {slackSend !== null && mapping.name === TARGET_PARAMETER && (
-                                    <SlackTargetAnswer
-                                      id={`node-mapping-${mapping.name}-answer`}
-                                      className={styles.fieldNote}
-                                      connectionId={slackSend.connectionId}
-                                      target={slackSend.target}
-                                      name={mapping.expression}
-                                    />
-                                  )}
-                                </>
+                                  Every parameter is drawn by it and only the
+                                  target is asked about. Handed no connection it
+                                  is exactly the text field it replaced - no
+                                  list, no answer, nothing asked - which is
+                                  better than two code paths that have to agree
+                                  about what an ordinary parameter looks like.
+                                  A function's argument may perfectly well be
+                                  called `target`; `slackSend` is what
+                                  establishes that this one goes to Slack.
+
+                                  Only on this tab. A reference is read at run
+                                  time out of whatever the run is carrying by
+                                  then, so there is nothing here to ask about or
+                                  to offer, and a channel name suggested for the
+                                  *name of a field* would be nonsense.
+                                */
+                                <SlackTargetField
+                                  id={`node-mapping-${mapping.name}`}
+                                  className={`${styles.input} ${styles.parameterValue}`}
+                                  wrapperClassName={styles.inputWrapper}
+                                  value={mapping.expression}
+                                  placeholder={parameterPlaceholder(draft, mapping.name)}
+                                  spellCheck={false}
+                                  connectionId={
+                                    slackSend !== null && mapping.name === TARGET_PARAMETER
+                                      ? slackSend.connectionId
+                                      : null
+                                  }
+                                  target={
+                                    slackSend !== null && mapping.name === TARGET_PARAMETER
+                                      ? slackSend.target
+                                      : null
+                                  }
+                                  answerId={`node-mapping-${mapping.name}-answer`}
+                                  answerClassName={styles.fieldNote}
+                                  onChange={(next) =>
+                                    setDraft({
+                                      ...draft,
+                                      mappings: draft.mappings.map((held, at) =>
+                                        at === index ? { ...held, expression: next } : held,
+                                      ),
+                                    })
+                                  }
+                                />
                               )}
                             </div>
                           ))}

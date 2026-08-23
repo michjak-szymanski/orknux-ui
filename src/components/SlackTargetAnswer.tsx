@@ -40,6 +40,19 @@ export interface SlackTargetAnswerProps {
   target: MessageTarget | null;
   /** What is in the field, exactly as it was typed. */
   name: string;
+  /**
+   * Whether what is in the field was taken from the suggestions rather than
+   * typed - in which case there is nothing left to check.
+   *
+   * The two answers about this field are a question and a list, and they overlap
+   * in exactly one place: a name picked off the list is a name Slack has just
+   * named, so asking whether it exists is asking a question whose answer was on
+   * screen a moment ago. Two boxes of prose saying the same thing under one
+   * field is what makes a live hint feel like noise, so this one goes quiet -
+   * no question put, nothing drawn, and the room kept all the same. The moment
+   * the field is edited it is typing again and the check comes back.
+   */
+  picked?: boolean;
 }
 
 /**
@@ -64,7 +77,14 @@ export interface SlackTargetAnswerProps {
  * field for an answer that will never come is the interface promising something
  * it cannot do.
  */
-export function SlackTargetAnswer({ id, className, connectionId, target, name }: SlackTargetAnswerProps) {
+export function SlackTargetAnswer({
+  id,
+  className,
+  connectionId,
+  target,
+  name,
+  picked = false,
+}: SlackTargetAnswerProps) {
   /**
    * Exactly what the answer on screen would have to be an answer *to*.
    *
@@ -75,7 +95,7 @@ export function SlackTargetAnswer({ id, className, connectionId, target, name }:
    */
   const typed = name.trim();
   const asking = connectionId !== null && target !== null;
-  const question = asking && typed !== '' ? [connectionId, target, typed].join(' ') : null;
+  const question = asking && typed !== '' && !picked ? [connectionId, target, typed].join(' ') : null;
 
   const [answered, setAnswered] = useState<{ question: string; check: SlackTargetCheck } | null>(null);
 
@@ -125,7 +145,7 @@ export function SlackTargetAnswer({ id, className, connectionId, target, name }:
     <p
       id={id}
       className={`${className ?? ''} ${own.targetAnswer} ${answer === null ? '' : TARGET_CLASS[answer.outcome]}`}
-      data-outcome={answer?.outcome ?? (question === null ? 'nothing' : 'asking')}
+      data-outcome={answer?.outcome ?? (picked ? 'picked' : question === null ? 'nothing' : 'asking')}
       aria-live="polite"
     >
       {answer === null ? (

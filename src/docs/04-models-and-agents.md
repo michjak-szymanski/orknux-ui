@@ -447,6 +447,22 @@ parameter, since that is where a step names who it is writing to. Only on the
 **Value** tab: a **Reference** is read out of the run when the run reaches it, so
 there is nothing to look up beforehand.
 
+**The same fields offer what that connection can see.** A list opens under the
+field with the channels or people that match what has been typed so far —
+narrowing as you type, driven by the arrow keys, taken with Enter or a click, and
+put away with Escape. Taking one fills the field in, and nothing more happens to
+it: the check goes quiet afterwards, because a name Slack has just offered is not
+a name worth asking Slack about.
+
+It suggests and it never fences. Anything can still be typed whether or not the
+list holds it, and plenty of correct things never will: an id pasted out of
+somebody else's message, a colleague who joined a minute ago, a private channel
+this bot was never invited to, an archived channel. Where only the first few of
+what matched came back the list says so, because one that quietly left the rest
+out would read as the whole of what exists; and where nothing can be looked up at
+all it says why, rather than opening empty and looking like a Slack with nothing
+in it.
+
 There are three answers rather than two, and the third is the one that catches
 people out. A bot token set up only to post carries no permission to look
 anything up: `users:read` for people, `channels:read` for channels, and sending a
