@@ -9,6 +9,11 @@ workflow.
 ![The triggers a workspace has defined](/screens/triggers.png)
 
 - **Schedule** — a cron expression. Fires whether or not anybody is looking.
+  The form reads the expression back in English under the field as it is typed
+  — and says instead that it cannot be parsed, or that it names a date which
+  never comes round, which is the moment that warning is any use. The hint
+  beside the field names the six positions, seconds first, in the order the
+  server reads them.
 - **Connection** — something arriving on an integration: a Slack message in a
   channel the workspace is connected to.
 - **Webhook** — an HTTP request to a path on this installation.

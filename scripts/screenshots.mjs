@@ -542,6 +542,43 @@ const SHOTS = [
   { name: 'integrations', path: `/workspace/${ws}/integrations` },
   { name: 'audit', path: `/workspace/${ws}/audit` },
   { name: 'workspace-settings', path: `/workspace/${ws}/settings` },
+  /*
+   * The same page again, at the card the chapter about agents points at.
+   *
+   * Worth its own picture rather than a second reference to the one above,
+   * because what the paragraph is about is the state that page never opens in.
+   * A workspace decides nothing until somebody moves this, so the card as it is
+   * found says Default and offers no model to judge it against - and the manual
+   * beside it explains a share, the figures it works out to, and the
+   * **Worked Out Against** picker that only exists once there is a share. So
+   * the slider is moved before the shutter and left there: nothing is saved,
+   * the next shot navigates away from it, and the workspace is as the seed
+   * built it. The same trick the node builder above uses, and for the same
+   * reason - some things a page does cannot be photographed at rest.
+   */
+  {
+    name: 'workspace-agents',
+    path: `/workspace/${ws}/settings`,
+    waitFor: '#workspace-memory-share',
+    prepare: async (page) => {
+      // A quarter of the window: enough that the figures under it are round
+      // numbers on any model, and well short of a share a small one refuses.
+      await page.fill('#workspace-memory-share', '25');
+      // The card redraws from the field on every step, so what is waited for is
+      // the readout catching up rather than a fixed pause.
+      await page.waitForFunction(
+        () => document.querySelector('#workspace-memory-share + output')?.textContent === '25%',
+        undefined,
+        { timeout: 10_000 },
+      );
+      // Moved with the keyboard's own path, so the control is left focused and
+      // ringed; nothing else in this set is, and a focus ring in a picture
+      // reads as part of the design rather than as where the cursor was.
+      await page.locator('#workspace-memory-share').evaluate((slider) => slider.blur());
+      await page.locator('h2', { hasText: /^Agents$/ }).scrollIntoViewIfNeeded();
+      await page.waitForTimeout(400);
+    },
+  },
   // The composer, by its label rather than its placeholder: `text=` matches
   // content, and a placeholder is an attribute, so it never matched at all.
   { name: 'chat', path: '/chat', waitFor: 'textarea[aria-label="Message"]' },
@@ -613,12 +650,21 @@ const SHOTS = [
      * Open, with something typed into it. Closed it is a box in the top bar
      * that the reader has already seen in every other picture here; what the
      * page is about is the list underneath.
+     *
+     * A word rather than the single letter this used to type, because the box
+     * has since been named after something a letter cannot show. `s` found
+     * eight destinations and a variable, which was the whole of what the box
+     * did when it was called Go to; it now offers three things to *start* as
+     * well, and none of them was in that picture. `issue` reaches all three
+     * kinds at once - the page, the issues the workspace holds, and Create
+     * issue with its plus - so the list underneath says what the box is for
+     * rather than half of it.
      */
     path: `/workspace/${ws}`,
     prepare: async (page) => {
       const box = 'input[aria-label="Quick actions"]';
       await page.click(box);
-      await page.type(box, 's', { delay: 40 });
+      await page.type(box, 'issue', { delay: 40 });
       await page.waitForSelector('ul[role="listbox"]', { timeout: 10_000 });
       await page.waitForTimeout(300);
     },

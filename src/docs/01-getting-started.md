@@ -147,8 +147,8 @@ turns up, whichever workspace it happened in.
 
 ## Finding things
 
-![Quick actions, open on a letter: pages, and the things the workspace holds,
-in one list](/screens/command-palette.png)
+![Quick actions, open on a word: a page, something to start, a tool and four
+issues, in one list](/screens/command-palette.png)
 
 The box in the middle of the top bar is **Quick actions**. Open it with your
 Quick Actions shortcut — `Ctrl`+`Q` unless you have changed it in Preferences —

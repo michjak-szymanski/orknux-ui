@@ -86,14 +86,15 @@ again starts it straight.
   row is a detour past it. A start that is refused - a graph with no nodes has
   nothing to run - is said beside the workflow's name and leaves you in the
   editor, because there is no run at the other end to go and look at.
-- A node can be **turned**, three ways that are one act: the **Turn** button
-  that appears above the selected node, **Facing** in its panel, or `R` on the
-  canvas. The button is there because turning is something somebody does four
-  times in a row, and a panel on the far side of the screen is a long way to go
-  for that. It moves where the lines join the node - left to right, top to
-  bottom, right to left, bottom to top - and changes nothing about what runs. A long chain simply
-  reads better down a screen than off the side of one. Each node is turned on
-  its own, so a graph can bend where it needs to.
+- A node can be **turned**, three ways that are one act: the **Turn** button, a
+  rotate arrow standing just off the selected node's top-right corner,
+  **Facing** in its panel, or `R` on the canvas. The button is there because
+  turning is something somebody does four times in a row, and a panel on the
+  far side of the screen is a long way to go for that. It moves where the lines
+  join the node - left to right, top to bottom, right to left, bottom to top -
+  and changes nothing about what runs. A long chain simply reads better down a
+  screen than off the side of one. Each node is turned on its own, so a graph
+  can bend where it needs to.
 - A node can be **copied**: **Duplicate** in the toolbar, or `Ctrl`+`D` on the
   canvas. The copy points at the same action, trigger, condition, agent or
   object - two nodes running one action is the ordinary case - and carries its

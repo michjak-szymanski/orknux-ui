@@ -16,6 +16,11 @@ The dropdown above the composer picks the model. Picking an agent instead gives
 the conversation that agent's instructions, skills and tools. A new chat starts
 on the workspace's default so there is always something to talk to.
 
+Beside the name is the arrow that leaves a box, the same one every field naming
+a definition carries: it opens whatever is answering — the agent, or the model —
+in a tab of its own, so a question about what the thing is set to does not cost
+you the conversation.
+
 ## Attachments
 
 The **+** to the left of the composer attaches files — several at once. They

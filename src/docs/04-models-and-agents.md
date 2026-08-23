@@ -72,8 +72,8 @@ workflow, where their input comes from the parameters the node is given.
   the workspace.
 - **Memory** is what a workspace has written down for its agents to read.
 
-![One agent's settings: the model it answers on, its brief, and the catalogs and
-tools it was granted](/screens/agent-settings.png)
+![One agent's settings: its brief, the model it answers on, and the share of
+that model's window its sessions are given](/screens/agent-settings.png)
 
 ## Skills and tools
 
@@ -235,6 +235,9 @@ every workspace does until somebody sets it — the fixed built-in allowance
 applies, which is what every agent had before any of this could be set. So an
 agent at Default says which of the two it landed on, under the slider: *the
 workspace's 25%*, or *the built-in allowance*.
+
+![Agents in workspace settings: the share every agent that has set none of its
+own gets, and the model the figures under it are for](/screens/workspace-agents.png)
 
 The workspace's default is set the same way, on the same track, and it is a
 percentage for the same reason — except that here the argument is stronger,
