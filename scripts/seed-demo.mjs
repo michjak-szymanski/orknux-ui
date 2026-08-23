@@ -299,7 +299,7 @@ try {
 }
 log(`model ${chatModel.name} via ${provider.name} (${providerStatus})`);
 
-/* --------------------------------------------------------- the connection */
+/* -------------------------------------------------------- the connections */
 
 const { createWorkspaceConnection: slack } = await gql(
   'mutation($input: CreateWorkspaceConnectionInput!) { createWorkspaceConnection(input: $input) { id name status } }',
@@ -310,15 +310,25 @@ const { createWorkspaceConnection: slack } = await gql(
       // The server addresses a Slack connection itself; there is no URL to give.
       type: 'SLACK',
       /*
-       * Both tokens, and neither of them real.
+       * The one the demonstration sends through, and it carries no bot token.
        *
-       * A connection with no credential on it is not the ordinary case - a
-       * Slack connection somebody actually made has a bot token, and one that
-       * listens has an app-level token beside it. Seeding neither left the
-       * fixture with no stored credential anywhere, and `secret-reveal-check`
-       * has nothing to reveal: it reported "no connection in workspace 1 holds
-       * a credential", which reads as the eye being missing when it is the
-       * fixture that is.
+       * Not an oversight. This connection is what `Reply in the Slack thread`
+       * posts with, and a fixture bot token is a token Slack answers
+       * `invalid_auth` to - which is `Delivery.Refused`, which is a permanent
+       * step failure. Seeded with one, the workflow the manual is a manual of
+       * ended every run red, and the executions list, the run page and the
+       * chat behind it were all pictures of a product that cannot finish its
+       * own example.
+       *
+       * With nothing stored the server answers `NotPossible` instead: the step
+       * reports it sent nothing, says why, and the run completes. That is also
+       * the honest picture, because it is exactly what an installation with
+       * one integration still to configure looks like.
+       *
+       * The app-level token stays. It is the token that opens the socket
+       * rather than the one that posts, so it changes nothing about the run,
+       * and it is what makes this a connection that listens - which is what
+       * the trigger below is drawn on.
        *
        * Deliberately not the shape Slack uses. The first version of this wrote
        * `xoxb-…` and `xapp-…`, which is what a real one looks like, and GitHub
@@ -331,12 +341,42 @@ const { createWorkspaceConnection: slack } = await gql(
        * and the checks only ask whether something is stored, so a sentence
        * serves - and it says what it is to anybody who finds it in a database.
        */
-      secret: 'seed-fixture-bot-credential-not-a-real-slack-token',
+      secret: '',
       appToken: 'seed-fixture-app-credential-not-a-real-slack-token',
     },
   },
 );
 log(`connection ${slack.name}`);
+
+/*
+ * And the second one, which does hold a credential.
+ *
+ * A fixture with no stored credential anywhere is a fixture `secret-reveal-check`
+ * cannot run against: it looks for a connection whose secret is set, reveals it
+ * and puts it away again, and with none it reports "no connection in workspace 1
+ * holds a credential" - which reads as the eye being missing when it is the
+ * fixture that is. Emptying the one above would have taken that away, so the
+ * credential moves to a connection of its own rather than disappearing.
+ *
+ * It announces escalations, which is a job the desk already has: `Page the
+ * on-call` exists, `ESCALATION_CHANNEL` names where they are announced, and one
+ * of the conditions is `Mentions an outage`. So this is furniture the
+ * demonstration was already short of, not a fixture wearing a workspace's
+ * clothes - and nothing sends through it, so it stays green and out of the way.
+ */
+const { createWorkspaceConnection: escalations } = await gql(
+  'mutation($input: CreateWorkspaceConnectionInput!) { createWorkspaceConnection(input: $input) { id name status } }',
+  {
+    input: {
+      workspaceId: ws,
+      name: 'Slack escalations',
+      type: 'SLACK',
+      // Sends and does not listen, so a bot token and no app-level token.
+      secret: 'seed-fixture-bot-credential-not-a-real-slack-token',
+    },
+  },
+);
+log(`connection ${escalations.name}`);
 
 /* --------------------------------------------------------------- variables */
 
@@ -1168,11 +1208,13 @@ for (const input of ['SUP-4471', 'SUP-4468', 'SUP-4470', 'SUP-4455', 'SUP-4462']
  * has to match is the trigger the graph was drawn around, so this is the event
  * Slack would have delivered.
  *
- * The reply step still sends nothing, and that is fine: the connection now
- * carries a bot token but Slack refuses it, so the action reports that it sent
- * nothing and the run completes. A skipped step with a reason on it is a better
- * picture than a failure, because it is what an installation with one
- * integration still to configure actually looks like.
+ * The reply step sends nothing, and that is fine: the connection it posts
+ * through holds no bot token, so the action reports that it sent nothing and
+ * the run completes. A skipped step with a reason on it is a better picture
+ * than a failure, because it is what an installation with one integration
+ * still to configure actually looks like. It was briefly the other thing - a
+ * fixture bot token was seeded, Slack answered `invalid_auth`, and a refusal
+ * is a permanent failure - and the connection above says why it no longer is.
  *
  * Three of them rather than one, and each naming a different ticket, because
  * the session node in the graph keys on `trigger.ticket`: one event is one
