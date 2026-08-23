@@ -16,6 +16,7 @@ import { useInstallation } from '../session/installation';
 import { setSidebarCollapsed, useSidebarCollapsed } from '../session/sidebar';
 import { Attribution } from './Attribution';
 import { CommandPalette } from './CommandPalette';
+import { askBeforeLeaving } from './leaveGuard';
 import { NotificationBell } from './NotificationBell';
 import { QuickChat } from './QuickChat';
 import styles from './AppShell.module.css';
@@ -557,7 +558,26 @@ function WorkspaceSwitcher({ workspacePath }: { workspacePath?: string }) {
       <WorkspaceSelector
         workspaces={workspaces}
         selectedId={selectedId}
-        onSelect={(id) => navigate(workspaceSwitchPath(pathname, id))}
+        /*
+          Where it lands is still `workspaceSwitchPath`'s answer and not this
+          component's. What is new is asking first: the page underneath may be
+          holding work the server has not been told about, and this control is
+          not a link, so the guard that catches every other way out of an editor
+          could not see it. Switching workspace halfway through writing an issue
+          threw the issue away without a word - issue #234.
+
+          Leaving is still the right destination. A half-written issue belongs
+          to the workspace it was started in, and there is nowhere for it to go
+          in the next one; what was wrong was going silently. So the guard gets
+          first refusal, and where it takes the navigation this stays put and
+          lets the dialog decide.
+        */
+        onSelect={(id) => {
+          const to = workspaceSwitchPath(pathname, id);
+          if (askBeforeLeaving(to)) return false;
+          navigate(to);
+          return true;
+        }}
       />
       <span className={styles.topRightRule} aria-hidden="true" />
     </>
@@ -598,7 +618,8 @@ export function LdapStatus({ connected = true }: { connected?: boolean }) {
 interface WorkspaceSelectorProps {
   workspaces: Array<{ id: string; name: string }>;
   selectedId: string;
-  onSelect: (id: string) => void;
+  /** @returns whether the switch happened; false means a page asked to be asked. */
+  onSelect: (id: string) => boolean;
 }
 
 /**
@@ -616,7 +637,18 @@ function WorkspaceSelector({ workspaces, selectedId, onSelect }: WorkspaceSelect
       <select
         className={styles.workspaceSelect}
         value={selectedId}
-        onChange={(event) => onSelect(event.target.value)}
+        /*
+          Put back by hand when the switch did not happen.
+
+          `value` is React's, but the browser has already drawn the name that
+          was chosen, and nothing here changes state when a guard takes the
+          navigation - so there is no re-render to correct it, and the corner
+          would go on naming a workspace nobody is in for as long as the
+          question is open.
+        */
+        onChange={(event) => {
+          if (!onSelect(event.target.value)) event.target.value = selectedId;
+        }}
         aria-label="Selected workspace"
       >
         {workspaces.map((workspace) => (

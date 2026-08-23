@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ClipboardEvent as ReactClipboardEvent } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
@@ -44,7 +44,9 @@ import { MarkdownEditor } from '../../components/MarkdownEditor';
 import { MoveIssueDialog } from '../../components/MoveIssueDialog';
 import { ObserverList } from '../../components/ObserverList';
 import { TrashIcon } from '../../components/TrashIcon';
+import { UnsavedWorkDialog } from '../../components/UnsavedWorkDialog';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { useLeaveGuard } from '../../components/leaveGuard';
 import { useInstallation } from '../../session/installation';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceIssuePage.module.css';
@@ -328,8 +330,26 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
       .catch(() => setKnown([]));
   }, [workspaceId]);
 
-  async function save() {
-    if (saving || title.trim() === '') return;
+  /**
+   * Stores what the form holds.
+   *
+   * [thenGo] is true for the button at the top of the page, which is what it
+   * has always done: filing an issue lands on the issue, or empties the form
+   * for the next one. The leave guard passes false - it is about to take the
+   * page somewhere of its own, and a navigation from in here underneath that
+   * would be two answers to one press.
+   *
+   * @returns whether the server took it, which is what the guard's dialog needs
+   * in order not to leave on a save that was refused.
+   */
+  async function save(thenGo = true): Promise<boolean> {
+    if (saving) return false;
+    if (title.trim() === '') {
+      // Unreachable from the button, which is disabled without one. Reachable
+      // from Save & Leave, and that dialog promises the reason is on the page.
+      setError('An issue needs a title before it can be filed.');
+      return false;
+    }
     setSaving(true);
     setError(null);
     // Forgotten as soon as another save begins, so that "filed #12" below can
@@ -366,6 +386,16 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
         const refused = await hangLinks(made.id);
         setPendingLinks([]);
         const trouble = refusalOf(made.number, refused);
+        /*
+         * Filed, and staying put. The form is emptied so the page stops
+         * claiming to hold work nobody has stored - it has been stored - and
+         * the guard takes it from here.
+         */
+        if (!thenGo) {
+          setTitle('');
+          setDescription('');
+          return true;
+        }
         if (fileAnother) {
           /*
            * Cleared back to an empty form rather than reloaded: the point is
@@ -394,12 +424,64 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
       } else if (issue !== null) {
         setIssue(await updateIssue(issue.id, details));
       }
+      return true;
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not save the issue.');
+      return false;
     } finally {
       setSaving(false);
     }
   }
+
+  /*
+   * Work on this screen the server has not been told about.
+   *
+   * A value comparison against what was loaded, the way the four editors that
+   * already use this hook compute theirs: somebody who types a character and
+   * takes it out again has changed nothing. A new issue has nothing loaded to
+   * compare against, so its baseline is the empty form it opened as.
+   *
+   * Labels alone do not count while an issue is being written. A label with no
+   * title is not a report, and "File another" leaves labels standing in an
+   * otherwise empty form on purpose - guarding those would ask a question after
+   * every issue in a run, which is how a guard becomes something people click
+   * through. Files do count: they are already uploaded, and walking away leaves
+   * them on the workspace attached to nothing.
+   *
+   * A half-typed comment is deliberately not in here either. This save stores
+   * the issue and not the conversation, so a dialog offering to save one before
+   * leaving would be offering something it does not do.
+   */
+  const unsaved = useMemo(() => {
+    if (creating) {
+      return title.trim() !== '' || description.trim() !== '' || pendingLinks.length > 0 || pending.length > 0;
+    }
+    if (issue === null) return false;
+    return (
+      title.trim() !== issue.title.trim() ||
+      description !== (issue.description ?? '') ||
+      labels.length !== issue.labels.length ||
+      labels.some((one, at) => one !== issue.labels[at]) ||
+      (assignee?.kind ?? null) !== (issue.assignee?.kind ?? null) ||
+      (assignee?.id ?? null) !== (issue.assignee?.id ?? null)
+    );
+  }, [creating, title, description, labels, pendingLinks, pending, issue, assignee]);
+
+  /*
+   * The ways out, and the one question before any of them.
+   *
+   * The same hook the function, tool, object and skill editors use. This page
+   * is an editor in every way that matters - it holds a report somebody is
+   * writing, and there is no copy of it anywhere until Save is pressed - and it
+   * was simply never given one, which is what issue #234 found by way of the
+   * workspace picker. The picker is the exit no click listener can see, so it
+   * asks the guard itself; see `askBeforeLeaving`.
+   */
+  const guard = useLeaveGuard({
+    unsaved,
+    backTo: `/workspace/${workspaceId}/issues`,
+    save: () => save(false),
+  });
 
   /**
    * Moving an issue along, in one click from wherever it is.
@@ -1422,6 +1504,22 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
           setDeleting(null);
           navigate(`/workspace/${workspaceId}/issues`);
         }}
+      />
+
+      {/*
+        Outside the branch above, so it is the same dialog whichever state the
+        page is in, exactly as the four editors draw theirs.
+
+        An issue being written has no name until it has a title, and the dialog
+        puts what it is given in quotation marks - so a form with nothing in the
+        title box is described rather than quoted as an empty string.
+      */}
+      <UnsavedWorkDialog
+        subject={guard.asking ? (creating ? title.trim() || 'This issue' : (issue?.title ?? 'This issue')) : null}
+        creating={creating}
+        onStay={guard.stay}
+        onLeave={guard.leave}
+        onSaveAndLeave={guard.saveAndLeave}
       />
     </AppShell>
   );

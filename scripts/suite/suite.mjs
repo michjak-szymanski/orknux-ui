@@ -654,6 +654,22 @@ export const TESTS = [
      */
   },
   {
+    name: 'issue-leave-guard-check',
+    what: 'an issue being written survives the workspace picker, or is asked about before it does not',
+    needs: ['workspace'],
+    /*
+     * Issue #234. The form was the one editor in the product with no guard on
+     * it, and the picker is the one exit no click listener can see - so this
+     * drives the picker rather than a link, and measures the corner as well as
+     * the address: a question answered with Cancel used to leave the select
+     * naming a workspace nobody was in.
+     *
+     * Needs a second workspace to switch to and says so rather than passing
+     * quietly when there is only one. Files and deletes issues of its own in
+     * both, and sweeps what an earlier killed run left in either.
+     */
+  },
+  {
     name: 'validate-status-check',
     what: 'the Validate status says what it checked, beside the button that checks it',
     needs: ['workspace'],

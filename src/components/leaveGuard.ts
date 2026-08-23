@@ -34,6 +34,32 @@ export interface LeaveGuardOptions {
   save: () => Promise<boolean>;
 }
 
+/**
+ * The page holding work the server has not been told about, right now.
+ *
+ * A module-level slot rather than a context, and one slot rather than a list,
+ * because at most one page is on screen at a time and this is a property of the
+ * screen rather than of a subtree. It exists for the one exit a document
+ * listener cannot see: a navigation that no anchor was clicked for.
+ *
+ * The workspace picker in the top bar is that exit. It is a `<select>` and a
+ * `navigate()`, so the capture-phase click listener below - which is looking
+ * for an `<a>` - never had anything to catch, and switching workspace while an
+ * issue was being written threw the writing away without a word (issue #234).
+ */
+let armed: ((to: string) => boolean) | null = null;
+
+/**
+ * Offer a navigation to whatever is guarding the screen.
+ *
+ * @returns true when a guard has taken it, meaning the question is now open and
+ * the caller must not navigate; false when nothing is guarded and the caller
+ * should go ahead exactly as it did before.
+ */
+export function askBeforeLeaving(to: string): boolean {
+  return armed?.(to) ?? false;
+}
+
 export interface LeaveGuard {
   /** Whether the question is open. Feeds the dialog's subject. */
   asking: boolean;
@@ -141,6 +167,29 @@ export function useLeaveGuard({ unsaved, backTo, save }: LeaveGuardOptions): Lea
     }
     document.addEventListener('click', onClick, true);
     return () => document.removeEventListener('click', onClick, true);
+  }, [unsaved]);
+
+  /*
+   * The same interception for a navigation nobody clicked a link for; see
+   * `armed` above.
+   *
+   * Armed only while there is something to lose, and taken down on the way out,
+   * so a shell that consults it on every workspace switch finds nothing to ask
+   * about on the pages that hold nothing - which is all of them but one.
+   */
+  useEffect(() => {
+    if (!unsaved) return;
+    const ask = (to: string) => {
+      // Already going: the answer has been given and the navigation is under
+      // way, and asking again would be this guard interrupting itself.
+      if (goingAnyway.current) return false;
+      setLeaving({ to });
+      return true;
+    };
+    armed = ask;
+    return () => {
+      if (armed === ask) armed = null;
+    };
   }, [unsaved]);
 
   /* Whether the entry we are standing on is the spare one this page pushed. */

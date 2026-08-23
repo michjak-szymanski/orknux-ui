@@ -100,15 +100,17 @@ export function UnsavedWorkDialog({
           </span>
           <p className={styles.warningMessage}>
             {/*
-              Only the function editor ever says yes to `creating`: a tool and an
-              object are made elsewhere and this page only ever opens one that
-              exists. The wording stays about code and details because that is
-              whose branch it is.
+              The function editor said yes to `creating` alone until the issue
+              form joined it, and the words were about code because that was
+              whose branch it was. Two pages now share it and their work is not
+              the same shape - one is a file, the other is a report - so the
+              sentence says what is true of both: what is on the screen is all
+              there is of it.
             */}
             {creating ? (
               <>
                 <strong>&quot;{subject}&quot;</strong> has not been created yet. Leaving now throws away
-                the code and the details on this screen, and there is no way back to them.
+                what is on this screen, and there is no way back to it.
               </>
             ) : (
               <>
