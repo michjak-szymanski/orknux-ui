@@ -6,7 +6,7 @@
  * the one line of text. It looks like a single wide field and is several things
  * - a 20px textarea beside taller buttons, inside padding - so most of what
  * plainly reads as "the input" was dead ground. The box is 54px tall and the
- * textarea 24 of them; everything else was a click that went nowhere.
+ * textarea 20 of them; everything else was a click that went nowhere.
  *
  * Three presses, in the three places somebody would actually aim: the padding
  * above the text, the padding below it, and the wide gap between the end of the
@@ -41,6 +41,46 @@ const TALLEST = 60;
 record(
   rect.height <= TALLEST,
   `the composer is ${Math.round(rect.height)}px tall, wanted ${TALLEST} or less (the text in it is ${Math.round(text.height)})`,
+);
+
+/*
+ * And the one line sits in the middle of it.
+ *
+ * Reported as "asymmetric top padding", which is not where it came from: the
+ * padding is 10px on both sides, but the row is aligned to the end so the
+ * buttons stay on the floor as the field grows, and a 20px line beside 32px
+ * buttons then had all 12px of the difference above it - 22px of air over the
+ * text and 10px under. The two are measured against the box's inner edges
+ * rather than against a number, so this says the same thing whatever the font
+ * or the buttons turn out to be.
+ *
+ * The buttons are asserted to be on the floor in the same breath, because
+ * centring the text by letting go of `align-items: flex-end` would pass the
+ * first half of this and move every control beside it.
+ */
+const air = await page.evaluate((el) => {
+  const around = getComputedStyle(el);
+  const outer = el.getBoundingClientRect();
+  const top = outer.top + parseFloat(around.borderTopWidth);
+  const bottom = outer.bottom - parseFloat(around.borderBottomWidth);
+  const field = document.getElementById('chat-composer').getBoundingClientRect();
+  // Where the contents stand: inside the border and inside the padding.
+  const floor = bottom - parseFloat(around.paddingBottom);
+  const buttons = [...el.children].filter((child) => child.id !== 'chat-composer');
+  return {
+    above: +(field.top - top).toFixed(1),
+    below: +(bottom - field.bottom).toFixed(1),
+    floor: buttons.map((child) => +(floor - child.getBoundingClientRect().bottom).toFixed(1)),
+  };
+}, box);
+
+record(
+  Math.abs(air.above - air.below) <= 1,
+  `the one line is centred in the box (${air.above}px of air above it, ${air.below}px below)`,
+);
+record(
+  air.floor.every((gap) => Math.abs(gap) <= 0.5),
+  `and the controls beside it are still on the box's floor (${air.floor.join(', ')}px above it)`,
 );
 
 const focused = async () => page.evaluate(() => document.activeElement?.id ?? '');

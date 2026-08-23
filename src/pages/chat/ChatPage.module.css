@@ -891,6 +891,22 @@
 .composerInput {
   flex: 1 0 0;
   min-width: 0;
+  /*
+   * Centred in the row rather than sitting on its floor.
+   *
+   * The box's padding is even - 10px above and below - but the row is aligned
+   * to the end so that the buttons stay at the bottom as the field grows, and
+   * one line of text is 20px against their 32. Aligned to the end, all 12px of
+   * that difference goes above the text: 22px of air over the first line and
+   * 10px under it, which is the lopsided box that was reported. Half each is
+   * 16 and 16, and the row is still 54px tall because the buttons, not the
+   * text, are what decides that - so nothing beside it moves.
+   *
+   * A no-op the moment there is a second line: from 40px up the field is the
+   * tallest thing in the row, there is no spare height to divide, and the text
+   * starts at the top of the box as it always did.
+   */
+  align-self: center;
   height: 20px;
   padding: 0;
   overflow-y: hidden;

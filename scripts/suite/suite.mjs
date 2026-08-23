@@ -288,14 +288,22 @@ export const TESTS = [
 
   {
     name: 'composer-target-check',
-    what: 'the whole chat composer takes a click, and has not grown its padding back',
+    what: 'the whole chat composer takes a click, and its one line sits in the middle of it',
     needs: [],
     /*
      * Reported as "the click only activates the input on a narrow area". The
-     * box is 54px and the text in it 24, so most of what reads as the field was
+     * box is 54px and the text in it 20, so most of what reads as the field was
      * dead. It asserts the three places somebody actually aims and the box's
      * height, because the padding was cut in the same breath and a check that
      * only proved the clicks would let it grow back.
+     *
+     * The same 34px of difference was reported again from the other side - the
+     * text sat low, with 22px of air above it and 10 below, because the row is
+     * aligned to the end so the buttons stay on the floor as the field grows.
+     * So the air above and below the line is measured here too, along with the
+     * buttons still being on that floor: the box's height, where the text sits
+     * in it and where the controls sit beside it are three answers to one
+     * arrangement, and a check that holds one of them lets the other two move.
      */
   },
 
