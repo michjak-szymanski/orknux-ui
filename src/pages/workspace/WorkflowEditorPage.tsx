@@ -1383,6 +1383,39 @@ function GraphNodeView({ data, selected }: NodeProps) {
 const nodeTypes = { graphNode: GraphNodeView };
 
 /**
+ * How small a node can be, said before anything has measured one.
+ *
+ * React Flow draws a node it has no measurement for with `visibility: hidden`,
+ * and it recognises the node it measured by the object - so replacing the node
+ * objects throws every measurement away. Normally the browser measures the boxes
+ * again on the next frame and nobody sees the gap. When the replacement lands in
+ * the same batch as the measurement that did land, React never renders the state
+ * in between, the effect that would observe the boxes again never re-runs, its
+ * ResizeObserver has no size change to report, and the nodes stay hidden until
+ * the page is reloaded. That was #235 on the run's graph, and this canvas is
+ * built the same way.
+ *
+ * It is safer here only by where the rebuilds are. React Flow writes `measured`
+ * back onto the nodes through `onNodesChange`, so every path that rebuilds the
+ * array by spreading what is already in it - undo, redo, adding a node, copying
+ * one, the ports and panel effects - hands the measurement straight back.
+ * `loadGraph` is the one that does not, because it builds the objects out of the
+ * server's answer, and it runs on opening the editor and on Discard. That is a
+ * property of today's call sites rather than a guard, so the nodes now carry a
+ * size up front and there is no state in which one has none.
+ *
+ * These are the numbers the stylesheet and the resizer already agree on: `.node`
+ * is `min-width: 220px; min-height: 96px` and `NodeResizer` refuses to go below
+ * the same. They are a floor, not a size - a node grows to fit what it holds, so
+ * one frame of a tall node drawn at its minimum is possible and a node drawn at
+ * nothing is not. And a node somebody widened by hand carries `width` and
+ * `height` of its own, which React Flow prefers over both of these wherever it
+ * asks: in `nodeHasDimensions`, and in the inline size it puts on the element.
+ */
+const NODE_MIN_WIDTH = 220;
+const NODE_MIN_HEIGHT = 96;
+
+/**
  * Whether this click is the browser's to deal with rather than the editor's.
  *
  * Ctrl, Cmd, Shift, Alt or a button other than the first means a new tab, a new
@@ -2090,6 +2123,10 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
             id: node.key,
             type: 'graphNode',
             position: { x: node.x, y: node.y },
+            // What a node is at least, before anything has measured it, so that
+            // this rebuild cannot leave the canvas blank. See above.
+            initialWidth: NODE_MIN_WIDTH,
+            initialHeight: NODE_MIN_HEIGHT,
             data: {
               kind: node.kind,
               name: node.name,

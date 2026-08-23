@@ -48,6 +48,30 @@ export const TESTS = [
      */
   },
   {
+    name: 'editor-graph-check',
+    what: 'the editor keeps its graph on the canvas, including across a Discard',
+    needs: ['workflow'],
+    /*
+     * Issue #242, which is #235 on the other page that mounts a canvas. React
+     * Flow draws a node it has no measurement for as invisible and drops every
+     * measurement whenever the node objects are replaced, and when the
+     * replacement lands in the same batch as a measurement the nodes stay hidden
+     * until the page is reloaded.
+     *
+     * The editor is exposed in one place rather than everywhere: its nodes carry
+     * `measured` back from React Flow, so every rebuild that spreads what is
+     * already there hands the measurement back, and only `loadGraph` - opening
+     * the editor, and Discard - builds the objects fresh. So Discard is what is
+     * driven, watched every animation frame, because before the fix it blanked
+     * all four nodes for exactly one frame on every press.
+     *
+     * The other half is that these nodes are resizable. One is dragged wider and
+     * taller and has to keep the size it was dragged to: a fix that tells React
+     * Flow how big an unmeasured node is must not pin a node somebody sized by
+     * hand to the minimum.
+     */
+  },
+  {
     name: 'panel-close-check',
     what: 'the × on the builder panel: where it is, that it stays there, and that Escape does it too',
     needs: ['workflow'],
