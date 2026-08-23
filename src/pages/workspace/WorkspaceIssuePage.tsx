@@ -77,6 +77,25 @@ interface PendingLink {
 }
 
 /**
+ * Which issue the page below is about, as one string.
+ *
+ * Two addresses reach the same component - `/issues/4` and `/issues/new` - and
+ * three more differ only in the number. React reconciles by position and by
+ * type, and both of those are unchanged when the address moves between them, so
+ * the instance is kept and every one of its thirty pieces of state with it.
+ * That is what issue #238 was: Quick actions goes to `/issues/new` from an issue
+ * being read, `creating` turns true, the load effect below returns early because
+ * there is nothing to load - and the title and description of the issue that was
+ * on screen are still sitting in the form, ready to be filed a second time.
+ *
+ * The identity is the workspace and the number, so the comment half-typed on
+ * one issue does not follow the reader to the next one either.
+ */
+function subjectOf(workspaceId: string, number: string): string {
+  return `${workspaceId}/${number === '' ? 'new' : number}`;
+}
+
+/**
  * One issue, in the shape everybody already knows.
  *
  * Title across the top with what can be done to it; the description on the
@@ -84,8 +103,21 @@ interface PendingLink {
  * writes a new one - no id in the path means it does not exist yet - so the
  * form somebody files an issue in is the page they will read it on, rather
  * than a thinner thing they have to leave to finish.
+ *
+ * The wrapper is the whole of the fix for #238, and it is deliberately not a
+ * reset: nothing on this page is cleared on mount, because two things here are
+ * meant to survive a render. "File another" keeps the labels and the assignee
+ * for the next report on purpose, and the address the form was refused is
+ * carried through a `replace` onto this same address. Both of those keep the
+ * address they were made on, so both live through a key that only changes when
+ * the issue does.
  */
-export function WorkspaceIssuePage({ session, onSignOut }: WorkspaceIssuePageProps) {
+export function WorkspaceIssuePage(props: WorkspaceIssuePageProps) {
+  const { workspaceId = '', number = '' } = useParams();
+  return <Issue key={subjectOf(workspaceId, number)} {...props} />;
+}
+
+function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
   /*
    * The address carries the number, not the row id.
    *

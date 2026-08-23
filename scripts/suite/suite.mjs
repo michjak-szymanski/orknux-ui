@@ -753,6 +753,26 @@ export const TESTS = [
     needs: ['workspace'],
   },
   {
+    name: 'new-issue-blank-check',
+    what: 'a new issue starts empty however it was reached, and a run of them still keeps its labels',
+    needs: ['workspace'],
+    /*
+     * Issue #238: Quick actions opened the new-issue form filled in with the
+     * issue that was being read. Everything here is driven through the palette
+     * rather than through an address, because that is the only way to reproduce
+     * it at all - the defect lives in one running page, and a reload mounts a
+     * clean one.
+     *
+     * The three "File another" assertions look like they belong to another
+     * check and do not: they are what stops this one being fixed by clearing
+     * the form on mount, which would take the labels off the second issue of a
+     * run somebody is filing. Both halves have to be held at once.
+     *
+     * Files and deletes issues of its own, and sweeps what an earlier killed
+     * run left behind.
+     */
+  },
+  {
     name: 'workflow-list-check',
     what: 'the workflow list shows X at a time and orders the whole list, not the page',
     needs: ['workspace'],
