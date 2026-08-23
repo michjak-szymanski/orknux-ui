@@ -187,11 +187,11 @@ Preferences belong to the person signed in rather than to any workspace —
 the theme among them — so they follow you into every workspace you can see.
 
 Every keystroke this application listens for is set here too: **Quick
-Actions**, **Save**, **Format**, **Turn Node**, **Undo**, **Redo** and
-**Duplicate Node**.
+Actions**, **Save**, **Format**, **Turn Node**, **Add Node**, **Undo**,
+**Redo**, **Duplicate Node** and **Publish**.
 Each is changed by
 pressing the keys you want rather than by picking from a list, because which
 keys are free depends on your browser and your machine and not on this
-application. All of them but Turn Node have to carry a modifier: a bare letter
-would fire while somebody was typing, and turning a node is only ever heard on
-the canvas.
+application. All of them but Turn Node and Add Node have to carry a modifier: a
+bare letter would fire while somebody was typing, and those two are only ever
+heard on the canvas, which is not a text field.

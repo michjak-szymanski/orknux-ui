@@ -75,6 +75,9 @@ A workspace can move all three, under **Workspace Settings → Voice**, because
 none of them is a fact about audio that one answer settles — it is a room, a
 microphone and a person, and those differ:
 
+![Workspace settings: the models a chat may speak and listen with, and the three
+boxes voice mode is governed by](/screens/workspace-settings.png)
+
 | Setting | What it does |
 | --- | --- |
 | Pause before it answers | How long you can go quiet before it answers. Raise it if it cuts in while you are still talking; lower it if it sits there after you have finished |
@@ -132,8 +135,6 @@ Bottom right of every page except this one, a small panel that answers about
 over the one you already have open is two boxes to type a question into. It is told which page you have open, so "why did this fail" on a
 run page means that run, and it can look up the workspace's workflows, runs and
 agents to answer.
-
-![Workspace settings, where the quick chat's model and whether it may make changes are chosen](/screens/workspace-settings.png)
 
 It reads and nothing else, unless the workspace says otherwise — **Let it make
 changes** under Settings. Off, it says plainly that it cannot. On, it can act on

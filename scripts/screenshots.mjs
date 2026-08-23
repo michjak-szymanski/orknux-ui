@@ -541,7 +541,33 @@ const SHOTS = [
   { name: 'variables', path: `/workspace/${ws}/variables` },
   { name: 'integrations', path: `/workspace/${ws}/integrations` },
   { name: 'audit', path: `/workspace/${ws}/audit` },
-  { name: 'workspace-settings', path: `/workspace/${ws}/settings` },
+  /*
+   * Not the page as it opens, but the two cards the chapter beside it is about.
+   *
+   * This page grows a card at a time - General, Agents, Chat, Voice, Quick Chat
+   * - and at 1440x900 what is above the fold is now the first two of those,
+   * neither of which the chat chapter is pointing at. The picture had become a
+   * second copy of the one below it, and Voice, which is the reason this
+   * chapter has a picture at all, was off the bottom of it entirely.
+   *
+   * Stopped at Chat rather than run to the bottom of the page: the Quick Chat
+   * card under Voice names the model by its id, which is whatever the machine
+   * taking these happens to have loaded, and that is the one string on this
+   * page that is not the same on two installations.
+   */
+  {
+    name: 'workspace-settings',
+    path: `/workspace/${ws}/settings`,
+    prepare: async (page) => {
+      await page.locator('h2', { hasText: /^Chat$/ }).evaluate((heading) => {
+        const card = heading.closest('section') ?? heading;
+        // A little above the card, so its own top edge is in the picture
+        // rather than flush against it.
+        window.scrollTo({ top: card.getBoundingClientRect().top + window.scrollY - 24 });
+      });
+      await page.waitForTimeout(400);
+    },
+  },
   /*
    * The same page again, at the card the chapter about agents points at.
    *

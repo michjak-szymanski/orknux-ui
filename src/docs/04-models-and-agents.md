@@ -38,9 +38,13 @@ addresses that API does not have, so it could not work either way round;
 providers stored as it became Custom providers on upgrade, endpoint and key
 untouched.
 
-**Ollama** wants its OpenAI-compatible half, which lives under `/v1`.
-`http://localhost:11434` is the address of Ollama's own API and answers `404`
-to both of the calls made here; the hint in the form says so.
+**Ollama** takes the address the daemon listens on — `http://localhost:11434`,
+which is where an operator naturally points it. Its OpenAI-compatible half lives
+under `/v1` and the type adds that segment itself, so nobody has to know it, and
+an endpoint already written `.../v1` is left as it is rather than doubled. That
+segment used to be yours to remember: pointed at the bare port, a provider that
+was perfectly correct reported *"No model list — check the endpoint"* about an
+endpoint that was right.
 
 The key a provider calls with is one of two things, and they are exclusive. It
 is either the provider's own value, which is what nearly every provider has and
