@@ -1,3 +1,4 @@
+import type { MessageTarget } from './actions';
 import { graphql } from './client';
 import type { PageOf } from './client';
 
@@ -304,6 +305,67 @@ export async function revealWorkspaceConnectionAppToken(id: string): Promise<str
     { id },
   );
   return data.revealWorkspaceConnectionAppToken;
+}
+
+/**
+ * What asking a Slack connection about a typed user or channel came back with.
+ *
+ * Three outcomes and not two, because the server refuses to collapse them: a
+ * name nothing answers to and a question that was never put want opposite
+ * things done about them - a name to correct against a scope to add to the
+ * Slack app - and a screen that painted both as "wrong" would send somebody to
+ * mend a connection that is not broken.
+ */
+export type SlackTargetOutcome = 'FOUND' | 'NOT_FOUND' | 'UNCHECKED';
+
+export interface SlackTargetCheck {
+  outcome: SlackTargetOutcome;
+  /**
+   * One sentence or two, ready to show, never empty.
+   *
+   * Printed as it arrives and never reworded. It is written to carry the whole
+   * of the answer - including, for `UNCHECKED`, which scope to add and why a
+   * token that posts perfectly well can still be unable to look anything up -
+   * and the picker built over the same endpoints will show the same sentence.
+   * A second copy of that wording here would be a second thing to keep true.
+   */
+  message: string;
+  /** Slack's own id, when it was found. */
+  id: string | null;
+  /** What Slack calls it, when it was found: `#general`, `Alice Adams`. */
+  label: string | null;
+}
+
+const SLACK_TARGET_QUERY = `
+  query SlackTarget($connectionId: ID!, $target: MessageTarget!, $name: String!) {
+    slackTarget(connectionId: $connectionId, target: $target, name: $name) {
+      outcome
+      message
+      id
+      label
+    }
+  }
+`;
+
+/**
+ * Whether a Slack connection can see the user or channel typed into a field.
+ *
+ * A question and never a gate: nothing about saving an action asks this, and
+ * `targetName` stays free text whatever it answers. `name` is sent exactly as
+ * it was typed - `#general`, `@alice`, an address, an id pasted out of Slack -
+ * because the server is the one that knows what each of those means.
+ */
+export async function checkSlackTarget(
+  connectionId: string,
+  target: MessageTarget,
+  name: string,
+): Promise<SlackTargetCheck> {
+  const data = await graphql<{ slackTarget: SlackTargetCheck }>(SLACK_TARGET_QUERY, {
+    connectionId,
+    target,
+    name,
+  });
+  return data.slackTarget;
 }
 
 export async function fetchMcpServers(workspaceId: string): Promise<McpServer[]> {

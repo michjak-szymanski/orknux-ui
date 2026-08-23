@@ -1,0 +1,95 @@
+/*
+ * The one part of this dialog's look that is its own.
+ *
+ * Everything else comes from `Dialog.module.css`, which every dialog shares.
+ * What is here is the answer a Slack target field gives back about what has
+ * just been typed into it, and no other form has one.
+ */
+
+/*
+ * What the connection can see, under the field it was typed into.
+ *
+ * In the open rather than behind the (?), for the reason the cron reading under
+ * a schedule is: this is not an explanation of the field, it is the result of
+ * what somebody just put in it. UI-DESIGN-RULES.md keeps a result in the open
+ * beside an error and a status, and hides only the teaching.
+ *
+ * The fixed height is the whole of the layout question. This is rewritten while
+ * somebody types, and the answers are not the same length - "#general is a
+ * channel Alerts can see." is one line, and the sentence about a bot token
+ * carrying no read scope is eight. A box that grew and shrank between them
+ * would push the fields under it up and down under the pointer, which is the
+ * single thing that makes a live answer feel broken. So the room is taken once
+ * - and taken whether or not there is anything to say, so that the first
+ * keystroke does not move the form either - and a long answer scrolls inside
+ * it rather than pushing anything.
+ *
+ * Scrolls rather than clips: the `UNCHECKED` sentence names the scope to add
+ * and says why sending never needed it, and an ellipsis through the middle of
+ * that would be the interface deciding which half of the server's answer
+ * matters.
+ *
+ * Three lines rather than eight, because the room is kept whether or not there
+ * is anything in it: eight would be a hand's width of nothing under every field
+ * nobody has typed into yet, to spare the longest of the three outcomes a
+ * scroll. Three holds a confirmation whole and most of a piece of advice.
+ */
+.targetAnswer {
+  height: 54px;
+  min-height: 54px;
+  line-height: 18px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/*
+ * Found: quiet, and the only one of the three that is a confirmation.
+ *
+ * Green because it is the one outcome that settles anything - Slack named the
+ * thing, and the sentence says which thing.
+ */
+.targetFound {
+  color: var(--color-success);
+}
+
+/*
+ * Not found: advice, and painted as advice.
+ *
+ * Deliberately amber and deliberately not `--color-danger`, which is what this
+ * interface uses for a save that was refused. Nothing is refused here: a
+ * private channel this bot was never invited to and a member who joined a
+ * minute ago look exactly like a typo from where the server is standing, so the
+ * field stays free text, the Save button stays live, and this says what it
+ * knows without pretending to know more.
+ */
+.targetNotFound {
+  color: var(--color-amber);
+}
+
+/*
+ * Unchecked: the question was never put, so nothing here is about what was
+ * typed and nothing here is about the connection being broken.
+ *
+ * It keeps the ordinary hint grey it inherits from `fieldHint` - it has no
+ * colour of its own, because a verdict is exactly what it is not. Named all the
+ * same, so that the outcome the form is drawing is always one class rather than
+ * sometimes a class and sometimes the absence of one.
+ */
+.targetUnchecked {
+  color: var(--color-text-muted);
+}
+
+/*
+ * What Slack calls the thing it found, when its sentence does not already open
+ * with it.
+ *
+ * The label is the half of a `FOUND` that says *which* thing matched - `general`
+ * typed, `#general` found - and today the server's sentence leads with it, so
+ * this draws nothing. It is here for the day a sentence is worded another way:
+ * the confirmation must not quietly stop naming what it confirmed, and saying
+ * it twice in a box three lines tall is not the answer either.
+ */
+.targetLabel {
+  color: var(--color-text-body);
+  font-weight: 600;
+}

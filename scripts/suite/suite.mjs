@@ -1042,6 +1042,34 @@ export const TESTS = [
     needs: ['workspace'],
   },
   {
+    name: 'slack-target-check',
+    what: 'a Slack action saying what the connection can see, without ever refusing what is typed',
+    needs: ['workspace'],
+    /*
+     * Issue #176's checking half. `slackTarget` answers three ways and the
+     * whole risk is drawing them alike: `NOT_FOUND` is advice - a private
+     * channel this bot was never invited to looks the same as a typo from where
+     * the server is standing - and `UNCHECKED` is not about the typing at all.
+     *
+     * The assertions that earn it a place are the ones no screenshot shows. It
+     * measures the colour `NOT_FOUND` is painted against an element painted
+     * `--color-danger` on the same page, and it presses Save over one and reads
+     * the saved action back: the server keeps a test pinning that the field is
+     * free text, and an interface that greyed the button out would contradict
+     * it silently. It holds an answer back and edits the field underneath it,
+     * because a reply about text that has since changed is the same lie as a
+     * reading a keystroke behind. And it measures the top of the Create Action
+     * button across the shortest and longest answers there are.
+     *
+     * One leg runs against the real server with nothing intercepted - a Slack
+     * connection with no bot token is answered in one sentence without anything
+     * having to reach slack.com - and that is what keeps the query, its
+     * variables and the schema honest. The three outcomes themselves are forced
+     * in the browser, because being found needs a Slack workspace to be found
+     * in. Its connections and its action are its own, and swept at the end.
+     */
+  },
+  {
     name: 'connection-share-check',
     what: 'the connection page offers no Share card and no "Export as default"',
     needs: ['workspace'],
