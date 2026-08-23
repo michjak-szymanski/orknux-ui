@@ -778,6 +778,25 @@ export const TESTS = [
      */
   },
   {
+    name: 'run-graph-check',
+    what: "the run's graph stays on the canvas, including while the run is read again",
+    needs: ['fixture'],
+    /*
+     * Issue #235, and the order it forces. The report is that the graph is
+     * sometimes empty on load, which is a race - twice in twenty cold loads
+     * here - so waiting for it would be a check that certifies nothing. What
+     * this drives instead is the thing the race is between: reading the run
+     * again replaced every node object, React Flow dropped every measurement it
+     * had, and an unmeasured node is drawn `visibility: hidden`. That blanked
+     * the whole graph for a frame every single time, and it is the frame after
+     * it that is up to the machine.
+     *
+     * So it watches the canvas every animation frame across a Refresh rather
+     * than reading it once when the dust has settled. Needs one run with steps
+     * in it, which it finds rather than starts.
+     */
+  },
+  {
     name: 'delete-issue-check',
     what: 'the trash asks before it deletes, and the issue is really gone after',
     needs: ['workspace'],

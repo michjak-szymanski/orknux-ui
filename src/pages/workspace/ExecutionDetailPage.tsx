@@ -181,6 +181,27 @@ function OutcomeMark({ outcome }: { outcome: StepOutcome }) {
 const nodeTypes = { stepNode: StepNodeView };
 
 /**
+ * How big a step's box is, said rather than discovered.
+ *
+ * React Flow draws a node it has no measurement for with `visibility: hidden`,
+ * and it throws every measurement away whenever the node objects are replaced -
+ * which this page does on every read of the run, because the objects are built
+ * from the answer. Normally the browser measures them again on the next frame
+ * and nobody sees the gap. When the read lands in the same batch as the
+ * measurement it did land, React never renders the state in between, the effect
+ * that would observe the boxes again never re-runs, and the ResizeObserver has
+ * no size change to report - so the nodes stay hidden for as long as the page is
+ * open. That is the empty graph: four boxes, positioned, framed, and invisible.
+ *
+ * The size was never worth discovering. Every line in the box is one ellipsised
+ * row, so it is exactly this size whatever the run put in it - the stylesheet
+ * fixes the width and four rows fix the height. Given up front, there is no
+ * state in which a node has no size, and no frame in which one is not drawn.
+ */
+const NODE_WIDTH = 200;
+const NODE_HEIGHT = 90;
+
+/**
  * Frames the graph on what is actually drawn.
  *
  * React Flow's own `fitView` does nothing in this canvas. It fits to the sizes it
@@ -334,6 +355,9 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
         id: step.key,
         type: 'stepNode',
         position: { x: step.x, y: step.y },
+        // What the box measures, before anything has measured it. See above.
+        initialWidth: NODE_WIDTH,
+        initialHeight: NODE_HEIGHT,
         selected: step.key === selectedKey,
         data: {
           kind: step.kind,
