@@ -428,6 +428,25 @@ names — whichever was picked, it listened the moment it held an app-level toke
 Connections stored as Socket Mode became Slack connections on upgrade, both
 tokens where they were, and go on listening exactly as they did.
 
+**A Slack action's User and Channel fields are checked as you type them.** Under
+the field, orknux says whether that connection can see what is there — the name
+Slack gave it back when it could, and a note when it could not.
+
+There are three answers rather than two, and the third is the one that catches
+people out. A bot token set up only to post carries no permission to look
+anything up: `users:read` for people, `channels:read` for channels, and sending a
+message needs neither. So a perfectly working connection can be unable to answer
+the question at all, and that reads as **not checked** rather than as **not
+found** — one wants a scope added to the Slack app, the other wants the name
+corrected, and confusing them sends you to the wrong place. The same answer comes
+back for a Slack larger than one lookup reads, because ruling a name out from a
+list that was cut short would be worse than saying nothing.
+
+Nothing here refuses a save. The field stays free text and the action stores
+exactly what you typed, whatever the note says, because a private channel this
+bot was never invited to, a colleague who joined a minute ago and an id pasted
+out of somebody else's message all look identical to a typo from outside.
+
 A Slack connection is asked neither for an address nor for how it authenticates.
 There is one Slack Web API and a bot token is a bearer token, so both are
 already settled and a field offering to change them would be showing you a
