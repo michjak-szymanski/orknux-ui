@@ -166,6 +166,35 @@
   color: var(--color-text-secondary);
 }
 
+/*
+ * The type, drawn so it is not read as one of the labels beside it.
+ *
+ * Same size and shape, filled rather than outlined: an issue has one of these
+ * and any number of those, and a reader scanning a column has to be able to
+ * tell which chip is answering which question without reading the words.
+ */
+.typeTag {
+  padding: var(--space-2) var(--space-8);
+  border-radius: var(--radius-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  background: var(--color-accent-brand-soft);
+  border: 1px solid var(--color-accent-brand);
+  color: var(--color-accent-brand);
+}
+
+/* Short, closed and exhaustive, which is what a select is for. */
+.typeFilter {
+  padding: var(--space-8) var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
 .list {
   display: flex;
   flex-direction: column;

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { matchPath, useLocation, useNavigate } from 'react-router-dom';
 
 import { fetchWorkspaceEntities } from '../api/palette';
-import { goToPages, quickActions } from '../navigation';
+import { goToPages, namesOneThing, quickActions, sectionAt } from '../navigation';
 import type { EntityKind, NamedEntity } from '../api/palette';
 import activityIcon from '../assets/activity.svg';
 import bellIcon from '../assets/bell.svg';
@@ -19,7 +19,8 @@ import plusIcon from '../assets/plus.svg';
 import searchIcon from '../assets/search.svg';
 import bugIcon from '../assets/bug.svg';
 import toolIcon from '../assets/tool.svg';
-import { matches, usePaletteShortcut } from '../session/shortcut';
+import { rememberVisit, useRecentlyOpened } from '../session/recentlyOpened';
+import { matches, useRecentShortcut, usePaletteShortcut } from '../session/shortcut';
 import styles from './CommandPalette.module.css';
 
 export interface CommandPaletteProps {
@@ -96,6 +97,25 @@ const EDIT_PATH: Record<EntityKind, (workspace: string, id: string) => string> =
 };
 
 /**
+ * The addresses worth remembering having opened — issue #246.
+ *
+ * Read off [EDIT_PATH] rather than written out again, because the two questions
+ * have one answer: what the box can put you back on is what the box can find in
+ * the first place. A kind added above is remembered here without anybody
+ * remembering to add it, and a kind whose page moves takes its history with it.
+ *
+ * Filtered by [namesOneThing], which drops the one entry that is not a thing: a
+ * variable is edited on the catalogue screen, so `EDIT_PATH` sends it to a list,
+ * and a list is not somewhere you were.
+ */
+const REMEMBERED: string[] = [
+  ...new Set(Object.values(EDIT_PATH).map((at) => at('/workspace/:workspaceId', ':id'))),
+].filter(namesOneThing);
+
+/** How many recently opened things the resting list makes room for. */
+const RECENT_AT_REST = 3;
+
+/**
  * How well a command answers what was typed.
  *
  * Lower is better, and the order matters more now than it did when this offered
@@ -139,8 +159,12 @@ function rank(one: Command, needle: string): number {
  */
 export function CommandPalette({ workspacePath, showAdmin = true, showChat = true }: CommandPaletteProps) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const shortcut = usePaletteShortcut();
+  const recentKeys = useRecentShortcut();
   const [open, setOpen] = useState(false);
+  /** Opened straight onto Recently opened, rather than onto everything. */
+  const [onRecent, setOnRecent] = useState(false);
   const [text, setText] = useState('');
   const [at, setAt] = useState(0);
   const boxRef = useRef<HTMLDivElement>(null);
@@ -148,6 +172,32 @@ export function CommandPalette({ workspacePath, showAdmin = true, showChat = tru
   const [entities, setEntities] = useState<NamedEntity[]>([]);
   /** The workspace the names in hand belong to, so they are fetched once per workspace. */
   const loaded = useRef<string | null>(null);
+  /**
+   * Which workspace's names have actually arrived.
+   *
+   * The ref above says which one was asked for; this says which one was
+   * answered, and the recent list needs the second: an entry it cannot match to
+   * a name yet is not an entry that has been deleted, and telling somebody
+   * "nothing opened yet" while the request is still in the air is telling them
+   * something untrue.
+   */
+  const [readyFor, setReadyFor] = useState<string | null>(null);
+  const remembered = useRecentlyOpened();
+
+  /** This workspace's address without its trailing slash, or null without one. */
+  const workspace = workspacePath === undefined ? null : workspacePath.replace(/\/$/, '');
+
+  /*
+   * Every address that is one particular thing is noted as it is opened — issue
+   * #246.
+   *
+   * Here rather than in the shell because this is the component that offers the
+   * list, and it is the one that already knows which addresses it can name. The
+   * shell mounts it on every page, so every page is seen.
+   */
+  useEffect(() => {
+    if (REMEMBERED.some((pattern) => matchPath(pattern, pathname) !== null)) rememberVisit(pathname);
+  }, [pathname]);
 
   /*
    * Asked for when the palette is first opened rather than when the shell
@@ -155,8 +205,7 @@ export function CommandPalette({ workspacePath, showAdmin = true, showChat = tru
    * second character is typed the names are already here.
    */
   useEffect(() => {
-    if (!open || workspacePath === undefined) return;
-    const workspace = workspacePath.replace(/\/$/, '');
+    if (!open || workspace === null) return;
     if (loaded.current === workspace) return;
     loaded.current = workspace;
 
@@ -166,19 +215,25 @@ export function CommandPalette({ workspacePath, showAdmin = true, showChat = tru
     let current = true;
     fetchWorkspaceEntities(workspaceId)
       .then((found) => {
-        if (current) setEntities(found);
+        if (current) {
+          setEntities(found);
+          setReadyFor(workspace);
+        }
       })
       .catch(() => {
         // The pages are still worth offering, so a failure here is not one the
         // palette reports; it just has less to offer until it is opened again.
-        if (current) setEntities([]);
+        if (current) {
+          setEntities([]);
+          setReadyFor(workspace);
+        }
         loaded.current = null;
       });
 
     return () => {
       current = false;
     };
-  }, [open, workspacePath]);
+  }, [open, workspace]);
 
   /*
    * The pages, from the one list that also defines the router.
@@ -189,13 +244,8 @@ export function CommandPalette({ workspacePath, showAdmin = true, showChat = tru
    * "how is this found", and this only decides which of them apply right now.
    */
   const commands = useMemo<Command[]>(
-    () =>
-      goToPages({
-        workspacePath: workspacePath === undefined ? null : workspacePath.replace(/\/$/, ''),
-        showAdmin,
-        showChat,
-      }),
-    [workspacePath, showAdmin, showChat],
+    () => goToPages({ workspacePath: workspace, showAdmin, showChat }),
+    [workspace, showAdmin, showChat],
   );
 
   /**
@@ -208,17 +258,16 @@ export function CommandPalette({ workspacePath, showAdmin = true, showChat = tru
    */
   const actions = useMemo<Command[]>(
     () =>
-      quickActions({
-        workspacePath: workspacePath === undefined ? null : workspacePath.replace(/\/$/, ''),
-        showAdmin,
-      }).map((action) => ({ ...action, icon: plusIcon })),
-    [workspacePath, showAdmin],
+      quickActions({ workspacePath: workspace, showAdmin }).map((action) => ({
+        ...action,
+        icon: plusIcon,
+      })),
+    [workspace, showAdmin],
   );
 
   /** The workspace's own things, as somewhere to go. */
   const named = useMemo<Command[]>(() => {
-    if (workspacePath === undefined) return [];
-    const workspace = workspacePath.replace(/\/$/, '');
+    if (workspace === null) return [];
 
     return entities.map((entity) => ({
       label: entity.name,
@@ -230,35 +279,115 @@ export function CommandPalette({ workspacePath, showAdmin = true, showChat = tru
       // Matched, not shown: a model found by the id its provider knows it by.
       also: entity.also,
     }));
-  }, [entities, workspacePath]);
+  }, [entities, workspace]);
 
-  const found = useMemo(() => {
+  /** Whether the names this workspace's recent list has to be read against are here. */
+  const ready = workspace === null || readyFor === workspace;
+
+  /**
+   * What this browser last opened in this workspace, newest first — issue #246.
+   *
+   * Every entry is resolved rather than remembered. The address is what was
+   * stored; the name comes from the list of the workspace's own things that this
+   * box has already fetched, so something renamed since is listed under the name
+   * it has now, and something deleted since simply has no row — no request per
+   * entry, and no link that leads to a page saying the thing is gone.
+   *
+   * Which section it is in is read off the registry the router is built from, so
+   * a page moved between sections moves here too. The mark is the kind's, which
+   * is what the same destination carries when the search finds it by name: one
+   * thing should not be drawn two ways in one list.
+   *
+   * Only this workspace's. An entry from another one could be neither named nor
+   * checked without fetching that workspace's names as well — and an address into
+   * a workspace somebody has since lost sight of is a row that would go nowhere.
+   */
+  const recent = useMemo<Command[]>(() => {
+    if (workspace === null) return [];
+    const byPath = new Map(named.map((one) => [one.to, one]));
+
+    return remembered.flatMap((path) => {
+      if (!path.startsWith(`${workspace}/`)) return [];
+      const one = byPath.get(path);
+      if (one === undefined) return [];
+      return [{ ...one, where: sectionAt(path)?.goTo.label ?? one.where }];
+    });
+  }, [remembered, named, workspace]);
+
+  /*
+   * What an empty list means, rather than the sentence for it.
+   *
+   * The words stay in the markup below where they are one line each and where
+   * `hint-prose-check` can read them off the source; a sentence assembled up
+   * here is a sentence that has left the interface as far as that check is
+   * concerned, and its table of what the interface says would quietly stop
+   * covering this box.
+   */
+  const { found, headings, empty } = useMemo(() => {
     const needle = text.trim().toLowerCase();
+
     /*
-     * Nothing typed offers what can be done, and then where to go. Listing a
-     * workspace's every action before a single letter is a wall, not an answer,
-     * but the handful of things this box *does* have to be seen without being
-     * guessed at: a quick action nobody knows about is not a quick action. They
-     * come first for the same reason, and there are few enough of them that the
-     * pages underneath are still what most of the list is.
+     * Opened by its own keystroke, this box is one question and not two: put me
+     * back where I was. Typing a letter turns it back into the other one, which
+     * is the branch below.
      */
-    if (needle === '') return [...actions, ...commands].slice(0, SHOWN);
+    if (onRecent && needle === '') {
+      return {
+        found: recent,
+        headings: new Map<number, string>(recent.length > 0 ? [[0, 'Recently opened']] : []),
+        empty: ready ? ('unopened' as const) : ('waiting' as const),
+      };
+    }
 
-    return [...actions, ...commands, ...named]
-      .map((one) => ({ one, at: rank(one, needle) }))
-      .filter((scored) => scored.at >= 0)
-      // Stable, so pages keep their place ahead of contents at the same rank.
-      .sort((left, right) => left.at - right.at)
-      .slice(0, SHOWN)
-      .map((scored) => scored.one);
-  }, [actions, commands, named, text]);
+    /*
+     * Nothing typed offers where you have been, then what can be done, and then
+     * where to go. Listing a workspace's every action before a single letter is a
+     * wall, not an answer, but the handful of things this box *does* have to be
+     * seen without being guessed at: a quick action nobody knows about is not a
+     * quick action. Three recent rows above them rather than the whole list, so
+     * the verbs and the pages are still what most of a resting palette is.
+     */
+    if (needle === '') {
+      const head = recent.slice(0, RECENT_AT_REST);
+      const headings = new Map<number, string>();
+      if (head.length > 0) {
+        headings.set(0, 'Recently opened');
+        headings.set(head.length, 'Quick actions');
+      }
+      return {
+        found: [...head, ...actions, ...commands].slice(0, SHOWN),
+        headings,
+        empty: 'unfound' as const,
+      };
+    }
 
-  // The shortcut works wherever the caret is, which is the point of one.
+    return {
+      found: [...actions, ...commands, ...named]
+        .map((one) => ({ one, at: rank(one, needle) }))
+        .filter((scored) => scored.at >= 0)
+        // Stable, so pages keep their place ahead of contents at the same rank.
+        .sort((left, right) => left.at - right.at)
+        .slice(0, SHOWN)
+        .map((scored) => scored.one),
+      headings: new Map<number, string>(),
+      empty: 'unfound' as const,
+    };
+  }, [actions, commands, named, recent, text, onRecent, ready]);
+
+  /*
+   * The shortcuts work wherever the caret is, which is the point of one.
+   *
+   * Two of them, one box. They differ only in which list is under the caret when
+   * it opens: everything, or what was last opened. One listener, because two
+   * would be two things fighting over one keypress.
+   */
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (!matches(event, shortcut)) return;
+      const wantsRecent = matches(event, recentKeys);
+      if (!wantsRecent && !matches(event, shortcut)) return;
       event.preventDefault();
       setOpen(true);
+      setOnRecent(wantsRecent);
       setText('');
       setAt(0);
       inputRef.current?.focus();
@@ -266,14 +395,16 @@ export function CommandPalette({ workspacePath, showAdmin = true, showChat = tru
 
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [shortcut]);
+  }, [shortcut, recentKeys]);
 
   // Clicking anywhere else puts it away, the way a menu goes away.
   useEffect(() => {
     if (!open) return;
 
     function onDown(event: MouseEvent) {
-      if (!boxRef.current?.contains(event.target as Node)) setOpen(false);
+      if (boxRef.current?.contains(event.target as Node)) return;
+      setOpen(false);
+      setOnRecent(false);
     }
 
     window.addEventListener('mousedown', onDown);
@@ -282,6 +413,7 @@ export function CommandPalette({ workspacePath, showAdmin = true, showChat = tru
 
   function go(command: Command) {
     setOpen(false);
+    setOnRecent(false);
     setText('');
     inputRef.current?.blur();
     navigate(command.to);
@@ -290,6 +422,7 @@ export function CommandPalette({ workspacePath, showAdmin = true, showChat = tru
   function onKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
     if (event.key === 'Escape') {
       setOpen(false);
+      setOnRecent(false);
       inputRef.current?.blur();
       return;
     }
@@ -320,6 +453,14 @@ export function CommandPalette({ workspacePath, showAdmin = true, showChat = tru
           value={text}
           placeholder="Quick actions…"
           aria-label="Quick actions"
+          /*
+            Only opens it. Which list it opens onto is decided by whatever put
+            the caret here, and that includes the keystroke below, which focuses
+            the box itself — clearing the mode here meant the shortcut undid its
+            own decision one event later. Every way of closing the box puts the
+            mode back, so a focus that arrives on its own can only be the
+            ordinary one.
+          */
           onFocus={() => setOpen(true)}
           onChange={(event) => {
             setText(event.target.value);
@@ -333,11 +474,30 @@ export function CommandPalette({ workspacePath, showAdmin = true, showChat = tru
 
       {open && (
         <ul className={styles.results} role="listbox">
-          {found.length === 0 && <li className={styles.empty}>Nothing goes by that name.</li>}
+          {found.length === 0 && empty === 'unfound' && (
+            <li className={styles.empty}>Nothing goes by that name.</li>
+          )}
+          {found.length === 0 && empty === 'unopened' && (
+            <li className={styles.empty}>Nothing opened yet.</li>
+          )}
+          {/* The names it has to read the addresses against are still on their way. */}
+          {found.length === 0 && empty === 'waiting' && <li className={styles.empty}>Loading…</li>}
           {/* Two variables in different catalogues share a destination, so the
               name and the position are part of what tells one row from another. */}
           {found.map((one, index) => (
             <li key={`${one.where}:${one.to}:${one.label}:${index}`}>
+              {/*
+                Headings only where the resting list has two kinds of row in it.
+                Presentational rather than a group, because what is under each is
+                the same sort of thing — somewhere to go — and the arrow keys walk
+                straight through them.
+              */}
+              {headings.has(index) && (
+                <p className={styles.heading} role="presentation">
+                  {headings.get(index)}
+                  {index === 0 && <kbd className={styles.headingKeys}>{recentKeys}</kbd>}
+                </p>
+              )}
               <button
                 type="button"
                 role="option"

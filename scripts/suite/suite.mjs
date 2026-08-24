@@ -242,6 +242,23 @@ export const TESTS = [
     needs: ['session'],
   },
   {
+    name: 'library-install-check',
+    what: 'naming a package on the Libraries screen: the field, the pinned version, and the refusal',
+    needs: ['session'],
+    /*
+     * Issue #265. It reaches no registry, and could not be in this suite if it
+     * did: what it drives is the half that is answered before anything is
+     * fetched - a tag instead of a version - so it runs on a machine with no way
+     * out and still measures the sentence somebody is shown.
+     *
+     * It asks the server whether a registry is configured and asserts about
+     * whichever case it finds, rather than assuming the default. Both are real
+     * claims: with one, the field is drawn beside the upload; without one, there
+     * is no field at all, because a control that fails on being used is the one
+     * thing an offline installation should never be shown.
+     */
+  },
+  {
     name: 'hint-prose-check',
     what: 'every block of prose still in the open, and the written reason for each one',
     needs: ['workspace'],
@@ -552,6 +569,29 @@ export const TESTS = [
      * 42% brightness so the stroked icon files stay readable on white, and the
      * manual's forty-six screenshots were going through it too. Nothing failed;
      * the manual was simply illustrated with photographs taken at dusk.
+     */
+  },
+  {
+    name: 'recently-opened-check',
+    what: 'the box in the top bar puts you back on what you last had open, by a keystroke of its own',
+    needs: ['workspace'],
+    /*
+     * Issue #246. It builds two functions of its own and removes them, so it
+     * needs a workspace and nothing that is in one.
+     *
+     * Two of its assertions are the design rather than the screen, and they are
+     * why this is a check and not a screenshot. One renames a function behind
+     * the browser's back and requires the list to show the new name: what is
+     * stored is an address, and a stored *label* would pass every other
+     * assertion here while quietly printing last week's word for ever. The
+     * other deletes one and requires the row to be gone, which is the same
+     * mechanism read the other way - an entry is only drawn while the thing it
+     * names is still in the names the box has already fetched.
+     *
+     * It also stands over `palette-actions-check`'s ground for one assertion:
+     * Create issue has to survive the rows now above it. Two checks asserting
+     * one thing is usually a smell, but the whole risk of this change was
+     * pushing #218's row off the end of a list of ten.
      */
   },
   {
@@ -1037,6 +1077,29 @@ export const TESTS = [
     needs: ['session'],
   },
   {
+    name: 'chat-cost-check',
+    what: 'the switch that puts what an answer cost beside how long it took, off until it is turned on',
+    needs: ['session'],
+    /*
+     * The other half of #227. The number is the server's and `ChatCostTest`
+     * pins it - onto the answer, added up over an agent's rounds, costed at the
+     * model's prices and left uncosted where it has none. What that cannot see
+     * is the control.
+     *
+     * The assertion that earns it a place is the second visit, in a browser
+     * context that has never seen the first: a setting kept in local storage and
+     * a setting kept on `app_user` look identical after a reload, and only a
+     * fresh cookie jar tells them apart. That distinction is the reason this is
+     * a column at all, so it is the one worth a check. Beside it, that the
+     * switch starts off - the issue asked for a setting to turn the cost on -
+     * and that the explanation of which rounds are counted is behind the (?)
+     * rather than printed under the label, measured by the label being drawn on
+     * one line.
+     *
+     * Alice's switch is put back off at the end.
+     */
+  },
+  {
     name: 'loader-check',
     what: 'a slow load shows the mark, a finished one hides it, an empty list says so',
     needs: ['fixture'],
@@ -1096,6 +1159,26 @@ export const TESTS = [
      *
      * How many lines to expect comes from the run rather than the canvas: a
      * canvas drawing none would otherwise agree with itself.
+     */
+  },
+  {
+    name: 'issue-types-check',
+    what: 'a workspace adds a type, the list filters by it and by Untyped, and one in use will not delete',
+    needs: ['workspace'],
+    /*
+     * Issue #241. A type is the one thing about an issue that a label could not
+     * have been: a set cannot say "exactly one", and a label exists only while
+     * an issue carries it, so there was nothing for a settings page to hold.
+     *
+     * The refusal is what this drives in a browser rather than leaving to the
+     * server tests. The whole of it is that an administrator is told before and
+     * after - the count sits on the row, and the sentence that comes back names
+     * how many rather than being rephrased into "Could not delete" on the way
+     * through the page. Both of those are the interface's to get wrong.
+     *
+     * Untyped is asked for as well, and deliberately: it is the state most of a
+     * tracker is in on the day types arrive, and a filter that could only say
+     * "this type" or "never mind" would have left it unaskable.
      */
   },
   {

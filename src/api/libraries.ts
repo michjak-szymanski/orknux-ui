@@ -51,6 +51,8 @@ export interface ScriptLibrary {
   usedBy: Dependant[];
   uploadedAt: string;
   uploadedBy: string;
+  /** Where it was fetched from, or null when somebody uploaded the file. */
+  registry: LibraryRegistry | null;
 }
 
 /** What an imported library is, as far as the importer needs to know. */
@@ -73,6 +75,31 @@ export interface ScriptLibraryImport {
   name: string;
   /** What was imported. Null only if it went away behind the delete guard's back. */
   library: ImportedLibrary | null;
+}
+
+/**
+ * Where a library was fetched from, and what the registry claimed about it.
+ *
+ * Null on a library somebody uploaded, and that is the honest answer rather than
+ * an awkward one: an uploaded file has no provenance this installation can vouch
+ * for, and a row of blanks would read as though it had.
+ */
+export interface LibraryRegistry {
+  /** The npm package, scope and all. */
+  packageName: string;
+  /** Exactly one version. Never a range and never a tag. */
+  version: string;
+  url: string;
+  /** The registry's own hash of the file it served, verified on arrival. */
+  integrity: string;
+  /** Which file inside the package is the one that runs. */
+  entry: string;
+}
+
+/** Whether this installation can fetch a package, and from where. */
+export interface LibraryRegistryStatus {
+  configured: boolean;
+  url: string;
 }
 
 /** A library import as the server's input type takes one, without what it sent back. */
@@ -108,6 +135,7 @@ const LIBRARY_FIELDS = `
   members { name callable }
   usedBy { ${DEPENDANT_FIELDS} }
   uploadedAt uploadedBy
+  registry { packageName version url integrity entry }
 `;
 
 /** Everything loaded into the installation, with what imports it. Administrators. */
@@ -147,6 +175,43 @@ export async function deleteScriptLibrary(id: string): Promise<boolean> {
     { id },
   );
   return data.deleteScriptLibrary;
+}
+
+/**
+ * Whether a package can be named here, and where one would come from.
+ *
+ * Asked before the field is drawn. An installation configured without a registry
+ * offers the upload alone, because a field offering to fetch from a registry that
+ * is not there is a field that fails on being used.
+ */
+export async function fetchLibraryRegistry(): Promise<LibraryRegistryStatus> {
+  const data = await graphql<{ libraryRegistry: LibraryRegistryStatus }>(
+    `query LibraryRegistry { libraryRegistry { configured url } }`,
+  );
+  return data.libraryRegistry;
+}
+
+/**
+ * Fetches an npm package and loads what is inside it as a library.
+ *
+ * `spec` is a package and an exact version — `random@4.1.0`. The fetch happens
+ * once, on the server, into the database: the file it brings back is what is
+ * stored and what runs, exactly as an uploaded one is, and the registry is never
+ * consulted again.
+ *
+ * Every refusal comes back as the server's own sentence — a range instead of a
+ * version, a package that ships no ES module, one whose module imports something,
+ * a file that did not hash to what the registry claimed — and each of those wants
+ * a different thing done about it, so none is shortened on the way through.
+ */
+export async function installScriptLibrary(spec: string): Promise<ScriptLibrary> {
+  const data = await graphql<{ installScriptLibrary: ScriptLibrary }>(
+    `mutation InstallScriptLibrary($spec: String!) {
+      installScriptLibrary(spec: $spec) { ${LIBRARY_FIELDS} }
+    }`,
+    { spec },
+  );
+  return data.installScriptLibrary;
 }
 
 /** What came back from a load: which library it is, and whether it replaced one. */

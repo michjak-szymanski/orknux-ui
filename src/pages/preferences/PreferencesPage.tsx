@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import type { SessionUser } from '../../api/session';
-import { setUserEmail, setUserEmailNotifications } from '../../api/users';
+import { setChatCostShown, setUserEmail, setUserEmailNotifications } from '../../api/users';
 import moonIcon from '../../assets/moon.svg';
 import sunIcon from '../../assets/sun.svg';
 import { AppShell } from '../../components/AppShell';
@@ -19,6 +19,7 @@ import {
   DEFAULT_REDO_SHORTCUT,
   DEFAULT_DUPLICATE_SHORTCUT,
   DEFAULT_PUBLISH_SHORTCUT,
+  DEFAULT_RECENT_SHORTCUT,
   DEFAULT_SAVE_SHORTCUT,
   setFormatShortcut,
   setTurnShortcut,
@@ -28,6 +29,7 @@ import {
   setDuplicateShortcut,
   setPublishShortcut,
   setPaletteShortcut,
+  setRecentShortcut,
   setSaveShortcut,
   usable,
   useFormatShortcut,
@@ -38,6 +40,7 @@ import {
   useDuplicateShortcut,
   usePublishShortcut,
   usePaletteShortcut,
+  useRecentShortcut,
   useSaveShortcut,
 } from '../../session/shortcut';
 import styles from './PreferencesPage.module.css';
@@ -50,14 +53,17 @@ export interface PreferencesPageProps {
 /**
  * What one person has decided about their own interface.
  *
- * Appearance, and the one thing about a person the server keeps for them: the
- * address to write to. The theme is a property of the machine somebody is
- * sitting at and stays in the browser; an address follows them between
- * machines, so it lives on the server. Security keys belong here too, when they
+ * Appearance, and what the server keeps about a person for them: the address to
+ * write to, whether the tracker writes to it, and whether their chats say what
+ * an answer cost. The theme and the shortcuts are properties of the machine
+ * somebody is sitting at and stay in the browser; the rest follows them between
+ * machines, so it lives on the server. Which side a new setting goes on is that
+ * question and not how small it is. Security keys belong here too, when they
  * arrive.
  */
 export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
   const shortcut = usePaletteShortcut();
+  const recent = useRecentShortcut();
   const save = useSaveShortcut();
   const format = useFormatShortcut();
   const turn = useTurnShortcut();
@@ -68,11 +74,21 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
   const publish = usePublishShortcut();
   /**
    * Which shortcut the next keystroke belongs to, or null while none is being
-   * recorded. Not a boolean: there are nine of these now, and they share the one
+   * recorded. Not a boolean: there are ten of these now, and they share the one
    * listener — one per shortcut would fight over the same keypress.
    */
   const [recording, setRecording] = useState<
-    'palette' | 'save' | 'format' | 'turn' | 'add' | 'undo' | 'redo' | 'duplicate' | 'publish' | null
+    | 'palette'
+    | 'recent'
+    | 'save'
+    | 'format'
+    | 'turn'
+    | 'add'
+    | 'undo'
+    | 'redo'
+    | 'duplicate'
+    | 'publish'
+    | null
   >(null);
   const [refused, setRefused] = useState<string | null>(null);
 
@@ -111,6 +127,7 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
       }
 
       if (recording === 'palette') setPaletteShortcut(said);
+      else if (recording === 'recent') setRecentShortcut(said);
       else if (recording === 'save') setSaveShortcut(said);
       else if (recording === 'turn') setTurnShortcut(said);
       else if (recording === 'add') setAddShortcut(said);
@@ -194,6 +211,36 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
       setNotifyError(cause instanceof Error ? cause.message : 'Could not save that.');
     } finally {
       setSavingNotify(false);
+    }
+  }
+
+  /**
+   * Whether a chat prints what an answer cost beside how long it took.
+   *
+   * Seeded from the session and saved on the click, exactly as the switch above
+   * it is, and for the same two reasons. Here rather than on the workspace
+   * because a chat is one person's - nobody else can open the screen this
+   * decides about - and on the server rather than in this browser's storage
+   * because it is not a fact about this machine: somebody watching what they
+   * spend wants it watched wherever they sign in.
+   */
+  const [costShown, setCostShown] = useState(session.chatCostShown === true);
+  const [savingCost, setSavingCost] = useState(false);
+  const [costError, setCostError] = useState<string | null>(null);
+
+  async function chooseCost(next: boolean) {
+    if (savingCost || next === costShown) return;
+    setSavingCost(true);
+    setCostError(null);
+    setCostShown(next);
+    try {
+      const held = await setChatCostShown(next);
+      setCostShown(held.chatCostShown);
+    } catch (cause) {
+      setCostShown(!next);
+      setCostError(cause instanceof Error ? cause.message : 'Could not save that.');
+    } finally {
+      setSavingCost(false);
     }
   }
 
@@ -312,6 +359,65 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
             </div>
           </section>
 
+          <section className={styles.card}>
+            <h2 className={styles.sectionTitle}>Chat</h2>
+
+            <div className={styles.setting}>
+              <span className={styles.labelWithHint}>
+                <span className={styles.settingLabel} id="answer-cost">
+                  Answer Cost
+                </span>
+                <FieldHint label="Answer Cost">
+                  <p>
+                    Puts what an answer cost beside how long it took, on the answer just given.
+                  </p>
+                  <ul>
+                    <li>
+                      It is the <strong>whole turn</strong>, not the last call in it: an agent that
+                      looks something up before it answers has paid for two rounds, and both are
+                      counted.
+                    </li>
+                    <li>
+                      Money needs prices, which are recorded on the model. A model carrying none
+                      shows the tokens and nothing else, because no price is not a price of nothing.
+                    </li>
+                    <li>
+                      Nothing is shown where the provider reported no counts, or for any answer read
+                      back out of the history - what was said is kept, what it cost is not.
+                    </li>
+                  </ul>
+                </FieldHint>
+              </span>
+              <div className={styles.options} role="radiogroup" aria-labelledby="answer-cost">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={costShown}
+                  disabled={savingCost}
+                  className={costShown ? styles.optionCurrent : styles.option}
+                  onClick={() => void chooseCost(true)}
+                >
+                  On
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={!costShown}
+                  disabled={savingCost}
+                  className={costShown ? styles.option : styles.optionCurrent}
+                  onClick={() => void chooseCost(false)}
+                >
+                  Off
+                </button>
+              </div>
+              {costError !== null && (
+                <p className={styles.error} role="alert">
+                  {costError}
+                </p>
+              )}
+            </div>
+          </section>
+
           {/*
             Every setting on this page said what it was for in a paragraph under
             its control, which is the convention the rest of the product moved
@@ -407,7 +513,54 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                   {refused !== null ? (
                     <>
                     <strong>{refused}</strong> would fire while typing. Hold Ctrl, Alt, Shift or Cmd
-                    with it \u2014 or use a function key.
+                    with it — or use a function key.
+                    </>
+                  ) : (
+                    <>Press the combination you want. Escape leaves it as it is.</>
+                  )}
+                </p>
+              )}
+            </div>
+
+            <div className={styles.setting}>
+              <span className={styles.labelWithHint}>
+                <span className={styles.settingLabel} id="recent-shortcut">
+                  Recently Opened Shortcut
+                </span>
+                <FieldHint label="Recently Opened Shortcut">
+                  Opens the same box in the top bar, but onto what you last had open rather than
+                  onto everything. The list is kept in this browser and goes no further; it holds
+                  addresses only, so anything renamed since is listed under the name it has now and
+                  anything deleted is not listed at all.
+                </FieldHint>
+              </span>
+              <div className={styles.options}>
+                <button
+                  type="button"
+                  className={recording === 'recent' ? styles.optionCurrent : styles.option}
+                  onClick={() => {
+                    setRefused(null);
+                    setRecording((held) => (held === 'recent' ? null : 'recent'));
+                  }}
+                >
+                  {recording === 'recent' ? 'Press any keys…' : recent}
+                </button>
+                {recent !== DEFAULT_RECENT_SHORTCUT && recording !== 'recent' && (
+                  <button
+                    type="button"
+                    className={styles.option}
+                    onClick={() => setRecentShortcut(DEFAULT_RECENT_SHORTCUT)}
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+              {recording === 'recent' && (
+                <p className={styles.settingNote}>
+                  {refused !== null ? (
+                    <>
+                    <strong>{refused}</strong> would fire while typing. Hold Ctrl, Alt, Shift or Cmd
+                    with it — or use a function key.
                     </>
                   ) : (
                     <>Press the combination you want. Escape leaves it as it is.</>
@@ -452,7 +605,7 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                   {refused !== null ? (
                     <>
                     <strong>{refused}</strong> would fire while typing. Hold Ctrl, Alt, Shift or Cmd
-                    with it \u2014 or use a function key.
+                    with it — or use a function key.
                     </>
                   ) : (
                     <>Press the combination you want. Escape leaves it as it is.</>

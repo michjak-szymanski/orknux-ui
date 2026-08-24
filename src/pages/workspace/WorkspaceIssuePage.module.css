@@ -275,6 +275,18 @@
   gap: var(--space-6);
 }
 
+/* One of a short, closed list - which is what a select is for. */
+.typeSelect {
+  padding: var(--space-6) var(--space-8);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
 .statusOpen,
 .statusProgress,
 .statusClosed {
