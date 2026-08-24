@@ -123,6 +123,12 @@ workflow, where their input comes from the parameters the node is given.
   the workspace.
 - **Memory** is what a workspace has written down for its agents to read.
 
+Everything this card names is defined somewhere else in the workspace, and every
+one of them carries the mark that opens it: the model beside its picker, and a
+catalog, a tool or an MCP server at the end of its own row. They open in a tab
+of their own, so going to read what something is does not throw away a form that
+has not been saved — and pressing one grants nothing.
+
 ![One agent's settings: its brief, the model it answers on, and the share of
 that model's window its sessions are given](/screens/agent-settings.png)
 
@@ -275,7 +281,10 @@ reported at four characters to the token. A share the model cannot give is
 refused before it is saved, with a sentence naming that model and its numbers,
 because the alternative is finding out on somebody's turn when the provider
 refuses the request. Choose the model first: until there is one, there is no
-window to take a share of and the slider says so by staying where it is.
+window to take a share of and the slider says so by staying where it is. The
+mark beside the picker opens that model's page in a tab of its own, which is
+where its window is recorded and where a refusal about a window that is not
+recorded is put right.
 
 There are three steps, and they are consulted in this order: **the agent's own
 share, then the workspace's default, then the built-in allowance.** An agent

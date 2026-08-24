@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent, ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 
 import { fetchMemoryBudget, updateAgent } from '../api/agents';
 import type { Agent, SessionMemoryBudget } from '../api/agents';
+import { fetchMcpServers } from '../api/integrations';
+import type { McpServer } from '../api/integrations';
 import { fetchMemoryCatalogs } from '../api/memory';
 import type { MemoryCatalog } from '../api/memory';
 import { answers, fetchModels } from '../api/models';
@@ -18,6 +21,7 @@ import { CatalogueNote, useCatalogue } from './Catalogue';
 import type { Catalogue } from './Catalogue';
 import { FieldHint } from './FieldHint';
 import { IconField } from './IconField';
+import { OpenDefinitionIcon } from './OpenDefinitionIcon';
 import { segments } from './searchMatches';
 import own from './AgentForm.module.css';
 
@@ -56,6 +60,17 @@ export interface AgentFormStyles {
   actions: string;
   ghost: string;
   filled: string;
+  /**
+   * A label with something on the far side of the row from it, which here is
+   * always the way out to what the field names.
+   */
+  labelRow: string;
+  /**
+   * The mark on that way out. Both frames already had the class, for the
+   * trigger and condition forms they also hold - this form is the one that
+   * named nothing it pointed at.
+   */
+  jump: string;
   /** Where a frame wants "Saved." said in the actions row rather than by itself. */
   savedNote?: string;
 }
@@ -143,6 +158,14 @@ interface GrantListProps<Item> {
   nameOf: (item: Item) => string;
   /** The muted word at the end of a row: how much it holds, or `off`. */
   metaOf?: (item: Item) => ReactNode;
+  /**
+   * Where the row's own page is, or null where it has none.
+   *
+   * A grant list names things the workspace defines elsewhere, and deciding
+   * whether to tick one means knowing what it is - which until now meant
+   * finding the page by hand. Issue #251.
+   */
+  linkOf?: (item: Item) => string | null;
   /** The names granted now. */
   granted: string[];
   onChange: (granted: string[]) => void;
@@ -187,6 +210,7 @@ function GrantList<Item>({
   keyOf,
   nameOf,
   metaOf,
+  linkOf,
   granted,
   onChange,
 }: GrantListProps<Item>) {
@@ -255,8 +279,17 @@ function GrantList<Item>({
         <div className={own.checkList} data-grant-rows="">
           {shown.map((row) => {
             const meta = metaOf?.(row.item);
+            const opens = linkOf?.(row.item) ?? null;
             return (
-              <label
+              /*
+                A row rather than one big <label>, now that it carries a way out
+                as well as a tick. The label is only the part that toggles: a
+                press on a link inside a label is a press the browser can
+                forward to the checkbox, and going to read what a grant means
+                would grant it - which is the rule the (?) beside Orknux and
+                Shells is already written to.
+              */
+              <div
                 key={keyOf(row.item)}
                 className={row.matches ? own.checkRow : `${own.checkRow} ${own.checkRowKept}`}
                 data-grant-name={row.name}
@@ -268,36 +301,50 @@ function GrantList<Item>({
                 */
                 data-kept={row.matches ? undefined : ''}
               >
-                <input
-                  type="checkbox"
-                  checked={row.ticked}
-                  onChange={(event) =>
-                    onChange(
-                      event.target.checked
-                        ? [...granted, row.name]
-                        : granted.filter((one) => one !== row.name),
-                    )
-                  }
-                />
-                {/*
-                  The typed part picked out, by the matcher the manual's search
-                  already uses - so the two cannot disagree about what matched.
-                */}
-                <span className={own.grantName}>
-                  {segments(row.name, search).map((part, index) =>
-                    part.match ? (
-                      <mark key={index} className={own.grantMark}>
-                        {part.text}
-                      </mark>
-                    ) : (
-                      <span key={index}>{part.text}</span>
-                    ),
-                  )}
-                </span>
+                <label className={own.grantToggle}>
+                  <input
+                    type="checkbox"
+                    checked={row.ticked}
+                    onChange={(event) =>
+                      onChange(
+                        event.target.checked
+                          ? [...granted, row.name]
+                          : granted.filter((one) => one !== row.name),
+                      )
+                    }
+                  />
+                  {/*
+                    The typed part picked out, by the matcher the manual's search
+                    already uses - so the two cannot disagree about what matched.
+                  */}
+                  <span className={own.grantName}>
+                    {segments(row.name, search).map((part, index) =>
+                      part.match ? (
+                        <mark key={index} className={own.grantMark}>
+                          {part.text}
+                        </mark>
+                      ) : (
+                        <span key={index}>{part.text}</span>
+                      ),
+                    )}
+                  </span>
+                </label>
                 {meta !== undefined && meta !== null && meta !== false && (
                   <span className={own.checkCount}>{meta}</span>
                 )}
-              </label>
+                {opens !== null && (
+                  <Link
+                    className={own.grantJump}
+                    to={opens}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={`Opens ${row.name} in a new tab`}
+                    aria-label={`Open ${row.name}`}
+                  >
+                    <OpenDefinitionIcon />
+                  </Link>
+                )}
+              </div>
             );
           })}
           {shown.length === 0 && <p className={own.emptyNote}>Nothing by that name.</p>}
@@ -370,6 +417,25 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
     [workspaceId],
     { skip: noWorkspace },
   );
+  /*
+   * The registered servers, which this form asks for only to know where each
+   * chip's own page is - issue #251.
+   *
+   * A grant is a name somebody typed, not a reference, so a chip may well name
+   * nothing this workspace has: `serverPage` answers null for those rather than
+   * pointing at a page that would say the server does not exist. Nothing else
+   * on the form changes if this list never arrives - the chips are drawn from
+   * the agent, and only the way out is missing.
+   */
+  const serverCatalogue = useCatalogue<McpServer>('MCP servers', () => fetchMcpServers(workspaceId), [workspaceId], {
+    skip: noWorkspace,
+  });
+
+  /** Where a named MCP server is defined, or null when nothing here is called that. */
+  const serverPage = (named: string): string | null => {
+    const found = serverCatalogue.items.find((server) => server.name === named);
+    return found === undefined ? null : `/workspace/${workspaceId}/integrations/servers/${found.id}`;
+  };
 
   /*
    * Only the models are unpacked here. The three grant lists are handed the
@@ -596,9 +662,32 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
         </div>
 
         <div className={styles.field}>
-          <label className={styles.label} htmlFor="agent-model">
-            Model
-          </label>
+          {/*
+            The way out to the model this agent answers on - issue #251, and the
+            page the refusal under the slider below sends people to when a model
+            has no context window recorded.
+
+            Only once one is chosen: "None — this agent cannot run" names
+            nothing to open. A tab of its own, like every other jump on these
+            forms, because this one is reached in the middle of an edit.
+          */}
+          <span className={styles.labelRow}>
+            <label className={styles.label} htmlFor="agent-model">
+              Model
+            </label>
+            {chosenModel !== null && (
+              <Link
+                className={styles.jump}
+                to={`/workspace/${workspaceId}/models/${chosenModel}`}
+                target="_blank"
+                rel="noreferrer"
+                title="Opens the model's settings in a new tab"
+                aria-label="Open the model's settings"
+              >
+                <OpenDefinitionIcon />
+              </Link>
+            )}
+          </span>
           <div className={styles.inputWrapper}>
             <select
               id="agent-model"
@@ -770,6 +859,7 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
           keyOf={(catalog) => catalog.id}
           nameOf={(catalog) => catalog.name}
           metaOf={(catalog) => catalog.memoryCount}
+          linkOf={(catalog) => `/workspace/${workspaceId}/memory?catalog=${catalog.id}`}
           granted={memoryCatalogs}
           onChange={setMemoryCatalogs}
         />
@@ -788,6 +878,7 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
           keyOf={(catalog) => catalog.id}
           nameOf={(catalog) => catalog.name}
           metaOf={(catalog) => catalog.skillCount}
+          linkOf={(catalog) => `/workspace/${workspaceId}/skills?catalog=${catalog.id}`}
           granted={skillCatalogs}
           onChange={setSkillCatalogs}
         />
@@ -805,6 +896,7 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
           keyOf={(tool) => tool.id}
           nameOf={(tool) => tool.name}
           metaOf={(tool) => (tool.enabled ? null : 'off')}
+          linkOf={(tool) => `/workspace/${workspaceId}/tools/${tool.id}`}
           granted={tools}
           onChange={setTools}
         />
@@ -896,20 +988,42 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
             */}
             {mcpServers.length > 0 && (
               <div className={own.serverChips} data-grant-rows="">
-                {mcpServers.map((server) => (
-                  <span key={server} className={own.chip}>
-                    {server}
-                    <button
-                      type="button"
-                      className={own.chipRemove}
-                      onClick={() => setMcpServers((current) => current.filter((named) => named !== server))}
-                      aria-label={`Remove ${server}`}
-                      title={`Remove ${server}`}
-                    >
-                      <img src={xCircleIcon} alt="" width={8} height={8} />
-                    </button>
-                  </span>
-                ))}
+                {mcpServers.map((server) => {
+                  const opens = serverPage(server);
+                  return (
+                    <span key={server} className={own.chip}>
+                      {server}
+                      {/*
+                        The registered server this chip names - issue #251. A grant
+                        is a name somebody typed rather than a reference, so a chip
+                        naming nothing this workspace has gets no mark: a way out
+                        to a page that would answer "no such server" is worse than
+                        none.
+                      */}
+                      {opens !== null && (
+                        <Link
+                          className={own.grantJump}
+                          to={opens}
+                          target="_blank"
+                          rel="noreferrer"
+                          title={`Opens ${server} in a new tab`}
+                          aria-label={`Open ${server}`}
+                        >
+                          <OpenDefinitionIcon />
+                        </Link>
+                      )}
+                      <button
+                        type="button"
+                        className={own.chipRemove}
+                        onClick={() => setMcpServers((current) => current.filter((named) => named !== server))}
+                        aria-label={`Remove ${server}`}
+                        title={`Remove ${server}`}
+                      >
+                        <img src={xCircleIcon} alt="" width={8} height={8} />
+                      </button>
+                    </span>
+                  );
+                })}
               </div>
             )}
 

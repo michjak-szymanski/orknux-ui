@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import type { PageOf } from '../../api/client';
 import type { SessionUser } from '../../api/session';
@@ -57,6 +57,18 @@ const PAGE_SIZE = 50;
 export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageProps) {
   const { workspaceId = '' } = useParams();
   const navigate = useNavigate();
+  /**
+   * Which catalog to open on, where somebody arrived pointed at one.
+   *
+   * A catalog is what an agent is granted, so the grant list on an agent's
+   * settings links to it - and a link that lands on whichever catalog happens
+   * to be first is a link that names one thing and opens another. Issue #251.
+   * It is an opening position and not a filter: choosing another in the column
+   * leaves the address alone, because a catalog somebody is reading is not a
+   * place they asked to be sent.
+   */
+  const [addressed] = useSearchParams();
+  const asked = addressed.get('catalog');
 
   const [catalogs, setCatalogs] = useState<SkillCatalog[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -73,14 +85,15 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
     async (keep?: string) => {
       const found = await fetchSkillCatalogs(workspaceId);
       setCatalogs(found);
-      // Keep the catalog that was open where it still exists; otherwise the
+      // Keep the catalog that was open where it still exists; then the one the
+      // address asked for, which is only ever the first time round; then the
       // first, so the panel is never showing nothing while catalogs exist.
       setSelected((held) => {
-        const wanted = keep ?? held;
+        const wanted = keep ?? held ?? asked;
         return found.find((catalog) => catalog.id === wanted)?.id ?? found[0]?.id ?? null;
       });
     },
-    [workspaceId],
+    [workspaceId, asked],
   );
 
   useEffect(() => {
