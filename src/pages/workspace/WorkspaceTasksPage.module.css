@@ -1,0 +1,335 @@
+.titleHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+}
+
+.title {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--text-2xl);
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+/* ---- Starting one ---- */
+
+.starter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+  padding: var(--space-16);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.labelWithHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.prompt {
+  width: 100%;
+  padding: var(--space-10) var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  resize: vertical;
+}
+
+.prompt:focus {
+  border-color: var(--color-accent-brand);
+  outline: none;
+}
+
+.prompt::placeholder {
+  color: var(--color-text-muted);
+}
+
+.starterRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+.selectWrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.selectWrapper > img {
+  position: absolute;
+  right: var(--space-8);
+  pointer-events: none;
+}
+
+.select,
+.sortSelect {
+  padding: var(--space-6) var(--space-24) var(--space-6) var(--space-8);
+  /* The menu the browser drops takes its colour from the control, so a
+     transparent select opens a white list on a dark page. */
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.select {
+  min-width: 220px;
+}
+
+.select:hover,
+.sortSelect:hover {
+  border-color: var(--color-text-muted);
+}
+
+.start {
+  margin-left: auto;
+  padding: var(--space-8) var(--space-16);
+  background: var(--color-accent-brand);
+  border: 0;
+  border-radius: var(--radius-6);
+  font: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-bg);
+  cursor: pointer;
+}
+
+.start:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.startError {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-danger);
+}
+
+/* ---- Filter ---- */
+
+.filterBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  width: 100%;
+}
+
+.sortRow {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.sortLabel {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+/* ---- The list ---- */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  overflow: clip;
+}
+
+.tableHeader,
+.row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: var(--space-14) var(--space-16);
+}
+
+.tableHeader {
+  border-bottom: 1px solid var(--color-border);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  letter-spacing: 0.55px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.row {
+  border-top: 1px solid var(--color-border);
+  text-decoration: none;
+}
+
+.row:first-of-type {
+  border-top: 0;
+}
+
+.row:hover {
+  background: var(--color-surface-raised);
+}
+
+.colTitle,
+.colWorker,
+.colState,
+.colTurns,
+.colWhen {
+  padding: 0 var(--space-16);
+}
+
+/* The title takes the slack: it is what identifies the row. */
+.colTitle {
+  display: flex;
+  flex: 1 0 0;
+  gap: var(--space-8);
+  align-items: center;
+  min-width: 0;
+}
+
+.colWorker {
+  flex-shrink: 0;
+  width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.colState {
+  flex-shrink: 0;
+  width: 120px;
+}
+
+.colTurns {
+  flex-shrink: 0;
+  width: 90px;
+}
+
+.colWhen {
+  flex-shrink: 0;
+  width: 130px;
+}
+
+.name {
+  overflow: hidden;
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row:hover .name {
+  text-decoration: underline;
+}
+
+/*
+ * The one thing on a list of tasks worth interrupting somebody for.
+ *
+ * A parked task does nothing at all until a person looks at it, so it is marked
+ * on the row itself rather than only by its state, which is a word in a column
+ * somebody has to be reading.
+ */
+.needs {
+  flex: none;
+  padding: 1px var(--space-8);
+  background: var(--color-amber-soft);
+  border-radius: var(--radius-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-amber);
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.state {
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.state[data-state='WAITING'] {
+  color: var(--color-amber);
+}
+
+.state[data-state='RUNNING'] {
+  color: var(--color-accent-brand);
+}
+
+.state[data-state='DONE'] {
+  color: var(--color-success);
+}
+
+.state[data-state='FAILED'] {
+  color: var(--color-danger);
+}
+
+.muted {
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.nothing {
+  color: var(--color-text-muted);
+}
+
+/* ---- Loading, empty, error ---- */
+
+.notice {
+  margin: 0;
+  padding: var(--space-14) var(--space-16);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.noticeError {
+  color: var(--color-danger);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: var(--space-24) var(--space-16);
+  border-top: 1px solid var(--color-border);
+}
+
+.emptyTitle {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
