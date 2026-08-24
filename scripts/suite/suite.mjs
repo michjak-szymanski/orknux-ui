@@ -1196,6 +1196,31 @@ export const TESTS = [
      */
   },
   {
+    name: 'connection-credential-check',
+    what: "each of a connection's credentials choosing its own source, without either touching the other",
+    needs: ['workspace'],
+    /*
+     * Issue #244. #232 gave the choice to a model provider, which has one
+     * secret column - so a choice made once for the card and a choice made once
+     * for the field were the same thing there, and it was impossible to tell
+     * which had been built. A Slack connection holds two credentials, and no
+     * single switch can say that the bot token is a workspace secret while the
+     * app-level token is the connection's own. That sentence is what this
+     * drives, in both directions, reading the result back off the server.
+     *
+     * The dangerous half is the field that was already there. "A token is
+     * stored, leave it alone" is a null secret behind a row of dots, and every
+     * arrangement that lets somebody point the *other* field at a variable has
+     * a way of turning that into "clear the token" - so a save that touches
+     * neither credential is asserted to leave both, and the stored one is
+     * compared byte for byte with what was typed rather than inferred from a
+     * boolean.
+     *
+     * Its own catalog, variables and connection, all under a scratch name,
+     * swept at both ends of the run.
+     */
+  },
+  {
     name: 'slack-connection-check',
     what: 'one Slack connection type, made through the dialog and finished on its page',
     needs: ['workspace'],

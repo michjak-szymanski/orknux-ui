@@ -58,6 +58,12 @@ export interface SecretFieldHandle {
   offersReveal: boolean;
   /** Nothing chosen on a field that says it reads a variable. */
   unchosen: boolean;
+  /**
+   * Whether this field has been given anything at all - something typed, or a
+   * variable chosen. What a form that is *adding* asks before it enables its
+   * button, where "leave the stored one alone" is not one of the answers.
+   */
+  answered: boolean;
   sending: SecretSending;
   choose: (next: SecretSource) => void;
   type: (next: string) => void;
@@ -65,6 +71,8 @@ export interface SecretFieldHandle {
   show: (what: string) => void;
   hide: () => void;
   reset: (found: { stored: boolean; variable: string | null }) => void;
+  /** Back to a fresh, empty field: what a dialog does when it opens again. */
+  clear: () => void;
 }
 
 export interface UseSecretFieldOptions {
@@ -99,6 +107,7 @@ export function useSecretField({ stored: startsStored = false }: UseSecretFieldO
     revealed,
     offersReveal,
     unchosen: source === 'VARIABLE' && variableId === '',
+    answered: source === 'VARIABLE' ? variableId !== '' : (value ?? '') !== '',
     /*
      * One of the two, never both and never neither by accident.
      *
@@ -137,11 +146,32 @@ export function useSecretField({ stored: startsStored = false }: UseSecretFieldO
       setValue(null);
       setShownValue(null);
     },
+    /*
+     * Null only where there is something to leave alone.
+     *
+     * `null` is what tells a save not to touch the stored credential, and a
+     * masked box is how that state is drawn - so a field with nothing behind it
+     * left holding null would show a mask over nothing, and a save that looked
+     * like it had kept something would have kept nothing.
+     */
     reset(found) {
       setSource(found.variable === null ? 'OWN' : 'VARIABLE');
       setVariableId(found.variable ?? '');
       setStored(found.stored);
-      setValue(null);
+      setValue(found.stored ? null : '');
+      setShownValue(null);
+    },
+    /*
+     * Empty rather than null, which is what separates this from `reset`. A
+     * dialog that opens again is a field with nothing behind it, and null there
+     * would mean "leave the stored one alone" about a thing that does not exist
+     * yet - so the box would show a mask over nothing.
+     */
+    clear() {
+      setSource('OWN');
+      setVariableId('');
+      setStored(false);
+      setValue('');
       setShownValue(null);
     },
   };
@@ -226,8 +256,12 @@ export function SecretField({
         <span className={styles.labelWithHint}>
           {/* Pointing at whichever control the field is drawing: one field,
               asked for one way at a time. */}
+          {/* No space unless there is a mark to separate: a label whose text
+              ends in one is a label that does not compare equal to its own
+              name, which is how anything reading names finds it. */}
           <label className={styles.label} htmlFor={reading ? pickerId : id}>
-            {label} {required && <span className={styles.required}>*</span>}
+            {label}
+            {required && <span className={styles.required}> *</span>}
           </label>
           <FieldHint label={label}>
             {hint}

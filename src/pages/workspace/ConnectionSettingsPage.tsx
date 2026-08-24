@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
@@ -22,8 +22,10 @@ import { BackLink } from '../../components/BackLink';
 import { FieldHint } from '../../components/FieldHint';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { Loader } from '../../components/Loader';
-import { RevealToggle } from '../../components/RevealToggle';
+import { SecretField, useSecretField } from '../../components/SecretField';
+import type { SecretFieldHandle, SecretSource } from '../../components/SecretField';
 import { shellUser } from '../../session/user';
+import { useWorkspaceVariables } from './workspaceVariables';
 import styles from './IntegrationSettings.module.css';
 
 export interface ConnectionSettingsPageProps {
@@ -39,9 +41,6 @@ const SECURITY: { value: MailSecurity; label: string; port: number }[] = [
   { value: 'TLS', label: 'TLS (implicit)', port: 465 },
   { value: 'NONE', label: 'None', port: 25 },
 ];
-
-/** Stands in for a stored secret until the caller asks to see it. */
-const MASK = '••••••••••••••••••••••••••••••••';
 
 /**
  * A connection as one workspace holds it. What the admin defines stays locked;
@@ -120,22 +119,18 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
    * the token is what somebody came here to type.
    */
   const [type, setType] = useState<ConnectionType | null>(null);
-  // Null while the stored secret is untouched, so saving leaves it alone.
-  const [secret, setSecret] = useState<string | null>(null);
-  const [appToken, setAppToken] = useState<string | null>(null);
-  const [revealed, setRevealed] = useState(false);
   /**
-   * What was revealed, kept so it can be put back out of sight.
+   * The two credentials, each holding its own answer to the same question.
    *
-   * Hiding is only offered while the field still holds exactly this. Once it
-   * has been typed into, covering it again would either throw the typing away
-   * or leave an edit pending behind a row of dots - and a secret that is
-   * hidden but not what is stored is the worst of the three.
+   * This is the whole of #244. One switch above the card cannot say "the bot
+   * token is a workspace secret and the app-level token is this connection's
+   * own", because that sentence is about two fields; two handles can, and each
+   * carries its own box, its own picker, its own reveal and its own rule about
+   * what an emptied box means.
    */
-  const [revealedValue, setRevealedValue] = useState<string | null>(null);
-  /** The same pair for the other credential a Slack connection holds. */
-  const [appRevealed, setAppRevealed] = useState(false);
-  const [appRevealedValue, setAppRevealedValue] = useState<string | null>(null);
+  const secret = useSecretField();
+  const appToken = useSecretField();
+  const { variables, refresh: refreshVariables } = useWorkspaceVariables(workspaceId);
   const [urlOverride, setUrlOverride] = useState('');
   const [smtpUsername, setSmtpUsername] = useState('');
   const [smtpFrom, setSmtpFrom] = useState('');
@@ -163,12 +158,8 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
         setSmtpFrom(found.smtpFrom ?? '');
         setSmtpSecurity(found.smtpSecurity);
         setSmtpPort(found.smtpPort === null ? '' : String(found.smtpPort));
-        setSecret(null);
-        setAppToken(null);
-        setRevealed(false);
-        setRevealedValue(null);
-        setAppRevealed(false);
-        setAppRevealedValue(null);
+        secret.reset({ stored: found.secretSet, variable: found.secretVariableId });
+        appToken.reset({ stored: found.appTokenSet, variable: found.appTokenVariableId });
       })
       .catch((cause: unknown) => {
         setLoadError(cause instanceof Error ? cause.message : 'Could not load the connection.');
@@ -201,10 +192,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
 
   async function handleRevealAppToken() {
     try {
-      const stored = await revealWorkspaceConnectionAppToken(connectionId);
-      setAppToken(stored ?? '');
-      setAppRevealedValue(stored ?? '');
-      setAppRevealed(true);
+      appToken.show((await revealWorkspaceConnectionAppToken(connectionId)) ?? '');
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : 'Could not reveal the app-level token.');
     }
@@ -212,13 +200,57 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
 
   async function handleReveal() {
     try {
-      const stored = await revealWorkspaceConnectionSecret(connectionId);
-      setSecret(stored ?? '');
-      setRevealedValue(stored ?? '');
-      setRevealed(true);
+      secret.show((await revealWorkspaceConnectionSecret(connectionId)) ?? '');
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : 'Could not reveal the credentials.');
     }
+  }
+
+  /**
+   * The secrets this workspace keeps, and only those.
+   *
+   * A VALUE is read with the variable listing, and a value on a listing is a
+   * value on a screen - so a credential may not be pointed at one, and the
+   * server refuses it. Filtered here rather than left to that refusal: an
+   * option offered and then rejected teaches the rule at the cost of a save.
+   */
+  const secrets = useMemo(
+    () =>
+      variables
+        .filter((variable) => variable.kind === 'SECRET')
+        .map((variable) => ({ value: variable.id, label: variable.name, hint: variable.catalogName })),
+    [variables],
+  );
+
+  /**
+   * The list one field offers, with whatever it already reads kept in it even
+   * before the variables arrive.
+   *
+   * The connection carries each variable's name and catalog precisely so a
+   * screen need not ask twice; without this row the picker would sit on its
+   * placeholder while the list is in flight, which reads as a field that has
+   * chosen nothing.
+   */
+  function offered(held: string | null, called: string | null, catalog: string | null) {
+    if (held === null || called === null) return secrets;
+    if (secrets.some((option) => option.value === held)) return secrets;
+    return [{ value: held, label: called, hint: catalog ?? '' }, ...secrets];
+  }
+
+  /** Which of the two a field is, and what that costs this form. */
+  function chooseSource(field: SecretFieldHandle, next: SecretSource) {
+    field.choose(next);
+    // Reaching for the list is a reason to read it again: somebody about to
+    // point a field at a secret has often just been to Variables to make it.
+    if (next === 'VARIABLE') refreshVariables();
+    setSaveError(null);
+    setSaved(false);
+  }
+
+  /** Cleared as soon as either field is touched, whichever way it was touched. */
+  function touched() {
+    setSaveError(null);
+    setSaved(false);
   }
 
   /**
@@ -248,6 +280,22 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
     event.preventDefault();
     if (saving) return;
 
+    // Said before the save rather than after it: a picker left on its
+    // placeholder is a field that has not been answered.
+    if (secret.unchosen) {
+      setSaveError(`Choose the workspace secret this connection reads its ${secretLabel(kind)} from.`);
+      setSaved(false);
+      return;
+    }
+    if (slack && appToken.unchosen) {
+      setSaveError('Choose the workspace secret this connection reads its app-level token from.');
+      setSaved(false);
+      return;
+    }
+
+    const sendingSecret = secret.sending;
+    const sendingAppToken = appToken.sending;
+
     setSaving(true);
     setSaveError(null);
     setSaved(false);
@@ -260,8 +308,27 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
         // authType on every save, and a Slack connection has nowhere else to
         // point. Sending them would write settings the form no longer shows.
         authType: slack ? undefined : authType,
-        secret: secret ?? undefined,
-        appToken: appToken ?? undefined,
+        /*
+         * Each field's answer, in the names this mutation gives it.
+         *
+         * One of the two, never both and never neither by accident. A variable
+         * sent drops any copy that field held and a value sent drops any
+         * reference, so the exclusivity is the server's rule as much as this
+         * form's - and sending the pair is a BAD_REQUEST rather than something
+         * resolved by precedence. Nothing sent is what says "leave the stored
+         * one alone", which is what a masked box means and is the easiest thing
+         * on this page to break.
+         */
+        ...(sendingSecret === null
+          ? {}
+          : 'variable' in sendingSecret
+            ? { secretVariableId: sendingSecret.variable }
+            : { secret: sendingSecret.value }),
+        ...(sendingAppToken === null
+          ? {}
+          : 'variable' in sendingAppToken
+            ? { appTokenVariableId: sendingAppToken.variable }
+            : { appToken: sendingAppToken.value }),
         urlOverride: slack ? undefined : urlOverride.trim(),
         // Only for a mail connection: sending these for a Slack one would write
         // settings nothing reads and clear what somebody typed elsewhere.
@@ -271,6 +338,8 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
         smtpSecurity: mail ? smtpSecurity : undefined,
       });
       setConnection(updated);
+      secret.reset({ stored: updated.secretSet, variable: updated.secretVariableId });
+      appToken.reset({ stored: updated.appTokenSet, variable: updated.appTokenVariableId });
       setSaved(true);
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : 'Could not save the credentials.');
@@ -541,110 +610,69 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
               </>
             )}
 
-            <div className={styles.field}>
-              <span className={styles.labelWithHint}>
-                <label className={styles.label} htmlFor="connection-secret">
-                  {/*
-                    One column underneath, three names on top of it - because the
-                    column being shared is a fact about the schema and not about
-                    the person filling the field in, who has several tokens in
-                    front of them and needs to be told which one this wants.
-                    Slack hands out three, so Slack gets told; "API Token" stays
-                    for the kinds where the service really does call it that.
-                  */}
-                  {secretLabel(kind)}
-                </label>
-                <FieldHint label={secretLabel(kind)}>{secretHint(kind)}</FieldHint>
-              </span>
-              <div className={styles.inputWrapper}>
-                <input
-                  id="connection-secret"
-                  name="secret"
-                  className={`${styles.input} ${styles.inputMono}`}
-                  type="text"
-                  placeholder={mail ? 'Enter password...' : 'Enter token or key...'}
-                  value={secret ?? (connection?.secretSet === true ? MASK : '')}
-                  onChange={(event) => setSecret(event.target.value)}
-                />
-                {/*
-                  One control, two states. This was a pair of green words -
-                  Reveal, then Hide - which is the same gesture the variables
-                  page offers as an eye, and the owner picked the eye: the field
-                  beside it is already a row of dots, so the row is about the
-                  value rather than about prose, and a word inside a control
-                  holding a secret reads as part of the secret.
+            {/*
+              Each credential, and where it comes from - the choice standing
+              beside that field's own name rather than above the card.
 
-                  Offered only while the field still holds what is stored or
-                  what was revealed; once it has been typed into, it is an edit
-                  like any other and there is nothing to hide.
-                */}
-                {connection?.secretSet === true &&
-                  (secret === null || (revealed && secret === revealedValue)) && (
-                    <RevealToggle
-                      shown={revealed && secret === revealedValue}
-                      label={secretLabel(kind).toLowerCase()}
-                      onToggle={() => {
-                        if (revealed && secret === revealedValue) {
-                          // Back to untouched, not to empty: null is what tells
-                          // the save to leave the stored credential alone.
-                          setSecret(null);
-                          setRevealed(false);
-                          setRevealedValue(null);
-                        } else {
-                          void handleReveal();
-                        }
-                      }}
-                    />
-                  )}
-              </div>
-            </div>
+              A connection is exactly the shape that makes the difference
+              visible. A Slack one holds two credentials, and "this connection
+              uses a workspace secret" cannot mean one of them without meaning
+              the other; two of these can, because each is named after the field
+              it governs and each has one input under it. See
+              components/SecretField.tsx.
+            */}
+            <SecretField
+              id="connection-secret"
+              label={secretLabel(kind)}
+              field={secret}
+              options={offered(
+                connection?.secretVariableId ?? null,
+                connection?.secretVariableName ?? null,
+                connection?.secretVariableCatalog ?? null,
+              )}
+              variablesPath={`/workspace/${workspaceId}/variables`}
+              placeholder={mail ? 'Enter password...' : 'Enter token or key...'}
+              hint={secretHint(kind)}
+              onSource={(next) => chooseSource(secret, next)}
+              onValue={touched}
+              onVariable={touched}
+              onReveal={() => void handleReveal()}
+              broken={
+                connection?.secretVariableMissing === true
+                  ? `The workspace secret this ${secretLabel(kind).toLowerCase()} was read from is gone, so this connection has nothing to authenticate with. Its address is fine. Point this field at another secret, or give it a value of its own.`
+                  : null
+              }
+            />
 
             {slack && (
-              <div className={styles.field}>
-                <span className={styles.labelWithHint}>
-                  <label className={styles.label} htmlFor="connection-app-token">
-                    App-Level Token
-                  </label>
-                  <FieldHint label="App-Level Token">
+              <SecretField
+                id="connection-app-token"
+                label="App-Level Token"
+                field={appToken}
+                options={offered(
+                  connection.appTokenVariableId,
+                  connection.appTokenVariableName,
+                  connection.appTokenVariableCatalog,
+                )}
+                variablesPath={`/workspace/${workspaceId}/variables`}
+                placeholder="xapp-..."
+                hint={
+                  <>
                     Optional, and beginning <code>xapp-</code>. From Basic Information, with
                     connections:write. Given one, orknux listens for mentions and runs the triggers
                     waiting on them; left empty, this connection only sends.
-                  </FieldHint>
-                </span>
-                <div className={styles.inputWrapper}>
-                  <input
-                    id="connection-app-token"
-                    name="appToken"
-                    className={`${styles.input} ${styles.inputMono}`}
-                    type="text"
-                    placeholder="xapp-..."
-                    value={appToken ?? (connection.appTokenSet ? MASK : '')}
-                    onChange={(event) => setAppToken(event.target.value)}
-                  />
-                  {/*
-                    The same pair the bot token beside it has always had. This
-                    one had neither: it could be written and never read back, so
-                    there was no way to check which token was in there, compare
-                    it against Slack, or see whether it had been rotated.
-                  */}
-                  {connection.appTokenSet &&
-                    (appToken === null || (appRevealed && appToken === appRevealedValue)) && (
-                      <RevealToggle
-                        shown={appRevealed && appToken === appRevealedValue}
-                        label="app-level token"
-                        onToggle={() => {
-                          if (appRevealed && appToken === appRevealedValue) {
-                            setAppToken(null);
-                            setAppRevealed(false);
-                            setAppRevealedValue(null);
-                          } else {
-                            void handleRevealAppToken();
-                          }
-                        }}
-                      />
-                    )}
-                </div>
-              </div>
+                  </>
+                }
+                onSource={(next) => chooseSource(appToken, next)}
+                onValue={touched}
+                onVariable={touched}
+                onReveal={() => void handleRevealAppToken()}
+                broken={
+                  connection.appTokenVariableMissing
+                    ? 'The workspace secret this app-level token was read from is gone, so this connection cannot listen. Point this field at another secret, or give it a value of its own.'
+                    : null
+                }
+              />
             )}
 
             {/*

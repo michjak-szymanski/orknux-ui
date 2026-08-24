@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { authTypeLabel, createWorkspaceConnection } from '../api/integrations';
@@ -7,7 +7,9 @@ import chevronDown12Icon from '../assets/chevron-down-12.svg';
 import styles from './Dialog.module.css';
 import { FieldHint } from './FieldHint';
 import { HeaderRowsEditor } from './HeaderRowsEditor';
-import { RevealToggle } from './RevealToggle';
+import { SecretField, useSecretField } from './SecretField';
+import type { SecretFieldHandle, SecretSource } from './SecretField';
+import { useWorkspaceVariables } from '../pages/workspace/workspaceVariables';
 
 export interface WorkspaceConnectionDialogProps {
   open: boolean;
@@ -61,19 +63,20 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
   const [type, setType] = useState<ConnectionType | ''>('');
   const [url, setUrl] = useState('');
   const [authType, setAuthType] = useState<AuthType>('BEARER_TOKEN');
-  const [secret, setSecret] = useState('');
-  const [appToken, setAppToken] = useState('');
   /**
-   * Whether the credentials are readable while they are being typed.
+   * The credentials, one handle each.
    *
-   * A token is pasted more often than typed, and a dotted field hides a paste
-   * that went wrong as effectively as it hides the token. Off by default,
-   * because the dialog can be open on a shared screen.
+   * `secret` is whichever of the three names the chosen kind gives it - the
+   * mail password, Slack's bot token, an HTTP endpoint's token - because it is
+   * one column underneath and only ever one of them is on screen. `appToken` is
+   * a second credential and therefore a second handle, which is the whole of
+   * #244: a Slack connection can read its bot token from a workspace secret
+   * while keeping its app-level token of its own, and one switch above the
+   * dialog could not say that.
    */
-  // One per field: revealing a pasted bot token to check it says nothing about
-  // wanting the app-level token on screen beside it.
-  const [showSecret, setShowSecret] = useState(false);
-  const [showAppToken, setShowAppToken] = useState(false);
+  const secret = useSecretField();
+  const appToken = useSecretField();
+  const { variables, refresh: refreshVariables } = useWorkspaceVariables(workspaceId);
   const [smtpUsername, setSmtpUsername] = useState('');
   const [smtpFrom, setSmtpFrom] = useState('');
   const [smtpSecurity, setSmtpSecurity] = useState<MailSecurity>('STARTTLS');
@@ -91,17 +94,13 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
       setType('');
       setUrl('');
       setAuthType('BEARER_TOKEN');
-      setSecret('');
-      setAppToken('');
+      secret.clear();
+      appToken.clear();
       setSmtpUsername('');
       setSmtpFrom('');
       setSmtpSecurity('STARTTLS');
       setSmtpPort('587');
       setHeaders([{ name: '', value: '' }]);
-      // Opened fresh, and hiding again: the last person to reveal a token did
-      // not decide it for the next one.
-      setShowSecret(false);
-      setShowAppToken(false);
       setError(null);
       setSubmitting(false);
       dialog.showModal();
@@ -115,16 +114,40 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
   const complete =
     name.trim() !== '' &&
     type !== '' &&
+    // A picker left on its placeholder is a field that has not been answered,
+    // whichever of them it is.
+    !secret.unchosen &&
+    !appToken.unchosen &&
     (slack
-      ? // The bot token alone. An app-level token is what makes the connection
-        // listen as well as send, and a connection that only sends is a whole
-        // half of what people use this for.
-        secret.trim() !== ''
+      ? // The bot token alone, from either source. An app-level token is what
+        // makes the connection listen as well as send, and a connection that
+        // only sends is a whole half of what people use this for.
+        secret.answered
       : // A mail server has to be told who it sends as. The login is not
         // required: a relay inside a network often authenticates nobody.
         mail
         ? url.trim() !== '' && smtpFrom.trim() !== ''
         : url.trim() !== '');
+
+  /**
+   * The secrets this workspace keeps, and only those: a VALUE is read with the
+   * variable listing, so the server refuses one as a credential and offering it
+   * here would teach that at the cost of a save.
+   */
+  const secrets = useMemo(
+    () =>
+      variables
+        .filter((variable) => variable.kind === 'SECRET')
+        .map((variable) => ({ value: variable.id, label: variable.name, hint: variable.catalogName })),
+    [variables],
+  );
+
+  /** Which of the two a field is, and reading the list again as it is reached for. */
+  function chooseSource(field: SecretFieldHandle, next: SecretSource) {
+    field.choose(next);
+    if (next === 'VARIABLE') refreshVariables();
+    setError(null);
+  }
 
   /** Changing how the session is secured moves the port with it, until it is typed over. */
   function changeSecurity(next: MailSecurity) {
@@ -139,6 +162,9 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
     event.preventDefault();
     if (!complete || submitting) return;
 
+    const sendingSecret = secret.sending;
+    const sendingAppToken = appToken.sending;
+
     setSubmitting(true);
     setError(null);
     try {
@@ -151,9 +177,22 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
         // mail server has a login of its own and no auth type to choose.
         url: slack ? undefined : url.trim(),
         authType: slack ? undefined : mail ? 'NONE' : authType,
-        secret: secret.trim() || undefined,
+        /*
+         * Each field's answer, in the names this mutation gives it: one of the
+         * two, never both. Sending the pair is refused rather than resolved by
+         * precedence, and sending neither leaves that credential unset.
+         */
+        ...(sendingSecret === null
+          ? {}
+          : 'variable' in sendingSecret
+            ? { secretVariableId: sendingSecret.variable }
+            : { secret: sendingSecret.value.trim() || undefined }),
         // Empty is a real answer here, and it means send-only.
-        appToken: slack ? appToken.trim() || undefined : undefined,
+        ...(!slack || sendingAppToken === null
+          ? {}
+          : 'variable' in sendingAppToken
+            ? { appTokenVariableId: sendingAppToken.variable }
+            : { appToken: sendingAppToken.value.trim() || undefined }),
         smtpPort: mail ? Number(smtpPort) : undefined,
         smtpUsername: mail ? smtpUsername.trim() || undefined : undefined,
         smtpFrom: mail ? smtpFrom.trim() : undefined,
@@ -327,103 +366,71 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
               </div>
 
               {smtpUsername.trim() !== '' && (
-                <div className={styles.field}>
-                  <span className={styles.labelWithHint}>
-                    <label className={styles.label} htmlFor="workspace-connection-password">
-                      Password
-                    </label>
-                    <FieldHint label="Password">
+                <SecretField
+                  id="workspace-connection-password"
+                  label="Password"
+                  field={secret}
+                  options={secrets}
+                  variablesPath={`/workspace/${workspaceId}/variables`}
+                  placeholder="Enter password..."
+                  hint={
+                    <>
                       Stored encrypted, and never shown again in the list. Many providers want an app
                       password here rather than the account&apos;s own.
-                    </FieldHint>
-                  </span>
-                  <div className={styles.inputWrapper}>
-                    <input
-                      id="workspace-connection-password"
-                      name="smtpPassword"
-                      className={styles.input}
-                      type={showSecret ? 'text' : 'password'}
-                      placeholder="Enter password..."
-                      value={secret}
-                      onChange={(event) => setSecret(event.target.value)}
-                    />
-                    <RevealToggle
-                      shown={showSecret}
-                      onToggle={() => setShowSecret((on) => !on)}
-                      label="password"
-                    />
-                  </div>
-                </div>
+                    </>
+                  }
+                  onSource={(next) => chooseSource(secret, next)}
+                  onValue={() => setError(null)}
+                  onVariable={() => setError(null)}
+                />
               )}
             </>
           )}
 
           {slack && (
             <>
-              <div className={styles.field}>
-                <span className={styles.labelWithHint}>
-                  <label className={styles.label} htmlFor="workspace-connection-bot-token">
-                    Bot token
-                  </label>
-                  {/* Named the way the connection's own settings page names it,
-                      and saying which of Slack's several tokens this is: the
-                      whole difficulty is that they all look like tokens. */}
-                  <FieldHint label="Bot token">
+              {/* Two credentials, each answering for itself. This is the pair
+                  that made a card-level switch untenable: "this connection uses
+                  a workspace secret" cannot mean the bot token without also
+                  meaning the app-level token. */}
+              <SecretField
+                id="workspace-connection-bot-token"
+                label="Bot token"
+                field={secret}
+                options={secrets}
+                variablesPath={`/workspace/${workspaceId}/variables`}
+                placeholder="xoxb-..."
+                hint={
+                  <>
                     The <strong>bot</strong> token, beginning <code>xoxb-</code>. In your Slack app
                     under <strong>OAuth &amp; Permissions</strong>, as the Bot User OAuth Token. Not
                     the app-level <code>xapp-</code> token, which has its own field below. It needs
                     app_mentions:read to see mentions, and chat:write to answer them.
-                  </FieldHint>
-                </span>
-                <div className={styles.inputWrapper}>
-                  <input
-                    id="workspace-connection-bot-token"
-                    name="botToken"
-                    className={`${styles.input} ${styles.inputMono}`}
-                    type={showSecret ? 'text' : 'password'}
-                    placeholder="xoxb-..."
-                    value={secret}
-                    onChange={(event) => setSecret(event.target.value)}
-                    required
-                  />
-                  <RevealToggle
-                    shown={showSecret}
-                    onToggle={() => setShowSecret((on) => !on)}
-                    label="bot token"
-                  />
-                </div>
-              </div>
+                  </>
+                }
+                onSource={(next) => chooseSource(secret, next)}
+                onValue={() => setError(null)}
+                onVariable={() => setError(null)}
+              />
 
-              <div className={styles.field}>
-                <span className={styles.labelWithHint}>
-                  <label className={styles.label} htmlFor="workspace-connection-app-token">
-                    App-Level Token
-                  </label>
-                  {/* The same words the connection's own settings page puts
-                      behind its (?), so the dialog and the page agree. */}
-                  <FieldHint label="App-Level Token">
+              <SecretField
+                id="workspace-connection-app-token"
+                label="App-Level Token"
+                field={appToken}
+                options={secrets}
+                variablesPath={`/workspace/${workspaceId}/variables`}
+                placeholder="xapp-... (optional)"
+                hint={
+                  <>
                     Optional, and beginning <code>xapp-</code>. From Basic Information, with
                     connections:write. Giving one is what lets Slack mentions start workflows:
                     without it this connection sends and does not listen.
-                  </FieldHint>
-                </span>
-                <div className={styles.inputWrapper}>
-                  <input
-                    id="workspace-connection-app-token"
-                    name="appToken"
-                    className={`${styles.input} ${styles.inputMono}`}
-                    type={showAppToken ? 'text' : 'password'}
-                    placeholder="xapp-... (optional)"
-                    value={appToken}
-                    onChange={(event) => setAppToken(event.target.value)}
-                  />
-                  <RevealToggle
-                    shown={showAppToken}
-                    onToggle={() => setShowAppToken((on) => !on)}
-                    label="app-level token"
-                  />
-                </div>
-              </div>
+                  </>
+                }
+                onSource={(next) => chooseSource(appToken, next)}
+                onValue={() => setError(null)}
+                onVariable={() => setError(null)}
+              />
             </>
           )}
 
@@ -452,29 +459,19 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
           )}
 
           {!slack && !mail && authType !== 'NONE' && (
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="workspace-connection-secret">
-                Token / Key
-              </label>
-              <div className={styles.inputWrapper}>
-                <input
-                  id="workspace-connection-secret"
-                  name="secret"
-                  className={styles.input}
-                  type={showSecret ? 'text' : 'password'}
-                  placeholder="Enter token or key..."
-                  value={secret}
-                  onChange={(event) => setSecret(event.target.value)}
-                />
-                <RevealToggle
-                  shown={showSecret}
-                  onToggle={() => setShowSecret((on) => !on)}
-                  label="token"
-                />
-              </div>
-            </div>
+            <SecretField
+              id="workspace-connection-secret"
+              label="Token / Key"
+              field={secret}
+              options={secrets}
+              variablesPath={`/workspace/${workspaceId}/variables`}
+              placeholder="Enter token or key..."
+              hint="Whatever the endpoint expects, sent the way the authentication method above says."
+              onSource={(next) => chooseSource(secret, next)}
+              onValue={() => setError(null)}
+              onVariable={() => setError(null)}
+            />
           )}
-
 
           {!slack && !mail && <HeaderRowsEditor headers={headers} onChange={setHeaders} compact />}
         </div>
