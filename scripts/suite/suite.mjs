@@ -978,6 +978,51 @@ export const TESTS = [
     // Builds and deletes a scratch tool of its own, so nothing else is edited.
   },
   {
+    name: 'function-run-check',
+    what: 'running a function from its editor, with parameters, and reading what came back',
+    needs: ['workspace'],
+    /*
+     * Issue #266. Validate answered whether the parser accepts the text, which
+     * is not the question anybody has; this is the one that runs it.
+     *
+     * What earns it a place is the two halves a "does it work" button gets
+     * wrong. The function is granted one of the workspace's variables and the
+     * value of it is asserted in what came back, because a run that resolved no
+     * grant would still *succeed* and answer wrongly - #142 all over again, on a
+     * path that did not exist when #142 was fixed. And the same function is then
+     * edited to throw and run again: a panel that can only report success proves
+     * nothing, and the reason it prints has to be the sentence a workflow's own
+     * run history would have printed.
+     *
+     * It also reads the audit. A test run is the one execution that leaves no
+     * run behind it, so the audit entry is the only thing that can ever say it
+     * happened - and a fix that dropped it would be invisible everywhere else.
+     *
+     * Its own function, variable and catalog, made and deleted over GraphQL, and
+     * swept at the start in case an earlier run was killed before it could.
+     */
+  },
+  {
+    name: 'rename-declaration-check',
+    what: "renaming a function follows into the code, and only where it is the editor's own name to change",
+    needs: ['workspace'],
+    /*
+     * Issue #267. The panel already rewrote the parameter list of the
+     * declaration and left the name of the same declaration behind, so a
+     * renamed function went on declaring the old name for ever.
+     *
+     * Three of its four functions exist to watch the *refusals*, which is where
+     * a fix like this does damage: a declaration somebody named themselves is
+     * never touched, a function that calls itself by name is left whole rather
+     * than half-renamed, and opening one whose name and declaration already
+     * disagree - the state the defect leaves behind on any installation that has
+     * been running - rewrites nothing and opens with nothing to lose. That last
+     * one is issue #175's failure in new clothes, so it is asked of the unsaved
+     * dialog and of the browser's own beforeunload, exactly as #175's check asks
+     * it.
+     */
+  },
+  {
     name: 'import-await-check',
     what: 'the editor says an imported function hands back a promise, and minds a missing await',
     needs: ['nothing'],

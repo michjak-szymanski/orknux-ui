@@ -1048,3 +1048,64 @@
   box-shadow: 0 0 12px rgba(124, 92, 255, 0.55);
   transform: translateY(-1px);
 }
+
+/*
+ * What a test run came to: the verdict, and what came back under it.
+ *
+ * In the panel rather than under the code column, because it is the answer to a
+ * question asked here - the arguments are three fields up - and because the
+ * column is somebody's code, not a place to print things over.
+ */
+.runResult {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+}
+
+.runVerdict,
+.runVerdictBad {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.runVerdict {
+  color: var(--color-success);
+}
+
+.runVerdictBad {
+  color: var(--color-danger);
+}
+
+/*
+ * The answer itself, and it wraps.
+ *
+ * A `pre` that does not is a panel with a horizontal scrollbar under one long
+ * line of JSON, and the interesting part of a failure - what it said - is
+ * usually at the end of the line rather than the start. It is bounded and
+ * scrolls instead: a function may hand back a great deal, and the panel is not
+ * where somebody reads four megabytes of it.
+ */
+.runAnswer {
+  margin: 0;
+  max-height: 220px;
+  overflow: auto;
+  padding: var(--space-8) var(--space-10);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  color: var(--color-text-body);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* The request never got as far as a run. Not the script's failure, and said apart from one. */
+.runFailed {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+}

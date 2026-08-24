@@ -230,6 +230,18 @@ const IN_THE_OPEN = [
     because: 'status',
     why: "how far back this issue's history goes, which is a fact about this issue",
   },
+  {
+    file: 'src/pages/workspace/FunctionEditorPage.tsx',
+    says: 'This runs the saved function, not the column.',
+    because: 'status',
+    why: 'drawn only while the column and the saved function disagree, which is the state the page is in. What Run does at all is behind the (?) on the heading',
+  },
+  {
+    file: 'src/pages/workspace/FunctionEditorPage.tsx',
+    says: 'It was stopped rather than refused; running it again may answer.',
+    because: 'status',
+    why: 'what the run that just finished came to - a budget ran out rather than the code being wrong, so the next press may answer',
+  },
 
   // ---- The state of a list, a panel or a field with nothing in it ---------
   {
