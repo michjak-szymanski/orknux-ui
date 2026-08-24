@@ -805,6 +805,24 @@
 }
 
 /*
+ * The same way out, drawn as the mark instead of as the words "Open
+ * definition". Inline-flex so the box is the icon's box and the New button
+ * beside it stays on its own centre line; hovering brightens the mark, since
+ * an underline under an svg underlines nothing.
+ */
+.definitionJump {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-2);
+  color: var(--color-accent-brand);
+  text-decoration: none;
+}
+
+.definitionJump:hover {
+  color: var(--color-text-primary);
+}
+
+/*
  * The parameters an action node passes. One row per parameter the action has and
  * no others: a node shows what it can actually send, not the union of everything
  * any action might take.

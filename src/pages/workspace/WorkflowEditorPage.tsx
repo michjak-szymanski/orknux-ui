@@ -87,6 +87,7 @@ import { ExportComponentDialog } from '../../components/ComponentTransfer';
 import { ConditionDialog } from '../../components/ConditionDialog';
 import { DefinitionPicker } from '../../components/DefinitionPicker';
 import { FieldHint } from '../../components/FieldHint';
+import { OpenDefinitionIcon } from '../../components/OpenDefinitionIcon';
 import { RetryPolicyFields } from './RetryPolicyFields';
 import { CreateAgentDialog } from '../../components/CreateAgentDialog';
 import { NameDialog } from '../../components/NameDialog';
@@ -3907,14 +3908,16 @@ Change the keystroke in Preferences.`}
                         {draft.agentId !== null && (
                           <Link
                             to={`/workspace/${workspaceId}/agents/${draft.agentId}/settings`}
-                            className={styles.definitionLink}
+                            className={styles.definitionJump}
                             onClick={openingIn(
                               'AGENT',
                               draft.agentId,
                               `/workspace/${workspaceId}/agents/${draft.agentId}/settings`,
                             )}
+                            title="Opens the agent this node points at"
+                            aria-label="Open the agent's definition"
                           >
-                            Open definition
+                            <OpenDefinitionIcon />
                           </Link>
                         )}
                       </span>
@@ -3984,14 +3987,16 @@ Change the keystroke in Preferences.`}
                         {draft.triggerId !== null && (
                           <Link
                             to={`/workspace/${workspaceId}/triggers/${draft.triggerId}`}
-                            className={styles.definitionLink}
+                            className={styles.definitionJump}
                             onClick={openingIn(
                               'TRIGGER',
                               draft.triggerId,
                               `/workspace/${workspaceId}/triggers/${draft.triggerId}`,
                             )}
+                            title="Opens the trigger this node points at"
+                            aria-label="Open the trigger's definition"
                           >
-                            Open definition
+                            <OpenDefinitionIcon />
                           </Link>
                         )}
                       </span>
@@ -4024,14 +4029,16 @@ Change the keystroke in Preferences.`}
                         {draft.actionId !== null && (
                           <Link
                             to={`/workspace/${workspaceId}/actions/${draft.actionId}`}
-                            className={styles.definitionLink}
+                            className={styles.definitionJump}
                             onClick={openingIn(
                               'ACTION',
                               draft.actionId,
                               `/workspace/${workspaceId}/actions/${draft.actionId}`,
                             )}
+                            title="Opens the action this node points at"
+                            aria-label="Open the action's definition"
                           >
-                            Open definition
+                            <OpenDefinitionIcon />
                           </Link>
                         )}
                       </span>
@@ -4075,10 +4082,12 @@ Change the keystroke in Preferences.`}
                         {draft.objectId !== null && (
                           <Link
                             to={`/workspace/${workspaceId}/objects/${draft.objectId}`}
-                            className={styles.definitionLink}
+                            className={styles.definitionJump}
                             onClick={leavingFor(`/workspace/${workspaceId}/objects/${draft.objectId}`)}
+                            title="Opens the object this node points at"
+                            aria-label="Open the object's definition"
                           >
-                            Open definition
+                            <OpenDefinitionIcon />
                           </Link>
                         )}
                       </span>
@@ -4512,14 +4521,16 @@ Change the keystroke in Preferences.`}
                         {draft.conditionId !== null && (
                           <Link
                             to={`/workspace/${workspaceId}/conditions/${draft.conditionId}`}
-                            className={styles.definitionLink}
+                            className={styles.definitionJump}
                             onClick={openingIn(
                               'CONDITION',
                               draft.conditionId,
                               `/workspace/${workspaceId}/conditions/${draft.conditionId}`,
                             )}
+                            title="Opens the condition this node points at"
+                            aria-label="Open the condition's definition"
                           >
-                            Open definition
+                            <OpenDefinitionIcon />
                           </Link>
                         )}
                       </span>
