@@ -102,6 +102,35 @@
   box-shadow: 0 12px 32px rgb(0 0 0 / 35%);
 }
 
+/*
+ * What the rows under it are — "Recently opened", then "Quick actions".
+ *
+ * Drawn only when the resting list holds both, since a heading over the only
+ * group there is says nothing. Quiet and small: it is a divider that happens to
+ * carry a word, not a row somebody is meant to reach for.
+ */
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  margin: var(--space-4) 0 2px;
+  padding: 0 var(--space-8);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* The other way into this list, said beside the name of it. */
+.headingKeys {
+  padding: 1px var(--space-6);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
 .result {
   display: flex;
   align-items: baseline;

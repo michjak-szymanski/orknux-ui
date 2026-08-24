@@ -19,6 +19,7 @@ import {
   DEFAULT_REDO_SHORTCUT,
   DEFAULT_DUPLICATE_SHORTCUT,
   DEFAULT_PUBLISH_SHORTCUT,
+  DEFAULT_RECENT_SHORTCUT,
   DEFAULT_SAVE_SHORTCUT,
   setFormatShortcut,
   setTurnShortcut,
@@ -28,6 +29,7 @@ import {
   setDuplicateShortcut,
   setPublishShortcut,
   setPaletteShortcut,
+  setRecentShortcut,
   setSaveShortcut,
   usable,
   useFormatShortcut,
@@ -38,6 +40,7 @@ import {
   useDuplicateShortcut,
   usePublishShortcut,
   usePaletteShortcut,
+  useRecentShortcut,
   useSaveShortcut,
 } from '../../session/shortcut';
 import styles from './PreferencesPage.module.css';
@@ -58,6 +61,7 @@ export interface PreferencesPageProps {
  */
 export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
   const shortcut = usePaletteShortcut();
+  const recent = useRecentShortcut();
   const save = useSaveShortcut();
   const format = useFormatShortcut();
   const turn = useTurnShortcut();
@@ -68,11 +72,21 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
   const publish = usePublishShortcut();
   /**
    * Which shortcut the next keystroke belongs to, or null while none is being
-   * recorded. Not a boolean: there are nine of these now, and they share the one
+   * recorded. Not a boolean: there are ten of these now, and they share the one
    * listener — one per shortcut would fight over the same keypress.
    */
   const [recording, setRecording] = useState<
-    'palette' | 'save' | 'format' | 'turn' | 'add' | 'undo' | 'redo' | 'duplicate' | 'publish' | null
+    | 'palette'
+    | 'recent'
+    | 'save'
+    | 'format'
+    | 'turn'
+    | 'add'
+    | 'undo'
+    | 'redo'
+    | 'duplicate'
+    | 'publish'
+    | null
   >(null);
   const [refused, setRefused] = useState<string | null>(null);
 
@@ -111,6 +125,7 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
       }
 
       if (recording === 'palette') setPaletteShortcut(said);
+      else if (recording === 'recent') setRecentShortcut(said);
       else if (recording === 'save') setSaveShortcut(said);
       else if (recording === 'turn') setTurnShortcut(said);
       else if (recording === 'add') setAddShortcut(said);
@@ -407,7 +422,54 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                   {refused !== null ? (
                     <>
                     <strong>{refused}</strong> would fire while typing. Hold Ctrl, Alt, Shift or Cmd
-                    with it \u2014 or use a function key.
+                    with it — or use a function key.
+                    </>
+                  ) : (
+                    <>Press the combination you want. Escape leaves it as it is.</>
+                  )}
+                </p>
+              )}
+            </div>
+
+            <div className={styles.setting}>
+              <span className={styles.labelWithHint}>
+                <span className={styles.settingLabel} id="recent-shortcut">
+                  Recently Opened Shortcut
+                </span>
+                <FieldHint label="Recently Opened Shortcut">
+                  Opens the same box in the top bar, but onto what you last had open rather than
+                  onto everything. The list is kept in this browser and goes no further; it holds
+                  addresses only, so anything renamed since is listed under the name it has now and
+                  anything deleted is not listed at all.
+                </FieldHint>
+              </span>
+              <div className={styles.options}>
+                <button
+                  type="button"
+                  className={recording === 'recent' ? styles.optionCurrent : styles.option}
+                  onClick={() => {
+                    setRefused(null);
+                    setRecording((held) => (held === 'recent' ? null : 'recent'));
+                  }}
+                >
+                  {recording === 'recent' ? 'Press any keys…' : recent}
+                </button>
+                {recent !== DEFAULT_RECENT_SHORTCUT && recording !== 'recent' && (
+                  <button
+                    type="button"
+                    className={styles.option}
+                    onClick={() => setRecentShortcut(DEFAULT_RECENT_SHORTCUT)}
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+              {recording === 'recent' && (
+                <p className={styles.settingNote}>
+                  {refused !== null ? (
+                    <>
+                    <strong>{refused}</strong> would fire while typing. Hold Ctrl, Alt, Shift or Cmd
+                    with it — or use a function key.
                     </>
                   ) : (
                     <>Press the combination you want. Escape leaves it as it is.</>
@@ -452,7 +514,7 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                   {refused !== null ? (
                     <>
                     <strong>{refused}</strong> would fire while typing. Hold Ctrl, Alt, Shift or Cmd
-                    with it \u2014 or use a function key.
+                    with it — or use a function key.
                     </>
                   ) : (
                     <>Press the combination you want. Escape leaves it as it is.</>

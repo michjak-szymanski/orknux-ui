@@ -555,6 +555,29 @@ export const TESTS = [
      */
   },
   {
+    name: 'recently-opened-check',
+    what: 'the box in the top bar puts you back on what you last had open, by a keystroke of its own',
+    needs: ['workspace'],
+    /*
+     * Issue #246. It builds two functions of its own and removes them, so it
+     * needs a workspace and nothing that is in one.
+     *
+     * Two of its assertions are the design rather than the screen, and they are
+     * why this is a check and not a screenshot. One renames a function behind
+     * the browser's back and requires the list to show the new name: what is
+     * stored is an address, and a stored *label* would pass every other
+     * assertion here while quietly printing last week's word for ever. The
+     * other deletes one and requires the row to be gone, which is the same
+     * mechanism read the other way - an entry is only drawn while the thing it
+     * names is still in the names the box has already fetched.
+     *
+     * It also stands over `palette-actions-check`'s ground for one assertion:
+     * Create issue has to survive the rows now above it. Two checks asserting
+     * one thing is usually a smell, but the whole risk of this change was
+     * pushing #218's row off the end of a list of ten.
+     */
+  },
+  {
     name: 'palette-actions-check',
     what: 'Quick actions offers things to do as well as places to go, and is named for it',
     needs: ['workspace'],

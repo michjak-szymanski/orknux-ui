@@ -164,6 +164,14 @@ And it holds a few things to *start* — **Create issue**, **Create function**,
 **Create condition** — each marked with a plus, and each offered before you type
 anything at all. Those are what it is named after.
 
+The same box also remembers where you have been. Your Recently Opened shortcut —
+`Ctrl`+`Shift`+`E` unless you have changed it — opens it straight onto the last
+dozen things you had open in this workspace, newest first; the three most recent
+sit above the list whenever you open it any other way. It keeps addresses and
+nothing else, in this browser rather than against your account, so something
+renamed since you last opened it is listed under the name it has now and
+something deleted is not listed at all.
+
 ## Your first workflow
 
 1. Open **Workflows** in a workspace and create one.
