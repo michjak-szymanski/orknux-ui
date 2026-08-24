@@ -159,6 +159,13 @@ model and called if the model decides to. A tool an agent has been granted
 cannot be deleted while the grant is there, for the reason a skill catalog
 cannot.
 
+A tool may **import** the workspace's functions, so logic a workflow already has
+need not be written a second time for an agent to reach it. Its editor has the
+same **Imports** and **Libraries** sections a function's has, and the code calls
+them the same way — `imports.name(…)`. Nothing imports a tool: the direction is
+one way, which is also why a tool cannot be caught in an import loop. It is set
+out under Workflows, in *One function calling another*.
+
 ![The tool editor](/screens/tool-editor.png)
 
 Beside Validate is a **wand**, and it is the quickest way to get help with what

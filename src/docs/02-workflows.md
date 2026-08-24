@@ -209,6 +209,60 @@ granted one by one — naming a secret is not enough to reach it.
 **Objects** are the shapes that travel between nodes: named fields with types,
 which an object node fills in and later nodes read field by field.
 
+## One function calling another
+
+What was written once and pasted into three functions can be written once. A
+function may **import** other functions of the same workspace, and so may a
+tool. The rows are in the **Imports** section of the editor's side panel: pick
+the function, and give it a name for this code to call it by. **Add Import**
+makes another row.
+
+The code reaches them through one frozen object called `imports`, keyed by the
+names you chose:
+
+```ts
+export default function shout(word: string) {
+  return { said: imports.upper(word) };
+}
+```
+
+Nothing about the imported function's own signature moves, because an import is
+not an argument. A script that imports nothing has no `imports` object at all.
+
+**The row holds an id and the name is your own word for it**, and holding those
+two apart is the point of the whole thing. Rename the imported function and the
+calling code is untouched: the row still points at the same function, and the
+call still says what it always said. The reverse follows as well — changing the
+name in the panel does not rewrite your code, so the calls have to be changed
+to match.
+
+A function reached through two others is evaluated once, because its state is
+one state. The editor knows what an import takes and returns, so a call with
+the wrong arguments is underlined before it is saved.
+
+### What is refused, and when
+
+An import that cannot work is refused where somebody is looking rather than
+mid-run, so **the save is what fails**.
+
+- A **loop** is refused, and the refusal names it however many functions it goes
+  round — *That import would make a loop: slug imports title imports slug*. Only
+  functions can be in one; nothing imports a tool.
+- **A plugin's function cannot be imported** — *Weather is provided by a plugin,
+  so it cannot be imported. Point an action at it instead.* It does not run in
+  this sandbox. The picker does not offer one either.
+- **Two imports cannot share a name** — *This already imports something called
+  "upper"* — and a name has to be one JavaScript can be called by.
+- Another workspace's function is answered *There is no function 41 to import*,
+  which is what a function that never existed is answered. A catalogue is the
+  workspace's, and an id from elsewhere is not a thing to be told about.
+- **A function something imports cannot be deleted.** See *Deleting something in
+  use*, below.
+
+Libraries — JavaScript an administrator loads for the whole installation — are
+imported the same way, in a **Libraries** section beside Imports, and arrive in
+the same `imports` object. They are described under Administration.
+
 ## Sending mail
 
 A workflow can send email, and it takes two things: a connection that knows the
@@ -406,6 +460,11 @@ references it, which is new: a header pointing at a variable that is gone would
 send an empty one. The way through is to change what is in the way first: take the node
 off the graph, take the grant off the agent, and the delete goes through. It is
 the rule a variable has always had.
+
+**A function another script imports is refused as well**, and that is a second
+sentence rather than the same one — *slug is imported by title, the tool
+Summarise*. A caller is a node you repoint; an importer is code somebody has to
+open and change. Naming both kinds says which job it is.
 
 **A published copy counts as well as the graph on the canvas.** A workflow
 published months ago goes on calling the definitions its nodes name, so an
