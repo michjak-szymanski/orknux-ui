@@ -5,10 +5,13 @@
  * a decision: a script somebody wrote to measure something once should not
  * become a test in CI because it happened to be saved in this directory.
  *
- * `needs` is the honest part. Every one of these drives the real interface
- * against a real server, and they differ in what has to be in that server's
- * database first:
+ * `needs` is the honest part. Nearly every one of these drives the real
+ * interface against a real server, and they differ in what has to be in that
+ * server's database first:
  *
+ *   'nothing'   - no server at all. A check that reads the source, or asks a
+ *                 compiler about something the interface generates, and would
+ *                 only be putting a browser between itself and the answer.
  *   'session'   - an account and nothing else. Runs anywhere the product runs.
  *   'workspace' - a workspace with the ordinary furniture: functions, tools,
  *                 conditions, connections, issues. The seed builds this.
@@ -973,6 +976,25 @@ export const TESTS = [
     what: "a tool's signature is editable, follows into the code column, and sticks",
     needs: ['workspace'],
     // Builds and deletes a scratch tool of its own, so nothing else is edited.
+  },
+  {
+    name: 'import-await-check',
+    what: 'the editor says an imported function hands back a promise, and minds a missing await',
+    needs: ['nothing'],
+    /*
+     * A function is stored as `export default async function` and an imported
+     * one is called directly, so `imports.f(1)` is a promise - and it was
+     * annotated as the bare return type. `const x = imports.f(1)` compiled
+     * clean and handed somebody a promise at run time, which is worse than
+     * either an error or silence.
+     *
+     * It drives nothing, because there is nothing to drive: `importTypes` is
+     * imports in and a declaration file out, and the thing worth asserting
+     * about that file is what TypeScript makes of it. So it compiles a call
+     * against the declaration twice, with `await` and without, using the
+     * options `components/monaco.ts` gives the editor - the same compiler
+     * reaching the same verdict a hover would have shown.
+     */
   },
   {
     name: 'active-badge-check',
