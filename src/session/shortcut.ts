@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 
 const KEY = 'orknux.paletteShortcut';
+const RECENT_KEY = 'orknux.recentShortcut';
 const SAVE_KEY = 'orknux.saveShortcut';
 const FORMAT_KEY = 'orknux.formatShortcut';
 const TURN_KEY = 'orknux.turnShortcut';
@@ -12,6 +13,25 @@ const PUBLISH_KEY = 'orknux.publishShortcut';
 
 /** What opens the palette when nothing has been chosen. */
 export const DEFAULT_SHORTCUT = 'Ctrl+Q';
+
+/**
+ * What opens the same box straight onto Recently opened when nothing has been
+ * chosen.
+ *
+ * Ctrl+Shift+E, which is what issue #246 asked for. It is the palette's box and
+ * the palette's list — the difference is only which of the two questions somebody
+ * arrived with. Ctrl+Q is "where is the thing called X"; this is "put me back
+ * where I was", which is the more common of the two and the one that should not
+ * cost a search.
+ *
+ * A modifier pair rather than a bare letter, like everything but the two canvas
+ * keys: this is heard wherever the caret is, including in a text box.
+ *
+ * Nothing else here claims it: the editor's keystrokes are Ctrl+S, Ctrl+Z,
+ * Ctrl+Shift+Z, Ctrl+Y, Ctrl+D, Ctrl+Enter, R, A and Escape, the palette is
+ * Ctrl+Q and the formatter Ctrl+Shift+F.
+ */
+export const DEFAULT_RECENT_SHORTCUT = 'Ctrl+Shift+E';
 
 /**
  * What saves an editor when nothing has been chosen.
@@ -158,6 +178,7 @@ function remembered(key: string, fallback: Shortcut) {
 }
 
 const palette = remembered(KEY, DEFAULT_SHORTCUT);
+const recent = remembered(RECENT_KEY, DEFAULT_RECENT_SHORTCUT);
 const saving = remembered(SAVE_KEY, DEFAULT_SAVE_SHORTCUT);
 const formatting = remembered(FORMAT_KEY, DEFAULT_FORMAT_SHORTCUT);
 const turning = remembered(TURN_KEY, DEFAULT_TURN_SHORTCUT);
@@ -177,6 +198,18 @@ export function setPaletteShortcut(next: Shortcut): void {
 
 export function usePaletteShortcut(): Shortcut {
   return palette.use();
+}
+
+export function recentShortcut(): Shortcut {
+  return recent.get();
+}
+
+export function setRecentShortcut(next: Shortcut): void {
+  recent.set(next);
+}
+
+export function useRecentShortcut(): Shortcut {
+  return recent.use();
 }
 
 export function saveShortcut(): Shortcut {

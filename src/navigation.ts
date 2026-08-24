@@ -537,6 +537,24 @@ function pageAt(pathname: string): Page | undefined {
 }
 
 /**
+ * Whether an address is about one particular thing rather than a list of them.
+ *
+ * The registry already draws this line and draws it for a different reason:
+ * `goTo: false` marks a page that cannot be gone to by name because there is no
+ * such thing as "the function editor" without saying which function. That is
+ * exactly the kind of page worth remembering having opened — a list you bounced
+ * through on the way somewhere is not somewhere you were.
+ *
+ * `action` is what separates the two sorts of `goTo: false` page. `.../issues/new`
+ * carries one: it is not a thing, it is where filing one begins, and it is
+ * already offered as a verb.
+ */
+export function namesOneThing(pathname: string): boolean {
+  const page = pageAt(pathname);
+  return page !== undefined && page.goTo === false && page.action === undefined;
+}
+
+/**
  * The nearest page at or above [pathname] that is a section in its own right.
  *
  * Walks up a segment at a time, so the editor of one workflow answers Workflows
