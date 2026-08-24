@@ -71,7 +71,6 @@ export interface TriggerFormStyles {
    * what has just been chosen.
    */
   fieldHint: string;
-  message: string;
   error: string;
   actions: string;
   ghost: string;
@@ -353,14 +352,6 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
   return (
     <>
       <form className={styles.body} onSubmit={handleSubmit}>
-        <p className={styles.message}>
-          {incoming
-            ? 'Set up a trigger to execute your workflow automatically when events occur.'
-            : webhook
-              ? 'Give something outside a URL to call, and say what it has to send.'
-              : 'Set up a trigger to execute your workflow automatically on a schedule.'}
-        </p>
-
         <div className={styles.fields}>
           <div className={styles.field}>
             <label className={styles.label} htmlFor="trigger-name">
@@ -395,7 +386,7 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                 // What a trigger waits for does not change; its settings do.
                 disabled={editing}
               >
-                <option value="INCOMING_CONNECTION">Incoming Connection</option>
+                <option value="INCOMING_CONNECTION">Connection</option>
                 <option value="SCHEDULED">Scheduled</option>
                 <option value="WEBHOOK">Webhook</option>
               </select>

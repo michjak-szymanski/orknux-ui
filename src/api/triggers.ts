@@ -257,9 +257,9 @@ export async function deleteTrigger(id: string): Promise<boolean> {
   return data.deleteTrigger;
 }
 
-/** "INCOMING_CONNECTION" -> "Incoming Connection", as the table shows it. */
+/** "INCOMING_CONNECTION" -> "Connection", as the table shows it. */
 export const TRIGGER_TYPE_LABEL: Record<TriggerType, string> = {
-  INCOMING_CONNECTION: 'Incoming Connection',
+  INCOMING_CONNECTION: 'Connection',
   SCHEDULED: 'Scheduled',
   WEBHOOK: 'Webhook',
 };

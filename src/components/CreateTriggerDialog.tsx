@@ -42,7 +42,6 @@ const FORM_STYLES: TriggerFormStyles = {
   inputCron: styles.inputCron,
   prefix: styles.prefix,
   fieldHint: styles.fieldHint,
-  message: styles.dialogMessage,
   error: styles.error,
   actions: styles.actions,
   ghost: styles.ghost,

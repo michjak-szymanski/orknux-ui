@@ -35,7 +35,6 @@ const FORM_STYLES: TriggerFormStyles = {
   inputCron: styles.inputCron,
   prefix: styles.prefix,
   fieldHint: styles.hint,
-  message: styles.hint,
   error: styles.error,
   actions: styles.cardActions,
   ghost: styles.ghost,
