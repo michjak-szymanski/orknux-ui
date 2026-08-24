@@ -143,11 +143,35 @@ if (grip === null) {
       `(${dragged?.width}x${dragged?.height}, inline ${dragged?.inlineWidth}x${dragged?.inlineHeight})`,
   );
 
-  // And it survives the re-render that a change of selection replaces every node
-  // object for, which is the shape of the wipe without the load behind it.
-  const other = page.locator('.react-flow__node').nth(1);
-  if ((await other.count()) > 0) {
-    await other.click();
+  /*
+   * And it survives the re-render that a change of selection replaces the node
+   * objects for, which is the shape of the wipe without the load behind it.
+   *
+   * Which node is selected next has to be worked out rather than counted to,
+   * because the drag above has just made the first node bigger: on a narrower
+   * fit it now covers its neighbour, and clicking a covered node waits thirty
+   * seconds for a box that is never going to be on top. So the next node is one
+   * whose box is clear of the one that grew, clicked where it is rather than
+   * where the list says it is.
+   */
+  const elsewhere = await page.evaluate(() => {
+    const nodes = [...document.querySelectorAll('.react-flow__node')];
+    if (nodes.length < 2) return null;
+    const grown = nodes[0].getBoundingClientRect();
+    for (const node of nodes.slice(1)) {
+      const box = node.getBoundingClientRect();
+      const covered =
+        box.left < grown.right &&
+        box.right > grown.left &&
+        box.top < grown.bottom &&
+        box.bottom > grown.top;
+      if (!covered) return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+    }
+    return null;
+  });
+
+  if (elsewhere !== null) {
+    await page.mouse.click(elsewhere.x, elsewhere.y);
     await page.waitForTimeout(400);
     const still = await sizeOfFirst();
     record(
@@ -155,6 +179,8 @@ if (grip === null) {
       `and it is still that size after the canvas has been re-rendered around it ` +
         `(${still?.width}x${still?.height})`,
     );
+  } else {
+    console.log('no node was clear of the one that grew, so the re-render was not driven here');
   }
 }
 
