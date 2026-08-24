@@ -1,6 +1,13 @@
 import { graphql } from './client';
 
-/** What kind of thing happened on an issue. */
+/**
+ * What kind of thing happened.
+ *
+ * Nearly all of them are about an issue. The last two are about a task, which is
+ * why the subject on a notification is two nullable pairs rather than one: a
+ * task that stops for permission has to reach somebody, and there is one desk in
+ * this product where an event becomes news.
+ */
 export type NotificationKind =
   | 'OPENED'
   | 'ASSIGNED'
@@ -8,7 +15,9 @@ export type NotificationKind =
   | 'COMMENT'
   | 'MENTIONED'
   | 'OBSERVING'
-  | 'LINKED';
+  | 'LINKED'
+  | 'TASK_WAITING'
+  | 'TASK_FINISHED';
 
 /**
  * One thing that happened, as the bell shows it.
@@ -19,8 +28,12 @@ export type NotificationKind =
 export interface Notification {
   id: string;
   workspaceId: string;
-  issueNumber: number;
-  issueTitle: string;
+  /** The issue it is about, and null when it is about a task. */
+  issueNumber: number | null;
+  issueTitle: string | null;
+  /** The task it is about, and null when it is about an issue. */
+  taskId: string | null;
+  taskTitle: string | null;
   kind: NotificationKind;
   /** Whoever did it; never the person reading, since your own doing is not news. */
   actor: string;
@@ -31,7 +44,7 @@ export interface Notification {
   unread: boolean;
 }
 
-const FIELDS = 'id workspaceId issueNumber issueTitle kind actor says at unread';
+const FIELDS = 'id workspaceId issueNumber issueTitle taskId taskTitle kind actor says at unread';
 
 export async function fetchNotifications(limit?: number): Promise<Notification[]> {
   const data = await graphql<{ myNotifications: Notification[] }>(

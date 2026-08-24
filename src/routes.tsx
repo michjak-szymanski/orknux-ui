@@ -53,6 +53,8 @@ import { WorkspaceModelsPage } from './pages/workspace/WorkspaceModelsPage';
 import { WorkspaceObjectsPage } from './pages/workspace/WorkspaceObjectsPage';
 import { WorkspaceSettingsPage } from './pages/workspace/WorkspaceSettingsPage';
 import { WorkspaceSessionsPage } from './pages/workspace/WorkspaceSessionsPage';
+import { WorkspaceTasksPage } from './pages/workspace/WorkspaceTasksPage';
+import { TaskPage } from './pages/workspace/TaskPage';
 import { WorkspaceSkillsPage } from './pages/workspace/WorkspaceSkillsPage';
 import { WorkspaceToolsPage } from './pages/workspace/WorkspaceToolsPage';
 import { WorkspaceTriggersPage } from './pages/workspace/WorkspaceTriggersPage';
@@ -95,6 +97,7 @@ export const PAGE_ELEMENTS: Record<PagePath, PageElement> = {
   '/workspace/:workspaceId/skills': (session, onSignOut) => <WorkspaceSkillsPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/tools': (session, onSignOut) => <WorkspaceToolsPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/sessions': (session, onSignOut) => <WorkspaceSessionsPage session={session} onSignOut={onSignOut} />,
+  '/workspace/:workspaceId/tasks': (session, onSignOut) => <WorkspaceTasksPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/models': (session, onSignOut) => <WorkspaceModelsPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/integrations': (session, onSignOut) => <WorkspaceIntegrationsPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/audit': (session, onSignOut) => <WorkspaceAuditPage session={session} onSignOut={onSignOut} />,
@@ -121,6 +124,7 @@ export const PAGE_ELEMENTS: Record<PagePath, PageElement> = {
   '/workspace/:workspaceId/memory/new': (session, onSignOut) => <MemoryEditorPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/memory/:memoryId': (session, onSignOut) => <MemoryEditorPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/sessions/:sessionId': (session, onSignOut) => <SessionDetailPage session={session} onSignOut={onSignOut} />,
+  '/workspace/:workspaceId/tasks/:taskId': (session, onSignOut) => <TaskPage session={session} onSignOut={onSignOut} />,
   '/chat': (session, onSignOut) => <ChatPage session={session} onSignOut={onSignOut} />,
   '/chat/:chatId': (session, onSignOut) => <ChatPage session={session} onSignOut={onSignOut} />,
   '/docs': (session, onSignOut) => <DocsPage session={session} onSignOut={onSignOut} />,

@@ -1,0 +1,314 @@
+.titleHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+}
+
+.back {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.back:hover {
+  color: var(--color-text-primary);
+}
+
+.title {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--text-2xl);
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+.state {
+  font-weight: 600;
+}
+
+.state[data-state='WAITING'] {
+  color: var(--color-amber);
+}
+
+.state[data-state='RUNNING'] {
+  color: var(--color-accent-brand);
+}
+
+.state[data-state='DONE'] {
+  color: var(--color-success);
+}
+
+.state[data-state='FAILED'] {
+  color: var(--color-danger);
+}
+
+/* ---- The three panels ---- */
+
+.card,
+.asking {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  overflow: clip;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding: var(--space-12) var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.headRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.labelWithHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.prompt {
+  margin: 0;
+  padding: var(--space-14) var(--space-16);
+  font-size: var(--text-md);
+  color: var(--color-text-body);
+  white-space: pre-wrap;
+}
+
+.stop {
+  padding: var(--space-4) var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.stop:hover {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+/* ---- What it stopped for ---- */
+
+.asking {
+  border-color: var(--color-amber);
+  background: var(--color-amber-soft);
+}
+
+.askingHead {
+  margin: 0;
+  padding: var(--space-14) var(--space-16) 0;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.asks {
+  margin: 0;
+  padding: var(--space-8) var(--space-16) 0;
+  font-size: var(--text-md);
+  color: var(--color-text-body);
+  white-space: pre-wrap;
+}
+
+.askingRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-14) var(--space-16);
+}
+
+.answer {
+  flex: 1 0 0;
+  min-width: 0;
+  padding: var(--space-8) var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+}
+
+.answer:focus {
+  border-color: var(--color-accent-brand);
+  outline: none;
+}
+
+.approve {
+  padding: var(--space-8) var(--space-16);
+  background: var(--color-accent-brand);
+  border: 0;
+  border-radius: var(--radius-6);
+  font: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-bg);
+  cursor: pointer;
+}
+
+.approve:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.refuse {
+  padding: var(--space-8) var(--space-16);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.refuse:hover {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.startError {
+  margin: 0;
+  padding: 0 var(--space-16) var(--space-14);
+  font-size: var(--text-md);
+  color: var(--color-danger);
+}
+
+/* ---- The log ---- */
+
+.line {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-12) var(--space-16);
+  border-top: 1px solid var(--color-border);
+}
+
+.line:first-of-type {
+  border-top: 0;
+}
+
+.lineHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.kind {
+  padding: 1px var(--space-8);
+  background: var(--color-surface-raised);
+  border-radius: var(--radius-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+}
+
+.kind[data-kind='TOOL'] {
+  background: var(--color-cyan-soft);
+  color: var(--color-cyan);
+}
+
+.kind[data-kind='AGENT'] {
+  background: var(--color-accent-brand-soft);
+  color: var(--color-accent-brand);
+}
+
+.kind[data-kind='SYSTEM'] {
+  background: var(--color-amber-soft);
+  color: var(--color-amber);
+}
+
+.actor {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.when {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.said {
+  font-size: var(--text-md);
+  color: var(--color-text-body);
+}
+
+/*
+ * A call's arguments are JSON somebody reads a character at a time, and a long
+ * one must not push the page sideways.
+ */
+.call {
+  margin: 0;
+  max-height: 240px;
+  padding: var(--space-8) var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.grant {
+  margin: 0;
+  padding: var(--space-10) var(--space-16);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-md);
+  color: var(--color-text-body);
+}
+
+.grant:first-of-type {
+  border-top: 0;
+}
+
+.muted {
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+/* ---- Loading and error ---- */
+
+.notice {
+  margin: 0;
+  padding: var(--space-14) var(--space-16);
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.noticeError {
+  color: var(--color-danger);
+}

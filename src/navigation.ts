@@ -187,6 +187,19 @@ export const PAGES = [
     goTo: { label: 'Memory', where: 'AI', icon: memoryIcon },
   },
   {
+    path: '/workspace/:workspaceId/tasks',
+    access: 'signed-in',
+    goTo: {
+      label: 'Tasks',
+      where: 'AI',
+      icon: clipboardListIcon,
+      also: 'agent job work on its own autonomous do this for me',
+    },
+    // The page exists to start one, and starting one is a verb: nobody looks
+    // for "Tasks" when what they want is for something to be done.
+    action: { label: 'Start a task', also: 'new ask an agent get it done' },
+  },
+  {
     path: '/workspace/:workspaceId/sessions',
     access: 'signed-in',
     goTo: {
@@ -320,6 +333,7 @@ export const PAGES = [
   { path: '/workspace/:workspaceId/memory/new', access: 'signed-in', goTo: false },
   { path: '/workspace/:workspaceId/memory/:memoryId', access: 'signed-in', goTo: false },
   { path: '/workspace/:workspaceId/sessions/:sessionId', access: 'signed-in', goTo: false },
+  { path: '/workspace/:workspaceId/tasks/:taskId', access: 'signed-in', goTo: false },
 
   // ---- Chat and the manual ----
   {

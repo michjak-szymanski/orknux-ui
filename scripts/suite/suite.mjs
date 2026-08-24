@@ -1622,6 +1622,48 @@ export const TESTS = [
     // and ORKNUX_BARE_WORKSPACE.
   },
 
+  // --- tasks -----------------------------------------------------------------
+  {
+    name: 'task-check',
+    what: 'a task started from the page, its event log filling up, and it reaching an end that says why',
+    needs: ['workspace'],
+    /*
+     * Issue #229. 'workspace' rather than 'model', and for the reason the
+     * session check gives: it does not need a model that *answers*. The prompt
+     * is written into the task's log before the model is asked and a model that
+     * never answers is recorded as a note saying so, so the log holds lines
+     * either way and the task still reaches a legible ending. Everything about
+     * stopping for permission needs a real judgement and is next door.
+     *
+     * It makes its own model, pointed at `.invalid`, and removes it - a seeded
+     * installation has none, and one that borrows whatever is there says a
+     * different thing on every machine.
+     */
+  },
+  {
+    name: 'task-permission-check',
+    what: 'a task stopping for permission, saying so, ringing the bell, and carrying on once it is granted',
+    needs: ['model'],
+    ci: false,
+    /*
+     * The other half of #229, and it cannot be run unattended: what it asks a
+     * model to prove is a *judgement* - given a job it has no means to do, stop
+     * and ask rather than invent an answer - and only a model that answers makes
+     * one. CI has none.
+     *
+     * Naming the gap rather than hiding it. Run it by hand against a server
+     * whose model answers:
+     *
+     *   node scripts/suite/run.mjs --only task-permission-check
+     *
+     * The assertion that matters most is the last one: the grant lands on the
+     * task and the agent's own `shellAccess` is still false. Approving something
+     * for one afternoon's work must not arm the agent in every chat for ever,
+     * and that is the one thing about this feature that would be a security
+     * defect rather than a bug.
+     */
+  },
+
   // --- held back ------------------------------------------------------------
   {
     name: 'tool-wand-check',
