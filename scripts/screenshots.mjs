@@ -7,30 +7,47 @@
  * product while the paragraph beside it is correct. Regenerating has to be one
  * command or it never happens.
  *
- *   docker exec orknux-ui-dev-1 npx playwright install --with-deps chromium
- *   docker exec -e ORKNUX_DEMO_ENDPOINT=http://a.model.that/answers \
- *     orknux-ui-dev-1 node scripts/seed-demo.mjs
- *   docker exec orknux-ui-dev-1 node scripts/screenshots.mjs
+ * That command is in the other repository, because most of what it does is not
+ * a browser. From PowerShell, in a checkout of orknux-server:
  *
- * The first line is needed once per container: the browser and the system
- * libraries it needs live in the container's own filesystem, not in the
- * node_modules volume, so recreating the container takes them with it.
+ *   .\scripts\screenshots.ps1 -Endpoint http://a.model.that/answers
  *
- * The endpoint on the second matters more than it looks. Half a dozen of these
- * pictures are of a product talking to a model - a chat with an answer in it, a
- * run with an agent step, a provider with a green light - and pointed at
- * nothing they are pictures of a 404. Whatever it is pointed at, its address is
- * replaced in every image before the shutter: see `hideEverywhere` below, which
- * does the same for the address of whoever is taking the pictures.
+ * It builds the jar, stands an installation of its own up around it, seeds it,
+ * runs this inside its interface container, and takes it all down again. Read
+ * the top of that script before running either half by hand: the traps that
+ * cost the most are not visible from here — the browser's origin has to be the
+ * one `ORKNUX_ALLOWED_ORIGINS` names, or every call from the page answers 403
+ * while curl is served perfectly, and the jar has to be built from the tree
+ * being photographed, because Monitoring prints the version it was built at.
+ *
+ * By hand, against an installation that script has already stood up:
+ *
+ *   docker compose -f scripts/screens-compose.yaml exec ui node scripts/seed-demo.mjs
+ *   docker compose -f scripts/screens-compose.yaml exec ui node scripts/screenshots.mjs
+ *
+ * There is no playwright install line any more: the browser and the system
+ * libraries it needs live in the container's own filesystem rather than in the
+ * node_modules volume, so a recreated container loses them — which is why that
+ * container's own command puts them back rather than a person remembering to.
+ *
+ * The endpoint matters more than it looks. Half a dozen of these pictures are
+ * of a product talking to a model - a chat with an answer in it, a run with an
+ * agent step, a provider with a green light - and pointed at nothing they are
+ * pictures of a 404. It also has to be a model with tool support, or the agent
+ * that answers by calling something answers by apologising. Whatever it is
+ * pointed at, its address is replaced in every image before the shutter: see
+ * `hideEverywhere` below, which does the same for the address of whoever is
+ * taking the pictures.
  *
  * The seed comes first and is not optional. These pictures used to be taken of
  * whatever was in the developer's database, which is how the manual ended up
  * showing a workflow called `dgd`; now the content is built on purpose and this
  * finds it by name.
  *
- * The credentials are the ones seeded into the development directory in
- * orknux-server's `docker/ldap/bootstrap.ldif` — they are in that repository in
- * plain text on purpose, and they are of no use anywhere else.
+ * The credentials are the ones seeded into the directory in orknux-server's
+ * `docker/ldap/bootstrap.ldif` — the same file the installation being
+ * photographed is seeded from. They are in that repository in plain text on
+ * purpose, and they are of no use anywhere else.
  */
 import { chromium } from 'playwright';
 import { mkdir } from 'node:fs/promises';

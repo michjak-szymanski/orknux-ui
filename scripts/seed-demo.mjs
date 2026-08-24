@@ -7,11 +7,17 @@
  * can photograph content that is not there — so the content is made here, and
  * the capture points at it.
  *
- * It builds a *second* workspace and never touches the first: the database this
- * runs against is somebody's working data, and a documentation script has no
- * business editing it.
+ * It builds a *second* workspace and never touches the first, because for a
+ * long time the database this ran against was somebody's working data and a
+ * documentation script has no business editing it. That is no longer where it
+ * is pointed - orknux-server's `scripts/screenshots.ps1` stands an installation
+ * up for this and throws it away afterwards, and runs this inside it:
  *
- *   docker exec orknux-ui-dev-1 node scripts/seed-demo.mjs
+ *   docker compose -f scripts/screens-compose.yaml exec ui node scripts/seed-demo.mjs
+ *
+ * The guard stays anyway. What it protects against is somebody pointing
+ * ORKNUX_UI_URL at their own server, which is one environment variable away and
+ * exactly how this nearly took a tracker with seventy-five issues in it.
  *
  * Idempotent by demolition: a workspace of this name is deleted and rebuilt, so
  * a second run leaves one clean copy rather than two half-populated ones.
