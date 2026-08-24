@@ -346,6 +346,121 @@ What a plugin can reach is exactly that list and nothing else. There is no way
 for one to ask the server for anything it was not given, which is why declaring
 parameters is also the answer to "what data does this plugin see?".
 
+### What a plugin may use
+
+That answers what data a plugin sees. The other question is what *language* it
+gets, and a plugin says so itself. A bundle written for a browser or for Node
+expects builtins this sandbox does not switch on, so a plugin declares which of
+them it needs — and the list it may choose from is five names long:
+
+- `CONSOLE` — write to the server's log
+- `INTL` — format dates and numbers for a locale
+- `TEXT_ENCODING` — convert between text and bytes
+- `PERFORMANCE` — measure elapsed time
+- `TEMPORAL` — use the Temporal date and time API
+
+That the list is closed is the point of it. **There is no name for reading a
+file, opening a socket or reaching a Java class**, so a plugin cannot ask for
+one and nobody can grant one by clicking through a dialog. A plugin naming
+something that is not on the list is refused with the list, rather than loaded
+having quietly been given less than it asked for.
+
+Loading a plugin that asks for anything stops and shows what it asks for, a row
+per name saying what that name allows, over **Allow and Load** and **Cancel**.
+Agreement is by name rather than by yes: the load carries those names back, and
+one carrying anything other than exactly what the plugin declares is refused the
+same way. "Yes" would be an agreement to whatever the file happened to ask for,
+including whatever it has started asking for since anybody last looked.
+
+Only what was accepted is turned on, and only for the one plugin. The sandbox is
+built for each call from that plugin's own row, so a plugin that asked for
+nothing gets nothing, sitting beside one that asked for everything.
+
+**A plugin edited to need one more is refused with the new list, and the one
+already loaded goes on with exactly what it had.** An acceptance names the
+permissions it was given for rather than being a yes to the plugin, so an
+escalation cannot arrive under an answer somebody gave last month. A plugin that
+stops asking for something stops being granted it, without anybody having to
+remember to take it away.
+
+What was accepted, who accepted it and when are on the row here — *allows INTL ·
+TEXT_ENCODING · accepted 3 days ago by alice*. A decision about what somebody
+else's code may do that lives only in a dialog is one nobody can audit.
+
+**A bundle whose module body needs a permission cannot be loaded at all**, and
+only what its `run` does may need them. Reading the file is the run that finds
+out what the plugin is asking for, so it is made with nothing relaxed, always,
+and there is no way to say otherwise: running it under permissions would mean
+granting something in order to discover whether to grant it. A bundle that
+touches `Intl` at its top level is refused as unreadable — *That file is not a
+usable plugin: ReferenceError: Intl is not defined* — rather than as something
+to be granted. Ask for what `run` needs, not for what loading needs; the starter
+this server generates says as much beside the declaration.
+
+### console and Intl are no longer free
+
+**This is the one thing an installation upgrading to this version has to look
+at.** GraalJS switches `console` and `Intl` on by default, and the plugin
+sandbox now switches both off explicitly, because a default that happened to be
+on is not something anybody accepted.
+
+Every plugin loaded before this asks for nothing, so it is granted nothing. One
+that called `console.log` or reached for `Intl` goes on being listed here and
+then fails when a run reaches it. The way through is to load it again declaring
+`CONSOLE` or `INTL` and accept that — no plugin is migrated into a grant nobody
+gave.
+
+Workspace functions and tools are not affected. They run in a different sandbox,
+which has never taken a permission and has not changed.
+
+## Libraries
+
+JavaScript loaded once for the whole installation, which any workspace's
+function or tool may import. A plugin brings functions of its own for a workflow
+to call; a library brings code for a function to be written with — a date
+handler, a parser, something too large to paste into every script that needs it.
+
+An administrator loads one here, and it must be **a single self-contained
+module with a default export** — a `.js` or `.mjs` file, up to 4 MB. A
+TypeScript file is compiled in the browser before it is sent. The file is
+evaluated once as it arrives, in the same sandbox it will run in, and what its
+default export turned out to hold is what is stored: which names it offers and
+which of those can be called. That is all that is claimed about it, because
+nothing in a bundle says what its arguments are. A file that is not a module
+with a default export is refused there and then — *That file could not be loaded
+as a library: it has no default export to import* — rather than at the moment a
+workflow needed it.
+
+A library's **key is its filename without the extension**, and it is its
+identity: loading a file with a key already in the list replaces it in place, so
+nothing importing it is repointed. Each row says what it exports, how large it
+is, when it was loaded and by whom.
+
+Under the key is the line the plugins page has no need of: **what imports this**
+— every function and every tool that does, named with the workspace it lives in.
+That line is the reason a library belongs to the installation rather than to a
+workspace. What code is running inside this installation is a question with one
+answer, and a library each workspace loaded for itself would give it as many
+answers as there are workspaces, with the useful half of it scattered across
+screens no administrator can see. It is also what refuses the removal — *That
+library is imported by slugify in Backend* — so nothing goes out from under a
+script that was using it.
+
+A function or a tool imports one by id, under a local name of its own, in the
+**Libraries** section of its editor. The name is seeded from the key the first
+time a row points at one and is never rewritten afterwards, because by then the
+code already says `imports.dateFns`. It arrives in the same frozen `imports`
+object an imported function does; from inside a script there is no difference
+worth spelling out. See *One function calling another*, under Workflows.
+
+**A plugin imports none of this.** It embeds what it needs, because a plugin is
+meant to be portable between installations and one assuming a library had been
+loaded here would not be. For the same reason a library does not travel inside a
+component file: the file names the library by key, and an import that needs one
+this installation has not loaded is refused on the way in — *No library called
+date-fns is loaded in this installation. Load it first, then import again.*
+Importing a function should not be a thing that installs software.
+
 ## Networking
 
 ![Proxy rules, in the order they are read, and the box that asks which one answers a given address](/screens/networking.png)
