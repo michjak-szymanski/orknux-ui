@@ -20,6 +20,17 @@
 }
 
 /*
+ * The Enabled switch, and it belongs here for the same reason the row above
+ * does: it is the one control on this form that no frame draws a box for, so
+ * neither frame has a name for it to hand in. The shared icon button is what
+ * the toggle in the trigger list is, which is the point - the same switch
+ * should not read as two different controls depending on which screen it is on.
+ */
+.toggle {
+  composes: iconButton from '../styles/iconButton.module.css';
+}
+
+/*
  * The reading of the schedule, under the schedule.
  *
  * The frame paints it: it carries `fieldHint` too, so it is the same grey and

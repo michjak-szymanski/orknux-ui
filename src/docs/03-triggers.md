@@ -68,6 +68,20 @@ The firing still happens and is still recorded, saying it started none of the
 workflows it was for - which is the thing to look for when a schedule appears to
 be doing nothing.
 
+## Switching one off
+
+A trigger carries an **Enabled** switch, in three places: the toggle on its row
+in the list, and the same switch on the form that creates one and on its own
+settings page. Off is not deleted — the definition stays, the workflows pointing
+at it stay pointed at it, and nothing starts. A new trigger arrives switched on
+unless the form is told otherwise, which is worth doing for a webhook defined
+before its caller exists.
+
+Nothing that fires reads it later than it has to: an arriving event and the
+scheduler's tick only ever look at enabled definitions, and a request to a
+switched-off webhook is answered `404` like any other path nobody has claimed.
+Whichever switch is used, the workspace's audit log says so in the same words.
+
 ## History
 
 Every trigger keeps a history: when it fired, what set it off, and what came of

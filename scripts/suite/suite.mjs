@@ -216,6 +216,19 @@ export const TESTS = [
      */
   },
   {
+    name: 'trigger-switch-check',
+    what: 'the Enabled switch on both screens that define a trigger, and that it saves',
+    needs: ['workspace'],
+    /*
+     * Issues #247 and #257 were the same missing control reported twice, which
+     * is why one check drives both screens: the dialog and the settings page
+     * are one component, and a fix that reached only one of them is exactly the
+     * regression worth catching. Whether a switched-off trigger actually fires
+     * is not asked here - a page cannot deliver a Slack mention or turn the
+     * clock - and is covered on all three firing paths by the server suite.
+     */
+  },
+  {
     name: 'dialog-hint-check',
     what: 'every dialog sentence that moved behind a (?), and every one that did not',
     needs: ['workspace'],

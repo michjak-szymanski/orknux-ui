@@ -16,6 +16,8 @@ import {
 import type { Trigger, TriggerAction, TriggerType, WebhookAuthType } from '../api/triggers';
 import { OpenDefinitionIcon } from './OpenDefinitionIcon';
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
+import toggleOffIcon from '../assets/toggle-off.svg';
+import toggleOnIcon from '../assets/toggle-on.svg';
 import {
   NEW_FUNCTION,
   NEW_FUNCTION_NAME,
@@ -132,6 +134,17 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
   /** Empty asks nothing, which is what a trigger does unless told otherwise. */
   const [conditionId, setConditionId] = useState(trigger?.conditionId ?? '');
   const [icon, setIcon] = useState<string | null>(trigger?.icon ?? null);
+  /**
+   * Whether it fires at all. A new one does, which is what somebody filling
+   * this in means by filling it in.
+   *
+   * Here rather than only in the list because both places somebody looks at a
+   * trigger properly — the dialog that makes one, the page that holds one — had
+   * no way to say it: issues #247 and #257. It is saved with the rest of the
+   * form, so turning it off is a change to the definition like any other and
+   * not a second thing to remember afterwards.
+   */
+  const [enabled, setEnabled] = useState(trigger?.enabled ?? true);
   const [webhookPath, setWebhookPath] = useState(trigger?.webhookPath ?? '');
   const [objectId, setObjectId] = useState(trigger?.objectId ?? '');
   const [authType, setAuthType] = useState<WebhookAuthType>(trigger?.authType ?? 'NONE');
@@ -309,10 +322,27 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
         // take it off, so an empty pick is sent as null.
         conditionId: conditionId === '' ? null : conditionId,
         icon,
+        enabled,
       };
       const saved = editing
         ? await updateTrigger(trigger.id, settings)
         : await createTrigger({ workspaceId, type, ...settings });
+      /*
+       * Cleared on the way out, not only on the way to an error.
+       *
+       * The dialog unmounts this the moment it is told, so nothing there ever
+       * noticed it was not: creating a trigger is one save and then the form is
+       * gone. The settings page keeps it - it is keyed by which trigger is being
+       * edited, and saving does not change that - so a form that left
+       * `submitting` set stayed on "Saving…", disabled, for as long as the page
+       * was open. One save per visit, and a reload to make a second.
+       *
+       * Not a new fault; it was simply unreachable until this form grew a
+       * control somebody would want to change twice. `trigger-switch-check`
+       * turns the switch off, saves, turns it on and saves again for that
+       * reason.
+       */
+      setSubmitting(false);
       onSaved(saved);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not save the trigger.');
@@ -371,6 +401,43 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
               </select>
               <img src={chevronDown12Icon} alt="" width={12} height={12} />
             </div>
+          </div>
+
+          {/*
+            The switch, in the same shape it has in the list: the label on the
+            left, the toggle out on the right. It is about the trigger itself
+            rather than about what it waits for, so it sits above the fields the
+            type decides and does not move when the type changes.
+          */}
+          <div className={styles.field}>
+            <span className={styles.labelRow}>
+              <span className={own.labelWithHint}>
+                <span className={styles.label} id="trigger-enabled-label">
+                  Enabled
+                </span>
+                <FieldHint label="Enabled">
+                  Switched off it stays in the catalogue and fires at nothing, and the workflows
+                  pointing at it stop being started.
+                </FieldHint>
+              </span>
+              <button
+                id="trigger-enabled"
+                type="button"
+                className={own.toggle}
+                onClick={() => setEnabled((on) => !on)}
+                aria-pressed={enabled}
+                aria-labelledby="trigger-enabled-label"
+                title={enabled ? 'Enabled' : 'Disabled'}
+              >
+                <img
+                  src={enabled ? toggleOnIcon : toggleOffIcon}
+                  data-keeps-colour
+                  alt=""
+                  width={36}
+                  height={20}
+                />
+              </button>
+            </span>
           </div>
 
           {webhook && (

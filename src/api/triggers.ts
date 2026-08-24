@@ -165,6 +165,8 @@ export interface CreateTriggerInput {
   authType?: WebhookAuthType;
   /** The function that authenticates a caller; null when nothing does. */
   authFunctionId?: string | null;
+  /** Whether it fires at all; omitted makes one that does. */
+  enabled?: boolean;
 }
 
 export async function createTrigger(input: CreateTriggerInput): Promise<Trigger> {
@@ -191,6 +193,8 @@ export async function updateTrigger(
     authType?: WebhookAuthType;
     /** The function that authenticates a caller; null when nothing does. */
     authFunctionId?: string | null;
+    /** Whether it fires at all; omitted leaves it as it stands. */
+    enabled?: boolean;
   },
 ): Promise<Trigger> {
   const data = await graphql<{ updateTrigger: Trigger }>(UPDATE_TRIGGER_MUTATION, { id, input });
