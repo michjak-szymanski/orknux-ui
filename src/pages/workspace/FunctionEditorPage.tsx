@@ -20,9 +20,12 @@ import {
   updateFunction,
   validateFunctionSource,
   valueTypeLabel,
+  argumentJson,
+  runFunction,
+  withName,
   withParameters,
 } from '../../api/functions';
-import type { FunctionParam, ScriptImport, WorkspaceFunction } from '../../api/functions';
+import type { FunctionParam, FunctionRun, ScriptImport, WorkspaceFunction } from '../../api/functions';
 import { fetchWorkspaceLibraries, localName } from '../../api/libraries';
 import type { ScriptLibrary, ScriptLibraryImport, ScriptLibraryImportInput } from '../../api/libraries';
 import type { SessionUser } from '../../api/session';
@@ -209,6 +212,24 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
   /** What a parameter or a return type can name, and what the editor declares. */
   const [objects, setObjects] = useState<WorkflowObject[]>([]);
   const [returnObjectId, setReturnObjectId] = useState<string | null>(null);
+
+  /*
+   * What a test run would pass, as typed, by parameter name.
+   *
+   * As typed rather than as JSON: the panel offers a control per type, and what
+   * somebody has half-written in a number field is not a number yet. It becomes
+   * JSON in `handleRun`, at the one moment there is a type to read it against.
+   *
+   * Keyed by name rather than by position, because a parameter renamed in the
+   * panel above is a different parameter and should not keep a value that was
+   * typed for the old one.
+   */
+  const [testValues, setTestValues] = useState<Record<string, string>>({});
+  const [running, setRunning] = useState(false);
+  /** What the last run came to, or null before there has been one. */
+  const [ran, setRan] = useState<FunctionRun | null>(null);
+  /** The run could not be asked for at all — the request failed, not the script. */
+  const [runFailed, setRunFailed] = useState<string | null>(null);
 
   /*
    * What there is to choose from. Their values are not here and cannot be: an
@@ -555,6 +576,18 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
    */
   const printed = useRef<string | null>(null);
 
+  /**
+   * The name this page believes the declaration in the column bears.
+   *
+   * Null until the page knows: the first pass of the effect below seeds it and
+   * changes nothing, and every read of a stored function seeds it again from what
+   * arrived. Without that, opening a function whose code and name already disagree
+   * — which is exactly the state issue #267 leaves behind — would rewrite the code
+   * before anybody had touched anything, and the page would open with work in it
+   * to lose.
+   */
+  const declaredAs = useRef<string | null>(null);
+
   useEffect(() => {
     if (functionId === '') return;
     fetchFunction(functionId)
@@ -564,6 +597,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
           return;
         }
         setFn(found);
+        declaredAs.current = identifier(found.name);
         setName(found.name);
         setDescription(found.description ?? '');
         /*
@@ -716,6 +750,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
         .then((found) => {
           if (found === null) return;
           setFn(found);
+          declaredAs.current = identifier(found.name);
           setName(found.name);
           setDescription(found.description ?? '');
           setSource(found.typescript ?? found.source);
@@ -943,6 +978,44 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
     if (stub !== source) setSource(stub);
   }, [creating, stub, source]);
 
+  /*
+   * The declaration follows the Name field, which is issue #267.
+   *
+   * The panel already rewrites the parameter list of the declaration above, and
+   * the name was the one part of the same line it left behind: renaming `sss` to
+   * `sssssdsd` left `export default async function sss()` in the column, which
+   * runs perfectly — the sandbox calls the default export — and reads as a
+   * mistake to everybody who opens it afterwards. So the answer is not to stop
+   * writing a name into the stub. A name that is decoration is still the name a
+   * stack trace prints when the function throws, which is a sentence the Run
+   * panel now shows people; and taking it out of the stub would fix nothing for
+   * the functions that already have one, which is all of them.
+   *
+   * What makes rewriting it safe is `withName` and this ref between them. The
+   * declaration is only ever renamed *from* the name this page last put there —
+   * so a declaration somebody has given a name of their own is left alone from
+   * then on, permanently — and `withName` refuses when that name appears anywhere
+   * else in the file, so a function that calls itself is never half-renamed.
+   * Nothing here touches a line that is not the declaration, and every change is
+   * on screen, in the column, before it can be saved.
+   *
+   * It sits after the stub effect on purpose. While a new function is still
+   * printing its stub, that effect has already rewritten the whole thing with the
+   * new name by the time this runs, so this finds nothing to rename and leaves
+   * the stub's own bookkeeping alone.
+   */
+  useEffect(() => {
+    const now = identifier(name);
+    const was = declaredAs.current;
+    declaredAs.current = now;
+    if (was === null || was === now) return;
+    setSource((current) => {
+      const next = withName(current, was, now);
+      if (next !== current) setSaved(false);
+      return next;
+    });
+  }, [name]);
+
   /**
    * There is work on this screen the server has not been told about.
    *
@@ -1128,6 +1201,42 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
       );
     } catch (cause) {
       setStatus({ ok: false, message: cause instanceof Error ? cause.message : 'Could not validate.', whole: true });
+    }
+  }
+
+  /**
+   * Runs the function, with what is in the Test Run fields, and shows the answer.
+   *
+   * The server is handed an id and arguments and nothing else — no source. So what
+   * runs is the *saved* function, in the sandbox a workflow runs it in, with the
+   * workspace's variables it is granted resolved the same way; the panel says so,
+   * and says so again when there is unsaved work in the column, because otherwise
+   * a run that disagreed with the code on screen would read as the run being wrong
+   * rather than as the code not having been saved.
+   *
+   * A failure is the interesting answer and is shown as one: the reason comes back
+   * on `error` with the function's name in front of it, worded exactly as a run of
+   * the workflow would have worded it in its history.
+   */
+  async function handleRun() {
+    if (running || creating) return;
+    setRunning(true);
+    setRan(null);
+    setRunFailed(null);
+    try {
+      const answer = await runFunction({
+        workspaceId,
+        functionId,
+        arguments: declared(params).map((param) => ({
+          name: param.name,
+          json: argumentJson(param.type, testValues[param.name] ?? ''),
+        })),
+      });
+      setRan(answer);
+    } catch (cause) {
+      setRunFailed(cause instanceof Error ? cause.message : 'It could not be run.');
+    } finally {
+      setRunning(false);
     }
   }
 
@@ -2160,6 +2269,130 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                 )}
               </section>
 
+              {/*
+                Running it, which is what Validate never could — issue #266.
+
+                Not offered while a function is being written: there is nothing to
+                run until there is a row, and the button takes an id.
+
+                Every field here is a parameter with a type, offered as that type,
+                rather than one JSON box: a number field is where somebody types a
+                number, and asking them to remember that a string needs quotes is
+                asking them to do the editor's job. The shapes that have no
+                spelling as a plain word — map, array, an object — are the
+                exception and are typed as JSON, because that is what they are.
+
+                The externals are not here and must not be. A grant belongs to the
+                function; a field for one would let a test run be given a value the
+                real run would never see, and the run would prove nothing about the
+                function it was run on.
+              */}
+              {!creating && (
+                <section className={styles.panelSection}>
+                  <span className={styles.headingWithHint}>
+                    <h2 className={styles.panelHeading}>Test Run</h2>
+                    <FieldHint label="Test Run">
+                      Runs the saved function the way an action node would: the same sandbox, the same imports
+                      and libraries, and the workspace’s variables resolved the same way. It runs what is stored
+                      rather than what is in the column, so save first to try a change — and every run is
+                      recorded in this workspace’s audit, because it leaves no run of its own behind it.
+                    </FieldHint>
+                  </span>
+
+                  <div className={styles.paramList}>
+                    {declared(params).map((param) => (
+                      <div key={param.name} className={styles.field}>
+                        <label className={styles.fieldLabel} htmlFor={`run-arg-${param.name}`}>
+                          {param.name} · {valueTypeLabel(param.type)}
+                        </label>
+                        {param.type === 'BOOLEAN' ? (
+                          <div className={styles.selectWrapper}>
+                            <select
+                              id={`run-arg-${param.name}`}
+                              className={`${styles.input} ${styles.inputMono}`}
+                              value={testValues[param.name] ?? ''}
+                              aria-label={`Argument ${param.name}`}
+                              onChange={(event) =>
+                                setTestValues((current) => ({ ...current, [param.name]: event.target.value }))
+                              }
+                            >
+                              {/* Blank is a real answer: it is the `null` an unmapped node passes. */}
+                              <option value="">nothing</option>
+                              <option value="true">true</option>
+                              <option value="false">false</option>
+                            </select>
+                            <img src={chevronDown12Icon} alt="" width={12} height={12} />
+                          </div>
+                        ) : param.type === 'STRING' || param.type === 'NUMBER' ? (
+                          <input
+                            id={`run-arg-${param.name}`}
+                            className={`${styles.input} ${styles.inputMono}`}
+                            type={param.type === 'NUMBER' ? 'number' : 'text'}
+                            value={testValues[param.name] ?? ''}
+                            aria-label={`Argument ${param.name}`}
+                            onChange={(event) =>
+                              setTestValues((current) => ({ ...current, [param.name]: event.target.value }))
+                            }
+                          />
+                        ) : (
+                          <textarea
+                            id={`run-arg-${param.name}`}
+                            className={`${styles.input} ${styles.textarea} ${styles.inputMono}`}
+                            value={testValues[param.name] ?? ''}
+                            placeholder={param.type === 'ARRAY' ? '[]' : '{}'}
+                            aria-label={`Argument ${param.name}`}
+                            onChange={(event) =>
+                              setTestValues((current) => ({ ...current, [param.name]: event.target.value }))
+                            }
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    className={styles.ghostButton}
+                    onClick={() => void handleRun()}
+                    disabled={running}
+                  >
+                    {running ? 'Running…' : 'Run'}
+                  </button>
+
+                  {/* One line, and only when it is true: the column has moved on. */}
+                  {unsaved && <p className={styles.paramHint}>This runs the saved function, not the column.</p>}
+
+                  {runFailed !== null && (
+                    <p className={styles.runFailed} role="alert">
+                      {runFailed}
+                    </p>
+                  )}
+
+                  {ran !== null && (
+                    <div className={styles.runResult}>
+                      <p className={ran.ok ? styles.runVerdict : styles.runVerdictBad} role="status">
+                        {ran.ok ? 'Returned' : 'Failed'} in {ran.durationMillis} ms
+                      </p>
+                      {/*
+                        What came back, whichever it was. A failure prints its
+                        reason here rather than in a toast, because it is the
+                        answer to the question the button asked - and it is
+                        worded exactly as the run history would have worded it.
+                      */}
+                      <pre className={styles.runAnswer}>
+                        {ran.ok ? (ran.returned ?? 'It returned nothing.') : ran.error}
+                      </pre>
+                      {!ran.ok && !ran.settled && (
+                        <p className={styles.paramHint}>It was stopped rather than refused; running it again may answer.</p>
+                      )}
+                      {ran.grants.length > 0 && (
+                        <p className={styles.paramHint}>Handed {ran.grants.join(', ')} from the workspace.</p>
+                      )}
+                    </div>
+                  )}
+                </section>
+              )}
+
               <hr className={styles.divider} />
 
               <div className={styles.metadata}>
@@ -2198,6 +2431,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                         .then((found) => {
                           if (found === null) return;
                           setFn(found);
+                          declaredAs.current = identifier(found.name);
                           setName(found.name);
                           setDescription(found.description ?? '');
                           setSource(found.typescript ?? found.source);

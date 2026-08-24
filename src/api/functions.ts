@@ -191,6 +191,12 @@ const DELETE_FUNCTION_MUTATION = `
   }
 `;
 
+const RUN_FUNCTION_MUTATION = `
+  mutation RunFunction($input: RunFunctionInput!) {
+    runFunction(input: $input) { ok returned error durationMillis settled grants }
+  }
+`;
+
 /**
  * A parameter as the server takes one.
  *
@@ -302,8 +308,8 @@ export async function duplicateFunction(fn: WorkspaceFunction): Promise<Workspac
          * when the original was saved, and renaming a declaration in both keeps that
          * true.
          */
-        source: renamed(fn.source, fn.name, name),
-        typescript: renamed(fn.typescript ?? fn.source, fn.name, name),
+        source: withName(fn.source, fn.name, name),
+        typescript: withName(fn.typescript ?? fn.source, fn.name, name),
         returnType: fn.returnType,
         params: fn.params,
         externalVariableIds: fn.externals.map((external) => external.variableId),
@@ -328,19 +334,29 @@ export async function duplicateFunction(fn: WorkspaceFunction): Promise<Workspac
 const NAME_ATTEMPTS = 20;
 
 /**
- * The same code, with its declaration renamed to match the copy.
+ * The same code, with its declaration renamed.
  *
- * A copy called `isFalseCopy` whose code still reads `function isFalse()` runs
+ * A function called `sssssdsd` whose code still reads `function sss()` runs
  * perfectly — the sandbox calls the default export, not the name — and reads as a
- * mistake every time somebody opens it.
+ * mistake every time somebody opens it. That is issue #267, and it is the same
+ * complaint a duplicate produced before this existed.
  *
- * Only the declaration is touched, and only when the old name appears nowhere else.
- * A function that calls itself by name would be broken by renaming the declaration
- * alone, and renaming every occurrence would eventually rewrite a string or a
- * property that happened to match. Where it is not unambiguous, the source is left
- * exactly as it was: a copy that reads oddly is better than one that throws.
+ * What makes it safe to do at all is how narrow it is. **Only the declaration is
+ * touched, and only when it bears exactly the name it is being renamed *from*.**
+ * A declaration saying something else is somebody's own choice of identifier and
+ * is left alone for ever after. **And only when that name appears nowhere else in
+ * the file**: a function that calls itself by name would be broken by renaming the
+ * declaration alone, and renaming every occurrence would eventually rewrite a
+ * string, a property or a comment that happened to match. Where it is not
+ * unambiguous the source comes back exactly as it was — code that reads oddly is
+ * better than code that was rewritten under somebody.
+ *
+ * Shared by the two callers that need it: the editor, keeping the declaration in
+ * step with the Name field the way it already keeps the parameter list in step
+ * with the panel, and `duplicateFunction`, which renames a copy's declaration to
+ * match the copy.
  */
-function renamed(source: string, from: string, to: string): string {
+export function withName(source: string, from: string, to: string): string {
   const declaration = new RegExp(
     `(export\\s+default\\s+(?:async\\s+)?function\\s*\\*?\\s*)(${escaped(from)})(?=\\s*\\()`,
   );
@@ -680,6 +696,76 @@ export async function validateFunctionSource(workspaceId: string, source: string
 export async function deleteFunction(id: string): Promise<boolean> {
   const data = await graphql<{ deleteFunction: boolean }>(DELETE_FUNCTION_MUTATION, { id });
   return data.deleteFunction;
+}
+
+/** One argument for a test run: which parameter, and the value as JSON. */
+export interface FunctionArgument {
+  name: string;
+  json: string;
+}
+
+/** What one test run came to. */
+export interface FunctionRun {
+  ok: boolean;
+  /** The JSON it returned. Null when it failed, and also when it returned nothing. */
+  returned: string | null;
+  /** What went wrong, with the function's name in front of it. Null when it answered. */
+  error: string | null;
+  durationMillis: number;
+  /**
+   * Whether asking again could ever answer differently. False means the run was
+   * stopped by the clock or by how busy the machine was, not by the code.
+   */
+  settled: boolean;
+  /** The workspace's variables it was handed, by name. Never their values. */
+  grants: string[];
+}
+
+/**
+ * Runs the stored function and says what came back.
+ *
+ * The saved code, never the column: no source travels in this call, so what runs
+ * is the function a workflow would call. That is the point of the button — a run
+ * of the draft would answer a question about something nobody can trigger.
+ *
+ * The workspace's variables are not here and cannot be. A grant belongs to the
+ * function that declared it and is resolved on the server, the same way it is on
+ * the import path; what comes back names them so the panel can say what was
+ * handed over without ever showing a value.
+ */
+export async function runFunction(input: {
+  workspaceId: string;
+  functionId: string;
+  arguments: FunctionArgument[];
+}): Promise<FunctionRun> {
+  const data = await graphql<{ runFunction: FunctionRun }>(RUN_FUNCTION_MUTATION, { input });
+  return data.runFunction;
+}
+
+/**
+ * A typed value as the JSON the sandbox is handed.
+ *
+ * The panel offers a control per type rather than one JSON box, so this is where
+ * what somebody typed becomes what crosses the boundary: a string is quoted, a
+ * number and a boolean go as they read, and the shapes that have no spelling as a
+ * plain word — a map, an array, an object — are typed as JSON in the first place
+ * and go through untouched, for the server to accept or refuse by name.
+ *
+ * An empty field is `null`, which is exactly what a node passes for a parameter it
+ * has no mapping for.
+ */
+export function argumentJson(type: ValueType, written: string): string {
+  const held = written.trim();
+  if (held === '') return 'null';
+  switch (type) {
+    case 'STRING':
+      return JSON.stringify(written);
+    case 'NUMBER':
+    case 'BOOLEAN':
+      return held;
+    default:
+      return held;
+  }
 }
 
 export const VALUE_TYPES: ValueType[] = ['STRING', 'NUMBER', 'BOOLEAN', 'OBJECT', 'MAP', 'ARRAY'];
