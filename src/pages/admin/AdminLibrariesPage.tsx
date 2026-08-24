@@ -2,12 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   deleteScriptLibrary,
+  fetchLibraryRegistry,
   fetchScriptLibraries,
+  installScriptLibrary,
   librarySize,
   librarySourceUrl,
   uploadLibrary,
 } from '../../api/libraries';
-import type { ScriptLibrary } from '../../api/libraries';
+import type { LibraryRegistryStatus, ScriptLibrary } from '../../api/libraries';
 import type { SessionUser } from '../../api/session';
 import { timeAgo } from '../../api/tools';
 import downloadIcon from '../../assets/download.svg';
@@ -38,6 +40,12 @@ export interface AdminLibrariesPageProps {
  * names every function and tool importing a library across every workspace, which
  * is what somebody deciding whether to replace or remove one has to know, and it
  * is the only place in the product that can answer it.
+ *
+ * There are two ways in and one kind of row. A file somebody chose, and a package
+ * somebody named — and what the second produces is the same stored artefact as the
+ * first, fetched once by the server and never consulted again. The field for it is
+ * drawn only where a registry is configured: an installation with no way out
+ * should be shown the upload rather than a control that fails on being used.
  */
 export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPageProps) {
   const [libraries, setLibraries] = useState<ScriptLibrary[] | null>(null);
@@ -47,6 +55,9 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
   const [notice, setNotice] = useState<string | null>(null);
   /** The library whose removal is waiting to be confirmed. */
   const [confirming, setConfirming] = useState<string | null>(null);
+  /** Whether a package can be named here. Null until the server has said. */
+  const [registry, setRegistry] = useState<LibraryRegistryStatus | null>(null);
+  const [spec, setSpec] = useState('');
   const picker = useRef<HTMLInputElement>(null);
 
   const load = useCallback(() => {
@@ -65,6 +76,43 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
   }, []);
 
   useEffect(load, [load]);
+
+  /*
+   * Asked once. Whether this installation fetches packages is a setting, not
+   * something that changes while somebody is looking at the screen, and a
+   * registry that cannot be read leaves the upload standing rather than an error.
+   */
+  useEffect(() => {
+    fetchLibraryRegistry()
+      .then(setRegistry)
+      .catch(() => setRegistry({ configured: false, url: '' }));
+  }, []);
+
+  /**
+   * Fetches a named package, or shows why it was refused.
+   *
+   * Every refusal is the server's own sentence — a range instead of a version, a
+   * package that ships no ES module, one whose module imports something, a file
+   * that did not hash to what the registry claimed. They want different things
+   * done about them, so none is replaced here with a shorter one.
+   */
+  async function onInstall() {
+    const named = spec.trim();
+    if (named === '') return;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const installed = await installScriptLibrary(named);
+      setNotice(`Installed ${installed.key} from ${installed.registry?.packageName ?? named}.`);
+      setSpec('');
+      load();
+    } catch (cause: unknown) {
+      setError(cause instanceof Error ? cause.message : 'Could not install that package.');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function onPicked(file: File | undefined) {
     if (file === undefined) return;
@@ -119,6 +167,14 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
                 local name of its own — <code>imports.dateFns</code>. Its key is the filename without the
                 extension, so loading a file with a key already in the list replaces it in place and nothing
                 importing it is repointed. One that something imports cannot be removed.
+                <br />
+                <br />
+                Installing a package fetches it once, here on the server, into this database — the file is
+                what is stored and what runs, and nothing reaches a registry afterwards. Name an exact
+                version, never <code>latest</code>: a version that resolves differently tomorrow is not an
+                answer to what code is running here. A package has to publish one self-contained ES module;
+                one that imports anything else is refused, because this installation does not bundle. Build a
+                bundle elsewhere and upload it.
               </FieldHint>
             </span>
           </h1>
@@ -137,6 +193,33 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
           onChange={(event) => void onPicked(event.target.files?.[0])}
         />
         <div className={styles.actions}>
+          {/*
+            Drawn only where a registry is configured. An installation with no way
+            out is shown the upload, rather than a field that fails on being used.
+          */}
+          {registry?.configured === true && (
+            <form
+              className={styles.install}
+              onSubmit={(event) => {
+                event.preventDefault();
+                void onInstall();
+              }}
+            >
+              <input
+                className={styles.spec}
+                type="text"
+                value={spec}
+                placeholder="random@4.1.0"
+                aria-label="Package and exact version"
+                title={`Fetched once from ${registry.url}`}
+                disabled={busy}
+                onChange={(event) => setSpec(event.target.value)}
+              />
+              <button type="submit" className={styles.installButton} disabled={busy || spec.trim() === ''}>
+                Install
+              </button>
+            </form>
+          )}
           <button
             type="button"
             className={styles.load}
@@ -174,6 +257,22 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
               <img className={styles.icon} src={packageIcon} alt="" width={16} height={16} />
               <span className={styles.nameBlock}>
                 <span className={styles.name}>{library.key}</span>
+                {/*
+                  Where it came from, on the rows that came from somewhere. An
+                  uploaded file has no provenance this installation can vouch for,
+                  so nothing is drawn for one rather than a row of blanks that
+                  would read as though it had. The hash the registry claimed is on
+                  the hover: it is what makes the row checkable, and it is eighty
+                  characters nobody needs across a table.
+                */}
+                {library.registry !== null && (
+                  <span
+                    className={styles.from}
+                    title={`${library.registry.url}\n${library.registry.integrity}`}
+                  >
+                    {`npm  ·  ${library.registry.packageName}@${library.registry.version}  ·  ${library.registry.entry}`}
+                  </span>
+                )}
                 {/*
                  * What it exports, under the name. A library is worth listing for
                  * what an importer can reach on it, and "4 members" answers less

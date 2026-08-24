@@ -242,6 +242,23 @@ export const TESTS = [
     needs: ['session'],
   },
   {
+    name: 'library-install-check',
+    what: 'naming a package on the Libraries screen: the field, the pinned version, and the refusal',
+    needs: ['session'],
+    /*
+     * Issue #265. It reaches no registry, and could not be in this suite if it
+     * did: what it drives is the half that is answered before anything is
+     * fetched - a tag instead of a version - so it runs on a machine with no way
+     * out and still measures the sentence somebody is shown.
+     *
+     * It asks the server whether a registry is configured and asserts about
+     * whichever case it finds, rather than assuming the default. Both are real
+     * claims: with one, the field is drawn beside the upload; without one, there
+     * is no field at all, because a control that fails on being used is the one
+     * thing an offline installation should never be shown.
+     */
+  },
+  {
     name: 'hint-prose-check',
     what: 'every block of prose still in the open, and the written reason for each one',
     needs: ['workspace'],
