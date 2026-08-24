@@ -39,6 +39,7 @@ import type { CodeEditorHandle } from '../../components/CodeEditor';
 import { Loader } from '../../components/Loader';
 import { OpenDefinitionIcon } from '../../components/OpenDefinitionIcon';
 import { RevisionHistory } from '../../components/RevisionHistory';
+import { UsedBy } from '../../components/UsedBy';
 import { UnsavedWorkDialog } from '../../components/UnsavedWorkDialog';
 import { ValidationStatus } from '../../components/ValidationStatus';
 import type { Validation } from '../../components/ValidationStatus';
@@ -1335,6 +1336,18 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                       .catch(() => undefined);
                   }}
                 />
+              </div>
+
+              {/*
+                And which agents were granted it, above the button that would
+                take it away from them. A grant is a name rather than a
+                reference, so nothing would be left dangling - the agent would
+                simply stop being able to do this, with its own screen still
+                listing the grant. That is why the list belongs here and not
+                only in the refusal.
+              */}
+              <div className={styles.panelSection}>
+                <UsedBy kind="TOOL" componentId={toolId} />
               </div>
 
               <button

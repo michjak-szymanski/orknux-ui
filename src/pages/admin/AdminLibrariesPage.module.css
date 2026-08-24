@@ -183,6 +183,22 @@
   white-space: nowrap;
 }
 
+/*
+ * Why the row refused, said on the row rather than at the top of the card.
+ *
+ * One line, because what to do about it is the line above: every importer there
+ * is something to press. A refusal at the top of a table is a refusal the
+ * reader has to match back to a row by reading a name out of a sentence, which
+ * is the half of #268 that was not about links.
+ */
+.refused {
+  overflow: hidden;
+  font-size: var(--text-xs);
+  color: var(--color-danger);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .muted {
   overflow: hidden;
   font-size: var(--text-sm);

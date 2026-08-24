@@ -1,5 +1,7 @@
 import { compile } from '../components/monaco';
 import { ApiError, graphql } from './client';
+import { DEPENDANT_FIELDS } from './dependants';
+import type { Dependant } from './dependants';
 
 /**
  * One thing a library's export turned out to hold.
@@ -14,15 +16,6 @@ export interface LibraryMember {
   callable: boolean;
 }
 
-/** One function or tool that imports a library, and where it lives. */
-export interface LibraryUsage {
-  /** FUNCTION or TOOL. */
-  kind: string;
-  id: string;
-  name: string;
-  workspaceId: string;
-  workspaceName: string;
-}
 
 /**
  * JavaScript loaded once into the installation, which any workspace may import.
@@ -49,8 +42,13 @@ export interface ScriptLibrary {
    *
    * Empty on [fetchWorkspaceLibraries], which is not a claim that nothing uses
    * it: who else imports a library is an administrator's question.
+   *
+   * A [Dependant] and not a shape of this screen's own: it is the same row every
+   * other component's Used by panel draws, and the same row the delete refusal
+   * is worded from. Carrying the id is what lets the libraries table make each
+   * importer something to press, which is #268.
    */
-  usedBy: LibraryUsage[];
+  usedBy: Dependant[];
   uploadedAt: string;
   uploadedBy: string;
 }
@@ -108,7 +106,7 @@ export const SCRIPT_LIBRARY_IMPORT_FIELDS =
 const LIBRARY_FIELDS = `
   id key name filename sizeBytes sha256 callable
   members { name callable }
-  usedBy { kind id name workspaceId workspaceName }
+  usedBy { ${DEPENDANT_FIELDS} }
   uploadedAt uploadedBy
 `;
 

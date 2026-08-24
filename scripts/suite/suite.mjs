@@ -622,6 +622,22 @@ export const TESTS = [
     needs: ['workspace'],
   },
   {
+    name: 'used-by-check',
+    what: 'where a component is used: both states of the panel, and a row followed to the end',
+    needs: ['workspace'],
+    /*
+     * Issues #258 and #268. It builds its own function and its own tool that
+     * imports it, so that both answers are real: a component nothing points at
+     * says so in words, and the same component with an importer names it. An
+     * empty panel and a panel that failed to load are the same picture, which
+     * is why the first half is asserted at all.
+     *
+     * The row is pressed rather than read. `agent-jump-check` found the failure
+     * worth catching here - a link naming one thing and opening another - so
+     * what it asserts is the name on the page it landed on, not the href.
+     */
+  },
+  {
     name: 'agent-definition-check',
     what: "an agent node's definition opening in the panel, beside the graph, like a trigger's",
     needs: ['workflow'],

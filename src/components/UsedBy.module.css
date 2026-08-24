@@ -1,0 +1,139 @@
+/*
+ * Where a component is used, wherever it is shown.
+ *
+ * Its own stylesheet for the reason `RevisionHistory.module.css` has one: this
+ * stands in a code editor's side panel and in the card stack of four settings
+ * pages, and a look described five times is a look that eventually differs in
+ * one of them. Like that panel it draws no border and no background, so it
+ * reads as a section of whatever card it was dropped into rather than a box
+ * inside a box - and the rhythm below is deliberately that panel's, because the
+ * two sit one above the other on most of these pages.
+ */
+.usedBy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  width: 100%;
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.headingWithHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.empty {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.item:last-child {
+  border-bottom: 0;
+}
+
+/*
+ * The whole row is the link, not a mark at the end of it.
+ *
+ * The name is what somebody aims at and the kind beside it is what tells them
+ * which list to expect, so both belong to the same target; a link the width of
+ * one word with three words of label beside it is a row people press and
+ * nothing happens. It opens in place rather than in a new tab: the point of the
+ * list is going there, unlike the (?) arrows beside a form field, which exist
+ * so a half-filled form is not thrown away.
+ */
+.row {
+  display: flex;
+  gap: var(--space-8);
+  align-items: baseline;
+  width: 100%;
+  padding: var(--space-8) 0;
+  font-size: var(--text-sm);
+  text-decoration: none;
+  color: var(--color-text-primary);
+}
+
+.row:hover {
+  color: var(--color-accent-brand);
+}
+
+.name {
+  font-weight: 600;
+}
+
+/* What it is, so the name is somewhere the reader knows how to look for. */
+.kind {
+  color: var(--color-text-secondary);
+}
+
+/*
+ * The workspace, only where the answer could be in another one.
+ *
+ * A library is the installation's, so "slugify in Backend" is the whole answer
+ * and "slugify" is half of it. Everything else is asked from inside the
+ * workspace it is answered in, and repeating the name there would be noise.
+ */
+.where {
+  margin-left: auto;
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
+/*
+ * The same row where there is only a line to put it on.
+ *
+ * It inherits its size from the sentence it sits in - the libraries table's
+ * third line is small and muted - and marks itself as somewhere to go with the
+ * brand colour rather than an underline, which at that size reads as noise
+ * between two names separated by a dot.
+ */
+.inlineRow {
+  color: var(--color-accent-brand);
+  text-decoration: none;
+}
+
+.inlineRow:hover {
+  text-decoration: underline;
+}
+
+.separator {
+  padding: 0 var(--space-6);
+}
+
+.mark {
+  display: inline-flex;
+  flex: none;
+  align-self: center;
+  color: var(--color-text-muted);
+}
+
+.row:hover .mark {
+  color: var(--color-accent-brand);
+}

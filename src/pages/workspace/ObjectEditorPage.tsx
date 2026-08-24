@@ -20,6 +20,7 @@ import type { DefinitionOption } from '../../components/DefinitionPicker';
 import { Loader } from '../../components/Loader';
 import { TrashIcon } from '../../components/TrashIcon';
 import { UnsavedWorkDialog } from '../../components/UnsavedWorkDialog';
+import { UsedBy } from '../../components/UsedBy';
 import { ValidationStatus } from '../../components/ValidationStatus';
 import type { Validation } from '../../components/ValidationStatus';
 import { useLeaveGuard } from '../../components/leaveGuard';
@@ -519,6 +520,17 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
                   <span className={styles.metadataValue}>
                     {timeAgo(held.lastModifiedAt)} by <span className={styles.metadataWho}>{held.lastModifiedBy}</span>
                   </span>
+                </div>
+              )}
+
+              {/*
+                What names this shape, above the button that would take it
+                away: another object holding it as a property, and any webhook
+                that answers to it.
+              */}
+              {held !== null && (
+                <div className={styles.panelSection}>
+                  <UsedBy kind="OBJECT" componentId={objectId} />
                 </div>
               )}
 

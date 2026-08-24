@@ -471,6 +471,19 @@ published months ago goes on calling the definitions its nodes name, so an
 action whose node was taken off the canvas and never republished is exactly the
 case that asking the drawing alone would have let through.
 
+**And the same answer is on the thing's own page, before anybody tries.** A
+function, a tool, an agent, a condition, a trigger and an object each carry a
+**Used by** panel, under the History one, listing what points at them — and every
+row opens that thing, so being told an action is in the way is also being taken
+to it. A published copy is marked as one, because redrawing the canvas will not
+move it. Nothing pointing at it says so in words rather than leaving an empty
+box: *Nothing uses this yet*.
+
+It is deliberately the same list the refusal is worded from. A panel saying a
+function is used by nothing, followed by a delete refused for two reasons, would
+be worse than no panel at all — so there is one question asked in one place, and
+the sentence and the list cannot drift apart.
+
 A grant is a name rather than an id, which is why a tool or a catalog is refused
 even though nothing would have been left dangling by it. Nothing dangles, and
 that is the problem: the agent's screen goes on listing a grant that now means

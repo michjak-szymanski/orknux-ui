@@ -9,6 +9,7 @@ import { BackLink } from '../../components/BackLink';
 import { ConditionForm } from '../../components/ConditionForm';
 import type { ConditionFormStyles } from '../../components/ConditionForm';
 import { Loader } from '../../components/Loader';
+import { UsedBy } from '../../components/UsedBy';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './ConditionSettingsPage.module.css';
@@ -189,6 +190,19 @@ export function ConditionSettingsPage({ session, onSignOut }: ConditionSettingsP
             styles={FORM_STYLES}
             onSaved={() => navigate(list)}
           />
+
+          {/*
+            What still asks it, above the way to take it away. A condition is
+            reached from four directions - an action waits on it, another
+            condition holds it as a member, a workflow node branches on it, a
+            trigger gates on it - and none of those is visible from here
+            otherwise.
+          */}
+          {!adding && condition !== null && (
+            <section className={styles.card}>
+              <UsedBy kind="CONDITION" componentId={conditionId ?? ''} />
+            </section>
+          )}
 
           {/*
             Removing a condition asks twice, as the shell page does. A workflow
