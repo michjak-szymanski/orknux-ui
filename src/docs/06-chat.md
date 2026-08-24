@@ -89,13 +89,27 @@ what the empty box says. Emptying one again puts it back rather than leaving it
 on whatever was set last. A value outside what is allowed is refused when it is
 saved, in a sentence naming what is allowed.
 
-Tapping the circle interrupts: while it is speaking, it stops and listens;
-while it is listening, it takes what you have said so far as the whole turn.
+Tapping the circle interrupts: while it is thinking or speaking, it drops that
+turn and listens; while it is listening, it takes what you have said so far as
+the whole turn.
+
+**The microphone does not close between turns.** Anything said while the model
+is thinking or the answer is being read is held rather than lost, and is sent
+when the turn comes round — the panel shows it under the circle, marked
+**Waiting**, so you can see it was caught. A second thing said while one is
+already waiting is added to it, since both were said to the same turn. Cutting
+in with the circle throws the waiting message away: it means "listen to me now",
+and answering what you had already moved on from is not that.
+
+You can type as well as speak. The message box stays live while the panel is
+open, and what is sent from it is a turn like any other — held by the same rules
+and read back aloud in the same way.
 
 The transcript stays beside the panel, and a spoken conversation lands in it
-exactly as a typed one does — same chat, same history — so the conversation can
-be read back afterwards rather than only remembered. What it made of your last
-turn is shown under the circle, where a mishearing is obvious.
+exactly as a typed one does — same chat, same history, and the same *Waiting for…*
+under the turn while the model works — so the conversation can be read back
+afterwards rather than only remembered. What it made of your last turn is shown
+under the circle, where a mishearing is obvious.
 
 Voice is offered only where the workspace has both a transcription model and a
 speech model. A turn that fails — nothing transcribed, a provider that will not
@@ -107,9 +121,18 @@ The speaker under an answer reads it aloud, using the workspace's text-to-speech
 model. Pressing it again stops; so does leaving the chat, since an answer read
 aloud over a conversation nobody is looking at is a voice from nowhere.
 
-A long answer takes a moment to synthesise — the button says so while it does,
-because a control that looks inert for ten seconds gets pressed twice. Only one
-answer is read at a time.
+Reading starts on the first sentences rather than on the whole answer, so a long
+one begins about as quickly as a short one; the rest is made while what you are
+hearing plays. The button says it is working until sound actually starts,
+because a control that looks inert gets pressed twice. Only one answer is read
+at a time.
+
+What is read is what the answer *renders to*, not the markdown it is written in:
+no asterisks, no backticks, no hashes in front of a heading, and a link is read
+as its text rather than as its address. A fenced code block is announced rather
+than read out — a block of code said character by character is minutes nobody
+can follow, and saying nothing at all leaves the answer referring to something
+you were never told was there.
 
 The audio is played and not kept: nothing is written to the server, and the
 speaker appears only once the workspace has a speech model.

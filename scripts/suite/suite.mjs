@@ -668,6 +668,55 @@ export const TESTS = [
      */
   },
   {
+    name: 'voice-queue-check',
+    what: 'what is said or typed while voice mode is busy: held, shown, and sent when the turn comes round',
+    needs: ['workspace'],
+    /*
+     * Issues #254 and #262. The microphone used to close between turns, so
+     * everything said while the model was thinking or the answer was being read
+     * went nowhere at all - which is most of a conversation. It is held open
+     * now and what changes is where the words go.
+     *
+     * Three of its assertions could not be made any other way. That a message
+     * is *added* to the one already waiting rather than replacing it, which is
+     * the decision about being talked over and is invisible in any single
+     * screenshot. That the waiting message goes out by itself when the turn
+     * ends, with nobody pressing anything. And that the panel never says
+     * Speaking while no sound has come out - the speech model is stubbed to
+     * take a known time over a clip, and the caption is watched across exactly
+     * that gap, which is where it used to lie.
+     *
+     * The last phase is a regression rather than a feature: cutting in used to
+     * silence the panel for the rest of the session, with the microphone still
+     * working and the answers still arriving. It interrupts on purpose and then
+     * insists on hearing the turn after it.
+     *
+     * The microphone is a file Chromium is told to believe, and the ears, the
+     * mouth and the model are stubbed - not to avoid the server, but because
+     * every assertion here is about timing that belongs to none of them. The
+     * models and the chat it makes are put back afterwards.
+     */
+  },
+  {
+    name: 'spoken-answer-check',
+    what: 'the speaker under an answer reads what it renders to, a sentence at a time',
+    needs: ['workspace'],
+    /*
+     * Issues #255 and #263 over one seam. It was handed the markdown, so an
+     * answer read aloud pronounced the asterisks, the backticks, the hashes and
+     * the address inside every link; and it was handed all of it at once, so
+     * the wait before the first word was the wait for the last one to be
+     * synthesised.
+     *
+     * The assertions worth the whole check are the last three. Anything that
+     * strips a character passes the ones about markup; only a reader that
+     * pipelines passes "sound started before the last piece was even asked
+     * for", and only one that keeps a lid on it passes "never more than two
+     * being made at once" - asking for every piece the moment an answer lands
+     * would put a burst on a provider for audio nobody may ever hear.
+     */
+  },
+  {
     name: 'agent-grants-check',
     what: "an agent's grants: bounded, searchable, and explained behind a (?), on the page and in the panel",
     needs: ['workflow'],
