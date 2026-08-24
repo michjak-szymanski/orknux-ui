@@ -58,6 +58,14 @@ export interface Trigger {
   name: string;
   type: TriggerType;
   connectionId: string | null;
+  /**
+   * Whose messages a `REPLY` watches for replies to; empty on every other event.
+   *
+   * Not the connection it listens on. That one is the socket - the Slack app
+   * whose app-level token this installation receives events over. These are the
+   * bot tokens whose own messages count as a thread's parent.
+   */
+  watchedConnectionIds: string[];
   action: TriggerAction | null;
   cron: string | null;
   timezone: string | null;
@@ -89,7 +97,7 @@ export interface Trigger {
 }
 
 const TRIGGER_FIELDS =
-  `id workspaceId name type connectionId action cron timezone payload conditionId conditionName enabled source event icon webhookPath objectId objectName authType authFunctionId authFunctionName
+  `id workspaceId name type connectionId action watchedConnectionIds cron timezone payload conditionId conditionName enabled source event icon webhookPath objectId objectName authType authFunctionId authFunctionName
    lastFiring { id at outcome detail runsStarted }`;
 
 const WORKSPACE_TRIGGERS_QUERY = `
@@ -152,6 +160,8 @@ export interface CreateTriggerInput {
   type: TriggerType;
   connectionId?: string;
   action?: TriggerAction;
+  /** Whose messages a `REPLY` watches for replies to. Required on one, ignored otherwise. */
+  watchedConnectionIds?: string[];
   cron?: string;
   timezone?: string;
   /** JSON object handed to the runs this starts. */
@@ -180,6 +190,8 @@ export async function updateTrigger(
     name: string;
     connectionId?: string;
     action?: TriggerAction;
+    /** Whose messages a `REPLY` watches; omitted or empty watches nobody. */
+    watchedConnectionIds?: string[];
     cron?: string;
     timezone?: string;
     payload?: string;
@@ -286,6 +298,50 @@ export async function fetchSupportedTriggerActions(): Promise<TriggerAction[]> {
     {},
   );
   return data.supportedTriggerActions;
+}
+
+/** Whether a connection's bot token was able to say which Slack user it posts as. */
+export type SlackBotUserOutcome = 'FOUND' | 'UNCHECKED';
+
+/**
+ * Which Slack user one of the workspace's Slack connections posts as.
+ *
+ * A bot token is a Slack user, which is why a reply trigger picks connections
+ * and matches user ids. Two connections holding the same token are one Slack
+ * user twice over and cannot be told apart by anything on an arriving event, so
+ * `message` says so rather than leaving two rows to imply otherwise.
+ */
+export interface SlackBotUser {
+  connectionId: string;
+  name: string;
+  outcome: SlackBotUserOutcome;
+  /** One line, ready to draw, and empty when there is nothing worth saying. */
+  message: string;
+  /** Slack's own id, what `parent_user_id` is matched against, when it was found. */
+  userId: string | null;
+  /** What Slack calls that user: "@orknux". */
+  handle: string | null;
+  /** Whether the token can receive messages at all; null where Slack did not say. */
+  receives: boolean | null;
+}
+
+/**
+ * Which Slack user each of the workspace's Slack connections posts as.
+ *
+ * What the "whose messages does this watch" picker draws. It never fails: a
+ * connection whose token could not be asked comes back `UNCHECKED` with one line
+ * saying why, rather than being left out of the list.
+ */
+export async function fetchSlackBotUsers(workspaceId: string): Promise<SlackBotUser[]> {
+  const data = await graphql<{ slackBotUsers: SlackBotUser[] }>(
+    `query SlackBotUsers($workspaceId: ID!) {
+       slackBotUsers(workspaceId: $workspaceId) {
+         connectionId name outcome message userId handle receives
+       }
+     }`,
+    { workspaceId },
+  );
+  return data.slackBotUsers;
 }
 
 export const TRIGGER_ACTION_LABEL: Record<TriggerAction, string> = {
