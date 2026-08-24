@@ -197,6 +197,24 @@ const nodeTypes = { stepNode: StepNodeView };
  * row, so it is exactly this size whatever the run put in it - the stylesheet
  * fixes the width and four rows fix the height. Given up front, there is no
  * state in which a node has no size, and no frame in which one is not drawn.
+ *
+ * It is given twice, and the second time is issue #259. `initialWidth` answers
+ * "how big is a box nothing has measured yet", which is what decides whether a
+ * node is drawn; `measured` answers "this box has been measured", which is what
+ * decides whether the *lines* are drawn. React Flow keeps where a node's handles
+ * are in its own bookkeeping, and it keeps them across a rebuild only for a node
+ * whose object carries `measured` - `parseHandles` in @xyflow/system throws them
+ * away for a node that does not. An edge is nothing but two handle positions, so
+ * an edge whose node has none is not drawn at all: nodes on the canvas, no lines
+ * between them, which is precisely what was reported.
+ *
+ * That is why the #235 fix did not cover this. It made the boxes appear and left
+ * the lines behind them, and every read of the run erased all of them for a
+ * frame - and for good whenever the frame that would put them back never came,
+ * which is the same race #235 and #242 were about. These nodes are exactly as
+ * tall as this says, so nothing is being claimed here that a measurement would
+ * contradict; the editor's nodes hand `measured` back through `onNodesChange`
+ * and this page, which has no such door, says it itself.
  */
 const NODE_WIDTH = 200;
 const NODE_HEIGHT = 90;
@@ -355,9 +373,11 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
         id: step.key,
         type: 'stepNode',
         position: { x: step.x, y: step.y },
-        // What the box measures, before anything has measured it. See above.
+        // What the box measures, before anything has measured it, and what it
+        // measures once something has - which is what keeps the lines. See above.
         initialWidth: NODE_WIDTH,
         initialHeight: NODE_HEIGHT,
+        measured: { width: NODE_WIDTH, height: NODE_HEIGHT },
         selected: step.key === selectedKey,
         data: {
           kind: step.kind,

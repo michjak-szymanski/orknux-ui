@@ -130,3 +130,19 @@ that was thrown away, and `Ctrl+Z` inside a text box is left to the browser.
 node's own, saved with it, so a graph can run down the screen and turn along the
 way. Anything that lays out or draws an edge has to read it rather than assume
 left to right.
+
+**Rebuilding the node objects throws away what React Flow measured, and there are
+two halves to that.** `initialWidth` / `initialHeight` say how big a box is
+before anything has measured one, and without them an unmeasured node is drawn
+`visibility: hidden` — issues #235 and #242. `measured` is the other half and it
+is what keeps the *lines*: an edge is drawn from where its two nodes' handles
+are, React Flow keeps those positions in bookkeeping of its own, and
+`parseHandles` in `@xyflow/system` carries them across a rebuild only for a node
+whose object says `measured`. Leave it off and the boxes are on the canvas with
+nothing joining them, which is issue #259. Both pages that mount a canvas rebuild
+their nodes from an answer — the run's on every read, the editor's in `loadGraph`
+— so both say it: the run page can name the size, because every step's box is
+exactly 200 by 90, and the editor hands back the measurement React Flow already
+made, because its nodes are resizable and a size named for one would be a lie the
+box could contradict. `scripts/graph-lines-check.mjs` watches both, every
+animation frame.
