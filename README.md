@@ -22,7 +22,9 @@ TypeScript, built with Vite, styled with CSS Modules over the design tokens in
 The pictures are the manual's own, in `public/screens`, taken by
 `scripts/screenshots.mjs` against a workspace `scripts/seed-demo.mjs` builds for
 the purpose — so they are the current interface rather than the one somebody
-photographed once.
+photographed once. Retaking them is orknux-server's `scripts/screenshots.ps1`,
+one command: it stands an installation up to photograph, runs both of these
+inside it, and throws it away again.
 
 ![The workflow editor: the graph, what each edge carries, and the selected
 node's settings](public/screens/editor.png)
