@@ -21,6 +21,8 @@ const SAYS: Record<Notification['kind'], string> = {
   MENTIONED: 'mentioned you',
   OBSERVING: 'you are now an observer',
   LINKED: 'linked',
+  TASK_WAITING: 'a task needs you',
+  TASK_FINISHED: 'a task finished',
 };
 
 /**
@@ -149,7 +151,12 @@ export function NotificationBell() {
                 what is new (issue #114).
               */
               className={item.unread ? `${styles.item} ${styles.itemUnread}` : styles.item}
-              to={`/workspace/${item.workspaceId}/issues/${item.issueNumber}`}
+              /* Whichever of the two subjects this one is about. */
+              to={
+                item.taskId !== null
+                  ? `/workspace/${item.workspaceId}/tasks/${item.taskId}`
+                  : `/workspace/${item.workspaceId}/issues/${item.issueNumber}`
+              }
               onClick={() => setOpen(false)}
             >
               <span className={styles.itemHead}>
@@ -157,10 +164,15 @@ export function NotificationBell() {
                 <span className={styles.when}>{timeAgo(item.at)}</span>
               </span>
               <span className={styles.title}>
-                #{item.issueNumber} {item.issueTitle}
+                {item.taskId !== null ? item.taskTitle : `#${item.issueNumber} ${item.issueTitle}`}
               </span>
               <span className={styles.by}>
                 {item.actor}
+                {/* What a parked task is waiting for, which is the whole of why
+                    somebody would get up and look at it. */}
+                {item.kind === 'TASK_WAITING' && item.says !== null
+                  ? `: ${item.says.slice(0, 90)}`
+                  : ''}
                 {/*
                   The words themselves, for the two kinds that have any - and
                   for a link, the relation, which is the whole of what happened:
