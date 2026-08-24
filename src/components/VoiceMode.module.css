@@ -172,13 +172,27 @@
   color: var(--color-text-muted);
 }
 
+/*
+ * What was said, at the foot of the panel: what is still waiting to be sent,
+ * and what was sent last. Both are pushed down together rather than each
+ * anchoring itself, so the pair does not come apart when there is only one.
+ */
+.said {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+  margin: auto 0 0;
+}
+
 /* The last thing it made of what was said, so a mishearing is obvious. */
-.heard {
+.heard,
+.waiting {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   width: 100%;
-  margin: auto 0 0;
+  margin: 0;
   padding: var(--space-12);
   background: var(--color-surface-raised);
   border: 1px solid var(--color-border);
@@ -187,7 +201,19 @@
   color: var(--color-text-secondary);
 }
 
-.heardLabel {
+/*
+ * Something said while it was busy, held until the turn comes round.
+ *
+ * Drawn in the accent the rest of voice mode is drawn in, because the thing
+ * somebody needs to know is that their words were caught rather than lost -
+ * and a box that looks exactly like the one above it says the opposite.
+ */
+.waiting {
+  border-color: var(--color-accent-brand);
+  color: var(--color-text-primary);
+}
+
+.saidLabel {
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
   letter-spacing: 0.5px;

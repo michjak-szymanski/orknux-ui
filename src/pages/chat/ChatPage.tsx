@@ -28,7 +28,8 @@ import {
 import type { Attachment } from '../../api/attachments';
 import { AttachmentViewer } from '../../components/AttachmentViewer';
 import { answers, fetchModels } from '../../api/models';
-import { speak } from '../../api/speech';
+import { readAloud } from '../../components/readAloud';
+import type { Reading } from '../../components/readAloud';
 import { transcribe } from '../../api/transcription';
 import { fetchWorkspace } from '../../api/workspaces';
 import type { Model } from '../../api/models';
@@ -223,10 +224,15 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
    */
   const [speaking, setSpeaking] = useState<number | null>(null);
   const [fetchingSpeech, setFetchingSpeech] = useState<number | null>(null);
-  /** The audio in flight, so a second press can stop the first. */
-  const playing = useRef<{ audio: HTMLAudioElement; url: string } | null>(null);
-  /** Which reading is wanted; a stale one arriving late is dropped rather than played. */
-  const speechTicket = useRef(0);
+  /**
+   * The reading in flight, so a second press can stop the first.
+   *
+   * One object per reading rather than a ticket compared against a counter: the
+   * reading is a sentence at a time now, so what a stop has to reach is a queue,
+   * a request in the air and a clip playing, and holding all three together is
+   * the only way none of them is forgotten.
+   */
+  const reading = useRef<Reading | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const filesRef = useRef<HTMLInputElement>(null);
   const addRef = useRef<HTMLDivElement>(null);
@@ -542,6 +548,21 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
   const [voicePhase, setVoicePhase] = useState<VoicePhase>('listening');
   const voiceControls = useRef<VoiceModeHandle>(null);
   /**
+   * What was attached to a message typed while voice mode was open, and which
+   * message it was.
+   *
+   * Handed over in a ref rather than through the panel, because the panel has
+   * no business knowing what a file is: it sends a turn and reads the answer,
+   * and what goes with that turn is the composer's own affair.
+   *
+   * The text is kept beside the ids because the turn that eventually carries
+   * them may not be the one that was typed — a message held while the panel was
+   * busy has whatever was said after it added to it. So the turn that contains
+   * this text is the one these belong to, and a turn that does not is somebody
+   * else's.
+   */
+  const voiceFiles = useRef<{ text: string; ids: string[] } | null>(null);
+  /**
    * What this workspace has decided about how a turn ends, or nothing.
    *
    * Read here rather than in the panel because this is already the one place
@@ -797,27 +818,30 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
   /**
    * Stops whatever is being read, and lets go of it.
    *
-   * The object URL is revoked rather than left: a blob held by one keeps its
-   * bytes for as long as the page is open, and a chat somebody listens through
-   * would accumulate every answer it ever read.
-   *
-   * Bumping the ticket is what makes this stop a reading that has not arrived
-   * yet — the request cannot be recalled, but its answer can be ignored.
+   * Everything a reading is holding — the pieces not asked for yet, the request
+   * in the air, the clip playing and the object URL under it — is the reading's
+   * own, so stopping it is one call rather than a list somebody has to keep in
+   * step.
    */
   function hush() {
-    speechTicket.current += 1;
-    const held = playing.current;
-    if (held !== null) {
-      held.audio.pause();
-      URL.revokeObjectURL(held.url);
-      playing.current = null;
-    }
+    reading.current?.stop();
+    reading.current = null;
     setSpeaking(null);
     setFetchingSpeech(null);
   }
 
-  /** Reads one answer aloud, or stops it if it is the one already talking. */
-  async function readAloud(index: number, text: string) {
+  /**
+   * Reads one answer aloud, or stops it if it is the one already talking.
+   *
+   * A sentence at a time, and the first of them is asked for on its own: an
+   * answer of any length used to be one request, so the wait before the first
+   * word was the wait for the last one to be synthesised — seconds of a button
+   * that had plainly been pressed and a page saying nothing.
+   *
+   * What is read is what the answer renders to and not the markdown it is
+   * written in, which is `readAloud`'s doing and every reader's alike.
+   */
+  function readAnswer(index: number, text: string) {
     if (workspaceId === null) return;
 
     // A second press on the one that is talking — or being fetched — is "stop".
@@ -825,40 +849,51 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
     hush();
     if (stopping) return;
 
-    const ticket = (speechTicket.current += 1);
     setError(null);
     setFetchingSpeech(index);
-    try {
-      const spoken = await speak(workspaceId, text);
-      // Stopped, or another answer asked for, while this was being made.
-      if (speechTicket.current !== ticket) return;
-
-      const url = URL.createObjectURL(spoken);
-      const audio = new Audio(url);
-      playing.current = { audio, url };
-      audio.addEventListener('ended', hush, { once: true });
-      await audio.play();
-
-      if (speechTicket.current !== ticket) return;
-      setFetchingSpeech(null);
-      setSpeaking(index);
-    } catch (cause) {
-      if (speechTicket.current !== ticket) return;
-      hush();
-      setError(cause instanceof Error ? cause.message : 'That could not be read aloud.');
-    }
+    const say = readAloud(workspaceId, {
+      // Speaking when there is sound, not when there is a request.
+      onStart: () => {
+        if (reading.current !== say) return;
+        setFetchingSpeech(null);
+        setSpeaking(index);
+      },
+      onEnd: () => {
+        if (reading.current === say) hush();
+      },
+      onFailure: (reason) => {
+        if (reading.current !== say) return;
+        hush();
+        setError(reason);
+      },
+    });
+    reading.current = say;
+    say.push(text, true);
   }
 
   /**
-   * One spoken turn: what was heard goes to the model, and the answer comes
-   * back as text for the panel to read aloud.
+   * One turn held in voice mode: what was said - or typed - goes to the model,
+   * and the answer comes back as text for the panel to read aloud.
    *
    * The same stream as the composer's, so a conversation held by voice lands in
    * the transcript exactly as a typed one does — same chat, same history, and
    * the answer grows on screen while it is still being spoken.
+   *
+   * `sending` is set here for the same reason it is set on a typed send: it is
+   * what draws *Waiting for Gemma…* under the turn. The panel had that state to
+   * itself, off to the side, so a conversation held by voice showed the
+   * question, then nothing at all, then a whole answer — and the one screen
+   * saying the model was working was the one nobody was looking at.
    */
   async function handleVoiceTurn(text: string, onProgress: (soFar: string) => void): Promise<string> {
     if (currentId === null) return '';
+
+    // What the composer had attached when this was typed, if it was typed and
+    // if this is the turn that ended up carrying it.
+    const held = voiceFiles.current;
+    const carries = held !== null && text.includes(held.text);
+    const going = carries ? held.ids : [];
+    if (carries) voiceFiles.current = null;
 
     setMessages((present) => [
       ...present,
@@ -866,36 +901,52 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
       { role: 'assistant', content: '', actor: null },
     ]);
     setError(null);
+    setSending(true);
 
     let answer = '';
     let failure: string | null = null;
-    await streamChatMessage(currentId, text, {
-      onChunk: (piece) => {
-        answer += piece;
-        setMessages((present) => {
-          const grown = [...present];
-          const last = grown.length - 1;
-          grown[last] = { ...grown[last], content: grown[last].content + piece };
-          return grown;
-        });
-        // The panel reads whole sentences out of this while the rest is still
-        // being written, so it is handed the answer so far rather than the
-        // piece: what it needs to know is how much of it it has already read.
-        onProgress(answer);
-      },
-      onDone: (millis) => setLastMillis(millis),
-      onError: (reason) => {
-        failure = reason;
-      },
-    });
-    if (failure !== null) throw new Error(failure);
-    await loadSessions(currentId);
+    try {
+      await streamChatMessage(
+        currentId,
+        text,
+        {
+          onChunk: (piece) => {
+            answer += piece;
+            setMessages((present) => {
+              const grown = [...present];
+              const last = grown.length - 1;
+              grown[last] = { ...grown[last], content: grown[last].content + piece };
+              return grown;
+            });
+            // The panel reads whole sentences out of this while the rest is
+            // still being written, so it is handed the answer so far rather
+            // than the piece: what it needs to know is how much of it it has
+            // already read.
+            onProgress(answer);
+          },
+          onDone: (millis) => setLastMillis(millis),
+          onError: (reason) => {
+            failure = reason;
+          },
+        },
+        going,
+      );
+      if (failure !== null) throw new Error(failure);
+      if (going.length > 0) {
+        await fetchChatAttachments(currentId)
+          .then(setChatFiles)
+          .catch(() => undefined);
+      }
+      await loadSessions(currentId);
+    } finally {
+      setSending(false);
+    }
     return answer;
   }
 
   async function handleSend(event: FormEvent) {
     event.preventDefault();
-    if (currentId === null || draft.trim() === '' || sending) return;
+    if (currentId === null || draft.trim() === '') return;
 
     /*
      * What was attached is named in the message.
@@ -921,6 +972,29 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
 
 Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
 
+    /*
+     * In voice mode the panel owns the turn, whichever way the message was
+     * written.
+     *
+     * Not a second sender beside it: the panel is listening, reading the answer
+     * back and deciding when the next turn may start, and a send that went
+     * round it would put two turns on one chat, leave the answer unread, and
+     * have the microphone still waiting for a turn that had already been taken.
+     * So this hands it over — including anything attached, which the turn
+     * carries exactly as a typed send does — and what happens to it there is
+     * the same as for anything said out loud: this turn if there is none in
+     * flight, and the one waiting if there is.
+     */
+    if (voice && voiceControls.current !== null) {
+      setDraft('');
+      setAttached([]);
+      setError(null);
+      if (going.length > 0) voiceFiles.current = { text: said, ids: going.map((file) => file.id) };
+      voiceControls.current.say(said);
+      return;
+    }
+
+    if (sending) return;
     setSending(true);
     setDraft('');
     setAttached([]);
@@ -1052,7 +1126,14 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
    * first token that lands in it is the model answering.
    */
   const answering = sending && (messages[messages.length - 1]?.content ?? '') !== '';
-  const sendLabel = !sending ? 'Send' : answering ? 'Answering…' : 'Waiting…';
+  /*
+   * In voice mode it stays *Send* and stays live, because there it does
+   * something different: the panel is the sender, and pressing this while a
+   * turn is in flight puts what was typed in the queue rather than nowhere.
+   * A button labelled with the turn's progress and refusing the press would be
+   * the same message lost that voice mode was just taught to keep.
+   */
+  const sendLabel = voice || !sending ? 'Send' : answering ? 'Answering…' : 'Waiting…';
 
   /*
    * One banner, drawn in whichever half is showing. It cannot simply sit above
@@ -1637,7 +1718,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                           className={
                             speaking === index ? `${styles.rowAction} ${styles.rowActionOn}` : styles.rowAction
                           }
-                          onClick={() => void readAloud(index, message.content)}
+                          onClick={() => readAnswer(index, message.content)}
                           aria-pressed={speaking === index}
                           title={
                             fetchingSpeech === index
@@ -1981,7 +2062,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
               <button
                 type="submit"
                 className={styles.sendButton}
-                disabled={sending || draft.trim() === ''}
+                disabled={draft.trim() === '' || (sending && !voice)}
               >
                 {sendLabel}
               </button>

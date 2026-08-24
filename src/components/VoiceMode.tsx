@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import type { Ref } from 'react';
 
-import { speak } from '../api/speech';
+import { readAloud } from './readAloud';
+import type { Reading } from './readAloud';
 import { transcribe } from '../api/transcription';
 import styles from './VoiceMode.module.css';
 
 /**
  * Hands-free conversation: it listens, sends what it heard, and reads the
- * answer back before listening again.
+ * answer back — while going on listening.
  *
  * The loop is the feature. A microphone button that puts a transcript in the
  * box is a faster way to type; this is a way to talk to the thing without
@@ -15,8 +16,17 @@ import styles from './VoiceMode.module.css';
  * of a turn has to be noticed rather than declared. That is what the level
  * watching below is for: speech, then quiet for long enough to mean "your go".
  *
+ * **The microphone does not close between turns.** It used to: it opened when
+ * it was this person's turn and shut for as long as the model was thinking or
+ * talking, so anything said in that gap — which is most of a conversation — was
+ * said to nothing at all. It is held now and what changes is where the words
+ * go: this turn if there is no turn in flight, and otherwise into the one thing
+ * waiting to be sent, shown on the panel so that it is waiting visibly.
+ *
  * The transcript stays on screen beside this, because a conversation you cannot
- * scroll back through is a conversation you have to remember.
+ * scroll back through is a conversation you have to remember. And typing is not
+ * the other mode: a message typed into the composer while this is open is a
+ * turn like any other, held and sent by exactly the same rules.
  */
 export type VoicePhase = 'listening' | 'thinking' | 'speaking';
 
@@ -68,6 +78,15 @@ export interface VoiceModeProps {
 
 export interface VoiceModeHandle {
   interrupt: () => void;
+  /**
+   * Takes a message that was typed rather than spoken.
+   *
+   * The composer stays live while this panel is open, and what is typed into it
+   * has to arrive here rather than beside it: two senders on one chat means two
+   * turns in flight, an answer nobody reads aloud, and a microphone still
+   * listening for a turn that has already been taken.
+   */
+  say: (text: string) => void;
 }
 
 /**
@@ -169,26 +188,34 @@ function inForce(chosen: VoiceTurnTaking | null | undefined) {
 const VISIBLE_LEVEL = 0.01;
 
 /**
- * Where the text so far can be cut without reading half a sentence aloud.
+ * What the microphone is asked for, and why it is asked for by name.
  *
- * A full stop, question mark or exclamation followed by a space, or the end of
- * a line. Prose only: nothing here tries to be clever about "Dr. Smith", and
- * being wrong costs a clause read as two, not a wrong word.
+ * These are a browser's defaults for a bare `audio: true` and they are stated
+ * anyway, because one of them is now load-bearing rather than a nicety. The
+ * microphone stays open while the answer is being read aloud, so the room it is
+ * listening to contains this application talking: without echo cancellation the
+ * panel hears itself, transcribes itself, and sends its own last sentence back
+ * as the next thing somebody said. A default that is relied upon is a default
+ * worth writing down.
  */
-const SENTENCE_END = /[.!?…]["')\]]*(?=\s)|\n/g;
+const HEARING: MediaTrackConstraints = {
+  echoCancellation: true,
+  noiseSuppression: true,
+  autoGainControl: true,
+};
 
-/**
- * Short fragments are not worth a request of their own.
- *
- * "Yes." spoken alone, then the rest, sounds like two answers. Anything under
- * this waits for the sentence after it, unless the answer has finished.
- */
-const SHORTEST_TO_SPEAK = 24;
+/** The last thing sent, and whether it was said out loud or typed. */
+interface Said {
+  text: string;
+  spoken: boolean;
+}
 
 export function VoiceMode({ workspaceId, turnTaking, onSay, onClose, onPhase, ref }: VoiceModeProps) {
   const [phase, setPhase] = useState<VoicePhase>('listening');
   const [level, setLevel] = useState(0);
-  const [heard, setHeard] = useState<string | null>(null);
+  const [said, setSaid] = useState<Said | null>(null);
+  /** What was said into the gap and has not been sent yet, for the panel to show. */
+  const [waiting, setWaiting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   /*
@@ -220,9 +247,9 @@ export function VoiceMode({ workspaceId, turnTaking, onSay, onClose, onPhase, re
    * down and start it again mid-sentence. What it does never changes, so only
    * the latest one is kept.
    */
-  const say = useRef(onSay);
+  const sender = useRef(onSay);
   useEffect(() => {
-    say.current = onSay;
+    sender.current = onSay;
   }, [onSay]);
   /*
    * What the workspace decided, held in a ref for the reason the sender above
@@ -252,26 +279,34 @@ export function VoiceMode({ workspaceId, turnTaking, onSay, onClose, onPhase, re
   }, [pauseSetting, overRoomSetting, unattendedSetting]);
   const stream = useRef<MediaStream | null>(null);
   const recorder = useRef<MediaRecorder | null>(null);
-  /**
-   * The clip being heard, and the promise the drain is waiting on for it.
-   *
-   * The resolver is held here because the drain has no other way to be let go
-   * of: pausing an element fires no `ended`, so an interruption that only
-   * paused would leave the drain awaiting a clip that has stopped playing.
-   */
-  const audio = useRef<{ element: HTMLAudioElement; url: string; done: () => void } | null>(null);
-  /**
-   * The next turn, held in a ref.
-   *
-   * The reading is defined above the listening and finishes by starting it,
-   * which is a circle the language will not let either side of close directly.
-   */
-  const listenAgain = useRef<() => void>(() => undefined);
   const context = useRef<AudioContext | null>(null);
   const frame = useRef<number | null>(null);
 
   /**
-   * Everything this turn is holding open, closed in the order it was opened.
+   * The turn in flight, and which one it is.
+   *
+   * `busy` is what decides whether the next thing heard is this turn or the one
+   * after it, and it has to be a ref because it is read from a recorder that
+   * stopped several renders ago. `turn` only goes up, and everything a turn
+   * starts — a chunk of answer, a clip, the end of a reading — checks that it
+   * still belongs to the turn that is running before it does anything.
+   */
+  const busy = useRef(false);
+  const turn = useRef(0);
+  /** The reading of the current answer, and the only thing that can stop it. */
+  const reading = useRef<Reading | null>(null);
+  /** The one message waiting for its turn, in a ref for the reason `busy` is. */
+  const queued = useRef<Said | null>(null);
+  /**
+   * Starting the next turn, held in a ref.
+   *
+   * A turn ends by starting the next one where something is waiting, which is a
+   * circle the language will not let either side of close directly.
+   */
+  const nextTurn = useRef<() => void>(() => undefined);
+
+  /**
+   * Everything the microphone is holding open, closed in the order it was opened.
    *
    * The only place the microphone is given back, so every way out of voice mode
    * — the panel's own button, the cross beside the control, walking away from
@@ -298,135 +333,126 @@ export function VoiceMode({ workspaceId, turnTaking, onSay, onClose, onPhase, re
     setLevel(0);
   }, []);
 
-  const hush = useCallback(() => {
-    const held = audio.current;
-    if (held === null) return;
-    // Cleared first, so a hush that arrives twice - the cross pressed as the
-    // clip ends, a mount coming apart mid-sentence - does the work once.
-    audio.current = null;
-    held.element.pause();
-    URL.revokeObjectURL(held.url);
-    /*
-     * And the drain, let go of.
-     *
-     * `ended` is what resolves a clip that finishes, and a paused element never
-     * fires it - so without this the drain stays awaiting a clip that has
-     * stopped, `draining` stays true, and the guard at the top of it turns
-     * every later call into a no-op. One interruption and the panel never
-     * speaks again for the rest of the session, silently, with the microphone
-     * still working and the answers still arriving. Resolving twice is
-     * harmless; a promise settles once.
-     */
-    held.done();
-  }, []);
+  /**
+   * One turn: send it, and read the answer back as it is written.
+   *
+   * Nothing here waits for the microphone, because the microphone never
+   * stopped. What the panel shows is the conversation's state and not the
+   * device's: thinking while the model writes, speaking once sound is actually
+   * coming out, and listening again when there is nothing left to play.
+   */
+  const begin = useCallback(
+    (starting: Said) => {
+      if (!live.current) return;
+      const mine = (turn.current += 1);
+      busy.current = true;
+      setSaid(starting);
+      setError(null);
+      setPhase('thinking');
+
+      reading.current?.stop();
+      const say = readAloud(workspaceId, {
+        onStart: () => {
+          if (live.current && mine === turn.current) setPhase('speaking');
+        },
+        onEnd: () => {
+          if (live.current && mine === turn.current) nextTurn.current();
+        },
+        onFailure: (reason) => {
+          if (live.current && mine === turn.current) setError(reason);
+        },
+      });
+      reading.current = say;
+
+      void (async () => {
+        try {
+          const answer = await sender.current(starting.text, (soFar) => {
+            if (!live.current || mine !== turn.current) return;
+            say.push(soFar, false);
+          });
+          if (!live.current || mine !== turn.current) return;
+          // Whatever is left, punctuated or not: the end of an answer often is
+          // not a sentence. An answer that was empty ends the turn here too.
+          say.push(answer, true);
+        } catch (cause: unknown) {
+          if (!live.current || mine !== turn.current) return;
+          setError(cause instanceof Error ? cause.message : 'That turn did not work.');
+          say.stop();
+          // A turn that failed is not a reason to stop listening — the next one
+          // may be fine, and the alternative is a panel that sits there dead.
+          nextTurn.current();
+        }
+      })();
+    },
+    [workspaceId],
+  );
 
   /*
-   * The reading, which runs a sentence behind the writing.
+   * The turn is over: send what was waiting, or go back to listening.
    *
-   * `clips` are requests already made, in the order they must be heard; the
-   * drain plays them one at a time and the next is being fetched while the
-   * current one plays. `generation` is what makes an interruption final: a
-   * request that lands after somebody cut in belongs to a turn that is over,
-   * and playing it would be the panel talking over the person.
+   * In an effect rather than beside `begin` because the two call each other,
+   * and a ref is the seam that lets them.
    */
-  const clips = useRef<Promise<Blob>[]>([]);
-  const draining = useRef(false);
-  const finished = useRef(false);
-  const generation = useRef(0);
-  /** How much of the answer has been sent to be read. */
-  const read = useRef(0);
-
-  /** Plays one clip and resolves when it has finished, or at once if it cannot. */
-  const play = useCallback(
-    (clip: Blob, mine: number) =>
-      new Promise<void>((done) => {
-        if (!live.current || mine !== generation.current) {
-          done();
-          return;
-        }
-        const url = URL.createObjectURL(clip);
-        const element = new Audio(url);
-        audio.current = { element, url, done };
-        element.addEventListener('ended', () => done(), { once: true });
-        // A clip that will not play must not stop the ones behind it.
-        element.addEventListener('error', () => done(), { once: true });
-        element.play().catch(() => done());
-      }),
-    [],
-  );
-
-  const drain = useCallback(async () => {
-    if (draining.current) return;
-    draining.current = true;
-    const mine = generation.current;
-
-    while (clips.current.length > 0 && live.current && mine === generation.current) {
-      const next = clips.current.shift();
-      if (next === undefined) break;
-      // A sentence that could not be read is skipped rather than ending the
-      // answer: the rest of it is still worth hearing.
-      const clip = await next.catch(() => null);
-      if (clip === null) continue;
-      await play(clip, mine);
-      hush();
-    }
-
-    draining.current = false;
-    if (!live.current || mine !== generation.current) return;
-    // Nothing left and nothing more coming: the turn is over, so listen again.
-    if (finished.current && clips.current.length === 0) void listenAgain.current();
-  }, [hush, play]);
-
-  /**
-   * Reads whatever whole sentences have arrived since the last time.
-   *
-   * `whole` is the answer so far, always from the beginning, so the offset is
-   * the only state this needs. When the answer is done the remainder goes too,
-   * punctuated or not - the last thing somebody says often is not.
-   */
-  const readOn = useCallback(
-    (whole: string, done: boolean) => {
-      if (!live.current) return;
-      const mine = generation.current;
-      const rest = whole.slice(read.current);
-
-      let upTo = 0;
-      SENTENCE_END.lastIndex = 0;
-      for (let found = SENTENCE_END.exec(rest); found !== null; found = SENTENCE_END.exec(rest)) {
-        upTo = found.index + found[0].length;
+  useEffect(() => {
+    nextTurn.current = () => {
+      busy.current = false;
+      const next = queued.current;
+      if (next === null) {
+        setPhase('listening');
+        return;
       }
+      queued.current = null;
+      setWaiting(null);
+      begin(next);
+    };
+  }, [begin]);
 
-      const piece = (done ? rest : rest.slice(0, upTo)).trim();
-      if (piece === '') return;
-      if (!done && piece.length < SHORTEST_TO_SPEAK) return;
-
-      read.current += done ? rest.length : upTo;
-      clips.current.push(
-        speak(workspaceId, piece).then((clip) => {
-          if (mine !== generation.current) throw new Error('interrupted');
-          return clip;
-        }),
-      );
-      void drain();
+  /**
+   * Where a finished message goes: into this turn, or into the one waiting.
+   *
+   * The decision is made when the words are complete rather than when they were
+   * started, which is what makes cutting in work: somebody who interrupts is
+   * already speaking, and the sentence they are in the middle of belongs to the
+   * turn they have just taken rather than to the queue.
+   *
+   * A second message while one is already waiting is **added to it**, not put
+   * behind it and not thrown away. Both were said into the same gap and to the
+   * same turn, and holding a queue of them would answer a question somebody has
+   * already rephrased. What does throw the waiting message away is cutting in
+   * deliberately — see `interrupt`: pressing the circle means "listen to me
+   * now", and sending what was said before that press would be answering
+   * something the person has visibly moved on from.
+   */
+  const hand = useCallback(
+    (next: Said) => {
+      if (!busy.current) {
+        begin(next);
+        return;
+      }
+      const held = queued.current;
+      queued.current =
+        held === null
+          ? next
+          : { text: `${held.text} ${next.text}`, spoken: held.spoken || next.spoken };
+      setWaiting(queued.current.text);
     },
-    [drain, workspaceId],
+    [begin],
   );
 
   /**
-   * One turn: listen until the talking stops, then answer and read it back.
+   * Listens for one utterance, and starts listening for the next as it ends.
    *
    * Recursive rather than a loop with awaits, because each step ends in an
-   * event — the recorder stopping, the audio finishing — and a turn can be
-   * abandoned at any of them by the panel being closed.
+   * event — the recorder stopping — and listening can be abandoned at any of
+   * them by the panel being closed.
    */
   const listen = useCallback(async () => {
     if (!live.current) return;
     const mine = session.current;
-    setPhase('listening');
 
     let opened: MediaStream;
     try {
-      opened = await navigator.mediaDevices.getUserMedia({ audio: true });
+      opened = await navigator.mediaDevices.getUserMedia({ audio: HEARING });
     } catch {
       setError('The microphone could not be opened. The browser may have refused it.');
       return;
@@ -438,8 +464,8 @@ export function VoiceMode({ workspaceId, turnTaking, onSay, onClose, onPhase, re
       return;
     }
 
-    // Whatever the turn before this one is still holding, in case it ended
-    // without saying so: two open microphones means one of them has nobody.
+    // Whatever the last utterance is still holding, in case it ended without
+    // saying so: two open microphones means one of them has nobody.
     release();
     stream.current = opened;
     const ears = new AudioContext();
@@ -505,12 +531,10 @@ export function VoiceMode({ workspaceId, turnTaking, onSay, onClose, onPhase, re
 
       const quietLongEnough = spokeAt !== null && now - spokeAt > pauseMs;
       const goneOnTooLong = now - startedAt > unattendedMs;
-      if (quietLongEnough || (goneOnTooLong && spokeAt !== null)) {
-        held.stop();
-        return;
-      }
-      // Nothing said at all: keep listening rather than sending silence.
-      if (goneOnTooLong && spokeAt === null) {
+      if (quietLongEnough || goneOnTooLong) {
+        // Nothing said at all is caught below rather than here: the recorder is
+        // stopped either way, and only what it produced decides what happens
+        // next.
         held.stop();
         return;
       }
@@ -518,79 +542,42 @@ export function VoiceMode({ workspaceId, turnTaking, onSay, onClose, onPhase, re
     };
 
     held.onstop = () => {
-      const said = new Blob(pieces, { type: held.mimeType });
+      const heard = new Blob(pieces, { type: held.mimeType });
       const anythingSaid = spokeAt !== null;
       release();
       if (!live.current) return;
 
+      /*
+       * Straight back on the microphone, before anything is made of what it
+       * just heard.
+       *
+       * The transcript takes a moment and the answer takes longer, and every
+       * one of those moments used to be a closed microphone. Listening again
+       * first is what makes the next sentence somebody says land somewhere,
+       * whether it is their turn or not.
+       */
+      void listen();
+
       // Nobody spoke: round again, without troubling the transcriber.
-      if (!anythingSaid || said.size === 0) {
-        void listen();
-        return;
-      }
+      if (!anythingSaid || heard.size === 0) return;
 
-      setPhase('thinking');
-      transcribe(workspaceId, said)
-        .then(async (text) => {
+      transcribe(workspaceId, heard)
+        .then((text) => {
           if (!live.current) return;
-          if (text.trim() === '') {
-            void listen();
-            return;
-          }
-          setHeard(text.trim());
+          const words = text.trim();
+          if (words === '') return;
           setError(null);
-
-          /*
-           * A turn of its own, so anything left over from the last one - a clip
-           * still arriving, an offset into an answer that is finished with -
-           * belongs to a generation nobody is listening to any more.
-           */
-          generation.current += 1;
-          clips.current = [];
-          read.current = 0;
-          finished.current = false;
-
-          /*
-           * Speaking starts on the first whole sentence, not on the last one.
-           *
-           * The phase changes as soon as there is anything to read, which is
-           * what the circle in the middle is showing; the drain below is
-           * already fetching that sentence while the model writes the next.
-           */
-          const answer = await say.current(text.trim(), (soFar) => {
-            if (!live.current) return;
-            setPhase('speaking');
-            readOn(soFar, false);
-          });
-          if (!live.current) return;
-          if (answer.trim() === '') {
-            void listen();
-            return;
-          }
-
-          setPhase('speaking');
-          // Whatever is left, punctuated or not: the end of an answer often is
-          // not a sentence.
-          finished.current = true;
-          readOn(answer, true);
-          void drain();
+          hand({ text: words, spoken: true });
         })
         .catch((cause: unknown) => {
           if (!live.current) return;
-          setError(cause instanceof Error ? cause.message : 'That turn did not work.');
-          // A turn that failed is not a reason to stop listening — the next one
-          // may be fine, and the alternative is a panel that sits there dead.
-          void listen();
+          setError(cause instanceof Error ? cause.message : 'That could not be transcribed.');
         });
     };
 
     held.start();
     frame.current = requestAnimationFrame(watch);
-  }, [drain, hush, readOn, release, workspaceId]);
-
-  useEffect(() => {
-    listenAgain.current = () => void listen();
-  }, [listen]);
+  }, [hand, release, workspaceId]);
 
   useEffect(() => {
     live.current = true;
@@ -599,13 +586,14 @@ export function VoiceMode({ workspaceId, turnTaking, onSay, onClose, onPhase, re
       live.current = false;
       // Nothing that arrives after this belongs to anybody — including a
       // microphone this mount asked for and is no longer here to receive.
-      generation.current += 1;
+      turn.current += 1;
       session.current += 1;
-      clips.current = [];
+      queued.current = null;
+      reading.current?.stop();
+      reading.current = null;
       release();
-      hush();
     };
-  }, [hush, listen, release]);
+  }, [listen, release]);
 
   /**
    * The circle is a button, because the one thing somebody wants mid-sentence
@@ -623,21 +611,35 @@ export function VoiceMode({ workspaceId, turnTaking, onSay, onClose, onPhase, re
     onPhase?.(phase);
   }, [phase, onPhase]);
 
-  useImperativeHandle(ref, () => ({ interrupt }));
+  useImperativeHandle(ref, () => ({ interrupt, say }));
 
   function interrupt() {
-    if (phase === 'speaking') {
-      // The generation moves, so a clip already asked for is not played at
-      // somebody who has started talking again.
-      generation.current += 1;
-      clips.current = [];
-      hush();
-      void listen();
+    if (phase === 'speaking' || phase === 'thinking') {
+      /*
+       * The turn moves, so a clip already asked for and a chunk still arriving
+       * belong to a turn nobody is listening to any more. The microphone is not
+       * touched: it has been open the whole time, and restarting it here would
+       * cut off the first words of whatever this press was made in order to
+       * say.
+       */
+      turn.current += 1;
+      reading.current?.stop();
+      reading.current = null;
+      queued.current = null;
+      setWaiting(null);
+      busy.current = false;
+      setPhase('listening');
       return;
     }
     // Only a recorder that is actually running can be stopped; a second press
     // while the first one is still ending would otherwise throw.
-    if (phase === 'listening' && recorder.current?.state === 'recording') recorder.current.stop();
+    if (recorder.current?.state === 'recording') recorder.current.stop();
+  }
+
+  function say(text: string) {
+    const typed = text.trim();
+    if (typed === '') return;
+    hand({ text: typed, spoken: false });
   }
 
   const caption =
@@ -660,7 +662,7 @@ export function VoiceMode({ workspaceId, turnTaking, onSay, onClose, onPhase, re
         style={{ ['--level' as string]: level.toFixed(3) }}
         onClick={interrupt}
         aria-label={
-          phase === 'speaking' ? 'Stop speaking and listen' : phase === 'listening' ? 'Finish speaking' : 'Thinking'
+          phase === 'listening' ? 'Finish speaking' : 'Stop this turn and listen'
         }
       >
         <span className={styles.ring} aria-hidden="true" />
@@ -684,12 +686,25 @@ export function VoiceMode({ workspaceId, turnTaking, onSay, onClose, onPhase, re
             : 'Working out what to say.'}
       </p>
 
-      {heard !== null && (
-        <p className={styles.heard}>
-          <span className={styles.heardLabel}>Heard</span>
-          {heard}
-        </p>
-      )}
+      <div className={styles.said}>
+        {/*
+          What is waiting, above what has been sent, because it is the half
+          somebody can still do something about.
+        */}
+        {waiting !== null && (
+          <p className={styles.waiting} aria-live="polite">
+            <span className={styles.saidLabel}>Waiting</span>
+            {waiting}
+          </p>
+        )}
+
+        {said !== null && (
+          <p className={styles.heard}>
+            <span className={styles.saidLabel}>{said.spoken ? 'Heard' : 'Typed'}</span>
+            {said.text}
+          </p>
+        )}
+      </div>
 
       {error !== null && <p className={styles.error}>{error}</p>}
     </aside>
