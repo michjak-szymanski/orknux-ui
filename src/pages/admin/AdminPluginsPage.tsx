@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
+  PluginPermissionsRequired,
   fetchPluginSource,
   fetchPlugins,
   loadPlugin,
@@ -9,7 +10,7 @@ import {
   pluginTemplate,
   unloadPlugin,
 } from '../../api/plugins';
-import type { Plugin } from '../../api/plugins';
+import type { Plugin, PluginPermission } from '../../api/plugins';
 import type { SessionUser } from '../../api/session';
 import { timeAgo } from '../../api/tools';
 import downloadIcon from '../../assets/download.svg';
@@ -27,6 +28,21 @@ import styles from './AdminPluginsPage.module.css';
 export interface AdminPluginsPageProps {
   session: SessionUser;
   onSignOut?: () => void;
+}
+
+/**
+ * A load stopped at the question of what the plugin is allowed to do.
+ *
+ * The source is held rather than fetched again, so accepting is the same load
+ * carried on — a URL that answered once and has changed since cannot become a
+ * different plugin between the list being read and the list being agreed to.
+ */
+interface Asking {
+  /** The name it arrived as: what was picked, or the last part of the URL. */
+  name: string;
+  source: string;
+  /** The server's list, in the server's words. */
+  permissions: PluginPermission[];
 }
 
 /**
@@ -48,6 +64,8 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
   const [notice, setNotice] = useState<string | null>(null);
   /** The plugin whose unload is waiting to be confirmed. */
   const [confirming, setConfirming] = useState<string | null>(null);
+  /** The load waiting on somebody agreeing to what the plugin asked for. */
+  const [asking, setAsking] = useState<Asking | null>(null);
   const picker = useRef<HTMLInputElement>(null);
   /** A plugin somewhere on the web, by its URL. */
   const [url, setUrl] = useState('');
@@ -69,13 +87,21 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
 
   useEffect(load, [load]);
 
-  /** From a file or from a URL: the same plugin, loaded the same way. */
-  async function loadSource(name: string, source: string) {
+  /**
+   * From a file or from a URL: the same plugin, loaded the same way.
+   *
+   * And refused the same way. A plugin that declares permissions nobody has
+   * agreed to comes back with the list rather than with the plugin, and that
+   * list is put in front of somebody here — so whichever way a plugin arrived,
+   * the same question is asked before the sandbox is relaxed for it.
+   */
+  async function loadSource(name: string, source: string, accept?: string[]) {
     setBusy(true);
     setError(null);
     setNotice(null);
+    setAsking(null);
     try {
-      const loaded = await loadPlugin(name, source);
+      const loaded = await loadPlugin(name, source, accept);
       const what = loaded.replaced ? `Replaced ${loaded.plugin.key}` : `Loaded ${loaded.plugin.key}`;
       // Saying what it provides is the useful half: those names are what a
       // workflow will pick, and they are prefixed, so they are not what the
@@ -87,7 +113,16 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
       );
       load();
     } catch (cause: unknown) {
-      setError(cause instanceof Error ? cause.message : 'Could not load that plugin.');
+      /*
+        Not an error to reprint: it is a decision nobody has made yet. The
+        message the server sent says the same thing in one sentence, and the
+        list below says it in the shape somebody can answer.
+      */
+      if (cause instanceof PluginPermissionsRequired) {
+        setAsking({ name, source, permissions: cause.permissions });
+      } else {
+        setError(cause instanceof Error ? cause.message : 'Could not load that plugin.');
+      }
     } finally {
       setBusy(false);
       // Cleared so choosing the same file again still counts as a change.
@@ -113,6 +148,7 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
     setBusy(true);
     setError(null);
     setNotice(null);
+    setAsking(null);
     try {
       const { name, source } = await fetchPluginSource(address);
       setUrl('');
@@ -148,6 +184,21 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
     } finally {
       setBusy(false);
     }
+  }
+
+  /**
+   * Agrees to exactly what was shown, and loads on that.
+   *
+   * The names go back as they came, so what is granted is what was read. A file
+   * edited in the meantime to ask for more is refused again with the new list
+   * rather than landing under this answer.
+   */
+  async function onAccept(pending: Asking) {
+    await loadSource(
+      pending.name,
+      pending.source,
+      pending.permissions.map((one) => one.name),
+    );
   }
 
   async function onUnload(plugin: Plugin) {
@@ -269,6 +320,67 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
           </button>
         </div>
 
+      {/*
+        The load, stopped at the question.
+
+        Inline and in the page rather than in a modal, the way unloading is
+        confirmed in its row: this screen has no dialog idiom, and the thing
+        being decided about — the file just chosen — is on the screen already.
+        Nothing has been stored at this point; the plugin is loaded by the
+        button below or by nothing.
+      */}
+      {asking !== null && (
+        <section className={styles.asking}>
+          <p className={styles.askingLine}>
+            <span className={styles.askingName}>{asking.name}</span> needs these to run.
+            <FieldHint label="Permissions">
+              The sandbox a plugin runs in switches these off for everything, because a plugin
+              is somebody else&apos;s code running on this installation. Accepting turns them on
+              for this plugin alone, and records who agreed and when. A plugin edited later to
+              need something more is refused again, with the new list, rather than arriving
+              under this answer.
+            </FieldHint>
+          </p>
+          {/*
+            Named and explained in the server's own words. This build's
+            vocabulary is the server's, so a list written here would explain a
+            permission it has since renamed - or miss one it has added.
+          */}
+          <ul className={styles.permissions}>
+            {asking.permissions.map((one) => (
+              <li key={one.name} className={styles.permission}>
+                <span className={styles.permissionName}>{one.name}</span>
+                <span className={styles.permissionSummary}>{one.summary}</span>
+              </li>
+            ))}
+          </ul>
+          <div className={styles.askingActions}>
+            {/*
+              The decision, worded as one. "OK" beside a list of what a stranger's
+              code may reach reads as a way of making the list go away.
+            */}
+            <button
+              type="button"
+              className={styles.accept}
+              disabled={busy}
+              onClick={() => void onAccept(asking)}
+            >
+              Allow and Load
+            </button>
+            <button
+              type="button"
+              className={styles.cancel}
+              disabled={busy}
+              onClick={() => {
+                setNotice(`${asking.name} was not loaded.`);
+                setAsking(null);
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </section>
+      )}
 
       <section className={styles.card}>
         <div className={styles.tableHeader}>
@@ -320,6 +432,22 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
                     {plugin.declaredParameters
                       .map((one) => `${one.name}${one.required ? '' : '?'}: ${one.type.toLowerCase()}`)
                       .join('  ·  ')}
+                  </span>
+                )}
+                {/*
+                  What the sandbox was relaxed to allow it, and on whose word.
+                  Only where there is any: a plugin that asked for nothing would
+                  otherwise grow a line saying so under every row, the way the
+                  parameters above are drawn only when there are some.
+                */}
+                {plugin.permissions.length > 0 && (
+                  <span className={styles.allows}>
+                    allows {plugin.permissions.map((one) => one.name).join('  ·  ')}
+                    {plugin.permissionsAcceptedAt !== null &&
+                      `  ·  accepted ${timeAgo(plugin.permissionsAcceptedAt)}`}
+                    {plugin.permissionsAcceptedBy !== null &&
+                      plugin.permissionsAcceptedBy !== '' &&
+                      ` by ${plugin.permissionsAcceptedBy}`}
                   </span>
                 )}
               </span>

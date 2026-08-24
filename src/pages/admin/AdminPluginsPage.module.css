@@ -300,6 +300,119 @@
   color: var(--color-text-muted);
 }
 
+/*
+ * A load stopped at what the plugin asks to be allowed.
+ *
+ * Amber rather than red: nothing has gone wrong and nothing is being destroyed —
+ * there is a decision here that has not been made yet, and the block is coloured
+ * to be the thing on the page that is asking rather than to alarm.
+ *
+ * It fills the column like everything else on this page. Nothing caps it.
+ */
+.asking {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  width: 100%;
+  padding: var(--space-14) var(--space-16);
+  background: var(--color-amber-soft);
+  border: 1px solid var(--color-amber);
+  border-radius: var(--radius-8);
+}
+
+/* One line, and the (?) beside it holds what accepting actually means. */
+.askingLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+/* The file, spelled as it arrived, so it is clear which load this is about. */
+.askingName {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.permissions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * The name, then the server's own words for it. Side by side rather than
+ * stacked: this is a list to read down, and a two-line entry per permission
+ * turns five of them into a page.
+ */
+.permission {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-10);
+}
+
+.permissionName {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.permissionSummary {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.askingActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+/*
+ * The decision. It carries the same weight as Load Plugin because it is that
+ * button, finishing the load somebody started — the way out beside it is the
+ * plain one, so the pointer does not grant a permission on its way past.
+ */
+.accept {
+  padding: var(--space-6) var(--space-10);
+  background: var(--color-accent-brand);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.accept:disabled,
+.cancel:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/*
+ * What a loaded plugin was granted, under its name.
+ *
+ * The same line as the signatures above it, in amber, because it is the one
+ * thing in the row that somebody agreed to rather than something the file
+ * declared.
+ */
+.allows {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-amber);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* A link inside the page's own sentence, which should read as one. */
 .subtitleLink {
   color: var(--color-accent-brand);

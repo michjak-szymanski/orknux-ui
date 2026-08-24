@@ -1,6 +1,8 @@
 import { ApiError, graphql } from './client';
 import type { PageOf } from './client';
 import type { ValueType } from './actions';
+import { SCRIPT_LIBRARY_IMPORT_FIELDS, asLibraryInput } from './libraries';
+import type { ScriptLibraryImport, ScriptLibraryImportInput } from './libraries';
 
 export interface FunctionParam {
   name: string;
@@ -17,6 +19,45 @@ export interface FunctionExternal {
   variableId: string;
   name: string;
   type: 'STRING' | 'NUMBER' | 'BOOLEAN';
+}
+
+/**
+ * What an imported function is, as far as the importer needs to know.
+ *
+ * Enough to annotate `imports` in the editor and to name in a panel what was
+ * imported. Not the source: whoever is reading this is writing the call, not the
+ * callee, and the callee has an editor of its own.
+ */
+export interface ImportedFunction {
+  name: string;
+  description: string | null;
+  /** "(city: string, days: number)", the declared parameters and nothing else. */
+  signature: string;
+  returnType: ValueType;
+  /** What its returned object is called, when it returns one. */
+  returnObjectName: string | null;
+}
+
+/**
+ * One function a script imports, and the name it imports it under.
+ *
+ * Two halves, and they are not the same fact. `functionId` is the reference, held
+ * as an id because a reference held by name goes stale the first time somebody
+ * renames what it points at; `name` is the importer's own word for it, written
+ * into the importer's own code. Shared with tools, which import the same way.
+ */
+export interface ScriptImport {
+  functionId: string;
+  /** What the code calls it: `imports.<name>(…)`. */
+  name: string;
+  /** What was imported. Null only if it went away behind the delete guard's back. */
+  function: ImportedFunction | null;
+}
+
+/** An import as the server's input type takes one, without what it sent back. */
+export interface ScriptImportInput {
+  functionId: string;
+  name: string;
 }
 
 /** Where a function came from, and therefore whether it can be changed here. */
@@ -62,6 +103,22 @@ export interface WorkspaceFunction {
   params: FunctionParam[];
   /** The workspace's variables it is handed, after the parameters it declares. */
   externals: FunctionExternal[];
+  /**
+   * The workspace's other functions it calls, under the names it calls them.
+   *
+   * Not arguments: an import is reached through the sandbox's `imports` object,
+   * so adding one does not change what the code has to accept.
+   */
+  imports: ScriptImport[];
+  /**
+   * The installation's libraries it uses, under the names it uses them by.
+   *
+   * Reached through the same `imports` object and kept in a list of its own for
+   * the reason they are loaded separately: a library belongs to the installation
+   * and a function belongs to a workspace, so the two are chosen from different
+   * places even though the code calls them the same way.
+   */
+  libraries: ScriptLibraryImport[];
   /** "(input: object, format: string)", ready for the list. */
   signature: string;
   lastModifiedAt: string;
@@ -87,7 +144,10 @@ export interface FunctionValidation {
 const FUNCTION_FIELDS =
   `id workspaceId scope editable plugin { id name } name description source typescript returnType
    returnObjectId returnObjectName params { name type objectId objectName }
-   externals { variableId name type } signature lastModifiedAt lastModifiedBy`;
+   externals { variableId name type }
+   imports { functionId name function { name description signature returnType returnObjectName } }
+   ${SCRIPT_LIBRARY_IMPORT_FIELDS}
+   signature lastModifiedAt lastModifiedBy`;
 
 const WORKSPACE_FUNCTIONS_QUERY = `
   query WorkspaceFunctions($workspaceId: ID!, $page: Int!, $size: Int!) {
@@ -145,6 +205,18 @@ function asInput(param: FunctionParam): { name: string; type: ValueType; objectI
     : { name: param.name, type: param.type };
 }
 
+/**
+ * An import as the server takes one: the reference and the name, and nothing else.
+ *
+ * What was imported is resolved *by* the server and sent back with the script, so
+ * it belongs to what is read and not to what is written - a mutation carrying it
+ * is refused outright, for a field the input type does not have. Narrowed here
+ * rather than at each call, and exported because tools import the same way.
+ */
+export function asImportInput(held: ScriptImportInput): ScriptImportInput {
+  return { functionId: held.functionId, name: held.name };
+}
+
 /** `page` is 0-based, matching the server. */
 export async function fetchWorkspaceFunctions(
   workspaceId: string,
@@ -182,9 +254,18 @@ export async function createFunction(input: {
   params?: FunctionParam[];
   /** Which of the workspace's variables it is handed, in order. */
   externalVariableIds?: string[];
+  /** The workspace's other functions it calls, under the names it calls them. */
+  imports?: ScriptImportInput[];
+  /** The installation's libraries it uses, under the names it uses them by. */
+  libraries?: ScriptLibraryImportInput[];
 }): Promise<WorkspaceFunction> {
   const data = await graphql<{ createFunction: WorkspaceFunction }>(CREATE_FUNCTION_MUTATION, {
-    input: { ...input, params: input.params?.map(asInput) },
+    input: {
+      ...input,
+      params: input.params?.map(asInput),
+      imports: input.imports?.map(asImportInput),
+      libraries: input.libraries?.map(asLibraryInput),
+    },
   });
   return data.createFunction;
 }
@@ -226,6 +307,12 @@ export async function duplicateFunction(fn: WorkspaceFunction): Promise<Workspac
         returnType: fn.returnType,
         params: fn.params,
         externalVariableIds: fn.externals.map((external) => external.variableId),
+        // The copy calls the same functions under the same names: the code being
+        // copied says `imports.upper(…)`, and a copy without them would not run.
+        imports: fn.imports.map(asImportInput),
+        // The same, for the libraries: the code says `imports.dateFns.format(…)`
+        // and the copy has to be able to.
+        libraries: fn.libraries.map(asLibraryInput),
       });
     } catch (cause) {
       const taken = cause instanceof ApiError && /already exists/i.test(cause.message);
@@ -563,11 +650,20 @@ export async function updateFunction(
     params?: FunctionParam[];
     /** Null leaves them alone; an empty list takes them all off. */
     externalVariableIds?: string[];
+    /** Null leaves them alone; an empty list takes them all off. */
+    imports?: ScriptImportInput[];
+    /** Null leaves them alone; an empty list takes them all off. */
+    libraries?: ScriptLibraryImportInput[];
   },
 ): Promise<WorkspaceFunction> {
   const data = await graphql<{ updateFunction: WorkspaceFunction }>(UPDATE_FUNCTION_MUTATION, {
     id,
-    input: { ...input, params: input.params?.map(asInput) },
+    input: {
+      ...input,
+      params: input.params?.map(asInput),
+      imports: input.imports?.map(asImportInput),
+      libraries: input.libraries?.map(asLibraryInput),
+    },
   });
   return data.updateFunction;
 }

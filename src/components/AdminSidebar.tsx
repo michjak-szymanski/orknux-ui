@@ -3,6 +3,7 @@ import chartLineIcon from '../assets/chart-line.svg';
 import fileTextIcon from '../assets/file-text.svg';
 import globeIcon from '../assets/globe.svg';
 import layersIcon from '../assets/layers.svg';
+import packageIcon from '../assets/package.svg';
 import plugIcon from '../assets/plug.svg';
 import puzzleIcon from '../assets/puzzle.svg';
 import settingsIcon from '../assets/settings.svg';
@@ -20,6 +21,7 @@ export type AdminSection =
   | 'audit'
   | 'integrations'
   | 'plugins'
+  | 'libraries'
   | 'templates'
   | 'networking'
   | 'shell'
@@ -52,6 +54,17 @@ export function AdminSidebar({ active }: { active: AdminSection }) {
         icon={puzzleIcon}
         active={active === 'plugins'}
         to="/admin/plugins"
+      />
+      {/*
+        Beside Plugins, because both are code loaded once for every workspace to
+        use. What separates them is who calls it: the product calls a plugin's
+        functions, and somebody's own function imports a library and calls it.
+      */}
+      <SidebarNavItem
+        label="Libraries"
+        icon={packageIcon}
+        active={active === 'libraries'}
+        to="/admin/libraries"
       />
       {/*
         Beside Plugins, because both are things the installation offers to every

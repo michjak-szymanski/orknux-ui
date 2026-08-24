@@ -1,0 +1,263 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+import {
+  deleteScriptLibrary,
+  fetchScriptLibraries,
+  librarySize,
+  librarySourceUrl,
+  uploadLibrary,
+} from '../../api/libraries';
+import type { ScriptLibrary } from '../../api/libraries';
+import type { SessionUser } from '../../api/session';
+import { timeAgo } from '../../api/tools';
+import downloadIcon from '../../assets/download.svg';
+import packageIcon from '../../assets/package.svg';
+import plusIcon from '../../assets/plus.svg';
+import trashIcon from '../../assets/trash-2.svg';
+import { AdminSidebar } from '../../components/AdminSidebar';
+import { AppShell } from '../../components/AppShell';
+import { FieldHint } from '../../components/FieldHint';
+import { Loader } from '../../components/Loader';
+import { shellUser } from '../../session/user';
+import styles from './AdminLibrariesPage.module.css';
+
+export interface AdminLibrariesPageProps {
+  session: SessionUser;
+  onSignOut?: () => void;
+}
+
+/**
+ * The libraries loaded into this installation.
+ *
+ * Beside Plugins, because both are code an operator loads once for everyone
+ * rather than something a workspace owns. What separates them is what they are
+ * for: a plugin declares functions the product calls, a library is a bundle
+ * somebody's own function imports and calls itself.
+ *
+ * `usedBy` is why this screen is an administrator's rather than a workspace's. It
+ * names every function and tool importing a library across every workspace, which
+ * is what somebody deciding whether to replace or remove one has to know, and it
+ * is the only place in the product that can answer it.
+ */
+export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPageProps) {
+  const [libraries, setLibraries] = useState<ScriptLibrary[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  /** The library whose removal is waiting to be confirmed. */
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const picker = useRef<HTMLInputElement>(null);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    fetchScriptLibraries()
+      .then((found) => {
+        setLibraries(found);
+        setLoading(false);
+      })
+      .catch((cause: unknown) => {
+        setLibraries(null);
+        setError(cause instanceof Error ? cause.message : 'Could not load the libraries.');
+        setLoading(false);
+      });
+  }, []);
+
+  useEffect(load, [load]);
+
+  async function onPicked(file: File | undefined) {
+    if (file === undefined) return;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const loaded = await uploadLibrary(file.name, await file.text());
+      setNotice(loaded.replaced ? `Replaced ${loaded.key}.` : `Loaded ${loaded.key}.`);
+      load();
+    } catch (cause: unknown) {
+      setError(cause instanceof Error ? cause.message : 'Could not load that library.');
+    } finally {
+      setBusy(false);
+      // Cleared so choosing the same file again still counts as a change.
+      if (picker.current !== null) picker.current.value = '';
+    }
+  }
+
+  /**
+   * Removes one, or shows why it cannot be removed.
+   *
+   * The server refuses while anything imports it and names what does, and that
+   * sentence is the whole answer — it is shown as it came rather than replaced
+   * with a shorter one that would leave somebody hunting for the importer.
+   */
+  async function onRemove(library: ScriptLibrary) {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await deleteScriptLibrary(library.id);
+      setNotice(`Removed ${library.key}.`);
+      setConfirming(null);
+      load();
+    } catch (cause: unknown) {
+      setError(cause instanceof Error ? cause.message : 'Could not remove that library.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <AppShell user={shellUser(session)} onSignOut={onSignOut} sidebar={<AdminSidebar active="libraries" />}>
+      <header className={styles.titleBar}>
+        <div className={styles.titleBlock}>
+          <h1 className={styles.title}>
+            <span className={styles.titleWithHint}>
+              Libraries
+              <FieldHint label="Libraries">
+                A library is available in every workspace, and is imported by a function or a tool under a
+                local name of its own — <code>imports.dateFns</code>. Its key is the filename without the
+                extension, so loading a file with a key already in the list replaces it in place and nothing
+                importing it is repointed. One that something imports cannot be removed.
+              </FieldHint>
+            </span>
+          </h1>
+          <p className={styles.subtitle}>JavaScript any workspace’s function or tool may import.</p>
+        </div>
+        {/*
+         * The real input is hidden and driven by the button: a file input styles
+         * differently in every browser, and this one has to sit beside the other
+         * admin screens' buttons and look like them.
+         */}
+        <input
+          ref={picker}
+          className={styles.picker}
+          type="file"
+          accept=".js,.mjs,.ts,.mts,text/javascript,text/plain"
+          onChange={(event) => void onPicked(event.target.files?.[0])}
+        />
+        <div className={styles.actions}>
+          <button
+            type="button"
+            className={styles.load}
+            disabled={busy}
+            onClick={() => picker.current?.click()}
+          >
+            <img src={plusIcon} alt="" width={14} height={14} />
+            Load Library
+          </button>
+        </div>
+      </header>
+
+      <section className={styles.card}>
+        <div className={styles.tableHeader}>
+          <span className={styles.colName}>Name</span>
+          <span className={styles.colSize}>Size</span>
+          <span className={styles.colWhen}>Loaded</span>
+          <span className={styles.colActions}>Actions</span>
+        </div>
+
+        {loading && (
+          <p className={styles.notice}>
+            <Loader />
+          </p>
+        )}
+        {error !== null && <p className={`${styles.notice} ${styles.noticeError}`}>{error}</p>}
+        {notice !== null && error === null && <p className={styles.notice}>{notice}</p>}
+        {!loading && error === null && libraries?.length === 0 && (
+          <p className={styles.notice}>No libraries loaded yet.</p>
+        )}
+
+        {libraries?.map((library) => (
+          <div key={library.id} className={styles.row}>
+            <span className={styles.colName}>
+              <img className={styles.icon} src={packageIcon} alt="" width={16} height={16} />
+              <span className={styles.nameBlock}>
+                <span className={styles.name}>{library.key}</span>
+                {/*
+                 * What it exports, under the name. A library is worth listing for
+                 * what an importer can reach on it, and "4 members" answers less
+                 * than saying which — the brackets mark the ones to call.
+                 */}
+                <span className={styles.declares}>{exported(library)}</span>
+                {/*
+                  And who has it. This is the line the whole screen exists for: a
+                  library is installation-wide, so the question before replacing or
+                  removing one is whose code stops working, and nowhere else in the
+                  product can answer it.
+                */}
+                <span className={styles.usedBy}>{usedBy(library)}</span>
+              </span>
+            </span>
+            <span className={`${styles.colSize} ${styles.muted}`}>{librarySize(library.sizeBytes)}</span>
+            <span className={`${styles.colWhen} ${styles.muted}`}>
+              {timeAgo(library.uploadedAt)}
+              {library.uploadedBy !== '' && ` by ${library.uploadedBy}`}
+            </span>
+            <span className={styles.colActions}>
+              {/*
+                What was written, not what runs: TypeScript where there is any. A
+                plain link, so the browser saves it and the session cookie goes with
+                the request.
+              */}
+              <a
+                className={styles.rowAction}
+                href={librarySourceUrl(library.id)}
+                title={`Download ${library.key}`}
+                aria-label={`Download ${library.key}`}
+              >
+                <img src={downloadIcon} alt="" width={14} height={14} />
+              </a>
+              {/* Confirmed in the row rather than in a modal, as unloading a plugin is. */}
+              {confirming === library.id ? (
+                <>
+                  <button
+                    type="button"
+                    className={styles.confirm}
+                    disabled={busy}
+                    onClick={() => void onRemove(library)}
+                  >
+                    Remove
+                  </button>
+                  <button type="button" className={styles.cancel} onClick={() => setConfirming(null)}>
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.rowAction}
+                  disabled={busy}
+                  onClick={() => setConfirming(library.id)}
+                  aria-label={`Remove ${library.key}`}
+                  title={`Remove ${library.key}`}
+                >
+                  <img src={trashIcon} alt="" width={14} height={14} />
+                </button>
+              )}
+            </span>
+          </div>
+        ))}
+      </section>
+    </AppShell>
+  );
+}
+
+/**
+ * What the library's export turned out to be, as one line.
+ *
+ * A callable one is said as what it is rather than listed, because there is one
+ * thing to say about it: the local name is the call. Everything else is its
+ * members, with the callable ones marked the way this product marks a call.
+ */
+function exported(library: ScriptLibrary): string {
+  const members = library.members.map((member) => (member.callable ? `${member.name}()` : member.name));
+  if (library.callable) return members.length === 0 ? 'exports a function' : `exports a function  ·  ${members.join('  ·  ')}`;
+  return members.length === 0 ? 'exports nothing' : `exports ${members.join('  ·  ')}`;
+}
+
+/** Every importer, named with the workspace it is in: `slugify in backend`. */
+function usedBy(library: ScriptLibrary): string {
+  if (library.usedBy.length === 0) return 'used by nothing';
+  return `used by ${library.usedBy.map((one) => `${one.name} in ${one.workspaceName}`).join('  ·  ')}`;
+}
