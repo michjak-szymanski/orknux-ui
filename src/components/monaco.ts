@@ -312,6 +312,28 @@ export function declareObjects(source: string): void {
 
 const OBJECTS_PATH = 'inmemory://orknux/objects.d.ts';
 
+/** The declaration file holding whatever the script being edited imports. */
+let declaredImports: { dispose: () => void } | null = null;
+
+/**
+ * Tell the editor what `imports` holds for the script open in it.
+ *
+ * Replaced rather than added to, and for a sharper reason than the objects
+ * above: these belong to one script, not even to one workspace. Two functions
+ * each importing something under the name `upper` would be a redeclaration
+ * error in a file nobody can see to fix, and carrying one script's imports into
+ * the next would offer completions for calls that do not exist there.
+ *
+ * Always replaced with something, never simply disposed. A script with nothing
+ * imported still declares an empty `imports`; see `importTypes`.
+ */
+export function declareImports(source: string): void {
+  declaredImports?.dispose();
+  declaredImports = typescript.typescriptDefaults.addExtraLib(source, IMPORTS_PATH);
+}
+
+const IMPORTS_PATH = 'inmemory://orknux/imports.d.ts';
+
 /** What compiling one function produced, or why it could not be compiled. */
 export type Compiled =
   | { ok: true; javascript: string }

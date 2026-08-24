@@ -2,7 +2,14 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import type { ValueType } from '../../api/actions';
-import { VALUE_TYPES, namesObject, tsType, valueTypeLabel } from '../../api/functions';
+import {
+  VALUE_TYPES,
+  fetchWorkspaceFunctions,
+  namesObject,
+  tsType,
+  valueTypeLabel,
+} from '../../api/functions';
+import type { ScriptImport, WorkspaceFunction } from '../../api/functions';
 import { fetchWorkspaceObjects } from '../../api/objects';
 import type { WorkflowObject } from '../../api/objects';
 import type { SessionUser } from '../../api/session';
@@ -33,8 +40,10 @@ import { RevisionHistory } from '../../components/RevisionHistory';
 import { UnsavedWorkDialog } from '../../components/UnsavedWorkDialog';
 import { ValidationStatus } from '../../components/ValidationStatus';
 import type { Validation } from '../../components/ValidationStatus';
+import { FieldHint } from '../../components/FieldHint';
 import { useLeaveGuard } from '../../components/leaveGuard';
-import { compile, declareObjects } from '../../components/monaco';
+import { compile, declareImports, declareObjects } from '../../components/monaco';
+import { importTypes } from '../../components/importTypes';
 import { objectTypes } from '../../components/objectTypes';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
@@ -42,6 +51,9 @@ import styles from './EditorPage.module.css';
 
 /** The whole of a workspace's shapes fits the picker. */
 const OBJECT_PAGE_SIZE = 100;
+
+/** And the whole of its functions fits the one beside it. */
+const FUNCTION_PAGE_SIZE = 100;
 
 export interface ToolEditorPageProps {
   session: SessionUser;
@@ -73,6 +85,15 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
    * change here is written into the code below before it can be saved.
    */
   const [params, setParams] = useState<ToolParam[]>([]);
+  /**
+   * The workspace's functions this tool calls, under the names it calls them.
+   *
+   * Not parameters: an import is reached through the sandbox's `imports` object,
+   * so adding one changes what the code may call and not what the agent fills in.
+   */
+  const [imports, setImports] = useState<ScriptImport[]>([]);
+  /** What an import may point at: the workspace's own functions. */
+  const [importable, setImportable] = useState<WorkspaceFunction[]>([]);
   /** What a parameter can name, and what the editor declares to Monaco. */
   const [objects, setObjects] = useState<WorkflowObject[]>([]);
   const [caret, setCaret] = useState({ line: 1, column: 1 });
@@ -125,6 +146,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
     setDescription(found.description ?? '');
     setSource(found.typescript ?? found.source);
     setParams(found.params);
+    setImports(found.imports);
   }
 
   /*
@@ -144,6 +166,65 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
     declareObjects(objectTypes(objects));
   }, [objects]);
 
+  /*
+   * What this tool may import: the workspace's own functions.
+   *
+   * A plugin's is left out because the server refuses one - it belongs to no
+   * workspace, so nothing here could reach it - and offering a choice that is
+   * always refused is worse than not offering it. Nothing else is filtered: a tool
+   * is not something a function can import, so there is no loop to close.
+   */
+  useEffect(() => {
+    if (workspaceId === '') return;
+    fetchWorkspaceFunctions(workspaceId, 0, FUNCTION_PAGE_SIZE)
+      .then((page) => setImportable(page.content.filter((held) => held.scope !== 'PLUGIN')))
+      .catch(() => setImportable([]));
+  }, [workspaceId]);
+
+  /**
+   * The imports with what they point at filled in, for the editor to be told.
+   *
+   * A row added a moment ago has no `function` on it: that half is resolved by the
+   * server and arrives with the next read, and waiting for a save would mean the
+   * call somebody writes immediately after adding an import is underlined until
+   * they save it. The picker already holds the answer, so it is used.
+   *
+   * The signature is rebuilt from the declared parameters rather than taken from
+   * the list, deliberately: the one the list carries has the function's externals
+   * marked on the end, and an importer does not pass those - the sandbox does.
+   */
+  const resolvedImports = useMemo(
+    () =>
+      imports.map((held) => {
+        if (held.function !== null) return held;
+        const known = importable.find((candidate) => candidate.id === held.functionId);
+        return known === undefined
+          ? held
+          : {
+              ...held,
+              function: {
+                name: known.name,
+                description: known.description,
+                signature: `(${known.params.map((param) => `${param.name}: ${param.type.toLowerCase()}`).join(', ')})`,
+                returnType: known.returnType,
+                returnObjectName: known.returnObjectName,
+              },
+            };
+      }),
+    [imports, importable],
+  );
+
+  /*
+   * What `imports` holds, told to the editor so a call through it is checked.
+   *
+   * The same arrangement the objects above get, and for the same reason: without
+   * it every line calling an imported function is underlined for a global the
+   * language service has never heard of.
+   */
+  useEffect(() => {
+    declareImports(importTypes(resolvedImports));
+  }, [resolvedImports]);
+
   /** What an object is called, for the annotation that has to name it. */
   const objectNameOf = (objectId: string | null | undefined): string | null =>
     objects.find((held) => held.id === objectId)?.name ?? null;
@@ -159,6 +240,39 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
    */
   const declared = (all: ToolParam[]): ToolParam[] =>
     all.filter((param) => param.name.trim() !== '').map((param) => ({ ...param, name: param.name.trim() }));
+
+  /**
+   * The imports a save would send: the unnamed rows dropped, the names trimmed.
+   *
+   * Both sides of the comparison below go through this, exactly as `declared` does
+   * for the parameters - a row somebody has not named yet is not an import, and the
+   * save would not carry it.
+   */
+  const named = (all: ScriptImport[]): { functionId: string; name: string }[] =>
+    all
+      .filter((held) => held.functionId !== '' && held.name.trim() !== '')
+      .map((held) => ({ functionId: held.functionId, name: held.name.trim() }));
+
+  /**
+   * Whether the imports on screen are not the ones the server was told.
+   *
+   * Its own answer rather than part of `panelMoved`, because the two ask different
+   * questions of the code. A parameter has to be in the declaration, so a change to
+   * one rewrites it; an import appears nowhere in the signature, so a change to one
+   * leaves the code alone. Only leaving the page has to know about it.
+   */
+  const importsMoved = useMemo(() => {
+    if (tool === null) return false;
+    const was = named(tool.imports);
+    const now = named(imports);
+    return (
+      now.length !== was.length ||
+      now.some((held, at) => held.functionId !== was[at].functionId || held.name !== was[at].name)
+    );
+    // `named` is a plain helper over its argument, and reading it as a dependency
+    // would rebuild this on every render for nothing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tool, imports]);
 
   /** The tool's parameter list, as TypeScript would write it. */
   const declarations = useMemo(
@@ -390,6 +504,8 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
           // A half-written row is not a parameter yet, and sending it would be
           // refused for a name no script can be called by.
           params: params.filter((param) => param.name.trim() !== ''),
+          // The same rule for an import: a row nobody has named is not one yet.
+          imports: named(imports),
         }),
       );
       setSaved(true);
@@ -429,9 +545,11 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
       source !== (tool.typescript ?? tool.source) ||
       // The parameters a save would send, which the code column is kept in step
       // with above and so is asked for once.
-      panelMoved
+      panelMoved ||
+      // The imports, which the code column knows nothing about; see `importsMoved`.
+      importsMoved
     );
-  }, [tool, name, description, source, panelMoved]);
+  }, [tool, name, description, source, panelMoved, importsMoved]);
 
   /*
    * The three ways out, and the question before any of them: a link, a Back
@@ -856,6 +974,130 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                 <p className={styles.paramHint}>
                   An agent calling this tool fills these in by name. The declaration below takes them in this order.
                 </p>
+              </div>
+
+              {/*
+                What this tool calls, as opposed to what it is given.
+
+                Reached through the sandbox's `imports` object rather than through
+                the declaration, so a row here changes what the code may call and
+                not what the agent has to fill in - which is why it is a section of
+                its own and not another kind of parameter.
+
+                One direction only: a tool imports a function, and nothing imports a
+                tool, so there is no loop for the server to refuse.
+              */}
+              <div className={styles.panelSection}>
+                <span className={styles.headingWithHint}>
+                  <h2 className={styles.panelHeading}>Imports</h2>
+                  <FieldHint label="Imports">
+                    The workspace’s functions this tool may call, as <code>imports.name(…)</code>. The name is this
+                    code’s own word for it: renaming the function it points at changes nothing here. A plugin’s
+                    function cannot be imported.
+                  </FieldHint>
+                </span>
+                <div className={styles.paramList}>
+                  {imports.map((held, index) => (
+                    <div key={index} className={styles.paramRow}>
+                      <div className={styles.paramTopLine}>
+                        <select
+                          className={`${styles.paramName} ${styles.inputMono}`}
+                          value={held.functionId}
+                          aria-label={`Import ${index + 1} function`}
+                          onChange={(event) => {
+                            const chosen = importable.find((fn) => fn.id === event.target.value);
+                            setImports((current) =>
+                              current.map((row, at) =>
+                                at === index
+                                  ? {
+                                      ...row,
+                                      functionId: event.target.value,
+                                      /*
+                                       * Only ever filled in, never rewritten. The
+                                       * name is what the code below already says,
+                                       * and moving an import to another function is
+                                       * not a request to rename the calls.
+                                       */
+                                      name: row.name.trim() === '' ? (chosen?.name ?? '') : row.name,
+                                    }
+                                  : row,
+                              ),
+                            );
+                            setSaved(false);
+                          }}
+                        >
+                          {/*
+                            What it points at now, when that is not on offer: a
+                            function deleted out from under this tool, or the list
+                            not yet fetched. Without it the select would show the
+                            first option and read as though the import had been
+                            quietly moved.
+                          */}
+                          {!importable.some((fn) => fn.id === held.functionId) && (
+                            <option value={held.functionId}>{held.function?.name ?? '—'}</option>
+                          )}
+                          {importable.map((fn) => (
+                            <option key={fn.id} value={fn.id}>
+                              {fn.name}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          className={`${styles.paramName} ${styles.inputMono}`}
+                          type="text"
+                          value={held.name}
+                          aria-label={`Import ${index + 1} name`}
+                          onChange={(event) => {
+                            setImports((current) =>
+                              current.map((row, at) => (at === index ? { ...row, name: event.target.value } : row)),
+                            );
+                            setSaved(false);
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className={styles.removeParam}
+                          aria-label={`Remove ${held.name || `import ${index + 1}`}`}
+                          onClick={() => {
+                            setImports((current) => current.filter((_, at) => at !== index));
+                            setSaved(false);
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className={styles.addParam}
+                    disabled={importable.length === 0}
+                    title={
+                      importable.length === 0
+                        ? 'This workspace has no functions to import'
+                        : 'Call one of the workspace’s functions from this tool'
+                    }
+                    onClick={() => {
+                      /*
+                        One that is not imported already, so the row arrives
+                        pointing at something and under a name the server would
+                        take.
+                      */
+                      const next =
+                        importable.find((fn) => !imports.some((held) => held.functionId === fn.id)) ??
+                        importable[0];
+                      if (next === undefined) return;
+                      setImports((current) => [
+                        ...current,
+                        { functionId: next.id, name: next.name, function: null },
+                      ]);
+                      setSaved(false);
+                    }}
+                  >
+                    <img src={plusIcon} alt="" width={12} height={12} />
+                    Add Import
+                  </button>
+                </div>
               </div>
 
               {tool !== null && (

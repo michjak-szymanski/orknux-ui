@@ -1,6 +1,8 @@
 import { graphql } from './client';
 import type { PageOf } from './client';
 import type { ValueType } from './actions';
+import { asImportInput } from './functions';
+import type { ScriptImport, ScriptImportInput } from './functions';
 
 /**
  * One argument a tool takes, in the order it takes them.
@@ -37,6 +39,12 @@ export interface Tool {
   typescript: string;
   /** What it takes, in the order the sandbox passes it. */
   params: ToolParam[];
+  /**
+   * The workspace's functions it calls, under the names it calls them.
+   *
+   * One direction only: a tool may import a function, and nothing imports a tool.
+   */
+  imports: ScriptImport[];
   /** "(city: string, days: number)", ready for the list. */
   signature: string;
   enabled: boolean;
@@ -68,8 +76,9 @@ function asInput(param: ToolParam): { name: string; type: ValueType; objectId?: 
 
 const TOOL_FIELDS =
   'id workspaceId name description source typescript ' +
-  'params { name type objectId objectName } signature ' +
-  'enabled lastModifiedAt lastModifiedBy';
+  'params { name type objectId objectName } ' +
+  'imports { functionId name function { name description signature returnType returnObjectName } } ' +
+  'signature enabled lastModifiedAt lastModifiedBy';
 
 export async function fetchWorkspaceTools(workspaceId: string, page = 0, size = 20): Promise<PageOf<Tool>> {
   const data = await graphql<{ workspaceTools: PageOf<Tool> }>(
@@ -104,12 +113,21 @@ export interface CreateToolInput {
   typescript?: string;
   /** Left out means the one every tool used to take: an object called `input`. */
   params?: ToolParam[];
+  /** The workspace's functions it calls, under the names it calls them. */
+  imports?: ScriptImportInput[];
 }
 
 export async function createTool(workspaceId: string, input: CreateToolInput): Promise<Tool> {
   const data = await graphql<{ createTool: Tool }>(
     `mutation CreateTool($input: CreateToolInput!) { createTool(input: $input) { ${TOOL_FIELDS} } }`,
-    { input: { workspaceId, ...input, params: input.params?.map(asInput) } },
+    {
+      input: {
+        workspaceId,
+        ...input,
+        params: input.params?.map(asInput),
+        imports: input.imports?.map(asImportInput),
+      },
+    },
   );
   return data.createTool;
 }
@@ -122,12 +140,14 @@ export interface UpdateToolInput {
   typescript?: string;
   /** Left out leaves them alone; an empty list takes them all off. */
   params?: ToolParam[];
+  /** Left out leaves them alone; an empty list takes them all off. */
+  imports?: ScriptImportInput[];
 }
 
 export async function updateTool(id: string, input: UpdateToolInput): Promise<Tool> {
   const data = await graphql<{ updateTool: Tool }>(
     `mutation UpdateTool($id: ID!, $input: UpdateToolInput!) { updateTool(id: $id, input: $input) { ${TOOL_FIELDS} } }`,
-    { id, input: { ...input, params: input.params?.map(asInput) } },
+    { id, input: { ...input, params: input.params?.map(asInput), imports: input.imports?.map(asImportInput) } },
   );
   return data.updateTool;
 }

@@ -666,6 +666,20 @@
   color: var(--color-text-muted);
 }
 
+/*
+ * A heading with its (?) beside it.
+ *
+ * A (?) on a heading explains the group, which is what Imports is: what an import
+ * is, and what the name beside it belongs to. Beside the words rather than after
+ * the whole row, so it reads as part of the heading and not as a control belonging
+ * to the field below. The function editor's twin says the same.
+ */
+.headingWithHint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
 .field {
   display: flex;
   flex-direction: column;

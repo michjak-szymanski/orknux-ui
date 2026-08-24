@@ -10,6 +10,7 @@ import {
   createFunction,
   deleteFunction,
   fetchFunction,
+  fetchWorkspaceFunctions,
   timeAgo,
   namesObject,
   parametersOf,
@@ -21,7 +22,7 @@ import {
   valueTypeLabel,
   withParameters,
 } from '../../api/functions';
-import type { FunctionParam, WorkspaceFunction } from '../../api/functions';
+import type { FunctionParam, ScriptImport, WorkspaceFunction } from '../../api/functions';
 import type { SessionUser } from '../../api/session';
 import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import codeIcon from '../../assets/code.svg';
@@ -37,7 +38,8 @@ import type { CodeEditorHandle } from '../../components/CodeEditor';
 import { OpenDefinitionIcon } from '../../components/OpenDefinitionIcon';
 import { Loader } from '../../components/Loader';
 import { RevisionHistory } from '../../components/RevisionHistory';
-import { compile, declareObjects } from '../../components/monaco';
+import { compile, declareImports, declareObjects } from '../../components/monaco';
+import { importTypes } from '../../components/importTypes';
 import { objectTypes } from '../../components/objectTypes';
 import { fetchWorkspaceObjects } from '../../api/objects';
 import type { WorkflowObject } from '../../api/objects';
@@ -59,6 +61,9 @@ export interface FunctionEditorPageProps {
 
 /** The whole of a workspace's shapes fits the picker. */
 const OBJECT_PAGE_SIZE = 100;
+
+/** And the whole of its functions fits the one beside it. */
+const FUNCTION_PAGE_SIZE = 100;
 
 /*
  * How the two columns share the row, in pixels of panel.
@@ -177,6 +182,16 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
   const [params, setParams] = useState<FunctionParam[]>([]);
   /** The workspace's variables this function is handed, by id and in order. */
   const [externals, setExternals] = useState<string[]>([]);
+  /**
+   * The workspace's other functions this one calls, under the names it calls them.
+   *
+   * Not parameters, and kept apart from them for that reason: an import is reached
+   * through the sandbox's `imports` object, so adding one changes what the code may
+   * call and not what it has to accept.
+   */
+  const [imports, setImports] = useState<ScriptImport[]>([]);
+  /** What an import may point at: this workspace's own functions, minus this one. */
+  const [importable, setImportable] = useState<WorkspaceFunction[]>([]);
   /** What a parameter or a return type can name, and what the editor declares. */
   const [objects, setObjects] = useState<WorkflowObject[]>([]);
   const [returnObjectId, setReturnObjectId] = useState<string | null>(null);
@@ -206,6 +221,69 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
   useEffect(() => {
     declareObjects(objectTypes(objects));
   }, [objects]);
+
+  /*
+   * What this function may import: the workspace's own, and not itself.
+   *
+   * A plugin's function is left out because the server refuses one - it belongs to
+   * no workspace, so nothing here could reach it - and offering a choice that is
+   * always refused is worse than not offering it. A loop is not filtered: only the
+   * server knows the whole graph, and its refusal says which link closed it.
+   */
+  useEffect(() => {
+    if (workspaceId === '') return;
+    fetchWorkspaceFunctions(workspaceId, 0, FUNCTION_PAGE_SIZE)
+      .then((page) =>
+        setImportable(page.content.filter((held) => held.scope !== 'PLUGIN' && held.id !== functionId)),
+      )
+      .catch(() => setImportable([]));
+  }, [workspaceId, functionId]);
+
+  /**
+   * The imports with what they point at filled in, for the editor to be told.
+   *
+   * A row added a moment ago has no `function` on it: that half is resolved by the
+   * server and arrives with the next read, and waiting for a save would mean the
+   * call somebody writes immediately after adding an import is underlined until
+   * they save it. The picker already holds the answer, so it is used.
+   *
+   * The signature is rebuilt from the declared parameters rather than taken from
+   * the list, deliberately: the one the list carries has the function's externals
+   * marked on the end, and an importer does not pass those - the sandbox does. It
+   * is written the way the server writes an imported function's, so nothing moves
+   * when the stored answer replaces this one.
+   */
+  const resolvedImports = useMemo(
+    () =>
+      imports.map((held) => {
+        if (held.function !== null) return held;
+        const known = importable.find((candidate) => candidate.id === held.functionId);
+        return known === undefined
+          ? held
+          : {
+              ...held,
+              function: {
+                name: known.name,
+                description: known.description,
+                signature: `(${known.params.map((param) => `${param.name}: ${param.type.toLowerCase()}`).join(', ')})`,
+                returnType: known.returnType,
+                returnObjectName: known.returnObjectName,
+              },
+            };
+      }),
+    [imports, importable],
+  );
+
+  /*
+   * What `imports` holds, told to the editor so a call through it is checked.
+   *
+   * The same arrangement the objects above get, and for the same reason: without
+   * it every line calling an imported function is underlined for a global the
+   * language service has never heard of.
+   */
+  useEffect(() => {
+    declareImports(importTypes(resolvedImports));
+  }, [resolvedImports]);
 
   /** What an object is called, for the annotation that has to name it. */
   const objectNameOf = (objectId: string | null | undefined): string | null =>
@@ -449,6 +527,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
         setReturnObjectId(found.returnObjectId);
         setParams(found.params);
         setExternals(found.externals.map((external) => external.variableId));
+        setImports(found.imports);
       })
       .catch((cause: unknown) => {
         setLoadError(cause instanceof Error ? cause.message : 'Could not load the function.');
@@ -594,6 +673,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
           setReturnObjectId(found.returnObjectId);
           setParams(found.params);
           setExternals(found.externals.map((external) => external.variableId));
+          setImports(found.imports);
           setSaved(false);
           setStatus({ ok: true, message: 'Reloaded — the change was accepted.', whole: true });
         })
@@ -687,6 +767,40 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
     // dependency would rebuild this on every render for nothing.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fn, params, externals]);
+
+  /**
+   * The imports a save would send: the unnamed rows dropped, the names trimmed.
+   *
+   * Both sides of the comparison below go through this, exactly as `declared` does
+   * for the parameters - a row somebody has not named yet is not an import, and the
+   * save would not carry it.
+   */
+  const named = (all: ScriptImport[]): { functionId: string; name: string }[] =>
+    all
+      .filter((held) => held.functionId !== '' && held.name.trim() !== '')
+      .map((held) => ({ functionId: held.functionId, name: held.name.trim() }));
+
+  /**
+   * Whether the imports on screen are not the ones the server was told.
+   *
+   * Its own answer rather than part of `panelMoved`, because the two ask different
+   * questions of the code. A parameter has to be in the declaration, so a change to
+   * one rewrites it; an import is reached through `imports` and appears nowhere in
+   * the signature, so a change to one leaves the code alone. Only leaving the page
+   * has to know about it.
+   */
+  const importsMoved = useMemo(() => {
+    if (fn === null) return imports.length > 0;
+    const was = named(fn.imports);
+    const now = named(imports);
+    return (
+      now.length !== was.length ||
+      now.some((held, at) => held.functionId !== was[at].functionId || held.name !== was[at].name)
+    );
+    // `named` is a plain helper over its argument, and reading it as a dependency
+    // would rebuild this on every render for nothing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fn, imports]);
 
   /*
    * The code follows the panel.
@@ -782,6 +896,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
         description.trim() === '' &&
         declared(params).length === 0 &&
         externals.length === 0 &&
+        imports.length === 0 &&
         returnType === 'MAP' &&
         /*
          * The column is empty for exactly one render - the pass before the
@@ -807,9 +922,25 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
         (namesObject(fn.returnType) ? fn.returnObjectId : null) ||
       // The parameters a save would send and the externals in order, which the
       // code column is kept in step with above and so is asked for once.
-      panelMoved
+      panelMoved ||
+      // The imports, which the code column knows nothing about; see `importsMoved`.
+      importsMoved
     );
-  }, [creating, fn, name, description, source, returnType, returnObjectId, params, externals, panelMoved, stub]);
+  }, [
+    creating,
+    fn,
+    name,
+    description,
+    source,
+    returnType,
+    returnObjectId,
+    params,
+    externals,
+    imports,
+    panelMoved,
+    importsMoved,
+    stub,
+  ]);
 
   /*
    * The three ways out, and the question before any of them.
@@ -950,6 +1081,9 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
         returnObjectId: namesObject(returnType) ? returnObjectId : null,
         params: params.filter((param) => param.name.trim() !== ''),
         externalVariableIds: externals,
+        // A row nobody has named is not an import yet, and sending it would be
+        // refused for a name no code can call it by.
+        imports: named(imports),
       };
 
       const stored = creating
@@ -1596,6 +1730,130 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                 </div>
               </section>
 
+              {/*
+                What this function calls, as opposed to what it is handed.
+
+                Reached through the sandbox's `imports` object rather than through
+                the signature, so a row here changes what the code may call and not
+                what it has to accept - which is why this section is beside the
+                parameters rather than another kind of them.
+
+                Only the workspace's own functions are offered. The server refuses a
+                plugin's, refuses a loop and refuses this function itself; the first
+                two of those are not worth offering, and its refusal is what says so
+                for the third.
+              */}
+              <section className={styles.panelSection}>
+                <span className={styles.headingWithHint}>
+                  <h2 className={styles.panelHeading}>Imports</h2>
+                  <FieldHint label="Imports">
+                    The workspace’s other functions this one may call, as <code>imports.name(…)</code>. The name is
+                    this code’s own word for it: renaming the function it points at changes nothing here. A
+                    plugin’s function cannot be imported, and neither can a loop back to this one.
+                  </FieldHint>
+                </span>
+                <div className={styles.paramList}>
+                  {imports.map((held, index) => (
+                    <div key={index} className={styles.paramRow}>
+                      <select
+                        className={`${styles.paramName} ${styles.inputMono}`}
+                        value={held.functionId}
+                        aria-label={`Import ${index + 1} function`}
+                        onChange={(event) => {
+                          const chosen = importable.find((fn) => fn.id === event.target.value);
+                          setImports((current) =>
+                            current.map((row, at) =>
+                              at === index
+                                ? {
+                                    ...row,
+                                    functionId: event.target.value,
+                                    /*
+                                     * Only ever filled in, never rewritten. The name
+                                     * is what the code below already says, and moving
+                                     * an import to another function is not a request
+                                     * to go through the code renaming the calls.
+                                     */
+                                    name: row.name.trim() === '' ? (chosen?.name ?? '') : row.name,
+                                  }
+                                : row,
+                            ),
+                          );
+                          setSaved(false);
+                        }}
+                      >
+                        {/*
+                          What it points at now, when that is not on offer: a
+                          function deleted out from under this one, or the list
+                          not yet fetched. Without it the select would show the
+                          first option and read as though the import had been
+                          quietly moved.
+                        */}
+                        {!importable.some((fn) => fn.id === held.functionId) && (
+                          <option value={held.functionId}>{held.function?.name ?? '—'}</option>
+                        )}
+                        {importable.map((fn) => (
+                          <option key={fn.id} value={fn.id}>
+                            {fn.name}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        className={`${styles.paramName} ${styles.inputMono}`}
+                        type="text"
+                        value={held.name}
+                        aria-label={`Import ${index + 1} name`}
+                        onChange={(event) => {
+                          setImports((current) =>
+                            current.map((row, at) => (at === index ? { ...row, name: event.target.value } : row)),
+                          );
+                          setSaved(false);
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className={styles.removeParam}
+                        aria-label={`Remove ${held.name || `import ${index + 1}`}`}
+                        onClick={() => {
+                          setImports((current) => current.filter((_, at) => at !== index));
+                          setSaved(false);
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className={styles.addParam}
+                    disabled={importable.length === 0}
+                    title={
+                      importable.length === 0
+                        ? 'This workspace has no other functions to import'
+                        : 'Call one of the workspace’s other functions from this one'
+                    }
+                    onClick={() => {
+                      /*
+                        One that is not imported already, so the row arrives
+                        pointing at something and under a name the server would
+                        take. The same choice Add External makes.
+                      */
+                      const next =
+                        importable.find((fn) => !imports.some((held) => held.functionId === fn.id)) ??
+                        importable[0];
+                      if (next === undefined) return;
+                      setImports((current) => [
+                        ...current,
+                        { functionId: next.id, name: next.name, function: null },
+                      ]);
+                      setSaved(false);
+                    }}
+                  >
+                    <img src={plusIcon} alt="" width={14} height={14} />
+                    Add Import
+                  </button>
+                </div>
+              </section>
+
               <section className={styles.panelSection}>
                 <span className={styles.headingWithHint}>
                   <h2 className={styles.panelHeading}>Return Type</h2>
@@ -1737,6 +1995,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                           setReturnObjectId(found.returnObjectId);
                           setParams(found.params);
                           setExternals(found.externals.map((external) => external.variableId));
+                          setImports(found.imports);
                           setSaved(false);
                         })
                         .catch(() => undefined);
