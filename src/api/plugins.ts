@@ -35,9 +35,34 @@ export interface Plugin {
    * because the answers belong to a workspace and the question does not.
    */
   declaredParameters: PluginParameterDeclaration[];
+  /**
+   * What the sandbox was relaxed to allow this plugin, because somebody said so.
+   *
+   * Not what the file asks for: a plugin whose declaration was refused is not
+   * stored at all, so anything in here is a list a person read and accepted.
+   * Empty for a plugin that asked for nothing.
+   */
+  permissions: PluginPermission[];
+  /** When the list above was accepted. Null when there was nothing to accept. */
+  permissionsAcceptedAt: string | null;
+  /** Who accepted it. Null when there was nothing to accept. */
+  permissionsAcceptedBy: string | null;
   sha256: string;
   uploadedAt: string;
   uploadedBy: string;
+}
+
+/**
+ * One thing the sandbox does not switch on by itself.
+ *
+ * The name is what the server is told to accept; the summary is the server's
+ * own words for what it lets the plugin do. Both come from the server — this
+ * build's vocabulary is the server's, and a page holding its own copy of it
+ * would explain a permission the server has since renamed.
+ */
+export interface PluginPermission {
+  name: string;
+  summary: string;
 }
 
 /**
@@ -69,6 +94,8 @@ const PLUGIN_FIELDS = `
   id key name filename sizeBytes apiVersion sha256 uploadedAt uploadedBy
   declaredFunctions { name description returnType signature params { name type } }
   declaredParameters { name description type required secret }
+  permissions { name summary }
+  permissionsAcceptedAt permissionsAcceptedBy
 `;
 
 export async function fetchPlugins(): Promise<Plugin[]> {
@@ -100,7 +127,7 @@ export interface Loaded {
  * evaluated, but so the plugin can be downloaded later as the thing somebody wrote
  * rather than as the compiler's output.
  */
-export async function loadPlugin(name: string, written: string): Promise<Loaded> {
+export async function loadPlugin(name: string, written: string, accept?: string[]): Promise<Loaded> {
   const isTypeScript = name.endsWith('.ts') || name.endsWith('.mts');
 
   let javascript = written;
@@ -117,13 +144,41 @@ export async function loadPlugin(name: string, written: string): Promise<Loaded>
   return uploadPlugin(
     new File([javascript], asJavaScript, { type: 'text/javascript' }),
     isTypeScript ? written : undefined,
+    accept,
   );
 }
 
-export async function uploadPlugin(file: File, typescript?: string): Promise<Loaded> {
+/**
+ * A load refused because nobody has agreed to what the plugin asks for.
+ *
+ * Its own type rather than an `ApiError` carrying a sentence, because the page
+ * has a list to draw and a decision to put in front of somebody: the names are
+ * what goes back in `accept`, and the summaries are what that decision is made
+ * on. A refusal flattened into a string is one the page can only reprint.
+ */
+export class PluginPermissionsRequired extends ApiError {
+  constructor(
+    message: string,
+    readonly permissions: PluginPermission[],
+  ) {
+    super(message, 400);
+    this.name = 'PluginPermissionsRequired';
+  }
+}
+
+/**
+ * Loads a compiled plugin, accepting what it asks for where somebody has said so.
+ *
+ * `accept` names permissions rather than describing them, and has to name the
+ * declared set exactly: it is an answer to a list somebody was shown, so a
+ * plugin edited overnight to ask for one more is refused again rather than
+ * quietly granted under yesterday's answer.
+ */
+export async function uploadPlugin(file: File, typescript?: string, accept?: string[]): Promise<Loaded> {
   const form = new FormData();
   form.append('file', file, file.name);
   if (typescript !== undefined) form.append('typescript', typescript);
+  if (accept !== undefined) form.append('accept', accept.join(','));
 
   const answer = await fetch('/api/plugins', {
     method: 'POST',
@@ -135,6 +190,8 @@ export async function uploadPlugin(file: File, typescript?: string): Promise<Loa
     // The server explains a refusal — too large, not JavaScript, not text — and
     // that sentence is more use than the status code.
     const said = await answer.text().catch(() => '');
+    const asked = permissionsWanted(said);
+    if (asked !== null) throw new PluginPermissionsRequired(reason(said), asked);
     const message = said.trim() === '' ? `Could not load the plugin (status ${answer.status})` : reason(said);
     throw new ApiError(message, answer.status);
   }
@@ -215,6 +272,27 @@ function reason(said: string): string {
   } catch {
     return said;
   }
+}
+
+/**
+ * The permissions a refusal is asking for, or null when it is about something else.
+ *
+ * Read off the body rather than off the status: 400 is also how a file too large
+ * and a plugin that does not parse come back, and only this one has a list in it.
+ */
+function permissionsWanted(said: string): PluginPermission[] | null {
+  let parsed: { permissions?: unknown };
+  try {
+    parsed = JSON.parse(said) as { permissions?: unknown };
+  } catch {
+    return null;
+  }
+  const asked = parsed.permissions;
+  if (!Array.isArray(asked) || asked.length === 0) return null;
+  return asked.map((one) => {
+    const { name, summary } = one as Partial<PluginPermission>;
+    return { name: name ?? '', summary: summary ?? '' };
+  });
 }
 
 /** Bytes as something to read in a table. */
