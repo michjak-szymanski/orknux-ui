@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import type { SessionUser } from '../../api/session';
-import { setUserEmail, setUserEmailNotifications } from '../../api/users';
+import { setChatCostShown, setUserEmail, setUserEmailNotifications } from '../../api/users';
 import moonIcon from '../../assets/moon.svg';
 import sunIcon from '../../assets/sun.svg';
 import { AppShell } from '../../components/AppShell';
@@ -50,10 +50,12 @@ export interface PreferencesPageProps {
 /**
  * What one person has decided about their own interface.
  *
- * Appearance, and the one thing about a person the server keeps for them: the
- * address to write to. The theme is a property of the machine somebody is
- * sitting at and stays in the browser; an address follows them between
- * machines, so it lives on the server. Security keys belong here too, when they
+ * Appearance, and what the server keeps about a person for them: the address to
+ * write to, whether the tracker writes to it, and whether their chats say what
+ * an answer cost. The theme and the shortcuts are properties of the machine
+ * somebody is sitting at and stay in the browser; the rest follows them between
+ * machines, so it lives on the server. Which side a new setting goes on is that
+ * question and not how small it is. Security keys belong here too, when they
  * arrive.
  */
 export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
@@ -197,6 +199,36 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
     }
   }
 
+  /**
+   * Whether a chat prints what an answer cost beside how long it took.
+   *
+   * Seeded from the session and saved on the click, exactly as the switch above
+   * it is, and for the same two reasons. Here rather than on the workspace
+   * because a chat is one person's - nobody else can open the screen this
+   * decides about - and on the server rather than in this browser's storage
+   * because it is not a fact about this machine: somebody watching what they
+   * spend wants it watched wherever they sign in.
+   */
+  const [costShown, setCostShown] = useState(session.chatCostShown === true);
+  const [savingCost, setSavingCost] = useState(false);
+  const [costError, setCostError] = useState<string | null>(null);
+
+  async function chooseCost(next: boolean) {
+    if (savingCost || next === costShown) return;
+    setSavingCost(true);
+    setCostError(null);
+    setCostShown(next);
+    try {
+      const held = await setChatCostShown(next);
+      setCostShown(held.chatCostShown);
+    } catch (cause) {
+      setCostShown(!next);
+      setCostError(cause instanceof Error ? cause.message : 'Could not save that.');
+    } finally {
+      setSavingCost(false);
+    }
+  }
+
   function choose(next: Theme) {
     // Applied first: the page it changes is the page being looked at.
     applyTheme(next);
@@ -307,6 +339,65 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
               {notifyError !== null && (
                 <p className={styles.error} role="alert">
                   {notifyError}
+                </p>
+              )}
+            </div>
+          </section>
+
+          <section className={styles.card}>
+            <h2 className={styles.sectionTitle}>Chat</h2>
+
+            <div className={styles.setting}>
+              <span className={styles.labelWithHint}>
+                <span className={styles.settingLabel} id="answer-cost">
+                  Answer Cost
+                </span>
+                <FieldHint label="Answer Cost">
+                  <p>
+                    Puts what an answer cost beside how long it took, on the answer just given.
+                  </p>
+                  <ul>
+                    <li>
+                      It is the <strong>whole turn</strong>, not the last call in it: an agent that
+                      looks something up before it answers has paid for two rounds, and both are
+                      counted.
+                    </li>
+                    <li>
+                      Money needs prices, which are recorded on the model. A model carrying none
+                      shows the tokens and nothing else, because no price is not a price of nothing.
+                    </li>
+                    <li>
+                      Nothing is shown where the provider reported no counts, or for any answer read
+                      back out of the history - what was said is kept, what it cost is not.
+                    </li>
+                  </ul>
+                </FieldHint>
+              </span>
+              <div className={styles.options} role="radiogroup" aria-labelledby="answer-cost">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={costShown}
+                  disabled={savingCost}
+                  className={costShown ? styles.optionCurrent : styles.option}
+                  onClick={() => void chooseCost(true)}
+                >
+                  On
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={!costShown}
+                  disabled={savingCost}
+                  className={costShown ? styles.option : styles.optionCurrent}
+                  onClick={() => void chooseCost(false)}
+                >
+                  Off
+                </button>
+              </div>
+              {costError !== null && (
+                <p className={styles.error} role="alert">
+                  {costError}
                 </p>
               )}
             </div>

@@ -1021,6 +1021,29 @@ export const TESTS = [
     needs: ['session'],
   },
   {
+    name: 'chat-cost-check',
+    what: 'the switch that puts what an answer cost beside how long it took, off until it is turned on',
+    needs: ['session'],
+    /*
+     * The other half of #227. The number is the server's and `ChatCostTest`
+     * pins it - onto the answer, added up over an agent's rounds, costed at the
+     * model's prices and left uncosted where it has none. What that cannot see
+     * is the control.
+     *
+     * The assertion that earns it a place is the second visit, in a browser
+     * context that has never seen the first: a setting kept in local storage and
+     * a setting kept on `app_user` look identical after a reload, and only a
+     * fresh cookie jar tells them apart. That distinction is the reason this is
+     * a column at all, so it is the one worth a check. Beside it, that the
+     * switch starts off - the issue asked for a setting to turn the cost on -
+     * and that the explanation of which rounds are counted is behind the (?)
+     * rather than printed under the label, measured by the label being drawn on
+     * one line.
+     *
+     * Alice's switch is put back off at the end.
+     */
+  },
+  {
     name: 'loader-check',
     what: 'a slow load shows the mark, a finished one hides it, an empty list says so',
     needs: ['fixture'],
