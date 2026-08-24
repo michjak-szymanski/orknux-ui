@@ -1,5 +1,6 @@
 import { tsType } from '../api/functions';
 import type { ScriptImport } from '../api/functions';
+import type { ScriptLibraryImport } from '../api/libraries';
 import type { ValueType } from '../api/actions';
 
 /**
@@ -14,9 +15,15 @@ import type { ValueType } from '../api/actions';
  * `objectTypes` gives: a script's source is a module of its own, and an ambient
  * declaration is what is visible from inside one without an import nobody could
  * write.
+ *
+ * Both lists land in the same object, because at run time they arrive in the same
+ * object: a library is reached through `imports` under the local name the importer
+ * chose, exactly as an imported function is. What differs is how much can be said
+ * about it - see [libraryMember].
  */
-export function importTypes(imports: ScriptImport[]): string {
+export function importTypes(imports: ScriptImport[], libraries: ScriptLibraryImport[]): string {
   const usable = imports.filter((held) => IDENTIFIER.test(held.name) && held.function !== null);
+  const loaded = libraries.filter((held) => IDENTIFIER.test(held.name) && held.library !== null);
 
   /*
    * Nothing imported is said out loud rather than left out.
@@ -27,17 +34,53 @@ export function importTypes(imports: ScriptImport[]): string {
    * of one that has them. `Record<string, never>` is the truthful answer: the
    * object exists, and there is nothing on it.
    */
-  if (usable.length === 0) {
+  if (usable.length === 0 && loaded.length === 0) {
     return ['declare global {', '  const imports: Record<string, never>;', '}', 'export {};', ''].join('\n');
   }
 
-  const members = usable.flatMap((held) => [
-    ...described(held),
-    `  ${held.name}: (${parameters(held.function?.signature ?? '()')}) => ${returned(held)};`,
-  ]);
+  const members = [
+    ...usable.flatMap((held) => [
+      ...described(held),
+      `  ${held.name}: (${parameters(held.function?.signature ?? '()')}) => ${returned(held)};`,
+    ]),
+    ...loaded.map(libraryMember),
+  ];
 
   return ['declare global {', '  const imports: {', ...members, '  };', '}', 'export {};', ''].join('\n');
 }
+
+/**
+ * One imported library, as much of it as anybody knows.
+ *
+ * Deliberately vaguer than an imported function's line, because there is less to
+ * be sure of. A function has a declared signature the server prints; a library is
+ * a bundle, and all that was read out of it when it was loaded is which names it
+ * exports and which of those are callable. So a member that can be called is
+ * `(...args: unknown[]) => unknown` - enough for the call to compile and for the
+ * name to be completed, and not a claim about arguments nobody checked.
+ *
+ * A callable library is that same signature at the top level: `imports.shout(t)`.
+ * An object one is its members, and one exporting an object with nothing on it is
+ * `Record<string, never>` for the reason the empty `imports` is - `{}` would
+ * accept every property, which is the opposite of what is true.
+ */
+function libraryMember(held: ScriptLibraryImport): string {
+  const library = held.library;
+  if (library === null) return '';
+
+  const noted = `  /** The ${library.key} library. */`;
+  if (library.callable) return `${noted}\n  ${held.name}: ${CALLABLE};`;
+
+  const inside = library.members
+    .filter((member) => IDENTIFIER.test(member.name))
+    .map((member) => `${member.name}: ${member.callable ? CALLABLE : 'unknown'}`);
+
+  const shape = inside.length === 0 ? 'Record<string, never>' : `{ ${inside.join('; ')} }`;
+  return `${noted}\n  ${held.name}: ${shape};`;
+}
+
+/** What a library's callable is annotated as: callable, and nothing more claimed. */
+const CALLABLE = '(...args: unknown[]) => unknown';
 
 /** A name TypeScript can declare a member by. The server insists on one; this checks. */
 const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;

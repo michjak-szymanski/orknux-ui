@@ -1,6 +1,8 @@
 import { ApiError, graphql } from './client';
 import type { PageOf } from './client';
 import type { ValueType } from './actions';
+import { SCRIPT_LIBRARY_IMPORT_FIELDS, asLibraryInput } from './libraries';
+import type { ScriptLibraryImport, ScriptLibraryImportInput } from './libraries';
 
 export interface FunctionParam {
   name: string;
@@ -108,6 +110,15 @@ export interface WorkspaceFunction {
    * so adding one does not change what the code has to accept.
    */
   imports: ScriptImport[];
+  /**
+   * The installation's libraries it uses, under the names it uses them by.
+   *
+   * Reached through the same `imports` object and kept in a list of its own for
+   * the reason they are loaded separately: a library belongs to the installation
+   * and a function belongs to a workspace, so the two are chosen from different
+   * places even though the code calls them the same way.
+   */
+  libraries: ScriptLibraryImport[];
   /** "(input: object, format: string)", ready for the list. */
   signature: string;
   lastModifiedAt: string;
@@ -135,6 +146,7 @@ const FUNCTION_FIELDS =
    returnObjectId returnObjectName params { name type objectId objectName }
    externals { variableId name type }
    imports { functionId name function { name description signature returnType returnObjectName } }
+   ${SCRIPT_LIBRARY_IMPORT_FIELDS}
    signature lastModifiedAt lastModifiedBy`;
 
 const WORKSPACE_FUNCTIONS_QUERY = `
@@ -244,9 +256,16 @@ export async function createFunction(input: {
   externalVariableIds?: string[];
   /** The workspace's other functions it calls, under the names it calls them. */
   imports?: ScriptImportInput[];
+  /** The installation's libraries it uses, under the names it uses them by. */
+  libraries?: ScriptLibraryImportInput[];
 }): Promise<WorkspaceFunction> {
   const data = await graphql<{ createFunction: WorkspaceFunction }>(CREATE_FUNCTION_MUTATION, {
-    input: { ...input, params: input.params?.map(asInput), imports: input.imports?.map(asImportInput) },
+    input: {
+      ...input,
+      params: input.params?.map(asInput),
+      imports: input.imports?.map(asImportInput),
+      libraries: input.libraries?.map(asLibraryInput),
+    },
   });
   return data.createFunction;
 }
@@ -291,6 +310,9 @@ export async function duplicateFunction(fn: WorkspaceFunction): Promise<Workspac
         // The copy calls the same functions under the same names: the code being
         // copied says `imports.upper(…)`, and a copy without them would not run.
         imports: fn.imports.map(asImportInput),
+        // The same, for the libraries: the code says `imports.dateFns.format(…)`
+        // and the copy has to be able to.
+        libraries: fn.libraries.map(asLibraryInput),
       });
     } catch (cause) {
       const taken = cause instanceof ApiError && /already exists/i.test(cause.message);
@@ -630,11 +652,18 @@ export async function updateFunction(
     externalVariableIds?: string[];
     /** Null leaves them alone; an empty list takes them all off. */
     imports?: ScriptImportInput[];
+    /** Null leaves them alone; an empty list takes them all off. */
+    libraries?: ScriptLibraryImportInput[];
   },
 ): Promise<WorkspaceFunction> {
   const data = await graphql<{ updateFunction: WorkspaceFunction }>(UPDATE_FUNCTION_MUTATION, {
     id,
-    input: { ...input, params: input.params?.map(asInput), imports: input.imports?.map(asImportInput) },
+    input: {
+      ...input,
+      params: input.params?.map(asInput),
+      imports: input.imports?.map(asImportInput),
+      libraries: input.libraries?.map(asLibraryInput),
+    },
   });
   return data.updateFunction;
 }

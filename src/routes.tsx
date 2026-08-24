@@ -5,6 +5,7 @@ import type { PagePath } from './navigation';
 import { AdminAuditPage } from './pages/admin/AdminAuditPage';
 import { AdminDoctorPage } from './pages/admin/AdminDoctorPage';
 import { AdminIntegrationsPage } from './pages/admin/AdminIntegrationsPage';
+import { AdminLibrariesPage } from './pages/admin/AdminLibrariesPage';
 import { AdminMonitoringPage } from './pages/admin/AdminMonitoringPage';
 import { AdminNetworkingPage } from './pages/admin/AdminNetworkingPage';
 import { AdminShellPage } from './pages/admin/AdminShellPage';
@@ -128,6 +129,7 @@ export const PAGE_ELEMENTS: Record<PagePath, PageElement> = {
   '/admin/audit': (session, onSignOut) => <AdminAuditPage session={session} onSignOut={onSignOut} />,
   '/admin/integrations': (session, onSignOut) => <AdminIntegrationsPage session={session} onSignOut={onSignOut} />,
   '/admin/plugins': (session, onSignOut) => <AdminPluginsPage session={session} onSignOut={onSignOut} />,
+  '/admin/libraries': (session, onSignOut) => <AdminLibrariesPage session={session} onSignOut={onSignOut} />,
   '/admin/templates': (session, onSignOut) => <AdminTemplatesPage session={session} onSignOut={onSignOut} />,
   /* Before the one with an id in it: `new` is a page, not a template called new. */
   '/admin/templates/new': (session, onSignOut) => <AdminTemplatePage session={session} onSignOut={onSignOut} />,

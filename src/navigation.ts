@@ -20,6 +20,7 @@ import globeIcon from './assets/globe.svg';
 import lockKeyholeIcon from './assets/lock-keyhole.svg';
 import memoryIcon from './assets/memory.svg';
 import messageSquareIcon from './assets/message-square.svg';
+import packageIcon from './assets/package.svg';
 import plugIcon from './assets/plug.svg';
 import puzzleIcon from './assets/puzzle.svg';
 import templateIcon from './assets/layers.svg';
@@ -333,6 +334,17 @@ export const PAGES = [
     path: '/admin/plugins',
     access: 'admin',
     goTo: { label: 'Plugins', where: 'Admin', icon: puzzleIcon, also: 'extensions javascript' },
+  },
+  /* Beside Plugins: both are code loaded once for every workspace to use. */
+  {
+    path: '/admin/libraries',
+    access: 'admin',
+    goTo: {
+      label: 'Libraries',
+      where: 'Admin',
+      icon: packageIcon,
+      also: 'javascript bundles imports npm dependencies',
+    },
   },
   {
     path: '/admin/templates',

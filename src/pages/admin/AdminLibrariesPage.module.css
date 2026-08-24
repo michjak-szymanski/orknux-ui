@@ -1,0 +1,242 @@
+/*
+ * The plugins table's layout, because this is the same kind of list one screen
+ * along — code the installation holds — and a screen that looks different for no
+ * reason reads as a screen from somewhere else.
+ */
+
+.titleBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.titleBlock {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--text-2xl);
+  color: var(--color-text-primary);
+}
+
+.titleWithHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+/* The button drives this; a file input cannot be styled to match the others. */
+.picker {
+  display: none;
+}
+
+.actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-16);
+}
+
+.load {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-10) var(--space-14);
+  background: var(--color-accent-brand);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.load:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ---- Table ---- */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  overflow: clip;
+}
+
+.tableHeader,
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.tableHeader {
+  padding: var(--space-12) var(--space-16);
+  background: var(--color-surface-raised);
+  border-bottom: 1px solid var(--color-border);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.row {
+  padding: var(--space-14) var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.colName {
+  display: flex;
+  flex: 1 0 0;
+  align-items: center;
+  gap: var(--space-10);
+  min-width: 0;
+}
+
+.colSize {
+  flex-shrink: 0;
+  width: 80px;
+}
+
+.colWhen {
+  flex-shrink: 0;
+  width: 240px;
+}
+
+/* Wide enough for the two words the confirm puts here. */
+.colActions {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-8);
+  justify-content: flex-end;
+  width: 160px;
+}
+
+.icon {
+  flex-shrink: 0;
+}
+
+/* The key, and under it what the library brings and who has it. */
+.nameBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.name {
+  overflow: hidden;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * What it exports, in the monospace the rest of the product uses for code. One
+ * line: a bundle exporting forty names must not make its row forty lines tall.
+ */
+.declares {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * Who imports it. Not monospace, unlike the line above it: those are names in
+ * somebody's code and these are things in this product, and the difference is
+ * worth being able to see from across the row.
+ */
+.usedBy {
+  overflow: hidden;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.muted {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowAction {
+  composes: rowAction from '../../styles/rowAction.module.css';
+}
+
+/*
+ * Removal is confirmed in the row. The confirm carries the danger colour and the
+ * way out does not, so the pointer lands on Cancel by accident rather than on the
+ * other one.
+ */
+.confirm,
+.cancel {
+  padding: var(--space-6) var(--space-10);
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.confirm {
+  background: var(--color-danger);
+  border: 0;
+  color: var(--color-text-primary);
+}
+
+.confirm:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.cancel {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+/* ---- Loading / empty / error ---- */
+
+.notice {
+  margin: 0;
+  padding: var(--space-14) var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.noticeError {
+  color: var(--color-danger);
+}

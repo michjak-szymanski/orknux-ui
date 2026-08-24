@@ -23,6 +23,8 @@ import {
   withParameters,
 } from '../../api/functions';
 import type { FunctionParam, ScriptImport, WorkspaceFunction } from '../../api/functions';
+import { fetchWorkspaceLibraries, localName } from '../../api/libraries';
+import type { ScriptLibrary, ScriptLibraryImport, ScriptLibraryImportInput } from '../../api/libraries';
 import type { SessionUser } from '../../api/session';
 import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import codeIcon from '../../assets/code.svg';
@@ -192,6 +194,18 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
   const [imports, setImports] = useState<ScriptImport[]>([]);
   /** What an import may point at: this workspace's own functions, minus this one. */
   const [importable, setImportable] = useState<WorkspaceFunction[]>([]);
+  /**
+   * The installation's libraries this function uses, under the names it uses them by.
+   *
+   * A list of its own rather than more imports, because they are chosen from
+   * somewhere else: a library is loaded once for the whole installation by an
+   * administrator, and a function belongs to a workspace. The code calls them the
+   * same way — both arrive on `imports` under the local name — which is why the
+   * two sections sit together.
+   */
+  const [libraries, setLibraries] = useState<ScriptLibraryImport[]>([]);
+  /** What a library row may point at: everything loaded into the installation. */
+  const [loadable, setLoadable] = useState<ScriptLibrary[]>([]);
   /** What a parameter or a return type can name, and what the editor declares. */
   const [objects, setObjects] = useState<WorkflowObject[]>([]);
   const [returnObjectId, setReturnObjectId] = useState<string | null>(null);
@@ -239,6 +253,20 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
       .catch(() => setImportable([]));
   }, [workspaceId, functionId]);
 
+  /*
+   * What this function may use: everything loaded into the installation.
+   *
+   * Not the administrator's query. Choosing to import a library belongs to
+   * whoever is writing the function, so this one answers for any member of the
+   * workspace and says nothing about who else uses what.
+   */
+  useEffect(() => {
+    if (workspaceId === '') return;
+    fetchWorkspaceLibraries(workspaceId)
+      .then(setLoadable)
+      .catch(() => setLoadable([]));
+  }, [workspaceId]);
+
   /**
    * The imports with what they point at filled in, for the editor to be told.
    *
@@ -274,16 +302,37 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
     [imports, importable],
   );
 
+  /**
+   * The library rows with what they point at filled in, for the same reason.
+   *
+   * A row added a moment ago has no `library` on it — that half is resolved by
+   * the server and arrives with the next read — and the picker already holds the
+   * answer, so somebody who adds a library and writes the call in the next breath
+   * is not underlined until they save.
+   */
+  const resolvedLibraries = useMemo(
+    () =>
+      libraries.map((held) => {
+        if (held.library !== null) return held;
+        const known = loadable.find((candidate) => candidate.id === held.libraryId);
+        return known === undefined
+          ? held
+          : { ...held, library: { key: known.key, callable: known.callable, members: known.members } };
+      }),
+    [libraries, loadable],
+  );
+
   /*
    * What `imports` holds, told to the editor so a call through it is checked.
    *
    * The same arrangement the objects above get, and for the same reason: without
    * it every line calling an imported function is underlined for a global the
-   * language service has never heard of.
+   * language service has never heard of. Both lists go in together because both
+   * arrive in that one object at run time.
    */
   useEffect(() => {
-    declareImports(importTypes(resolvedImports));
-  }, [resolvedImports]);
+    declareImports(importTypes(resolvedImports, resolvedLibraries));
+  }, [resolvedImports, resolvedLibraries]);
 
   /** What an object is called, for the annotation that has to name it. */
   const objectNameOf = (objectId: string | null | undefined): string | null =>
@@ -528,6 +577,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
         setParams(found.params);
         setExternals(found.externals.map((external) => external.variableId));
         setImports(found.imports);
+        setLibraries(found.libraries);
       })
       .catch((cause: unknown) => {
         setLoadError(cause instanceof Error ? cause.message : 'Could not load the function.');
@@ -674,6 +724,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
           setParams(found.params);
           setExternals(found.externals.map((external) => external.variableId));
           setImports(found.imports);
+        setLibraries(found.libraries);
           setSaved(false);
           setStatus({ ok: true, message: 'Reloaded — the change was accepted.', whole: true });
         })
@@ -802,6 +853,32 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fn, imports]);
 
+  /**
+   * The libraries a save would send: the unnamed rows dropped, the names trimmed.
+   *
+   * The same rule `named` applies to the imports, for the same reason - a row
+   * pointing at nothing, or one nobody has named yet, is not a library this
+   * function uses and the save would not carry it.
+   */
+  const chosen = (all: ScriptLibraryImport[]): ScriptLibraryImportInput[] =>
+    all
+      .filter((held) => held.libraryId !== '' && held.name.trim() !== '')
+      .map((held) => ({ libraryId: held.libraryId, name: held.name.trim() }));
+
+  /** Whether the libraries on screen are not the ones the server was told. */
+  const librariesMoved = useMemo(() => {
+    if (fn === null) return libraries.length > 0;
+    const was = chosen(fn.libraries);
+    const now = chosen(libraries);
+    return (
+      now.length !== was.length ||
+      now.some((held, at) => held.libraryId !== was[at].libraryId || held.name !== was[at].name)
+    );
+    // `chosen` is a plain helper over its argument, and reading it as a dependency
+    // would rebuild this on every render for nothing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fn, libraries]);
+
   /*
    * The code follows the panel.
    *
@@ -897,6 +974,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
         declared(params).length === 0 &&
         externals.length === 0 &&
         imports.length === 0 &&
+        libraries.length === 0 &&
         returnType === 'MAP' &&
         /*
          * The column is empty for exactly one render - the pass before the
@@ -924,7 +1002,9 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
       // code column is kept in step with above and so is asked for once.
       panelMoved ||
       // The imports, which the code column knows nothing about; see `importsMoved`.
-      importsMoved
+      importsMoved ||
+      // And the libraries, which it knows nothing about either.
+      librariesMoved
     );
   }, [
     creating,
@@ -937,8 +1017,10 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
     params,
     externals,
     imports,
+    libraries,
     panelMoved,
     importsMoved,
+    librariesMoved,
     stub,
   ]);
 
@@ -1084,6 +1166,8 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
         // A row nobody has named is not an import yet, and sending it would be
         // refused for a name no code can call it by.
         imports: named(imports),
+        // The same rule for a library: a row nobody has named is not one yet.
+        libraries: chosen(libraries),
       };
 
       const stored = creating
@@ -1854,6 +1938,132 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                 </div>
               </section>
 
+              {/*
+                The installation's libraries, directly after the workspace's own
+                functions, because at run time they are the same thing: both arrive
+                on `imports` under the local name chosen here, and the code cannot
+                tell which is which.
+
+                What differs is where they come from and who loads them - a library
+                is loaded once for the whole installation by an administrator - so
+                they are picked from a list of their own rather than mixed into the
+                one above.
+              */}
+              <section className={styles.panelSection}>
+                <span className={styles.headingWithHint}>
+                  <h2 className={styles.panelHeading}>Libraries</h2>
+                  <FieldHint label="Libraries">
+                    The installation’s libraries this function may use, reached as <code>imports.name</code>.
+                    The name is this code’s own word for it and is seeded from the library’s key the first
+                    time a row points at one. An administrator loads them, on Admin → Libraries.
+                  </FieldHint>
+                </span>
+                <div className={styles.paramList}>
+                  {libraries.map((held, index) => (
+                    <div key={index} className={styles.paramRow}>
+                      <select
+                        className={`${styles.paramName} ${styles.inputMono}`}
+                        value={held.libraryId}
+                        aria-label={`Library ${index + 1}`}
+                        onChange={(event) => {
+                          const picked = loadable.find((one) => one.id === event.target.value);
+                          setLibraries((current) =>
+                            current.map((row, at) =>
+                              at === index
+                                ? {
+                                    ...row,
+                                    libraryId: event.target.value,
+                                    library: null,
+                                    /*
+                                     * Only ever filled in, never rewritten - the
+                                     * same rule an import's name follows, for the
+                                     * same reason: the code below already says
+                                     * `imports.dateFns`.
+                                     */
+                                    name:
+                                      row.name.trim() === ''
+                                        ? picked === undefined
+                                          ? ''
+                                          : localName(picked.key)
+                                        : row.name,
+                                  }
+                                : row,
+                            ),
+                          );
+                          setSaved(false);
+                        }}
+                      >
+                        {/*
+                          What it points at now, when that is not on offer: one
+                          removed out from under this function, or the list not
+                          yet fetched.
+                        */}
+                        {!loadable.some((one) => one.id === held.libraryId) && (
+                          <option value={held.libraryId}>{held.library?.key ?? '—'}</option>
+                        )}
+                        {loadable.map((one) => (
+                          <option key={one.id} value={one.id}>
+                            {one.key}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        className={`${styles.paramName} ${styles.inputMono}`}
+                        type="text"
+                        value={held.name}
+                        aria-label={`Library ${index + 1} name`}
+                        onChange={(event) => {
+                          setLibraries((current) =>
+                            current.map((row, at) => (at === index ? { ...row, name: event.target.value } : row)),
+                          );
+                          setSaved(false);
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className={styles.removeParam}
+                        aria-label={`Remove ${held.name || `library ${index + 1}`}`}
+                        onClick={() => {
+                          setLibraries((current) => current.filter((_, at) => at !== index));
+                          setSaved(false);
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className={styles.addParam}
+                    disabled={loadable.length === 0}
+                    title={
+                      loadable.length === 0
+                        ? 'No libraries are loaded into this installation'
+                        : 'Use one of the installation’s libraries from this function'
+                    }
+                    onClick={() => {
+                      /*
+                        One that is not used already, so the row arrives pointing
+                        at something and under a name the server would take. The
+                        same choice Add Import makes.
+                      */
+                      const next =
+                        loadable.find((one) => !libraries.some((held) => held.libraryId === one.id)) ??
+                        loadable[0];
+                      if (next === undefined) return;
+                      setLibraries((current) => [
+                        ...current,
+                        { libraryId: next.id, name: localName(next.key), library: null },
+                      ]);
+                      setSaved(false);
+                    }}
+                  >
+                    <img src={plusIcon} alt="" width={14} height={14} />
+                    Add Library
+                  </button>
+                </div>
+              </section>
+
               <section className={styles.panelSection}>
                 <span className={styles.headingWithHint}>
                   <h2 className={styles.panelHeading}>Return Type</h2>
@@ -1996,6 +2206,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                           setParams(found.params);
                           setExternals(found.externals.map((external) => external.variableId));
                           setImports(found.imports);
+        setLibraries(found.libraries);
                           setSaved(false);
                         })
                         .catch(() => undefined);
