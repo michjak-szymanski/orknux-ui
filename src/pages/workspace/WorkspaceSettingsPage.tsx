@@ -1164,6 +1164,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
               <option value="SENTENCE">Sentence</option>
               <option value="PARAGRAPH">Paragraph</option>
             </select>
+            <img src={chevronDown12Icon} alt="" width={12} height={12} />
           </div>
         </div>
 
