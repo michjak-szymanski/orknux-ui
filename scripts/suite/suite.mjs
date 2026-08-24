@@ -668,6 +668,30 @@ export const TESTS = [
      */
   },
   {
+    name: 'model-window-check',
+    what: "a model's context window: set on the screen the refusal names, and read by what refused",
+    needs: ['workspace'],
+    /*
+     * Issue #252. The application told people to set a context window on a
+     * screen that could only print one - `updateModel` had been in the schema
+     * the whole time with no form behind it - so a model discovered from a
+     * provider, or added before anybody knew the number, was stuck at nothing
+     * and every agent on it fell back to the built-in allowance.
+     *
+     * The assertion the rest is scaffolding for is the last one: the same model
+     * is asked for a session memory budget before and after, and it has to come
+     * back refused first, in the sentence that names this screen, and worked
+     * out afterwards against the window that was typed. A form that stored this
+     * somewhere of its own would pass everything else here.
+     *
+     * The other one worth having is that the model's prices survive the save.
+     * `updateModel` replaces a model's details rather than patching them, so a
+     * card that sent only its own two fields would silently clear the three it
+     * does not show. It makes a provider and a model of its own and removes
+     * them.
+     */
+  },
+  {
     name: 'agent-grants-check',
     what: "an agent's grants: bounded, searchable, and explained behind a (?), on the page and in the panel",
     needs: ['workflow'],

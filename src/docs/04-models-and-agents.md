@@ -86,6 +86,17 @@ says so in words about the variable, on its row and on its page. That is
 deliberate. A provider that cannot read its key fails a check exactly the way an
 unreachable one does, and "check the endpoint" is the wrong afternoon.
 
+A model's own page carries the two numbers that decide how much can be put in
+front of it: its **Context Window**, which is how much it reads at once, and its
+**Max Output**, which is the most it will write in one answer. Both are in
+tokens, both are as the provider states them — nothing here asks the model — and
+either can be left empty, which means not recorded rather than zero. They belong
+to the model and not to the provider: one provider serves models whose windows
+differ by an order of magnitude, so a single number kept beside the key would be
+wrong for all but one of them. The window is what a session's memory is a share
+of, so a model with none recorded leaves every agent on it with the built-in
+allowance, and setting a share against it is refused until the number is there.
+
 ## Workspace models
 
 Two model choices belong to the workspace rather than to a conversation:

@@ -303,6 +303,13 @@
   color: var(--color-text-secondary);
 }
 
+/* A label and the (?) that explains it. */
+.labelWithHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
 .input {
   width: 100%;
   padding: var(--space-10) var(--space-12);
