@@ -972,6 +972,30 @@ export const TESTS = [
      */
   },
   {
+    name: 'graph-lines-check',
+    what: 'the lines between the boxes stay drawn, on the run page and in the editor',
+    needs: ['fixture', 'workflow'],
+    /*
+     * Issue #259, and what #235 and #242 left behind. Those two were about a
+     * node React Flow had no measurement for, which it draws invisible, and
+     * both were fixed by saying how big a node is before anything measures one.
+     * A line is not drawn from a node's size, though - it is drawn from where
+     * the node's handles are, which React Flow carries across a rebuild only
+     * for a node whose object says `measured`. So the boxes came back and the
+     * lines did not: every step on the canvas and nothing joining any of them,
+     * which is what was reported.
+     *
+     * The same race decides whether it recovers, so what is driven is the thing
+     * the race is between - the frame in which the lines are not drawn, which
+     * happened on every read of a run and every Discard in the editor before
+     * the fix. Watched every animation frame, on both canvases, because one
+     * page's fix has twice now not been the other's.
+     *
+     * How many lines to expect comes from the run rather than the canvas: a
+     * canvas drawing none would otherwise agree with itself.
+     */
+  },
+  {
     name: 'delete-issue-check',
     what: 'the trash asks before it deletes, and the issue is really gone after',
     needs: ['workspace'],

@@ -2145,8 +2145,24 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
         setName(graph.name);
         setStatus(graph.status);
         setEnabled(graph.enabled);
-        setNodes(
-          graph.nodes.map((node) => ({
+        setNodes((current) => {
+          /*
+           * The measurement of the box that is already on the screen, handed
+           * back to the object that replaces it - issue #259, on the other page
+           * that mounts a canvas.
+           *
+           * React Flow keeps where a node's handles are in bookkeeping of its
+           * own, and it keeps it across a rebuild only for a node whose object
+           * carries `measured`. An edge is two handle positions, so every line
+           * on this canvas went out for a frame on every Discard. Handing the
+           * measurement back is what the other rebuild paths here already do by
+           * spreading what is there; this one has to say it, and it says the
+           * measurement rather than a size of its own, because these nodes are
+           * resizable and their real height is whatever they hold. Empty on the
+           * first load, which is the one that has nothing to hand back.
+           */
+          const measured = new Map(current.map((node) => [node.id, node.measured]));
+          return graph.nodes.map((node) => ({
             id: node.key,
             type: 'graphNode',
             position: { x: node.x, y: node.y },
@@ -2154,6 +2170,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
             // this rebuild cannot leave the canvas blank. See above.
             initialWidth: NODE_MIN_WIDTH,
             initialHeight: NODE_MIN_HEIGHT,
+            measured: measured.get(node.key),
             data: {
               kind: node.kind,
               name: node.name,
@@ -2177,8 +2194,8 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
               orientation: node.orientation ?? null,
               mappings: node.mappings ?? [],
             },
-          })),
-        );
+          }));
+        });
         setProblems(graph.problems);
         setPorts(Object.fromEntries(graph.nodes.map((node) => [node.key, { inputs: node.inputs, outputs: node.outputs }])));
         setEdges(
