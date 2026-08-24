@@ -11,6 +11,7 @@ import { BackLink } from '../../components/BackLink';
 import { DeleteAgentDialog } from '../../components/DeleteAgentDialog';
 import { Loader } from '../../components/Loader';
 import { RevisionHistory } from '../../components/RevisionHistory';
+import { UsedBy } from '../../components/UsedBy';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './AgentSettingsPage.module.css';
@@ -148,6 +149,15 @@ export function AgentSettingsPage({ session, onSignOut }: AgentSettingsPageProps
                   .catch(() => undefined);
               }}
             />
+          </section>
+
+          {/*
+            And which workflows instance it, immediately above the way to
+            delete it - which is the one place somebody needs to know, and the
+            place they used to find out by being refused.
+          */}
+          <section className={styles.card}>
+            <UsedBy kind="AGENT" componentId={agentId} />
           </section>
 
           <section className={`${styles.card} ${styles.dangerCard}`}>

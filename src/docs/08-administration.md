@@ -442,9 +442,20 @@ That line is the reason a library belongs to the installation rather than to a
 workspace. What code is running inside this installation is a question with one
 answer, and a library each workspace loaded for itself would give it as many
 answers as there are workspaces, with the useful half of it scattered across
-screens no administrator can see. It is also what refuses the removal — *That
-library is imported by slugify in Backend* — so nothing goes out from under a
-script that was using it.
+screens no administrator can see. It is also what refuses the removal, so
+nothing goes out from under a script that was using it: pressing Remove on a
+library something imports answers *Still imported — open one of those and take
+the import off first*, on the row itself, and each name on the line above it
+opens that function or tool. The names are the answer, so they are what you
+press.
+
+A library is the one thing in the product whose dependants can be in a workspace
+the reader cannot open, and the rule for that is worth knowing even though this
+screen never meets it: what may not be named is **counted rather than dropped**
+— *and 2 more in workspaces you cannot open*. Naming a function in a workspace
+somebody cannot see would tell them that workspace exists and what is in it, and
+leaving it out silently would answer the question with rows missing. An
+administrator sees every workspace, so here the count is always zero.
 
 A function or a tool imports one by id, under a local name of its own, in the
 **Libraries** section of its editor. The name is seeded from the key the first

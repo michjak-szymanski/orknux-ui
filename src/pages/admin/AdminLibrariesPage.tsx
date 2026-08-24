@@ -20,6 +20,7 @@ import { AdminSidebar } from '../../components/AdminSidebar';
 import { AppShell } from '../../components/AppShell';
 import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
+import { DependantLinks } from '../../components/UsedBy';
 import { shellUser } from '../../session/user';
 import styles from './AdminLibrariesPage.module.css';
 
@@ -55,6 +56,8 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
   const [notice, setNotice] = useState<string | null>(null);
   /** The library whose removal is waiting to be confirmed. */
   const [confirming, setConfirming] = useState<string | null>(null);
+  /** The library whose removal was refused because something still imports it. */
+  const [refused, setRefused] = useState<string | null>(null);
   /** Whether a package can be named here. Null until the server has said. */
   const [registry, setRegistry] = useState<LibraryRegistryStatus | null>(null);
   const [spec, setSpec] = useState('');
@@ -135,21 +138,36 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
   /**
    * Removes one, or shows why it cannot be removed.
    *
-   * The server refuses while anything imports it and names what does, and that
-   * sentence is the whole answer — it is shown as it came rather than replaced
-   * with a shorter one that would leave somebody hunting for the importer.
+   * Issue #268. The server refuses while anything imports it and names what
+   * does, and that sentence used to be the whole answer: shown at the top of the
+   * card, in the row's own words, with the importers as plain text. Being told
+   * *"That library is imported by slugify in Backend"* and left to go and find
+   * `slugify` is the reader doing by hand what the screen already knows.
+   *
+   * So the refusal lands on the row it is about, in one line, and the answer is
+   * the line already under the library's key — where every importer is now
+   * something to press. The server's sentence is still shown for anything else
+   * that could go wrong, because a refusal we did not anticipate is one nobody
+   * should have to guess at.
    */
   async function onRemove(library: ScriptLibrary) {
     setBusy(true);
     setError(null);
     setNotice(null);
+    setRefused(null);
     try {
       await deleteScriptLibrary(library.id);
       setNotice(`Removed ${library.key}.`);
       setConfirming(null);
       load();
     } catch (cause: unknown) {
-      setError(cause instanceof Error ? cause.message : 'Could not remove that library.');
+      const message = cause instanceof Error ? cause.message : 'Could not remove that library.';
+      if (library.usedBy.length > 0) {
+        setRefused(library.id);
+        setConfirming(null);
+      } else {
+        setError(message);
+      }
     } finally {
       setBusy(false);
     }
@@ -285,7 +303,20 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
                   removing one is whose code stops working, and nowhere else in the
                   product can answer it.
                 */}
-                <span className={styles.usedBy}>{usedBy(library)}</span>
+                <span className={styles.usedBy}>
+                  {library.usedBy.length === 0 ? 'used by nothing' : 'used by '}
+                  <DependantLinks entries={library.usedBy} hidden={0} showWorkspace none="" />
+                </span>
+                {/*
+                  The refusal, on the row it is about and in one line. What to
+                  do about it is the line above, which names every importer and
+                  opens it.
+                */}
+                {refused === library.id && (
+                  <span className={styles.refused} role="alert">
+                    Still imported — open one of those and take the import off first.
+                  </span>
+                )}
               </span>
             </span>
             <span className={`${styles.colSize} ${styles.muted}`}>{librarySize(library.sizeBytes)}</span>
@@ -355,8 +386,3 @@ function exported(library: ScriptLibrary): string {
   return members.length === 0 ? 'exports nothing' : `exports ${members.join('  ·  ')}`;
 }
 
-/** Every importer, named with the workspace it is in: `slugify in backend`. */
-function usedBy(library: ScriptLibrary): string {
-  if (library.usedBy.length === 0) return 'used by nothing';
-  return `used by ${library.usedBy.map((one) => `${one.name} in ${one.workspaceName}`).join('  ·  ')}`;
-}

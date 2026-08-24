@@ -43,6 +43,7 @@ import type { CodeEditorHandle } from '../../components/CodeEditor';
 import { OpenDefinitionIcon } from '../../components/OpenDefinitionIcon';
 import { Loader } from '../../components/Loader';
 import { RevisionHistory } from '../../components/RevisionHistory';
+import { UsedBy } from '../../components/UsedBy';
 import { compile, declareImports, declareObjects } from '../../components/monaco';
 import { importTypes } from '../../components/importTypes';
 import { objectTypes } from '../../components/objectTypes';
@@ -2446,6 +2447,15 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                         .catch(() => undefined);
                     }}
                   />
+                  {/*
+                    And what leans on it, under what it has been. A function is
+                    the most-pointed-at thing this product has - actions call
+                    it, conditions ask it, webhooks authenticate with it, other
+                    functions and tools import it - so being refused a delete
+                    was the only way anybody found out.
+                  */}
+                  <hr className={styles.divider} />
+                  <UsedBy kind="FUNCTION" componentId={functionId} />
                 </>
               )}
             </aside>

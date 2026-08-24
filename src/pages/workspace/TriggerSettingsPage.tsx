@@ -9,6 +9,7 @@ import { BackLink } from '../../components/BackLink';
 import { Loader } from '../../components/Loader';
 import { TriggerForm } from '../../components/TriggerForm';
 import type { TriggerFormStyles } from '../../components/TriggerForm';
+import { UsedBy } from '../../components/UsedBy';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './AgentSettingsPage.module.css';
@@ -150,6 +151,16 @@ export function TriggerSettingsPage({ session, onSignOut }: TriggerSettingsPageP
             />
 
             {saved && <p className={styles.savedNote}>Saved.</p>}
+
+            {/*
+              Which workflows start from it. The draft graph alone is the
+              answer, because publishing does not copy a trigger id - a
+              published workflow whose trigger is deleted does not fail in the
+              middle of a run, it stops being reached at all.
+            */}
+            <section className={styles.card}>
+              <UsedBy kind="TRIGGER" componentId={triggerId} />
+            </section>
 
             <section className={`${styles.card} ${styles.dangerCard}`}>
               <h2 className={styles.dangerHeading}>Danger Zone</h2>
