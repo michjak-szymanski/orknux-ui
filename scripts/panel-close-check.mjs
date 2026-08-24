@@ -62,7 +62,7 @@ async function openPanel(name) {
   await page.waitForTimeout(600);
   await page.locator('.react-flow__node').filter({ hasText: name }).first().click();
   await page.waitForTimeout(600);
-  const jump = page.getByRole('link', { name: 'Open definition' });
+  const jump = page.getByRole('link', { name: /^Open the .+'s definition$/ });
   if ((await jump.count()) !== 1) return false;
   await jump.click();
   await page.waitForTimeout(1200);

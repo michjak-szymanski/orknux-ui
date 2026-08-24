@@ -53,7 +53,17 @@ async function select(name) {
 }
 
 /** The one link out of the node panel, and where it says it goes. */
-const jump = page.getByRole('link', { name: 'Open definition' });
+/*
+ * Found by its name and not by its words.
+ *
+ * The node panel's ways out stopped being the words "Open definition" and
+ * became the mark every other form already used, so a locator asking for that
+ * text waits thirty seconds and then reports a missing link on a panel that has
+ * one - a check problem wearing a product problem's clothes. The accessible
+ * name is what the convention guarantees, and it names the kind, so this
+ * matches any of them. See the same note in condition-page-check.
+ */
+const jump = page.getByRole('link', { name: /^Open the .+'s definition$/ });
 
 /**
  * Presses Open definition and reports what happened: which panel opened, and

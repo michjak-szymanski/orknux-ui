@@ -432,7 +432,7 @@ await page.waitForSelector('.react-flow__node', { timeout: 20_000 });
 await page.waitForTimeout(800);
 await page.locator('.react-flow__node').filter({ hasText: agentNode.name }).first().click();
 await page.waitForTimeout(600);
-await page.getByRole('link', { name: 'Open definition' }).click();
+await page.getByRole('link', { name: /^Open the .+'s definition$/ }).click();
 await page.waitForSelector('dialog[open] [data-grants="tools"] [data-grant-rows]', { timeout: 20_000 });
 await page.waitForTimeout(500);
 

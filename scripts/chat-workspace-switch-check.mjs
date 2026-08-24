@@ -76,7 +76,24 @@ if (await drawn(page, 'the chat')) {
   );
 
   await picker.selectOption(other);
-  await page.waitForTimeout(2000);
+  /*
+   * Waited for rather than slept through.
+   *
+   * The corner and the conversation list do not change in the same frame: the
+   * page reads the chosen workspace from a store, and the fetch that was
+   * already in flight for the workspace being left lands first - so for a beat
+   * the list is the old one and the address bar names a chat in it, and then
+   * the second fetch replaces both. A fixed wait passed on a developer's
+   * machine and failed in CI, which is the wait being wrong rather than the
+   * page: what is being asserted is where it settles, not how many frames it
+   * took to get there.
+   */
+  await page
+    .locator('[class*="_sessionTitle"]', { hasText: SAID_THERE })
+    .first()
+    .waitFor({ state: 'visible', timeout: 20_000 })
+    .catch(() => {});
+  await page.waitForTimeout(300);
 
   const where = new URL(page.url()).pathname;
   record(where === '/chat' || where.startsWith('/chat/'), `switching workspace leaves you in the chat (${where})`);
