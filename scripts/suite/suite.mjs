@@ -232,6 +232,28 @@ export const TESTS = [
      */
   },
   {
+    name: 'reply-watch-check',
+    what: 'the trigger form once a connection trigger can wait for a message or a reply',
+    needs: ['workspace'],
+    /*
+     * Issue #269. Two events that were in the enum from the start with nothing
+     * publishing them, so the form has never drawn either, and each brings
+     * something the form has to say for itself: a reply asks a second question
+     * - whose messages it watches, which is not the connection it listens on -
+     * and a message has to admit how much traffic it is about to let in.
+     *
+     * Whether either one fires is not asked here, because a page cannot deliver
+     * a Slack event. `SlackReplyTriggerTest` matches a reply's `parent_user_id`
+     * against the watched bots end to end, and `SlackMessageEventTest` proves
+     * the payload carries one at all.
+     *
+     * The saving half needs a Slack connection whose bot token answers
+     * `auth.test`, because only a connection that can say which Slack user it
+     * posts as can be watched. Where the seed has none it records that it did
+     * not drive that half rather than passing over it in silence.
+     */
+  },
+  {
     name: 'dialog-hint-check',
     what: 'every dialog sentence that moved behind a (?), and every one that did not',
     needs: ['workspace'],

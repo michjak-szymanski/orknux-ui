@@ -94,3 +94,82 @@
   font-family: var(--font-mono);
   color: var(--color-text-secondary);
 }
+
+/*
+ * Whose messages a reply watches, drawn as a list of the workspace's Slack
+ * connections rather than as a picker.
+ *
+ * A picker would be the obvious choice and is the wrong one here: this takes
+ * several, and every row has something to say about itself — which Slack user
+ * the connection posts as, and where that user is another connection's user
+ * too. A closed picker shows one line, and this needs one per row.
+ *
+ * Here rather than handed in by the frames, for the reason `.labelWithHint` is:
+ * it is the same list in the dialog and on the settings page, and neither frame
+ * has a name for a control only this form draws.
+ */
+.watchList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.watchRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.watchLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+  cursor: pointer;
+}
+
+/* A connection whose token could not be asked has no user to match against. */
+.watchLabel:has(input:disabled) {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.watchName {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/*
+ * The Slack user the connection posts as, beside its name.
+ *
+ * Drawn on every row and not only where it matters, because where it matters is
+ * where two rows carry the same one — and a mark that appears only on the rows
+ * that clash is a mark nobody has learnt to read by the time it appears.
+ */
+.watchHandle {
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+/*
+ * One line under the row it is about: why a row cannot be ticked, or whose
+ * Slack user it turns out to share. Clipped rather than wrapped, so a long
+ * connection name cannot push the rest of the form down the page.
+ */
+.watchNote {
+  margin: 0 0 0 var(--space-20);
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

@@ -427,6 +427,21 @@ const IN_THE_OPEN = [
     why: 'the picker is empty, and where its contents come from',
   },
   {
+    file: 'src/components/TriggerForm.tsx',
+    says: 'Every message in every channel this bot is in',
+    because: 'status',
+    why:
+      'what choosing Message is about to let in. A trigger on a channel\'s history hears everything ' +
+      'anybody types there, which is a different order of traffic from being mentioned, and it is ' +
+      'worth knowing before Save rather than after. What the three events *are* is behind the (?)',
+  },
+  {
+    file: 'src/components/TriggerForm.tsx',
+    says: 'No Slack connections yet. A reply is matched against',
+    because: 'status',
+    why: 'the list is empty, and where its contents come from',
+  },
+  {
     file: 'src/components/ModelDialog.tsx',
     says: 'Asking the provider what it offers…',
     because: 'status',

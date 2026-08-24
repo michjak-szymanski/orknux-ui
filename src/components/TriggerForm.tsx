@@ -10,10 +10,11 @@ import {
   TRIGGER_ACTIONS,
   TRIGGER_ACTION_LABEL,
   createTrigger,
+  fetchSlackBotUsers,
   fetchSupportedTriggerActions,
   updateTrigger,
 } from '../api/triggers';
-import type { Trigger, TriggerAction, TriggerType, WebhookAuthType } from '../api/triggers';
+import type { SlackBotUser, Trigger, TriggerAction, TriggerType, WebhookAuthType } from '../api/triggers';
 import { OpenDefinitionIcon } from './OpenDefinitionIcon';
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
 import toggleOffIcon from '../assets/toggle-off.svg';
@@ -127,6 +128,14 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
   const [type, setType] = useState<TriggerType>(trigger?.type ?? 'INCOMING_CONNECTION');
   const [connectionId, setConnectionId] = useState(trigger?.connectionId ?? '');
   const [action, setAction] = useState<TriggerAction>(trigger?.action ?? 'MENTION');
+  /**
+   * Whose messages a reply watches for replies to.
+   *
+   * Not the connection above. That one is the socket this installation hears
+   * Slack on; these are the bot tokens whose own messages a reply has to hang
+   * under, which are usually other Slack apps entirely.
+   */
+  const [watched, setWatched] = useState<string[]>(trigger?.watchedConnectionIds ?? []);
   const [cron, setCron] = useState(trigger?.cron ?? '0 2 * * *');
   const [timezone, setTimezone] = useState(trigger?.timezone ?? 'UTC');
   const [payload, setPayload] = useState(trigger?.payload ?? '');
@@ -163,6 +172,10 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
   /** What the server says it can deliver; anything else is not worth offering. */
   const [deliverable, setDeliverable] = useState<TriggerAction[]>([]);
   const [connections, setConnections] = useState<WorkspaceConnection[]>([]);
+  /** Which Slack user each connection posts as, and what is wrong where something is. */
+  const [botUsers, setBotUsers] = useState<SlackBotUser[]>([]);
+  /** Whether that has been asked for, so choosing Reply twice is not two rounds of it. */
+  const [asked, setAsked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   /**
@@ -212,6 +225,27 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
 
   const incoming = type === 'INCOMING_CONNECTION';
   const webhook = type === 'WEBHOOK';
+  /** The one event that asks whose messages it is watching. */
+  const reply = incoming && action === 'REPLY';
+
+  /*
+   * Who each Slack connection posts as, asked the first time a reply is chosen
+   * and not before.
+   *
+   * It is a Slack round trip per connection on a cold cache, and every other
+   * kind of trigger this form makes has no use for the answer - so asking it
+   * with the rest of the catalogues would spend somebody else's rate limit on
+   * every schedule and every webhook anybody ever defined. The rows are drawn
+   * from the connections either way, so nothing waits on this: what arrives is
+   * the handle and the reason, filled in where the row already is.
+   */
+  useEffect(() => {
+    if (!reply || workspaceId === '' || asked) return;
+    setAsked(true);
+    fetchSlackBotUsers(workspaceId)
+      .then(setBotUsers)
+      .catch(() => setBotUsers([]));
+  }, [reply, workspaceId, asked]);
 
   /*
    * What each picker offers, with a second line saying which one this is.
@@ -240,6 +274,33 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
     [functions],
   );
 
+  /*
+   * The Slack connections, in the order the connection picker draws them.
+   *
+   * `slackBotUsers` answers about every Slack connection in the workspace, so
+   * this is only the ordering and the wait: a list that reshuffled itself when
+   * the answers arrived would move a row out from under somebody's cursor, and
+   * one that was empty until they arrived would read as a workspace with no
+   * Slack in it.
+   */
+  const slackBots = useMemo(() => {
+    const known = new Map(botUsers.map((bot) => [bot.connectionId, bot]));
+    return connections
+      .filter((held) => held.type === 'SLACK')
+      .map<SlackBotUser>(
+        (held) =>
+          known.get(held.id) ?? {
+            connectionId: held.id,
+            name: held.name,
+            outcome: 'UNCHECKED',
+            message: 'Not checked yet.',
+            userId: null,
+            handle: null,
+            receives: null,
+          },
+      );
+  }, [connections, botUsers]);
+
   const conditionOptions = useMemo(
     () => [
       ANY_EVENT_ROW,
@@ -262,7 +323,7 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
   const complete =
     name.trim() !== '' &&
     (incoming
-      ? connectionId !== ''
+      ? connectionId !== '' && (!reply || watched.length > 0)
       : webhook
         ? webhookPath.trim() !== '' &&
           objectId !== '' &&
@@ -310,6 +371,10 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
         name: name.trim(),
         connectionId: incoming ? connectionId : undefined,
         action: incoming ? action : undefined,
+        // Sent on every incoming trigger, empty included: the server assigns it
+        // rather than leaving it alone, so switching Reply to Mention clears
+        // what the reply was watching instead of leaving it behind.
+        watchedConnectionIds: incoming ? (reply ? watched : []) : undefined,
         cron: incoming || webhook ? undefined : cron.trim(),
         timezone: incoming || webhook ? undefined : timezone,
         webhookPath: webhook ? webhookPath.trim() : undefined,
@@ -666,7 +731,29 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                   <label className={styles.label} htmlFor="trigger-action">
                     Action
                   </label>
-                  <FieldHint label="Action">The specific event that activates this trigger.</FieldHint>
+                  <FieldHint label="Action">
+                    The specific event that activates this trigger.
+                    <br />
+                    <br />
+                    <strong>Mention</strong> is somebody naming the bot: <code>@orknux deploy</code>. It
+                    arrives only when the bot is spoken to, which makes it the quietest of the three.
+                    <br />
+                    <br />
+                    <strong>Message</strong> is anything anybody types in any channel the bot is a member
+                    of. That is a great deal more traffic than a mention: every remark in every one of
+                    those channels reaches this installation and is measured against the workspace&apos;s
+                    triggers. It needs the <code>channels:history</code> scope on the bot token, and{' '}
+                    <code>groups:</code>, <code>im:</code> or <code>mpim:</code> for private channels and
+                    direct messages. A bot that is not in the channel hears nothing there whatever its
+                    scopes say.
+                    <br />
+                    <br />
+                    <strong>Reply</strong> is a thread reply to a message one of the workspace&apos;s own
+                    bots wrote. Slack puts the author of a thread&apos;s parent message on every reply, and
+                    a bot token is a Slack user, so choosing which bots to watch is choosing which user ids
+                    a reply is measured against. Replies written by bots never fire it, or a workflow
+                    answering in a thread it watches would start itself for ever.
+                  </FieldHint>
                 </span>
                 <div className={styles.inputWrapper}>
                   <select
@@ -684,7 +771,77 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                   </select>
                   <img src={chevronDown12Icon} alt="" width={12} height={12} />
                 </div>
+                {/*
+                  A consequence of saving, so it stays in the open rather than
+                  going behind the (?). Somebody choosing Message is about to
+                  point a workflow at every remark in every channel the bot is
+                  in, and that is worth knowing before Save and not after.
+                */}
+                {action === 'MESSAGE' && (
+                  <p className={styles.fieldHint} id="trigger-action-volume">
+                    Every message in every channel this bot is in will be measured against this trigger.
+                  </p>
+                )}
               </div>
+
+              {reply && (
+                <div className={styles.field}>
+                  <span className={own.labelWithHint}>
+                    <span className={styles.label} id="trigger-watched-label">
+                      Replies To
+                    </span>
+                    <FieldHint label="Replies To">
+                      Whose messages this watches for replies to, which is not the connection it listens
+                      on.
+                      <br />
+                      <br />
+                      A bot token is a Slack user. Every thread reply carries the user who wrote the
+                      message the thread hangs under, so a reply is one of ours when that user is the user
+                      one of these connections posts as. The connection above is a different row: it is
+                      the Slack app whose app-level token this installation receives events over, and the
+                      bots people want answered are usually other apps.
+                      <br />
+                      <br />
+                      Two connections holding the same bot token are one Slack user twice over, and
+                      nothing on an arriving reply can tell them apart. Where that is so, each row says
+                      it.
+                    </FieldHint>
+                  </span>
+                  <ul className={own.watchList} aria-labelledby="trigger-watched-label">
+                    {slackBots.map((bot) => (
+                      <li key={bot.connectionId} className={own.watchRow}>
+                        <label className={own.watchLabel}>
+                          <input
+                            type="checkbox"
+                            id={`trigger-watch-${bot.connectionId}`}
+                            checked={watched.includes(bot.connectionId)}
+                            disabled={bot.outcome !== 'FOUND'}
+                            onChange={(event) =>
+                              setWatched((current) =>
+                                event.target.checked
+                                  ? [...current, bot.connectionId]
+                                  : current.filter((held) => held !== bot.connectionId),
+                              )
+                            }
+                          />
+                          <span className={own.watchName}>{bot.name}</span>
+                          {/* The handle and not the id: two connections on one
+                              token draw the same one, which is the whole of
+                              what a person needs to see here. */}
+                          <span className={own.watchHandle}>{bot.handle ?? '\u2014'}</span>
+                        </label>
+                        {bot.message !== '' && <p className={own.watchNote}>{bot.message}</p>}
+                      </li>
+                    ))}
+                  </ul>
+                  {slackBots.length === 0 && (
+                    <p className={styles.fieldHint}>
+                      No Slack connections yet. A reply is matched against the bot a connection posts as,
+                      so one is added under the workspace&apos;s Integrations and chosen here afterwards.
+                    </p>
+                  )}
+                </div>
+              )}
             </>
           ) : (
             <>
