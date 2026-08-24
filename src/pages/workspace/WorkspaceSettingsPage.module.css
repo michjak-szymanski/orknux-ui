@@ -299,3 +299,86 @@ select.input {
   gap: var(--space-8);
   margin-top: var(--space-4);
 }
+
+/* ---- The kinds of thing this workspace files (issue #241) ---- */
+
+.typeList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.typeRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-6) var(--space-8);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+}
+
+/*
+ * The name is the rename control, so there is no pencil to find. A type is
+ * renamed rarely and read constantly, and a row carrying a button for every
+ * rare thing is a row nobody can scan.
+ */
+.typeName {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: text;
+}
+
+/*
+ * How many issues are on it, shown beside the button rather than only in the
+ * refusal. A refusal that arrives once somebody has already pressed delete is
+ * one they had decided to be surprised by.
+ */
+.typeCount {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.typeRemove {
+  padding: 0 var(--space-6);
+  background: none;
+  border: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.typeRemove:hover:not(:disabled) {
+  color: var(--color-text-primary);
+}
+
+.typeRemove:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.typeNone {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.typeAdd {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.typeAdd .inputWrapper {
+  flex: 1 1 0;
+  min-width: 0;
+}

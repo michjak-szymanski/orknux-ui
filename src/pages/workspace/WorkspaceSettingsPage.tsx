@@ -4,6 +4,8 @@ import { useParams } from 'react-router-dom';
 
 import { fetchMemoryBudget } from '../../api/agents';
 import type { SessionMemoryBudget } from '../../api/agents';
+import { createIssueType, deleteIssueType, fetchIssueTypes, renameIssueType } from '../../api/issues';
+import type { IssueType } from '../../api/issues';
 import { answers, fetchModels } from '../../api/models';
 import type { Model } from '../../api/models';
 import type { SessionUser } from '../../api/session';
@@ -219,6 +221,21 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
   const [naming, setNaming] = useState(false);
 
   /*
+   * The kinds of thing this workspace files - issue #241.
+   *
+   * A workspace's own list and not the installation's: one team files bugs and
+   * features, and the next files incidents and requests. Here rather than on a
+   * page of its own because it is one short list, and a settings page that grew
+   * a second page for every list would be a menu.
+   */
+  const [types, setTypes] = useState<IssueType[]>([]);
+  const [newType, setNewType] = useState('');
+  const [typeError, setTypeError] = useState<string | null>(null);
+  const [typeBusy, setTypeBusy] = useState(false);
+  /** Which type is being renamed, and to what. Null while none is. */
+  const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
+
+  /*
    * The Agents card - issue #226.
    *
    * Its own draft and its own saved-and-failed states rather than the shared
@@ -320,6 +337,13 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
     if (against !== '' || answering.length === 0) return;
     setAgainst(answering[0].id);
   }, [against, answering]);
+
+  useEffect(() => {
+    if (workspaceId === '') return;
+    fetchIssueTypes(workspaceId)
+      .then(setTypes)
+      .catch(() => setTypes([]));
+  }, [workspaceId]);
 
   /*
    * Two questions about the drafted share, asked after the drag has stopped.
@@ -539,6 +563,28 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
     }
   }
 
+  /*
+   * Adding, renaming and taking away a type, each through the same wrapper.
+   *
+   * The refusal is printed as the server wrote it and never rephrased: a type
+   * that issues are carrying cannot be deleted, and what the administrator
+   * needs to see is how many - which only the server can count and only it
+   * should be trusted to say.
+   */
+  async function withTypes(work: () => Promise<unknown>) {
+    if (typeBusy) return;
+    setTypeBusy(true);
+    setTypeError(null);
+    try {
+      await work();
+      setTypes(await fetchIssueTypes(workspaceId));
+    } catch (cause) {
+      setTypeError(cause instanceof Error ? cause.message : 'Could not change the issue types.');
+    } finally {
+      setTypeBusy(false);
+    }
+  }
+
   async function choose(modelId: string) {
     setAbout('chat');
     setError(null);
@@ -650,6 +696,131 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             </button>
           </div>
         </form>
+      )}
+
+      {/*
+        The kinds of thing this workspace files - issue #241.
+
+        Behind `administered` like the General card above it, and for the same
+        reason: this decides how the whole tracker sorts itself, and somebody
+        who can file an issue should not be able to invent a fourth category on
+        the way past.
+      */}
+      {workspace?.administered === true && (
+        <section className={styles.card}>
+          <div className={styles.sectionTitle}>
+            <span className={styles.labelWithHint}>
+              <h2 className={styles.sectionHeading}>Issues</h2>
+              <FieldHint label="Issues">
+                A type is what an issue is - one of these, or none. Labels are
+                what a workspace says about an issue and stay free text, as many
+                at once as it likes. Renaming a type carries every issue on it;
+                deleting one is refused while any issue still carries it, and the
+                refusal says how many.
+              </FieldHint>
+            </span>
+            <div className={styles.rule} />
+          </div>
+
+          <div className={styles.field}>
+            <span className={styles.label}>Issue types</span>
+            <ul className={styles.typeList}>
+              {types.map((type) => (
+                <li key={type.id} className={styles.typeRow}>
+                  {renaming?.id === type.id ? (
+                    <input
+                      className={`${styles.input} ${styles.typeName}`}
+                      aria-label={`Rename ${type.name}`}
+                      value={renaming.name}
+                      autoFocus
+                      onChange={(event) => setRenaming({ id: type.id, name: event.target.value })}
+                      onBlur={() => setRenaming(null)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Escape') setRenaming(null);
+                        if (event.key !== 'Enter') return;
+                        const wanted = renaming.name.trim();
+                        setRenaming(null);
+                        if (wanted === '' || wanted === type.name) return;
+                        void withTypes(() => renameIssueType(type.id, wanted));
+                      }}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      className={styles.typeName}
+                      title="Rename"
+                      onClick={() => setRenaming({ id: type.id, name: type.name })}
+                    >
+                      {type.name}
+                    </button>
+                  )}
+                  <span className={styles.typeCount}>
+                    {type.issues === 1 ? '1 issue' : `${type.issues} issues`}
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.typeRemove}
+                    aria-label={`Delete ${type.name}`}
+                    disabled={typeBusy}
+                    onClick={() => void withTypes(() => deleteIssueType(type.id))}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+              {types.length === 0 && <li className={styles.typeNone}>None yet.</li>}
+            </ul>
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="new-issue-type">
+              Add a type
+            </label>
+            <div className={styles.typeAdd}>
+              <div className={styles.inputWrapper}>
+                <input
+                  id="new-issue-type"
+                  className={styles.input}
+                  type="text"
+                  value={newType}
+                  maxLength={60}
+                  placeholder="chore"
+                  onChange={(event) => setNewType(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Enter') return;
+                    event.preventDefault();
+                    const wanted = newType.trim();
+                    if (wanted === '') return;
+                    void withTypes(async () => {
+                      await createIssueType(workspaceId, wanted);
+                      setNewType('');
+                    });
+                  }}
+                />
+              </div>
+              <button
+                type="button"
+                className={styles.save}
+                disabled={newType.trim() === '' || typeBusy}
+                onClick={() => {
+                  const wanted = newType.trim();
+                  void withTypes(async () => {
+                    await createIssueType(workspaceId, wanted);
+                    setNewType('');
+                  });
+                }}
+              >
+                Add
+              </button>
+            </div>
+          </div>
+
+          {typeError !== null && (
+            <p className={styles.error} role="alert">
+              {typeError}
+            </p>
+          )}
+        </section>
       )}
 
       {/*

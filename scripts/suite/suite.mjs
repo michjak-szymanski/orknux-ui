@@ -1083,6 +1083,26 @@ export const TESTS = [
      */
   },
   {
+    name: 'issue-types-check',
+    what: 'a workspace adds a type, the list filters by it and by Untyped, and one in use will not delete',
+    needs: ['workspace'],
+    /*
+     * Issue #241. A type is the one thing about an issue that a label could not
+     * have been: a set cannot say "exactly one", and a label exists only while
+     * an issue carries it, so there was nothing for a settings page to hold.
+     *
+     * The refusal is what this drives in a browser rather than leaving to the
+     * server tests. The whole of it is that an administrator is told before and
+     * after - the count sits on the row, and the sentence that comes back names
+     * how many rather than being rephrased into "Could not delete" on the way
+     * through the page. Both of those are the interface's to get wrong.
+     *
+     * Untyped is asked for as well, and deliberately: it is the state most of a
+     * tracker is in on the day types arrive, and a filter that could only say
+     * "this type" or "never mind" would have left it unaskable.
+     */
+  },
+  {
     name: 'delete-issue-check',
     what: 'the trash asks before it deletes, and the issue is really gone after',
     needs: ['workspace'],

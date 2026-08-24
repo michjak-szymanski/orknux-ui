@@ -4,7 +4,35 @@ import { graphql } from './client';
 export type IssueStatus = 'OPEN' | 'IN_PROGRESS' | 'CLOSED';
 
 /** What a list is ordered by, in the words the server uses. */
-export type IssueOrder = 'NUMBER' | 'TITLE' | 'UPDATED' | 'LAST_COMMENT';
+export type IssueOrder = 'NUMBER' | 'TITLE' | 'UPDATED' | 'LAST_COMMENT' | 'TYPE';
+
+/**
+ * What kind of thing an issue is: a bug, a feature, or whatever else a
+ * workspace decides it files.
+ *
+ * Not a label, and the difference is worth knowing before reading the pages
+ * that draw both. A label is free text and a set, so an issue has as many as
+ * somebody typed and a label exists only while an issue carries it. A type is
+ * one row in the workspace's own list: exactly one per issue or none at all,
+ * kept whether anything carries it or not, and renamed in one place.
+ */
+export interface IssueType {
+  id: string;
+  workspaceId: string;
+  name: string;
+  /** How many issues here carry it. Read by the settings card, and by nothing else. */
+  issues: number;
+}
+
+/**
+ * What the type filter is set to, as the list's own three states.
+ *
+ * `null` is every issue; `''` is the ones nobody has classified, which the
+ * server also spells as an empty id; anything else is a type's id. Untyped is a
+ * state somebody filters for and not the absence of a filter, which is why
+ * there are three values here rather than two.
+ */
+export type IssueTypeFilter = string | null;
 
 /** What each state is called where somebody reads it. */
 export const ISSUE_STATUS_LABEL: Record<IssueStatus, string> = {
@@ -208,6 +236,8 @@ export interface Issue {
   title: string;
   description: string | null;
   status: IssueStatus;
+  /** What kind of thing it is, or null for untyped - a real state, not a gap. */
+  type: IssueType | null;
   reporter: string;
   assignee: Assignee | null;
   labels: string[];
@@ -244,6 +274,7 @@ export type IssueEventKind =
   | 'OPENED'
   | 'RECORDING'
   | 'STATUS'
+  | 'TYPE'
   | 'LABEL'
   | 'ASSIGNEE'
   | 'OBSERVER'
@@ -308,7 +339,8 @@ export async function fetchIssueHistory(
  * the more the tracker is used.
  */
 const ROW_FIELDS =
-  'id workspaceId number title status reporter assignee { kind id name hint } labels createdAt lastModifiedAt lastCommentAt lastModifiedBy';
+  'id workspaceId number title status type { id workspaceId name issues } reporter ' +
+  'assignee { kind id name hint } labels createdAt lastModifiedAt lastCommentAt lastModifiedBy';
 
 const ATTACHMENT_FIELDS = 'id filename contentType sizeBytes uploadedBy uploadedAt mine';
 
@@ -320,6 +352,7 @@ const RELATION_FIELDS = 'id kind issueId number title status linkedBy linkedAt';
 
 const FULL_FIELDS = `
   id workspaceId number title description status reporter
+  type { id workspaceId name issues }
   assignee { kind id name hint }
   labels
   attachments { ${ATTACHMENT_FIELDS} }
@@ -334,6 +367,12 @@ export async function fetchIssues(
   workspaceId: string,
   options: {
     status?: IssueStatus;
+    /**
+     * Which type. Absent is every issue; `''` is the untyped ones; an id is
+     * that type. Passed through as it stands, because the server reads the
+     * same three states off the same one argument.
+     */
+    typeId?: IssueTypeFilter;
     search?: string;
     page?: number;
     size?: number;
@@ -342,10 +381,10 @@ export async function fetchIssues(
   } = {},
 ): Promise<IssuePage> {
   const data = await graphql<{ workspaceIssues: IssuePage }>(
-    `query ($workspaceId: ID!, $status: IssueStatus, $search: String, $page: Int, $size: Int,
+    `query ($workspaceId: ID!, $status: IssueStatus, $typeId: ID, $search: String, $page: Int, $size: Int,
             $order: IssueOrder, $ascending: Boolean) {
-       workspaceIssues(workspaceId: $workspaceId, status: $status, search: $search, page: $page, size: $size,
-                       order: $order, ascending: $ascending) {
+       workspaceIssues(workspaceId: $workspaceId, status: $status, typeId: $typeId, search: $search,
+                       page: $page, size: $size, order: $order, ascending: $ascending) {
          totalElements
          content { ${ROW_FIELDS} }
        }
@@ -353,6 +392,7 @@ export async function fetchIssues(
     {
       workspaceId,
       status: options.status ?? null,
+      typeId: options.typeId ?? null,
       order: options.order ?? null,
       ascending: options.ascending ?? null,
       search: options.search || null,
@@ -388,6 +428,52 @@ export async function fetchIssueLabels(workspaceId: string): Promise<string[]> {
   return data.workspaceIssueLabels;
 }
 
+/**
+ * The kinds of thing this workspace files, alphabetically.
+ *
+ * Its own read rather than a field on the workspace: the filter, the issue page
+ * and the settings card all want it, and only the last of the three cares about
+ * the counts it carries.
+ */
+export async function fetchIssueTypes(workspaceId: string): Promise<IssueType[]> {
+  const data = await graphql<{ workspaceIssueTypes: IssueType[] }>(
+    `query ($workspaceId: ID!) {
+       workspaceIssueTypes(workspaceId: $workspaceId) { id workspaceId name issues }
+     }`,
+    { workspaceId },
+  );
+  return data.workspaceIssueTypes;
+}
+
+export async function createIssueType(workspaceId: string, name: string): Promise<IssueType> {
+  const data = await graphql<{ createIssueType: IssueType }>(
+    `mutation ($workspaceId: ID!, $name: String!) {
+       createIssueType(workspaceId: $workspaceId, name: $name) { id workspaceId name issues }
+     }`,
+    { workspaceId, name },
+  );
+  return data.createIssueType;
+}
+
+export async function renameIssueType(id: string, name: string): Promise<IssueType> {
+  const data = await graphql<{ renameIssueType: IssueType }>(
+    `mutation ($id: ID!, $name: String!) {
+       renameIssueType(id: $id, name: $name) { id workspaceId name issues }
+     }`,
+    { id, name },
+  );
+  return data.renameIssueType;
+}
+
+/** Refused while issues carry it; the refusal says how many, and is shown as it stands. */
+export async function deleteIssueType(id: string): Promise<boolean> {
+  const data = await graphql<{ deleteIssueType: boolean }>(
+    `mutation ($id: ID!) { deleteIssueType(id: $id) }`,
+    { id },
+  );
+  return data.deleteIssueType;
+}
+
 /** People, agents and models together: the box searches all three at once. */
 export async function fetchAssignees(workspaceId: string, search?: string): Promise<Assignee[]> {
   const data = await graphql<{ issueAssignees: Assignee[] }>(
@@ -405,6 +491,11 @@ export interface IssueInput {
   /** Empty clears it; absent leaves it alone. */
   description?: string;
   status?: IssueStatus;
+  /**
+   * Which type. Empty is untyped, which is a state somebody chooses from the
+   * picker; absent leaves it alone, the way an absent description does.
+   */
+  typeId?: string | null;
   labels?: string[];
   /**
    * Both together, or neither.

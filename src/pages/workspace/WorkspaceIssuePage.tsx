@@ -13,6 +13,7 @@ import {
   fetchIssue,
   fetchIssueHistory,
   fetchIssueLabels,
+  fetchIssueTypes,
   issueAttachmentUrl,
   readRelation,
   removeIssueAttachment,
@@ -27,6 +28,7 @@ import type {
   IssueEvent,
   IssueHistory,
   IssueStatus,
+  IssueType,
 } from '../../api/issues';
 import type { SessionUser } from '../../api/session';
 import { timeAgo } from '../../api/tools';
@@ -157,6 +159,14 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
   const [filed, setFiled] = useState<number | null>(null);
   const [labelDraft, setLabelDraft] = useState('');
   const [assignee, setAssignee] = useState<Assignee | null>(null);
+  /*
+   * What kind of thing this is, as the id the form posts back - `''` for
+   * untyped, which is a state somebody chooses and not a field they left out.
+   * Untyped is what a new issue starts as: guessing would file everything
+   * nobody thought about as a bug.
+   */
+  const [typeId, setTypeId] = useState<string>('');
+  const [types, setTypes] = useState<IssueType[]>([]);
   const [status, setStatus] = useState<IssueStatus>('OPEN');
   const [comment, setComment] = useState('');
   /** Whether the description is being written rather than read. */
@@ -284,6 +294,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
         setTitle(found.title);
         setDescription(found.description ?? '');
         setLabels(found.labels);
+        setTypeId(found.type?.id ?? '');
         setAssignee(found.assignee);
         setStatus(found.status);
       })
@@ -330,6 +341,13 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
       .catch(() => setKnown([]));
   }, [workspaceId]);
 
+  useEffect(() => {
+    if (workspaceId === '') return;
+    fetchIssueTypes(workspaceId)
+      .then(setTypes)
+      .catch(() => setTypes([]));
+  }, [workspaceId]);
+
   /**
    * Stores what the form holds.
    *
@@ -361,6 +379,9 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
         description,
         labels,
         status,
+        // Empty is untyped, for the reason an empty assigneeId is nobody: the
+        // page posts what its boxes show, and an absent field means untouched.
+        typeId,
         assigneeKind: assignee?.kind ?? null,
         /*
          * "No one" is an empty id, not an absent one.
@@ -1360,6 +1381,30 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                 </button>
               </div>
 
+              {/*
+                One of a short, closed list, so a select and not the text box
+                the labels below get. Untyped is a choice in it rather than the
+                absence of one - an issue nobody has classified is a real state
+                and stays readable as one.
+              */}
+              <div className={styles.sideField}>
+                <span className={styles.label}>Type</span>
+                <select
+                  className={styles.typeSelect}
+                  aria-label="Issue type"
+                  value={typeId}
+                  onChange={(event) => setTypeId(event.target.value)}
+                  disabled={saving}
+                >
+                  <option value="">Untyped</option>
+                  {types.map((type) => (
+                    <option key={type.id} value={type.id}>
+                      {type.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <AssigneePicker workspaceId={workspaceId} chosen={assignee} onChoose={setAssignee} />
 
               <div className={styles.sideField}>
@@ -1843,6 +1888,32 @@ function said(event: IssueEvent) {
       return (
         <>
           {who} changed the status from {statusName(event.was)} to {statusName(event.became)}
+        </>
+      );
+    case 'TYPE':
+      /*
+       * Three sentences from two columns, like the assignee above: typed,
+       * retyped and untyped are different things to have happened, and the
+       * word each side holds is what the type was called at the time.
+       */
+      if (event.was === null) {
+        return (
+          <>
+            {who} filed this as a <span className={styles.historyChip}>{event.became}</span>
+          </>
+        );
+      }
+      if (event.became === null) {
+        return (
+          <>
+            {who} took the type <span className={styles.historyChip}>{event.was}</span> off
+          </>
+        );
+      }
+      return (
+        <>
+          {who} changed the type from <span className={styles.historyChip}>{event.was}</span> to{' '}
+          <span className={styles.historyChip}>{event.became}</span>
         </>
       );
     case 'LABEL':

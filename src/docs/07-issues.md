@@ -30,8 +30,14 @@ clicking it again takes it out. That is also why only one applies at a time:
 there is one search, not a search and a label filter arguing about the same
 list.
 
+Beside the states is a **type** box: **Any type**, one of the workspace's own
+types, or **Untyped**. A select rather than the chips the labels get, because a
+type list is short and closed and an issue has exactly one of them or none -
+and because Untyped has to be something you can ask for. On a tracker that
+existed before its types did, that is most of it.
+
 **Sort** names the field it sorts on - **Number**, **Title**, **Last change**,
-**Last comment** - with a single arrow beside it for the direction. The arrow
+**Last comment**, **Type** - with a single arrow beside it for the direction. The arrow
 says which way it is now rather than which way pressing it would go.
 
 Number is the order things were filed in and not a date, which is why it is
@@ -100,10 +106,18 @@ Down the right are the things somebody wants at a glance.
   still work somebody can see the state of, which is the whole reason the same
   box takes all three. Type to search it, and **No one** is both where it starts
   and a valid answer.
+- **Type** is what the issue *is*: a bug, a feature, or whatever else this
+  workspace files. One of them or none - **Untyped** is a real answer and where
+  a new issue starts, because an issue nobody has classified should not be
+  recorded as a bug by default. The list is the workspace's own and is edited in
+  its settings, below.
 - **Labels** are typed in, with what the workspace already uses suggested
   underneath. They have no colours and no meaning of their own - `p1` is a
   convention this project keeps, not a field. A label exists because an issue
   carries it, so removing the last one that used it removes it from the list.
+  That is the difference from the type above it: a label is what somebody says
+  *about* an issue, as many at once as they like, and it exists only while an
+  issue holds it.
 - **Observers**, under the labels, are whoever else asked to hear about it.
   Below.
 - **Reporter** is whoever filed it, and is not editable.
@@ -113,6 +127,35 @@ issue's own page, where a number after a hash is an issue and nothing else, and
 only where it reads as one: inside code it is left alone, and so is anything
 longer than five digits, which is a colour.
 
+## Types
+
+A workspace decides which kinds of thing it files. **Workspace → Settings →
+Issues** holds the list; every workspace begins with **bug** and **feature**,
+and an administrator can add, rename and remove them. Per workspace and not per
+installation, because one team files bugs and features and the next files
+incidents and requests.
+
+Three things follow from a type being a thing the workspace keeps, rather than a
+label with a `type:` in front of it:
+
+- An issue has **one** or none. A set of labels cannot say "exactly one", so
+  nothing would stop an issue being both a bug and a feature and no two readers
+  would agree on what that meant.
+- It **exists while nothing carries it**. A label only exists because an issue
+  holds it, so there would be nothing to put on a settings page until somebody
+  had already used it.
+- It can be **renamed**, in one place. Every issue on it reads the new word at
+  once, and nothing was rewritten - while the history keeps the word each change
+  was made under, so renaming a type does not rewrite what happened last March.
+
+Removing one is **refused while issues still carry it**, and the refusal says
+how many; the count is on the row before you press anything. The way through is
+the type filter on the list: ask for that type, retype what it finds, then
+remove it. Nothing is untyped behind your back.
+
+Issues filed before the workspace had types are **untyped**, and stay untyped. A
+default would have been the tracker claiming a year of work was all bugs.
+
 ## History
 
 ![The History tab: what has happened to an issue, oldest
@@ -120,8 +163,10 @@ first](/screens/issue-history.png)
 
 Below the header are two tabs: **Issue**, which is everything above, and
 **History**, which is what has happened to it. Every line names somebody and
-when: it being opened, comments, the status moving, labels going on and coming
-off, it changing hands, and observers arriving and leaving. Oldest first,
+when: it being opened, comments, the status moving, the type being set or
+changed, labels going on and coming off, it changing hands, and observers
+arriving and leaving. The type is written down by the word it had at the time,
+so renaming one afterwards does not rewrite what happened. Oldest first,
 because it is read as a story.
 
 The history is fetched when the tab is opened and not before, so an issue read
@@ -177,7 +222,7 @@ beside the delete button on the issue, asks where it should go. Administrators
 only, because a move takes an issue out of one team's tracker and puts it in
 another's.
 
-Its comments, labels, links, observers and files go with it, the files included:
+Its comments, labels, observers and files go with it, the files included:
 the bytes are moved into the destination's own storage, so the screenshots still
 open afterwards.
 
@@ -360,8 +405,10 @@ pushed down a socket held open all day for a number that changes a few times.
 
 The tracker is offered over **MCP** as well as through this page. An assistant
 can list issues, read one with its comments, open a new one, comment on it,
-label it and close it, and wait on a feed of what has happened since it last
-looked. It is the same workspace and the same permissions, and an issue is
+type it, label it and close it, and wait on a feed of what has happened since it
+last looked. There is a tool for the types a workspace files, beside the one for
+its labels, and it is worth calling before filing: a label can be invented on the
+spot and a type is chosen from the list. It is the same workspace and the same permissions, and an issue is
 addressed by the number people say, so #4 to an assistant is #4 here. See
 Models and agents.
 

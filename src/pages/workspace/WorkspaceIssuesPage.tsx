@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
-import { ISSUE_STATUS_LABEL, fetchIssueLabels, fetchIssues } from '../../api/issues';
-import type { Issue, IssueOrder, IssuePage, IssueStatus } from '../../api/issues';
+import { ISSUE_STATUS_LABEL, fetchIssueLabels, fetchIssueTypes, fetchIssues } from '../../api/issues';
+import type { Issue, IssueOrder, IssuePage, IssueStatus, IssueType, IssueTypeFilter } from '../../api/issues';
 import type { SessionUser } from '../../api/session';
 import { timeAgo } from '../../api/tools';
 import { initialsOf } from '../../api/users';
@@ -74,6 +74,7 @@ const ORDERS: { label: string; order: IssueOrder }[] = [
   { label: 'Title', order: 'TITLE' },
   { label: 'Last change', order: 'UPDATED' },
   { label: 'Last comment', order: 'LAST_COMMENT' },
+  { label: 'Type', order: 'TYPE' },
 ];
 
 /**
@@ -94,6 +95,7 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
 
   const [issues, setIssues] = useState<IssuePage | null>(null);
   const [labels, setLabels] = useState<string[]>([]);
+  const [types, setTypes] = useState<IssueType[]>([]);
 
   /*
    * The filters live in the address, not in this component.
@@ -117,6 +119,19 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
    */
   const wanted = params.get('status');
   const status: IssueStatus | null = wanted === null ? 'OPEN' : wanted === 'all' ? null : (wanted as IssueStatus);
+  /*
+   * The type filter, in the address like the rest, and with three states
+   * rather than two: absent is every issue, the word `untyped` is the ones
+   * nobody has classified, and anything else is a type's id.
+   *
+   * `untyped` is written out in the address rather than left as an empty
+   * `type=`, because a bare `type=` in a URL somebody pastes is indistinguishable
+   * from a filter that got lost. The empty string is what the server is sent -
+   * that is its own spelling of the same state - and the two are kept apart
+   * here, in one place, rather than in every caller.
+   */
+  const typeParam = params.get('type');
+  const typeFilter: IssueTypeFilter = typeParam === null ? null : typeParam === 'untyped' ? '' : typeParam;
   const search = params.get('q') ?? '';
   const page = Number(params.get('page') ?? '1') || 1;
   const order = (params.get('order') as IssueOrder | null) ?? 'NUMBER';
@@ -208,6 +223,7 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
     const timer = window.setTimeout(() => {
       fetchIssues(workspaceId, {
         status: status ?? undefined,
+        typeId: typeFilter,
         search: search.trim() || undefined,
         page: page - 1,
         size: pageSize,
@@ -231,7 +247,7 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
       current = false;
       window.clearTimeout(timer);
     };
-  }, [workspaceId, status, search, page, pageSize, order, ascending, asked]);
+  }, [workspaceId, status, typeFilter, search, page, pageSize, order, ascending, asked]);
 
   /*
    * Coming back to the window catches the list up, quietly and not always.
@@ -263,6 +279,18 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
       .then(setLabels)
       .catch(() => setLabels([]));
   }, [workspaceId, issues]);
+
+  /*
+   * The types are the workspace's, not the tracker's, so this is read once and
+   * not again with every list: a label appears the moment somebody types it on
+   * an issue, and a type only when somebody adds one in the settings.
+   */
+  useEffect(() => {
+    if (workspaceId === '') return;
+    fetchIssueTypes(workspaceId)
+      .then(setTypes)
+      .catch(() => setTypes([]));
+  }, [workspaceId]);
 
   return (
     <AppShell
@@ -313,6 +341,30 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
               </button>
             ))}
           </div>
+
+          {/*
+            A select rather than a row of chips like the labels below. A type
+            list is short, closed and exhaustive - which is what a select is
+            for - and "Untyped" has to be one of the choices rather than the
+            absence of one, since it is the question this filter gets asked
+            most on a tracker that predates types.
+          */}
+          {types.length > 0 && (
+            <select
+              className={styles.typeFilter}
+              aria-label="Filter by type"
+              value={typeParam ?? ''}
+              onChange={(event) => filterBy({ type: event.target.value === '' ? null : event.target.value })}
+            >
+              <option value="">Any type</option>
+              {types.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.name}
+                </option>
+              ))}
+              <option value="untyped">Untyped</option>
+            </select>
+          )}
 
           <div className={styles.searchRow}>
             <img src={searchIcon} alt="" width={14} height={14} />
@@ -452,6 +504,12 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
                 </span>
 
                 <span className={styles.rowLabels}>
+                  {/*
+                    The type first and drawn differently, because it is not one
+                    of the labels beside it: an issue has one, and it says what
+                    the thing is rather than something about it.
+                  */}
+                  {issue.type !== null && <span className={styles.typeTag}>{issue.type.name}</span>}
                   {issue.labels.map((label) => (
                     <span key={label} className={styles.labelTag}>
                       {label}
