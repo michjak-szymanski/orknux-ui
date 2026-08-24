@@ -1641,6 +1641,30 @@ export const TESTS = [
      */
   },
   {
+    name: 'issue-start-by-ai-check',
+    what: 'Start by AI on an agent-assigned issue, and the link from it to the task',
+    needs: ['workspace'],
+    /*
+     * Issue #230. 'workspace' and not 'model', for the reason `task-check`
+     * gives: the prompt is written into the task's log before the model is
+     * asked, so everything this asserts - the control appearing only where an
+     * agent has the issue, the issue moving to In progress, the link standing
+     * where the button was, and the prompt on the other end of it being the
+     * issue - is true whether or not anything ever answers.
+     *
+     * It builds its own provider, model, agent and two issues and takes all of
+     * them away again. The seeded fixture has no model at all, and one that
+     * borrowed whichever agent happened to be there would say a different thing
+     * on every installation.
+     *
+     * The second issue - the one assigned to nobody - is half the check rather
+     * than a flourish. "Start by AI appears when an agent is assigned" is a
+     * statement about where it does *not* appear as much as where it does, and a
+     * check that only ever looked at the agent-assigned one would pass a control
+     * drawn on every issue in the tracker.
+     */
+  },
+  {
     name: 'task-permission-check',
     what: 'a task stopping for permission, saying so, ringing the bell, and carrying on once it is granted',
     needs: ['model'],

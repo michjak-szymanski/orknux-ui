@@ -31,6 +31,8 @@ import type {
   IssueType,
 } from '../../api/issues';
 import type { SessionUser } from '../../api/session';
+import { TASK_STATUS_LABEL, fetchIssueTasks, startIssueTask, stillGoing } from '../../api/tasks';
+import type { Task } from '../../api/tasks';
 import { timeAgo } from '../../api/tools';
 import { initialsOf } from '../../api/users';
 import { AppShell } from '../../components/AppShell';
@@ -195,6 +197,18 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
   const [error, setError] = useState<string | null>(null);
 
   /*
+   * What has been started on this issue, newest first.
+   *
+   * Read separately from the issue rather than hung on it, because a list of
+   * twenty issues would otherwise read this for every row in order to draw one
+   * control on the page showing one. What it decides is whether "Start by AI"
+   * is a button or a link to the task that already exists.
+   */
+  const [issueTasks, setIssueTasks] = useState<Task[]>([]);
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
+
+  /*
    * Which half of the issue is being read: what it says, or how it got here.
    *
    * The history is not part of the issue the page loads. Everybody who follows
@@ -333,6 +347,28 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
       current = false;
     };
   }, [creating, tab, workspaceId, issue]);
+
+  /*
+   * What this issue has started, whenever the issue itself is replaced.
+   *
+   * On the issue and not on its number, the way the history above is: pressing
+   * the button replaces the issue this page holds, so the link to the task
+   * appears in the same breath rather than after a reload.
+   */
+  useEffect(() => {
+    if (creating || issue === null) return;
+    let current = true;
+    fetchIssueTasks(issue.id)
+      .then((found) => {
+        if (current) setIssueTasks(found);
+      })
+      .catch(() => {
+        if (current) setIssueTasks([]);
+      });
+    return () => {
+      current = false;
+    };
+  }, [creating, issue]);
 
   useEffect(() => {
     if (workspaceId === '') return;
@@ -535,6 +571,32 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
   /** The one-click move, for the places that offer it. */
   async function toggleStatus() {
     await setIssueStatus(nextStatus(status));
+  }
+
+  /**
+   * Hands the issue to the agent it is assigned to.
+   *
+   * The page does not go to the task. Pressing this is not leaving the issue -
+   * most people press it and carry on reading - and a navigation from here would
+   * also have to argue with the leave guard over a description somebody is
+   * halfway through. What it does instead is turn itself into the link, which is
+   * the same journey one press later and the one that is still there tomorrow.
+   */
+  async function startByAI() {
+    if (issue === null || starting) return;
+    setStarting(true);
+    setStartError(null);
+    try {
+      const started = await startIssueTask(issue.id);
+      setIssueTasks([started, ...issueTasks]);
+      // The server moved the issue to In progress, so the page has to say so.
+      setStatus('IN_PROGRESS');
+      setIssue({ ...issue, status: 'IN_PROGRESS' });
+    } catch (cause) {
+      setStartError(cause instanceof Error ? cause.message : 'Could not start it.');
+    } finally {
+      setStarting(false);
+    }
   }
 
   /** Saving a change to a comment; only the author is offered this. */
@@ -1406,6 +1468,78 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
               </div>
 
               <AssigneePicker workspaceId={workspaceId} chosen={assignee} onChoose={setAssignee} />
+
+              {/*
+                Under the assignee, because it is about the assignee.
+
+                Drawn only where the issue is assigned to an *agent* and is not
+                closed - a person, a model and nobody are all things that cannot
+                be set to work, and a button that exists only to be refused is
+                worse than no button. It is the same condition the server checks,
+                so the two cannot disagree.
+
+                Once something is going it is a link and not a button. Two people
+                looking at a stalled issue will both press it, and what the
+                second one needs is the task that already exists rather than a
+                second agent on the same problem.
+
+                Read off the saved issue and not off the picker beside it. An
+                agent chosen and not yet saved is not who the issue is assigned
+                to, and a button that appeared on the choice would hand the work
+                to whoever was there before it.
+              */}
+              {!creating &&
+                issue !== null &&
+                issue.assignee?.kind === 'AGENT' &&
+                issue.status !== 'CLOSED' && (
+                  <div className={styles.sideField} data-testid="issue-ai">
+                    <span className={styles.labelWithHint}>
+                      <span className={styles.label}>Start by AI</span>
+                      <FieldHint label="Start by AI">
+                        Hands this issue to <strong>{issue.assignee.name}</strong> as a task: the number,
+                        the title, the kind, the labels, the description and the conversation, in the
+                        agent's own words no further than that. The issue moves to In progress and the
+                        task is linked to it both ways, so whoever is watching this issue hears what the
+                        agent asks for and what it comes back with. Nothing puts the issue back
+                        afterwards — a task that fails or is stopped leaves it where you put it, and it
+                        is yours to move.
+                      </FieldHint>
+                    </span>
+                    {stillGoing(issueTasks) !== null ? (
+                      <Link
+                        className={styles.aiRunning}
+                        data-testid="issue-task-link"
+                        to={`/workspace/${workspaceId}/tasks/${stillGoing(issueTasks)?.id}`}
+                      >
+                        Working on it — open the task
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        className={styles.aiStart}
+                        data-testid="issue-start-ai"
+                        disabled={starting}
+                        onClick={() => void startByAI()}
+                      >
+                        {starting ? 'Starting…' : 'Start by AI'}
+                      </button>
+                    )}
+                    {stillGoing(issueTasks) === null && issueTasks.length > 0 && (
+                      <Link
+                        className={styles.aiLast}
+                        data-testid="issue-task-link"
+                        to={`/workspace/${workspaceId}/tasks/${issueTasks[0].id}`}
+                      >
+                        Last task: {TASK_STATUS_LABEL[issueTasks[0].status].toLowerCase()}
+                      </Link>
+                    )}
+                    {startError !== null && (
+                      <span className={styles.startError} role="alert">
+                        {startError}
+                      </span>
+                    )}
+                  </div>
+                )}
 
               <div className={styles.sideField}>
                 <span className={styles.label}>Labels</span>

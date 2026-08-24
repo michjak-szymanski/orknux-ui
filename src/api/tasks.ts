@@ -202,6 +202,36 @@ export async function startTask(input: {
   return data.startTask;
 }
 
+/**
+ * "Start by AI" on an issue: its agent, set to work on the issue.
+ *
+ * `startTask` underneath, with a prompt the server composes from the issue -
+ * the browser does not write it, because what an agent is handed is a product
+ * decision and not a page's. The issue moves to In progress; nothing moves it
+ * back afterwards.
+ */
+export async function startIssueTask(issueId: string): Promise<Task> {
+  const data = await graphql<{ startIssueTask: Task }>(
+    `mutation ($issueId: ID!) { startIssueTask(issueId: $issueId) { ${TASK_FIELDS} } }`,
+    { issueId },
+  );
+  return data.startIssueTask;
+}
+
+/** Everything one issue has started, newest first. The link back. */
+export async function fetchIssueTasks(issueId: string): Promise<Task[]> {
+  const data = await graphql<{ issueTasks: Task[] }>(
+    `query ($issueId: ID!) { issueTasks(issueId: $issueId) { ${TASK_FIELDS} } }`,
+    { issueId },
+  );
+  return data.issueTasks;
+}
+
+/** The one still going, or null. What decides whether the button is a button. */
+export function stillGoing(tasks: Task[]): Task | null {
+  return tasks.find((one) => !['DONE', 'FAILED', 'STOPPED'].includes(one.status)) ?? null;
+}
+
 /** Gives a parked task the one thing it asked for, and lets it carry on. */
 export async function approveTaskRequest(id: string): Promise<Task> {
   const data = await graphql<{ approveTaskRequest: Task }>(
