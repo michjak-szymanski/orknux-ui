@@ -17,6 +17,34 @@
   overflow: hidden;
 }
 
+/*
+ * That authentication is off, across the top of every page.
+ *
+ * Above the top bar and part of the flex column rather than laid over it, so it
+ * pushes the interface down instead of covering the first row of it — this is
+ * meant to be impossible to miss and equally impossible to be in the way of.
+ * Amber rather than red: it is a deliberate setting somebody chose, not a fault,
+ * and it is the same colour the Doctor screen draws its WARN in.
+ *
+ * `flex-shrink: 0` because the shell's fixed variant hands the rest of the column
+ * a height to divide up, and a one-line strip must not be the thing that gives.
+ */
+.openNotice {
+  flex-shrink: 0;
+  margin: 0;
+  padding: var(--space-8) var(--space-24);
+  background: var(--color-amber-soft);
+  border-bottom: 1px solid var(--color-amber);
+  color: var(--color-amber);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  text-align: center;
+  /* One line. Cut rather than wrapped, on the narrowest window somebody has. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ---- Top nav ---- */
 
 /*
