@@ -100,6 +100,30 @@
 }
 
 /*
+ * A note that answers "which one of these?" rather than "what is this?".
+ *
+ * A field offering three named values wants them read as three things, not as
+ * one sentence with semicolons in it - at 240px that sentence is four lines
+ * with the names buried mid-line. No marker: the bold name is the marker, and a
+ * bullet beside it would indent every value to make room for punctuation
+ * nobody reads.
+ */
+.popover ul {
+  margin: var(--space-8) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.popover li + li {
+  margin-top: var(--space-4);
+}
+
+.popover li strong {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+/*
  * Pinned: it was asked to stay, so it says so and makes room for the control
  * that puts it away. The corner is cleared rather than the whole first line,
  * since most of these notes are a sentence and indenting all of them to miss a

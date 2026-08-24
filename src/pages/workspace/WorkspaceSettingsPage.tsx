@@ -1135,9 +1135,18 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
               Speech chunking
             </label>
             <FieldHint label="Speech chunking">
-              Where an answer is cut for the speech provider. Sentence starts talking soonest;
-              Paragraph sends fewer, longer requests and reads more smoothly; None waits for the
-              whole answer and sends it once.
+              <p>Where an answer is cut for the speech provider.</p>
+              <ul>
+                <li>
+                  <strong>Sentence</strong> starts talking soonest.
+                </li>
+                <li>
+                  <strong>Paragraph</strong> sends fewer, longer requests and reads more smoothly.
+                </li>
+                <li>
+                  <strong>None</strong> waits for the whole answer and sends it once.
+                </li>
+              </ul>
             </FieldHint>
           </span>
           <div className={styles.inputWrapper}>
