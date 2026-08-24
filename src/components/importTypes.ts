@@ -41,7 +41,7 @@ export function importTypes(imports: ScriptImport[], libraries: ScriptLibraryImp
   const members = [
     ...usable.flatMap((held) => [
       ...described(held),
-      `  ${held.name}: (${parameters(held.function?.signature ?? '()')}) => ${returned(held)};`,
+      `  ${held.name}: (${parameters(held.function?.signature ?? '()')}) => Promise<${returned(held)}>;`,
     ]),
     ...loaded.map(libraryMember),
   ];
@@ -100,7 +100,20 @@ function described(held: ScriptImport): string[] {
   return said === '' ? [] : [`  /** ${said.replace(/\*\//g, '* /')} */`];
 }
 
-/** What the call gives back, in the same words a parameter is annotated in. */
+/**
+ * What the call gives back, in the same words a parameter is annotated in.
+ *
+ * Wrapped in a `Promise` where it is written into the member above, because that
+ * is what a call actually hands back: every function starts as
+ * `export default async function`, and an imported one is called directly rather
+ * than through the harness that settles the one a node runs. So
+ * `const answer = imports.f(1)` is a promise, and annotated as the bare type the
+ * editor would neither offer `await` nor mind its absence - it would type-check
+ * and then behave differently, which is worse than either on its own.
+ *
+ * True of a function somebody wrote without `async` as well: `await` on a plain
+ * value is the value, so the annotation asks for nothing that would not work.
+ */
 function returned(held: ScriptImport): string {
   const fn = held.function;
   return fn === null ? 'unknown' : tsType(fn.returnType, fn.returnObjectName);
