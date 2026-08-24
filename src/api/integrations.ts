@@ -42,9 +42,24 @@ export interface WorkspaceConnection {
   authType: AuthType;
   headers: HttpHeader[];
   inherited: boolean;
+  /** Whether the connection holds a credential of its own. False for one reading a variable. */
   secretSet: boolean;
-  /** Whether an app-level token is stored, which is what lets a Slack connection listen. */
+  /**
+   * The workspace secret the credential is read from, or null when it keeps its
+   * own copy. Per field: `appTokenVariableId` answers the same question
+   * separately, because a Slack connection has two credentials.
+   */
+  secretVariableId: string | null;
+  secretVariableName: string | null;
+  secretVariableCatalog: string | null;
+  /** A reference pointing at nothing, which the field says rather than failing later. */
+  secretVariableMissing: boolean;
+  /** Whether an app-level token of the connection's own is stored, which is what lets a Slack connection listen. */
   appTokenSet: boolean;
+  appTokenVariableId: string | null;
+  appTokenVariableName: string | null;
+  appTokenVariableCatalog: string | null;
+  appTokenVariableMissing: boolean;
   /** The port a mail connection will use, which is the default one when none was chosen. */
   smtpPort: number | null;
   /** Who a mail connection logs in as; null sends without authenticating. */
@@ -63,14 +78,25 @@ export interface McpServer {
   address: string;
   authType: AuthType;
   headers: HttpHeader[];
+  /** Whether the server holds a credential of its own. False for one reading a variable. */
   secretSet: boolean;
+  /** The workspace secret the credential is read from, or null when it keeps its own copy. */
+  secretVariableId: string | null;
+  secretVariableName: string | null;
+  secretVariableCatalog: string | null;
+  /** A reference pointing at nothing, which the field says rather than failing later. */
+  secretVariableMissing: boolean;
 }
 
 const CONNECTION_FIELDS = 'id name type url';
 const WORKSPACE_CONNECTION_FIELDS =
   'id workspaceId name type url urlOverride effectiveUrl authType headers { name value } inherited secretSet ' +
-  'appTokenSet smtpPort smtpUsername smtpFrom smtpSecurity status lastCheckMessage lastCheckedAt';
-const MCP_SERVER_FIELDS = 'id workspaceId name address authType headers { name value } secretSet';
+  'secretVariableId secretVariableName secretVariableCatalog secretVariableMissing ' +
+  'appTokenSet appTokenVariableId appTokenVariableName appTokenVariableCatalog appTokenVariableMissing ' +
+  'smtpPort smtpUsername smtpFrom smtpSecurity status lastCheckMessage lastCheckedAt';
+const MCP_SERVER_FIELDS =
+  'id workspaceId name address authType headers { name value } secretSet ' +
+  'secretVariableId secretVariableName secretVariableCatalog secretVariableMissing';
 
 const CONNECTIONS_QUERY = `
   query Connections($page: Int!, $size: Int!) {
@@ -245,8 +271,12 @@ export async function createWorkspaceConnection(input: {
   url?: string;
   authType?: AuthType;
   secret?: string;
+  /** A workspace secret to read the credential from, instead of a copy here. Not with `secret`. */
+  secretVariableId?: string;
   /** Slack's app-level token. Given one, the connection listens as well as sends. */
   appToken?: string;
+  /** The app-level token's own reference, chosen separately from `secretVariableId`. */
+  appTokenVariableId?: string;
   /** Where the mail server listens; omitted takes the port the security implies. */
   smtpPort?: number;
   /** Who to log in as; omitted sends without authenticating, and the password is `secret`. */
@@ -273,7 +303,9 @@ export async function updateWorkspaceConnection(
     type?: ConnectionType;
     authType?: AuthType;
     secret?: string;
+    secretVariableId?: string;
     appToken?: string;
+    appTokenVariableId?: string;
     smtpPort?: number;
     smtpUsername?: string;
     smtpFrom?: string;
@@ -517,6 +549,8 @@ export async function createMcpServer(input: {
   address: string;
   authType?: AuthType;
   secret?: string;
+  /** A workspace secret to read the credential from, instead of a copy here. Not with `secret`. */
+  secretVariableId?: string;
   headers?: HttpHeader[];
 }): Promise<McpServer> {
   const data = await graphql<{ createMcpServer: McpServer }>(CREATE_MCP_SERVER_MUTATION, { input });
@@ -526,7 +560,15 @@ export async function createMcpServer(input: {
 /** Omitting `secret` keeps the stored credentials; an empty string clears them. */
 export async function updateMcpServer(
   id: string,
-  input: { name: string; address: string; authType?: AuthType; secret?: string; headers?: HttpHeader[] },
+  input: {
+    name: string;
+    address: string;
+    authType?: AuthType;
+    secret?: string;
+    /** Points the credential at a workspace secret, dropping any copy it held. Not with `secret`. */
+    secretVariableId?: string;
+    headers?: HttpHeader[];
+  },
 ): Promise<McpServer> {
   const data = await graphql<{ updateMcpServer: McpServer }>(UPDATE_MCP_SERVER_MUTATION, { id, input });
   return data.updateMcpServer;

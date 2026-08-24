@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { authTypeLabel, createMcpServer } from '../api/integrations';
@@ -6,7 +6,8 @@ import type { AuthType, HttpHeader, McpServer } from '../api/integrations';
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
 import styles from './Dialog.module.css';
 import { HeaderRowsEditor } from './HeaderRowsEditor';
-import { RevealToggle } from './RevealToggle';
+import { SecretField, useSecretField } from './SecretField';
+import { useWorkspaceVariables } from '../pages/workspace/workspaceVariables';
 
 export interface McpServerDialogProps {
   open: boolean;
@@ -27,8 +28,9 @@ export function McpServerDialog({ open, workspaceId, onClose, onCreated }: McpSe
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [authType, setAuthType] = useState<AuthType>('API_KEY');
-  const [secret, setSecret] = useState('');
-  const [showSecret, setShowSecret] = useState(false);
+  /** The credential: typed here, or read from a workspace secret. Its own choice. */
+  const secret = useSecretField();
+  const { variables, refresh: refreshVariables } = useWorkspaceVariables(workspaceId);
   const [headers, setHeaders] = useState<HttpHeader[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +43,7 @@ export function McpServerDialog({ open, workspaceId, onClose, onCreated }: McpSe
       setName('');
       setAddress('');
       setAuthType('API_KEY');
-      setSecret('');
+      secret.clear();
       setHeaders([]);
       setError(null);
       setSubmitting(false);
@@ -51,11 +53,26 @@ export function McpServerDialog({ open, workspaceId, onClose, onCreated }: McpSe
     }
   }, [open]);
 
-  const complete = name.trim() !== '' && address.trim() !== '';
+  const complete = name.trim() !== '' && address.trim() !== '' && !secret.unchosen;
+
+  /**
+   * The secrets this workspace keeps, and only those: a VALUE is read with the
+   * variable listing, so the server refuses one as a credential and offering it
+   * here would teach that at the cost of a save.
+   */
+  const secrets = useMemo(
+    () =>
+      variables
+        .filter((variable) => variable.kind === 'SECRET')
+        .map((variable) => ({ value: variable.id, label: variable.name, hint: variable.catalogName })),
+    [variables],
+  );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!complete || submitting) return;
+
+    const sending = secret.sending;
 
     setSubmitting(true);
     setError(null);
@@ -65,7 +82,14 @@ export function McpServerDialog({ open, workspaceId, onClose, onCreated }: McpSe
         name: name.trim(),
         address: address.trim(),
         authType,
-        secret: secret.trim() || undefined,
+        // One of the two, never both: sending the pair is refused rather than
+        // resolved by precedence, and sending neither adds a server with no
+        // credential, which is a thing somebody may perfectly well want.
+        ...(sending === null
+          ? {}
+          : 'variable' in sending
+            ? { secretVariableId: sending.variable }
+            : { secret: sending.value.trim() || undefined }),
         headers: headers.filter((header) => header.name.trim() !== ''),
       });
       onCreated(created);
@@ -145,27 +169,25 @@ export function McpServerDialog({ open, workspaceId, onClose, onCreated }: McpSe
           </div>
 
           {authType !== 'NONE' && (
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="mcp-server-secret">
-                Token / Key
-              </label>
-              <div className={styles.inputWrapper}>
-                <input
-                  id="mcp-server-secret"
-                  name="secret"
-                  className={styles.input}
-                  type={showSecret ? 'text' : 'password'}
-                  placeholder="Enter token or key..."
-                  value={secret}
-                  onChange={(event) => setSecret(event.target.value)}
-                />
-                <RevealToggle
-                  shown={showSecret}
-                  onToggle={() => setShowSecret((on) => !on)}
-                  label="token"
-                />
-              </div>
-            </div>
+            /* One field, asked for one way at a time - and the choice stands
+               beside this field's name rather than above the dialog, because a
+               dialog-level switch would be a claim about every field in it. */
+            <SecretField
+              id="mcp-server-secret"
+              label="Token / Key"
+              field={secret}
+              options={secrets}
+              variablesPath={`/workspace/${workspaceId}/variables`}
+              placeholder="Enter token or key..."
+              hint="Whatever the server expects, sent the way the authentication method above says."
+              onSource={(next) => {
+                secret.choose(next);
+                if (next === 'VARIABLE') refreshVariables();
+                setError(null);
+              }}
+              onValue={() => setError(null)}
+              onVariable={() => setError(null)}
+            />
           )}
 
           <HeaderRowsEditor headers={headers} onChange={setHeaders} compact />

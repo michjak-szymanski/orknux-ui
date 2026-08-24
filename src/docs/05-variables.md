@@ -50,5 +50,23 @@ these variables, and a parameter the plugin declared as a secret can only be
 answered with a variable. The reference is read when the plugin runs, not when
 it is set, so rotating a token is one edit here rather than one per plugin.
 
+## As a credential
+
+Every secret field in the product can read one instead of keeping a copy.
+Beside the field's own name — *API Key*, *Bot token*, *App-Level Token*,
+*Password*, *Token / Key* — stand **Value** and **Reference**. Value is a
+credential kept there, encrypted, belonging to that field alone. Reference
+points the field at one of these secrets, read at the moment it is needed, so
+rotating it is one edit here rather than one per place it is used.
+
+The choice belongs to each field separately. A Slack connection's bot token can
+be a reference while its app-level token stays its own, which is a thing a
+single switch above the card could not say.
+
+Only a secret can be one: a value is read with the listing, and a credential on
+a listing is a credential on a screen. The reference is held by identity, so
+renaming the variable or moving it to another catalog changes nothing; deleting
+it is refused while anything reads it, and the refusal names what does.
+
 Editing is inline: click the field, change it, and save with the check. Renaming
 is the same edit. Deleting a catalog requires it to be empty first.

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
@@ -17,9 +17,11 @@ import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
 import { HeaderRowsEditor } from '../../components/HeaderRowsEditor';
 import { Loader } from '../../components/Loader';
-import { RevealToggle } from '../../components/RevealToggle';
+import { SecretField, useSecretField } from '../../components/SecretField';
+import type { SecretSource } from '../../components/SecretField';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
+import { useWorkspaceVariables } from './workspaceVariables';
 import styles from './IntegrationSettings.module.css';
 
 export interface McpServerSettingsPageProps {
@@ -28,9 +30,6 @@ export interface McpServerSettingsPageProps {
 }
 
 const AUTH_TYPES: AuthType[] = ['NONE', 'API_KEY', 'BEARER_TOKEN', 'BASIC'];
-
-/** Stands in for a stored secret until the caller asks to see it. */
-const MASK = '••••••••••••••••••••';
 
 export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsPageProps) {
   const { workspaceId = '', serverId = '' } = useParams();
@@ -41,15 +40,15 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
   const [address, setAddress] = useState('');
   const [authType, setAuthType] = useState<AuthType>('NONE');
   const [headers, setHeaders] = useState<HttpHeader[]>([]);
-  // Null while the stored secret is untouched, so saving leaves it alone.
-  const [secret, setSecret] = useState<string | null>(null);
-  const [revealed, setRevealed] = useState(false);
   /**
-   * What was revealed, kept so it can be put back out of sight. Hiding is only
-   * offered while the field still holds exactly this; once it has been typed
-   * into, it is an edit like any other.
+   * The credential: this server's own copy, or a workspace secret it reads.
+   *
+   * A handle rather than four pieces of state, because these move together and
+   * the ways they move are the dangerous part - and because a card that grows a
+   * second credential is a second call to this and nothing else.
    */
-  const [revealedValue, setRevealedValue] = useState<string | null>(null);
+  const secret = useSecretField();
+  const { variables, refresh: refreshVariables } = useWorkspaceVariables(workspaceId);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -68,9 +67,7 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
         setAddress(found.address);
         setAuthType(found.authType);
         setHeaders(found.headers);
-        setSecret(null);
-        setRevealed(false);
-        setRevealedValue(null);
+        secret.reset({ stored: found.secretSet, variable: found.secretVariableId });
       })
       .catch((cause: unknown) => {
         setLoadError(cause instanceof Error ? cause.message : 'Could not load the server.');
@@ -79,18 +76,59 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
 
   async function handleReveal() {
     try {
-      const stored = await revealMcpServerSecret(serverId);
-      setSecret(stored ?? '');
-      setRevealedValue(stored ?? '');
-      setRevealed(true);
+      secret.show((await revealMcpServerSecret(serverId)) ?? '');
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : 'Could not reveal the credentials.');
     }
   }
 
+  /**
+   * The secrets this workspace keeps, and only those. A VALUE is read with the
+   * variable listing, and a value on a listing is a value on a screen, so the
+   * server refuses one - and offering it here would teach that at the cost of a
+   * save.
+   */
+  const secrets = useMemo(
+    () =>
+      variables
+        .filter((variable) => variable.kind === 'SECRET')
+        .map((variable) => ({ value: variable.id, label: variable.name, hint: variable.catalogName })),
+    [variables],
+  );
+
+  /** The one it already reads, kept in the list even before the list arrives. */
+  const offered = useMemo(() => {
+    const held = server?.secretVariableId ?? null;
+    const called = server?.secretVariableName ?? null;
+    if (held === null || called === null) return secrets;
+    if (secrets.some((option) => option.value === held)) return secrets;
+    return [{ value: held, label: called, hint: server?.secretVariableCatalog ?? '' }, ...secrets];
+  }, [server, secrets]);
+
+  function chooseSource(next: SecretSource) {
+    secret.choose(next);
+    // Reaching for the list is a reason to read it again: somebody about to
+    // point this at a secret has often just been to Variables to make it.
+    if (next === 'VARIABLE') refreshVariables();
+    setSaveError(null);
+    setSaved(false);
+  }
+
+  function touched() {
+    setSaveError(null);
+    setSaved(false);
+  }
+
   async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (name.trim() === '' || address.trim() === '' || saving) return;
+
+    if (secret.unchosen) {
+      setSaveError('Choose the workspace secret this server reads its token from.');
+      setSaved(false);
+      return;
+    }
+    const sending = secret.sending;
 
     setSaving(true);
     setSaveError(null);
@@ -100,11 +138,22 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
         name: name.trim(),
         address: address.trim(),
         authType,
-        secret: secret ?? undefined,
+        /*
+         * One of the two, never both. A variable sent drops any copy this
+         * server held and a token sent drops any reference; sending the pair is
+         * refused rather than resolved by precedence, and sending neither is
+         * what says "leave the stored one alone".
+         */
+        ...(sending === null
+          ? {}
+          : 'variable' in sending
+            ? { secretVariableId: sending.variable }
+            : { secret: sending.value }),
         headers: headers.filter((header) => header.name.trim() !== ''),
       });
       setServer(updated);
       setHeaders(updated.headers);
+      secret.reset({ stored: updated.secretSet, variable: updated.secretVariableId });
       setSaved(true);
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : 'Could not save the server.');
@@ -214,47 +263,31 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
             </div>
 
             {authType !== 'NONE' && (
-              <div className={styles.field}>
-                <label className={styles.label} htmlFor="server-secret">
-                  Token / Key
-                </label>
-                <div className={styles.inputWrapper}>
-                  <input
-                    id="server-secret"
-                    name="secret"
-                    className={`${styles.input} ${styles.inputMono}`}
-                    type="text"
-                    placeholder="Enter token or key..."
-                    value={secret ?? (server?.secretSet === true ? MASK : '')}
-                    onChange={(event) => setSecret(event.target.value)}
-                  />
-                  {/*
-                    The same eye the dialog that creates one of these already
-                    uses, in place of the word this page had - and with the half
-                    it was missing. `Reveal` put the token on the screen and then
-                    went away, so it stayed there until the page was loaded
-                    again.
-                  */}
-                  {server?.secretSet === true &&
-                    (secret === null || (revealed && secret === revealedValue)) && (
-                      <RevealToggle
-                        shown={revealed && secret === revealedValue}
-                        label="token"
-                        onToggle={() => {
-                          if (revealed && secret === revealedValue) {
-                            // Null, not empty: it is what tells the save to
-                            // leave the stored token alone.
-                            setSecret(null);
-                            setRevealed(false);
-                            setRevealedValue(null);
-                          } else {
-                            void handleReveal();
-                          }
-                        }}
-                      />
-                    )}
-                </div>
-              </div>
+              /*
+                The token, and where it comes from - one field, asked for one
+                way at a time. The choice belongs beside this field's own name
+                rather than above the card: a card-level switch happens to be
+                unambiguous where there is one credential and says nothing at
+                all where there are two. See components/SecretField.tsx.
+              */
+              <SecretField
+                id="server-secret"
+                label="Token / Key"
+                field={secret}
+                options={offered}
+                variablesPath={`/workspace/${workspaceId}/variables`}
+                placeholder="Enter token or key..."
+                hint="Whatever the server expects, sent the way the authentication method above says."
+                onSource={chooseSource}
+                onValue={touched}
+                onVariable={touched}
+                onReveal={() => void handleReveal()}
+                broken={
+                  server.secretVariableMissing
+                    ? 'The workspace secret this token was read from is gone, so this server has nothing to authenticate with. Its address is fine. Point this field at another secret, or give it a value of its own.'
+                    : null
+                }
+              />
             )}
 
             <hr className={styles.divider} />
