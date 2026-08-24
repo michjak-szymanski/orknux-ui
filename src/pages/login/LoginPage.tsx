@@ -169,11 +169,18 @@ export function LoginPage({ onSubmit, onResetPassword, version = `v${__APP_VERSI
               all-in-one image - which ships no directory at all - told everybody
               who opened it that it was about to reach one. The server names what
               it has; this says that and nothing more.
+
+              The notice wins where there is one. An installation with
+              authentication off never draws this screen - a session exists before
+              anybody asks for one - but somebody who arrives here anyway, on a
+              stale tab or a bookmarked address, is told why the form they are
+              looking at is beside the point.
             */}
             <p className={styles.authNote}>
-              {signIn?.method === 'INTERNAL'
-                ? `Signing in with ${signIn.displayName}`
-                : 'Authenticating via LDAP'}
+              {signIn?.notice ??
+                (signIn?.method === 'INTERNAL'
+                  ? `Signing in with ${signIn.displayName}`
+                  : 'Authenticating via LDAP')}
             </p>
           </div>
         </form>

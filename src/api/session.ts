@@ -62,7 +62,7 @@ export async function logout(): Promise<void> {
  * that image has no directory to reach - so the card must not say it is reaching
  * one.
  */
-export type AuthMethod = 'LDAP' | 'INTERNAL' | 'OIDC';
+export type AuthMethod = 'LDAP' | 'INTERNAL' | 'OIDC' | 'NONE';
 
 export interface AuthMethodInfo {
   method: AuthMethod;
@@ -70,6 +70,15 @@ export interface AuthMethodInfo {
   displayName: string;
   /** Where to send the browser, or null when there is a password box instead. */
   authorizeUrl: string | null;
+  /**
+   * What this installation has to say out loud about itself, wherever somebody is
+   * standing in it. Null on every installation that asks people to sign in.
+   *
+   * The sentence is the server's, not this bundle's: the startup log, the Doctor
+   * screen and the strip across the top of every page all read one constant, so
+   * they cannot end up describing the same installation differently.
+   */
+  notice: string | null;
 }
 
 /**
@@ -82,6 +91,11 @@ export interface AuthMethodInfo {
  * Falls back to a password box if the question cannot be answered. An installation
  * whose server is unreachable has a bigger problem than this, and a form somebody
  * can try is a better dead end than a blank card.
+ *
+ * That fallback is also the closed one, which matters now that one of the answers
+ * is "there is no sign-in": a browser that could not ask must never conclude that
+ * authentication is off, and must never draw the notice for an installation that
+ * has one.
  */
 export async function authMethod(): Promise<AuthMethodInfo> {
   try {
@@ -89,6 +103,6 @@ export async function authMethod(): Promise<AuthMethodInfo> {
     if (!response.ok) throw new Error(String(response.status));
     return (await response.json()) as AuthMethodInfo;
   } catch {
-    return { method: 'LDAP', displayName: 'single sign-on', authorizeUrl: null };
+    return { method: 'LDAP', displayName: 'single sign-on', authorizeUrl: null, notice: null };
   }
 }

@@ -12,6 +12,7 @@ import settingsIcon from '../assets/settings.svg';
 import shieldIcon from '../assets/shield.svg';
 import { lastWorkspaceId } from '../session/lastWorkspace';
 import { TOP_SECTIONS, sectionAt, sectionHome, whereAt, workspaceSwitchPath } from '../navigation';
+import { useAuthentication } from '../session/authentication';
 import { useInstallation } from '../session/installation';
 import { setSidebarCollapsed, useSidebarCollapsed } from '../session/sidebar';
 import { Attribution } from './Attribution';
@@ -182,6 +183,13 @@ export function AppShell({
   const { pathname } = useLocation();
   const collapsed = useSidebarCollapsed();
   const installation = useInstallation();
+  /*
+    How this installation signs people in, which on all but one of them is
+    nothing the shell has to draw. Null until the server has answered: the notice
+    below says the door is open, and that is not a thing to guess at.
+  */
+  const authentication = useAuthentication();
+  const notice = authentication?.notice ?? null;
 
   // The session's answer unless a page insisted on one, so the admin button and
   // the admin half of Quick actions appear together and only for an administrator.
@@ -198,6 +206,21 @@ export function AppShell({
 
   return (
     <div className={scrollContent ? `${styles.shell} ${styles.shellFixed}` : styles.shell}>
+      {/*
+        That this installation asks nobody to sign in, on every page rather than
+        on one screen somebody might not open.
+
+        Above the top bar and not dismissible, because the person it is written
+        for is not the one who set it up: somebody inheriting an installation
+        should not have to read an environment variable to find out that anybody
+        who reaches it administers it. The sentence is the server's own, the same
+        one the startup log and the Doctor screen use.
+      */}
+      {notice !== null && (
+        <p className={styles.openNotice} role="status">
+          {notice}
+        </p>
+      )}
       <header className={styles.topNav}>
         {/* Brand and sections travel together; the box between them is centred. */}
         <div className={styles.topLeft}>
@@ -300,7 +323,14 @@ export function AppShell({
             )}
             <NotificationBell />
           </div>
-          <UserMenu user={user} onSignOut={onSignOut} />
+          {/*
+            No Logout where there is nothing to log out of. Signing out of an
+            installation that asks nobody to sign in drops the session and lands
+            on a form that cannot work, which reads as the product being broken
+            rather than as the setting it is. The menu itself stays — Preferences
+            is still somewhere to go.
+          */}
+          <UserMenu user={user} onSignOut={onSignOut} canSignOut={notice === null} />
         </div>
       </header>
 
@@ -393,7 +423,21 @@ export function AppShell({
  * The top-bar user block. Clicking it opens the account menu, which is where
  * signing out lives; without an [onSignOut] handler the block stays inert.
  */
-function UserMenu({ user, onSignOut }: { user: AppShellUser; onSignOut?: () => void }) {
+function UserMenu({
+  user,
+  onSignOut,
+  /**
+   * Whether there is anything to sign out of. False only where the installation
+   * asks nobody to sign in, and the item is dropped rather than disabled: a
+   * greyed-out Logout invites the question of whose permission is missing, and
+   * nobody's is.
+   */
+  canSignOut = true,
+}: {
+  user: AppShellUser;
+  onSignOut?: () => void;
+  canSignOut?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const container = useRef<HTMLDivElement>(null);
   const onPreferences = useLocation().pathname.startsWith('/preferences');
@@ -469,19 +513,21 @@ function UserMenu({ user, onSignOut }: { user: AppShellUser; onSignOut?: () => v
             <img src={settingsIcon} alt="" width={14} height={14} />
             Preferences
           </Link>
-          <span className={styles.menuRule} aria-hidden="true" />
-          <button
-            type="button"
-            className={styles.logOut}
-            role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              onSignOut();
-            }}
-          >
-            <img src={doorOpenIcon} alt="" width={14} height={14} />
-            Logout
-          </button>
+          {canSignOut && <span className={styles.menuRule} aria-hidden="true" />}
+          {canSignOut && (
+            <button
+              type="button"
+              className={styles.logOut}
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onSignOut();
+              }}
+            >
+              <img src={doorOpenIcon} alt="" width={14} height={14} />
+              Logout
+            </button>
+          )}
         </div>
       )}
     </div>
