@@ -12,14 +12,35 @@ composer beneath](/screens/chat.png)
 
 ## Choosing what answers
 
-The dropdown above the composer picks the model. Picking an agent instead gives
-the conversation that agent's instructions, skills and tools. A new chat starts
+The dropdown above the composer picks what answers. Agents are the half it
+opens on, because an agent brings the conversation its instructions, skills and
+tools and supplies a model of its own; the Models tab beside it is the bare
+models, and a chat already pointed at one opens there instead. A new chat starts
 on the workspace's default so there is always something to talk to.
 
 Beside the name is the arrow that leaves a box, the same one every field naming
 a definition carries: it opens whatever is answering — the agent, or the model —
 in a tab of its own, so a question about what the thing is set to does not cost
 you the conversation.
+
+Switching workspace from the corner leaves you in the chat rather than taking
+you to the new workspace's workflows: the conversations listed on the left are
+the ones held in whichever workspace the corner names.
+
+## Asking again
+
+Under the last answer is a circling arrow: it asks the same question again.
+Whatever the dropdown says answers this chat is what answers, so a different
+model or agent means picking one first — moving the dropdown and pressing this
+is "answer that again, as somebody else".
+
+Nothing is lost by pressing it. The answer it replaces is kept, and the row
+underneath says which take you are reading — **1 of 2**, with a chevron either
+side — so the one you had is one press away, and stays there.
+
+Only the answer the conversation ends on can be asked again. Anything earlier
+has been answered on top of, and a different answer there would rewrite what the
+turns after it were replying to.
 
 ## Attachments
 

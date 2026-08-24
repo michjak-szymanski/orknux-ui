@@ -131,6 +131,20 @@ export interface Page {
    * and everything to offer as a verb.
    */
   action?: QuickAction;
+  /**
+   * Whether switching workspace leaves this page open instead of going to the
+   * new workspace's front page.
+   *
+   * For the section that is about a workspace without naming one in its
+   * address: the chat. Its conversations belong to a workspace and it reads
+   * which one out of the corner, so switching there is a change of subject and
+   * not a change of screen — and sending somebody to Workflows for it was issue
+   * #250. Every other page that names no workspace — the manual, the admin
+   * section, Preferences — is not about one at all, so choosing a workspace
+   * there is still "take me to that workspace" and still lands on its front
+   * page.
+   */
+  followsWorkspace?: boolean;
 }
 
 /**
@@ -307,7 +321,14 @@ export const PAGES = [
   { path: '/workspace/:workspaceId/sessions/:sessionId', access: 'signed-in', goTo: false },
 
   // ---- Chat and the manual ----
-  { path: '/chat', access: 'signed-in', goTo: { label: 'Chat', where: 'Chat', icon: messageSquareIcon, also: 'ask agent' } },
+  {
+    path: '/chat',
+    access: 'signed-in',
+    goTo: { label: 'Chat', where: 'Chat', icon: messageSquareIcon, also: 'ask agent' },
+    // A chat is about a workspace without naming one, so switching workspace is
+    // a change of subject rather than a change of screen.
+    followsWorkspace: true,
+  },
   { path: '/chat/:chatId', access: 'signed-in', goTo: false },
   {
     path: '/docs',
@@ -587,6 +608,14 @@ export function sectionHome(where: Where, workspacePath: string): string | undef
  * particular thing does not travel — issue #4 over there is a different issue,
  * or none — so a page about one thing lands on the list it was opened from.
  *
+ * A section that is about a workspace without naming one in its address — the
+ * chat — keeps its place too, by the same rule and for the same reason: the
+ * conversations in it belong to a workspace, so switching changes what the page
+ * is about rather than which page it is. It fell through to the front page
+ * before, which meant every switch made from a chat dropped the person into
+ * Flow (issue #250). One chat is still one particular thing, so `/chat/7` lands
+ * on `/chat` exactly as one issue lands on the issue list.
+ *
  * Everything else, including a page belonging to no workspace, goes to the
  * workspace's own front page. Any query string is dropped: it describes what was
  * being looked at here, and a filter naming this workspace's labels or ids means
@@ -596,6 +625,9 @@ export function workspaceSwitchPath(pathname: string, workspaceId: string): stri
   const home = `/workspace/${workspaceId}`;
   const section = sectionAt(pathname);
 
-  if (section === undefined || !section.path.startsWith('/workspace/:workspaceId')) return home;
-  return section.path.replace('/workspace/:workspaceId', home);
+  if (section === undefined) return home;
+  if (section.path.startsWith('/workspace/:workspaceId')) {
+    return section.path.replace('/workspace/:workspaceId', home);
+  }
+  return section.followsWorkspace === true ? section.path : home;
 }

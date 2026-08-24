@@ -426,6 +426,43 @@ export const TESTS = [
   },
 
   {
+    name: 'chat-agents-first-check',
+    what: 'the picker above a chat offers agents first, and opens on whichever half holds the ticked one',
+    needs: ['workspace'],
+    /*
+     * Issue #249. Two assertions that a lazy fix would separate: the tabs are
+     * in a fixed order whatever the chat holds, and which of them opens follows
+     * the chat and defaults to Agents. Reordering the tabs alone passes the
+     * first and fails the second, which is why both are here.
+     *
+     * The chats it reads are made by the check and deleted again - what each
+     * one is pointed at is the whole of what this measures, and reading
+     * whichever chat happened to be first would measure whatever somebody last
+     * left open.
+     */
+  },
+
+  {
+    name: 'chat-workspace-switch-check',
+    what: 'switching workspace from a chat leaves you in the chat, about the other workspace',
+    needs: ['workspace'],
+    /*
+     * Issue #250. Staying put is the half a fix that did nothing would also
+     * pass, so the check asserts the conversations listed are now the other
+     * workspace's and that the corner names it - a chat that has not changed
+     * what it is about has not switched anything.
+     *
+     * It caught its own fix being half-written: the chat page read the
+     * remembered workspace through a store but the effect that used it was
+     * still keyed to the mount, so the corner moved, the page stayed, and the
+     * sidebar went on listing the workspace that had just been left.
+     *
+     * The fourth assertion is about the rule that did not change: from a list
+     * page, switching still lands on the same list in the new workspace.
+     */
+  },
+
+  {
     name: 'hover-sweep-check',
     what: 'every small icon control on seventeen pages answers the pointer',
     needs: ['workspace'],
@@ -1009,6 +1046,29 @@ export const TESTS = [
      * Naming the gap rather than hiding it: nothing unattended proves the
      * answer side. Closing it needs a fixture with a stored answer, which needs
      * either a model CI can reach or a way to write a turn without one.
+     */
+  },
+  {
+    name: 'chat-regenerate-check',
+    what: 'asking the last answer again, and the answer it replaced still being there',
+    needs: ['model'],
+    ci: false,
+    /*
+     * Issue #245. The assertions are mostly about the *old* answer, because
+     * that is the part a regenerate is easy to get wrong: take the answer off
+     * the thread, put a new one there, and the answer somebody was about to
+     * keep is gone with nothing to go back to. It steps back to it, and then
+     * reloads and steps back to it again - which is what tells a take kept on
+     * the server from one held in a tab.
+     *
+     * `needs: ['model']` for the reason `chat-copy-answer-check` gives: there
+     * is no way to put an answer into a chat without one, since the thread is
+     * Spring AI's store and nothing in the API writes a turn to it. What CI
+     * does cover is the server half, in ChatRegenerateTest, on both engines.
+     *
+     * It was driven against a stub answering the OpenAI shape, whose every
+     * answer is numbered - two answers to one question are otherwise
+     * indistinguishable, and "the answer changed" is the assertion.
      */
   },
   {

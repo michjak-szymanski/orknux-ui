@@ -10,7 +10,7 @@ import doorOpenIcon from '../assets/door-open.svg';
 import orknuxMark from '../assets/orknux-mark.svg';
 import settingsIcon from '../assets/settings.svg';
 import shieldIcon from '../assets/shield.svg';
-import { lastWorkspaceId } from '../session/lastWorkspace';
+import { rememberWorkspace, useLastWorkspaceId } from '../session/lastWorkspace';
 import { TOP_SECTIONS, sectionAt, sectionHome, whereAt, workspaceSwitchPath } from '../navigation';
 import { useInstallation } from '../session/installation';
 import { setSidebarCollapsed, useSidebarCollapsed } from '../session/sidebar';
@@ -111,6 +111,13 @@ const WORKSPACE_LOOKUP = 100;
  */
 function useWorkspaceFallback(needed: boolean): string | undefined {
   const [path, setPath] = useState<string | undefined>(undefined);
+  /*
+    Watched rather than read once. On a page that names no workspace the
+    selector is the only thing that says which one is current, so a fallback
+    that read the remembered id at mount went on naming the old workspace after
+    somebody had chosen another — the corner correcting itself back (#250).
+  */
+  const remembered = useLastWorkspaceId();
 
   useEffect(() => {
     if (!needed) return;
@@ -121,12 +128,11 @@ function useWorkspaceFallback(needed: boolean): string | undefined {
     // and two mounts do not make two requests for one list.
     loadWorkspaces(WORKSPACE_LOOKUP)
       .then((workspaces) => {
-        const remembered = lastWorkspaceId();
         const live = workspaces.find((entry) => entry.id === remembered) ?? workspaces[0];
         setPath(live === undefined ? undefined : `/workspace/${live.id}`);
       })
       .catch(() => setPath(undefined));
-  }, [needed]);
+  }, [needed, remembered]);
 
   return path;
 }
@@ -575,6 +581,15 @@ function WorkspaceSwitcher({ workspacePath }: { workspacePath?: string }) {
         onSelect={(id) => {
           const to = workspaceSwitchPath(pathname, id);
           if (askBeforeLeaving(to)) return false;
+          /*
+            Written down here rather than by the page that is landed on.
+            `WorkspaceSidebar` records it for every workspace page, which is
+            every destination this had until the chat started staying where it
+            is — and a switch that lands back on the chat has no sidebar to do
+            it, so nothing would have told the chat which workspace it is now
+            about.
+          */
+          rememberWorkspace(id);
           navigate(to);
           return true;
         }}

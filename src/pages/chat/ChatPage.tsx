@@ -10,6 +10,7 @@ import {
   fetchChatMessages,
   fetchChatSessions,
   fetchChatsMentioning,
+  regenerateChatAnswer,
   renameChat,
   streamChatMessage,
   setChatPinned,
@@ -44,6 +45,7 @@ import messageSquareIcon from '../../assets/message-square.svg';
 import penIcon from '../../assets/pen.svg';
 import plusIcon from '../../assets/plus.svg';
 import micIcon from '../../assets/mic.svg';
+import refreshCwIcon from '../../assets/refresh-cw.svg';
 import searchIcon from '../../assets/search.svg';
 // Grey, not red: it sits in the title bar beside search and rename as one
 // action among several, and the confirm is where the warning belongs.
@@ -61,7 +63,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { setSidebarCollapsed, useSidebarCollapsed } from '../../session/sidebar';
 import { useInstallation } from '../../session/installation';
 import { shellUser } from '../../session/user';
-import { lastWorkspaceId } from '../../session/lastWorkspace';
+import { useLastWorkspaceId } from '../../session/lastWorkspace';
 import { FieldHint } from '../../components/FieldHint';
 import { OpenDefinitionIcon } from '../../components/OpenDefinitionIcon';
 import styles from './ChatPage.module.css';
@@ -74,7 +76,16 @@ export interface ChatPageProps {
 /** How many workspaces to look at when deciding which one to chat in. */
 const WORKSPACE_LOOKUP = 100;
 
-/** Which half of the model picker is showing. */
+/**
+ * Which half of the model picker is showing.
+ *
+ * Agents come first, in the tabs and as the one that opens (issue #249). What
+ * somebody chats to here is nearly always an agent — it brings its instructions,
+ * its skills and its tools with it, and it supplies a model anyway — so opening
+ * on the bare models was offering the raw material ahead of the thing made out
+ * of it. The exception is a chat already pointed at a bare model, which opens on
+ * Models so that what is answering now is the entry under the pointer.
+ */
 type PickerTab = 'models' | 'agents';
 
 /**
@@ -239,7 +250,7 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
-  const [pickerTab, setPickerTab] = useState<PickerTab>('models');
+  const [pickerTab, setPickerTab] = useState<PickerTab>('agents');
   const [pickerSearch, setPickerSearch] = useState('');
 
   const [draft, setDraft] = useState('');
@@ -249,6 +260,16 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
   const [thoughtOpen, setThoughtOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<number | null>(null);
+  /**
+   * Which take of an answer is being read, for the answers that have more than
+   * one, by their place in the log.
+   *
+   * Absent means the one that stands, which is what every answer shows until
+   * somebody steps back through it — and what an answer goes back to showing
+   * the moment it is asked for again. Cleared with the chat, since the numbers
+   * are places in a log that has been replaced.
+   */
+  const [takeAt, setTakeAt] = useState<Record<number, number>>({});
 
   const logRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
@@ -340,13 +361,19 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
    * outlives the workspace it points at (anything that rebuilds the database
    * gives them new ids), and a screen that trusts it asks about a workspace
    * nobody can see and quietly does nothing.
+   *
+   * Watched rather than read once. The selector in the corner leaves this page
+   * where it is now, so it is the only thing that says the chat is about
+   * another workspace — read at mount, switching looked like it had done
+   * nothing at all (issue #250).
    */
+  const remembered = useLastWorkspaceId();
+
   useEffect(() => {
     let abandoned = false;
     fetchWorkspaces(0, WORKSPACE_LOOKUP)
       .then((page) => {
         if (abandoned) return;
-        const remembered = lastWorkspaceId();
         const live = page.content.find((entry) => entry.id === remembered) ?? page.content[0];
         setWorkspaceId(live?.id ?? null);
         if (live === undefined) setError('There is no workspace to chat in yet.');
@@ -359,7 +386,7 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
     return () => {
       abandoned = true;
     };
-  }, []);
+  }, [remembered]);
 
   const loadSessions = useCallback(
     async (select?: string) => {
@@ -368,7 +395,16 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
       setSessions(loaded);
       // Nothing in the address bar means "open the most recent one", which is
       // what somebody arriving at /chat expects; a chat named there wins.
-      setCurrentId((present) => select ?? present ?? loaded[0]?.id ?? null);
+      //
+      // A chat that is not in this list is not this workspace's — the corner
+      // changed what the page is about, or the chat was deleted somewhere else
+      // — and holding on to its id draws the empty state over a workspace full
+      // of conversations.
+      setCurrentId((present) => {
+        if (select !== undefined) return select;
+        if (present !== null && loaded.some((entry) => entry.id === present)) return present;
+        return loaded[0]?.id ?? null;
+      });
     },
     [workspaceId, setCurrentId],
   );
@@ -413,6 +449,7 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
     setMessages([]);
     setChatFiles([]);
     setLastMillis(null);
+    setTakeAt({});
     if (currentId === null) return;
 
     let live = true;
@@ -862,8 +899,8 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
 
     setMessages((present) => [
       ...present,
-      { role: 'user', content: text, actor: null },
-      { role: 'assistant', content: '', actor: null },
+      { role: 'user', content: text, actor: null, takes: [] },
+      { role: 'assistant', content: '', actor: null, takes: [] },
     ]);
     setError(null);
 
@@ -926,11 +963,11 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
     setAttached([]);
     // Shown straight away: the server has it, and waiting for the model to
     // finish before drawing what was typed reads as a dropped message.
-    setMessages((present) => [...present, { role: 'user', content: said, actor: null }]);
+    setMessages((present) => [...present, { role: 'user', content: said, actor: null, takes: [] }]);
     setError(null);
     // The answer grows in place as it arrives, so the empty assistant turn is
     // appended first and each piece lands on the end of it.
-    setMessages((present) => [...present, { role: 'assistant', content: '', actor: null }]);
+    setMessages((present) => [...present, { role: 'assistant', content: '', actor: null, takes: [] }]);
     try {
       let failure: string | null = null;
       await streamChatMessage(
@@ -962,6 +999,66 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'The model did not answer.');
       // What the server kept is the truth about what was said.
+      fetchChatMessages(currentId).then(setMessages).catch(() => undefined);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  /**
+   * Asks for the last answer again.
+   *
+   * The one it replaces is not lost: it is put where every earlier take of an
+   * answer goes — into the row's own history, one press from being read again —
+   * and it is put there here, before anything is asked, so the log never stops
+   * holding it even while the new one is being written.
+   *
+   * Whatever the picker says answers this chat is what answers, which is the
+   * model or agent that gave the answer in the first place unless somebody has
+   * moved it since. That is why there is no second control for "again, but on
+   * something else": the control for that is the one naming who is answering.
+   */
+  async function handleRegenerate() {
+    if (currentId === null || sending) return;
+    const at = messages.length - 1;
+    if (messages[at]?.role !== 'assistant') return;
+
+    setSending(true);
+    setError(null);
+    setLastMillis(null);
+    setMessages((present) => {
+      const grown = [...present];
+      const last = grown.length - 1;
+      grown[last] = { ...grown[last], content: '', takes: [...grown[last].takes, grown[last].content] };
+      return grown;
+    });
+    // Back to the newest, because the newest is the one being written now.
+    setTakeAt((held) => {
+      const { [at]: _dropped, ...rest } = held;
+      return rest;
+    });
+
+    try {
+      let failure: string | null = null;
+      await regenerateChatAnswer(currentId, {
+        onChunk: (piece) =>
+          setMessages((present) => {
+            const grown = [...present];
+            const last = grown.length - 1;
+            grown[last] = { ...grown[last], content: grown[last].content + piece };
+            return grown;
+          }),
+        onDone: (millis) => setLastMillis(millis),
+        onError: (reason) => {
+          failure = reason;
+        },
+      });
+      if (failure !== null) throw new Error(failure);
+      await loadSessions(currentId);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'The model did not answer.');
+      // The server puts the answer back when it could not give another, so what
+      // it holds is the truth about what this chat says.
       fetchChatMessages(currentId).then(setMessages).catch(() => undefined);
     } finally {
       setSending(false);
@@ -1030,6 +1127,27 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
     setPickerOpen(false);
     setPickerSearch('');
   }
+
+  /**
+   * Which take of an answer is being read: 0 for the first it ever gave,
+   * `takes.length` for the one that stands.
+   *
+   * The one that stands is the default, and the only one an answer with no
+   * earlier takes has.
+   */
+  const takeShowing = (index: number, message: ChatMessage): number =>
+    Math.min(takeAt[index] ?? message.takes.length, message.takes.length);
+
+  /** And what that take actually said. */
+  const shownTake = (index: number, message: ChatMessage): string => {
+    const at = takeShowing(index, message);
+    return at === message.takes.length ? message.content : message.takes[at];
+  };
+
+  const stepTake = (index: number, message: ChatMessage, by: number) => {
+    const next = Math.max(0, Math.min(message.takes.length, takeShowing(index, message) + by));
+    setTakeAt((held) => ({ ...held, [index]: next }));
+  };
 
   function copy(text: string, index: number) {
     void navigator.clipboard?.writeText(text);
@@ -1277,7 +1395,18 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
               <button
                 type="button"
                 className={styles.modelButton}
-                onClick={() => setPickerOpen(!pickerOpen)}
+                onClick={() => {
+                  const opening = !pickerOpen;
+                  setPickerOpen(opening);
+                  /*
+                    Agents first, unless this chat is on a bare model — then
+                    Models, so the entry that is already ticked is the one under
+                    the pointer rather than one tab away.
+                  */
+                  if (opening) {
+                    setPickerTab(current.agentId === null && current.modelId !== null ? 'models' : 'agents');
+                  }
+                }}
                 aria-expanded={pickerOpen}
               >
                 <span className={current.modelName === null ? styles.modelUnset : styles.modelName}>
@@ -1299,16 +1428,9 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                       autoFocus
                     />
                   </div>
+                  {/* Agents first: what a chat is usually pointed at, and the
+                      thing a bare model is the raw material for (issue #249). */}
                   <div className={styles.pickerTabs} role="tablist">
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={pickerTab === 'models'}
-                      className={pickerTab === 'models' ? styles.pickerTabActive : styles.pickerTab}
-                      onClick={() => setPickerTab('models')}
-                    >
-                      Models
-                    </button>
                     <button
                       type="button"
                       role="tab"
@@ -1317,6 +1439,15 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                       onClick={() => setPickerTab('agents')}
                     >
                       Agents
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={pickerTab === 'models'}
+                      className={pickerTab === 'models' ? styles.pickerTabActive : styles.pickerTab}
+                      onClick={() => setPickerTab('models')}
+                    >
+                      Models
                     </button>
                   </div>
                   <div className={styles.pickerList}>
@@ -1616,28 +1747,108 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                       </p>
                     )}
                     {/* Models write markdown; showing the source shows the asterisks. */}
-                    <Markdown>{message.content}</Markdown>
+                    <Markdown>{shownTake(index, message)}</Markdown>
+                    {/*
+                      Which take of this answer is being read, and the way back
+                      to the others.
+
+                      Outside the row of actions below on purpose: those appear
+                      under the pointer, which is right for a copy button and
+                      wrong for this. That an answer was given twice is a fact
+                      about the conversation, and one nobody would find by
+                      hovering over a paragraph they had no reason to suspect.
+                    */}
+                    {message.takes.length > 0 && (
+                      <span className={styles.takes}>
+                        <button
+                          type="button"
+                          className={styles.rowAction}
+                          onClick={() => stepTake(index, message, -1)}
+                          disabled={takeShowing(index, message) === 0}
+                          title="The answer before this one"
+                          aria-label="The answer before this one"
+                        >
+                          <img
+                            src={chevronDown12Icon}
+                            alt=""
+                            width={12}
+                            height={12}
+                            style={{ transform: 'rotate(90deg)' }}
+                          />
+                        </button>
+                        {/*
+                          No `role="status"`: this is drawn for as long as the
+                          answer has more than one take, and the loading mark
+                          the checks wait on is exactly that role. A label that
+                          never goes away would read as a page that never
+                          finishes loading.
+                        */}
+                        <span className={styles.takeCount}>
+                          {takeShowing(index, message) + 1} of {message.takes.length + 1}
+                        </span>
+                        <button
+                          type="button"
+                          className={styles.rowAction}
+                          onClick={() => stepTake(index, message, 1)}
+                          disabled={takeShowing(index, message) === message.takes.length}
+                          title="The answer after this one"
+                          aria-label="The answer after this one"
+                        >
+                          <img
+                            src={chevronDown12Icon}
+                            alt=""
+                            width={12}
+                            height={12}
+                            style={{ transform: 'rotate(-90deg)' }}
+                          />
+                        </button>
+                      </span>
+                    )}
                     <div className={styles.rowActions}>
                       <button
                         type="button"
                         className={styles.rowAction}
-                        onClick={() => copy(message.content, index)}
+                        onClick={() => copy(shownTake(index, message), index)}
                         title="Copy"
                         aria-label="Copy this answer"
                       >
                         <img src={copyIcon} alt="" width={14} height={14} />
                       </button>
                       {/*
+                        Asking for it again, on the answer the chat ends on.
+
+                        Only there: anything earlier has been answered on top
+                        of, and a different answer under a question three turns
+                        back would rewrite what those turns were replying to.
+                        Not on a turn carried in from a session either — those
+                        are somebody else's words, copied in, and this chat has
+                        no business answering them again.
+                      */}
+                      {index === messages.length - 1 &&
+                        message.actor === null &&
+                        !sending &&
+                        message.content.trim() !== '' && (
+                          <button
+                            type="button"
+                            className={styles.rowAction}
+                            onClick={() => void handleRegenerate()}
+                            title="Answer again — this one is kept"
+                            aria-label="Answer again"
+                          >
+                            <img src={refreshCwIcon} alt="" width={14} height={14} />
+                          </button>
+                        )}
+                      {/*
                         Only where a speech model is set. A speaker that always
                         appeared and always failed would be worse than none.
                       */}
-                      {reads && message.content.trim() !== '' && (
+                      {reads && shownTake(index, message).trim() !== '' && (
                         <button
                           type="button"
                           className={
                             speaking === index ? `${styles.rowAction} ${styles.rowActionOn}` : styles.rowAction
                           }
-                          onClick={() => void readAloud(index, message.content)}
+                          onClick={() => void readAloud(index, shownTake(index, message))}
                           aria-pressed={speaking === index}
                           title={
                             fetchingSpeech === index

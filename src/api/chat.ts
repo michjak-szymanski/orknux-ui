@@ -47,6 +47,16 @@ export interface ChatMessage {
    * said in it.
    */
   actor: string | null;
+  /**
+   * What this answer said the earlier times it was given, oldest first.
+   *
+   * Empty for an answer nobody has asked again for, and for every other kind of
+   * line. Asking again takes the model's last turn off the thread before it is
+   * asked - a conversation holding two answers to one question was never had -
+   * so these are the turns that came off, kept so the button cannot lose the
+   * answer somebody was about to keep.
+   */
+  takes: string[];
 }
 
 /** The role a call reads under, which is not a turn anybody took. */
@@ -85,7 +95,7 @@ export async function fetchChatsMentioning(workspaceId: string, text: string): P
 
 export async function fetchChatMessages(id: string): Promise<ChatMessage[]> {
   const data = await graphql<{ chatMessages: ChatMessage[] }>(
-    'query ChatMessages($id: ID!) { chatMessages(id: $id) { role content actor } }',
+    'query ChatMessages($id: ID!) { chatMessages(id: $id) { role content actor takes } }',
     { id },
   );
   return data.chatMessages;
@@ -164,7 +174,7 @@ export async function sendChatMessage(id: string, text: string): Promise<ChatAns
     `mutation SendChatMessage($id: ID!, $text: String!) {
        sendChatMessage(id: $id, text: $text) {
          session { ${SESSION_FIELDS} }
-         answer { role content actor }
+         answer { role content actor takes }
          millis
        }
      }`,
@@ -213,10 +223,37 @@ export async function streamChatMessage(
     credentials: 'same-origin',
     body: JSON.stringify({ text, attachmentIds }),
   });
+  await read(response, handlers);
+}
 
+/**
+ * Asks for the last answer again, and reads the new one as it is written.
+ *
+ * No body: nothing is being said. The server takes the answer off the thread,
+ * keeps what it said as a take and asks whatever the chat says answers it —
+ * which is the model or agent that produced it, unless the picker has been
+ * moved since.
+ */
+export async function regenerateChatAnswer(id: string, handlers: ChatStreamHandlers): Promise<void> {
+  const response = await fetch(`/api/chats/${id}/regenerate`, {
+    method: 'POST',
+    credentials: 'same-origin',
+  });
+  await read(response, handlers);
+}
+
+/**
+ * The answer coming back, frame by frame.
+ *
+ * Shared by both doors because they differ only in what was sent: what comes
+ * back is the same three events either way, and a second copy of this loop is a
+ * second place for the buffering to be got wrong.
+ */
+async function read(response: Response, handlers: ChatStreamHandlers): Promise<void> {
   if (!response.ok || response.body === null) {
-    const detail = await response.text().catch(() => '');
-    throw new Error(detail === '' ? `The server answered ${response.status}.` : detail);
+    const body = await response.text().catch(() => '');
+    const said = refusal(body);
+    throw new Error(said ?? (body === '' ? `The server answered ${response.status}.` : body));
   }
 
   const reader = response.body.getReader();
@@ -234,6 +271,23 @@ export async function streamChatMessage(
       buffer = buffer.slice(split + 2);
       split = buffer.indexOf(BLANK_LINE);
     }
+  }
+}
+
+/**
+ * The sentence out of a refusal, where there is one.
+ *
+ * These two endpoints are the only ones that are not GraphQL, so `ApiError` is
+ * not what a refusal arrives as: it is a `ProblemDetail`, and its `detail` is
+ * the line the server wrote for a person to read. Without this the chat put the
+ * whole JSON object on screen.
+ */
+function refusal(body: string): string | null {
+  try {
+    const held = JSON.parse(body) as { detail?: unknown };
+    return typeof held.detail === 'string' && held.detail !== '' ? held.detail : null;
+  } catch {
+    return null;
   }
 }
 

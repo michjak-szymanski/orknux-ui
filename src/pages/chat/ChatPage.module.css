@@ -850,6 +850,38 @@
   color: var(--color-success-solid);
 }
 
+/*
+ * Which take of an answer is being read, for one that has been given more than
+ * once.
+ *
+ * Not in `.rowActions`. Those fade in under the pointer, which is right for a
+ * copy button and wrong for this: that an answer was given twice is a fact
+ * about the conversation, and a history nobody can see until they happen to
+ * hover over the paragraph is a history nobody knows is there.
+ */
+.takes {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  align-self: flex-start;
+}
+
+.takeCount {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* At either end there is nowhere to step, and a live-looking button says there is. */
+.takes .rowAction:disabled {
+  cursor: default;
+  opacity: 0.3;
+}
+
+.takes .rowAction:disabled:hover {
+  background: none;
+}
+
 .waiting {
   margin: 0;
   font-size: var(--text-base);
