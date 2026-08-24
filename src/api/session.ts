@@ -13,6 +13,11 @@ export interface SessionUser {
    * installation with no mail server configured.
    */
   emailNotifications?: boolean;
+  /**
+   * Whether a chat prints what an answer cost beside how long it took. False
+   * until somebody turns it on, on the Preferences page.
+   */
+  chatCostShown?: boolean;
 }
 
 export interface Credentials {

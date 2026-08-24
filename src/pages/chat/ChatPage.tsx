@@ -15,9 +15,12 @@ import {
   streamChatMessage,
   setChatPinned,
   startChat,
+  costAmount,
+  spendKnown,
   thinkingTime,
+  tokenCount,
 } from '../../api/chat';
-import type { ChatMessage, ChatSession } from '../../api/chat';
+import type { ChatMessage, ChatSession, ChatSpend } from '../../api/chat';
 import { fetchInstallationSettings } from '../../api/installation';
 import {
   attachmentUrl,
@@ -261,8 +264,15 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
 
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
-  /** How long the last answer took; the log shows it under the model's name. */
-  const [lastMillis, setLastMillis] = useState<number | null>(null);
+  /**
+   * What the last answer took and cost; the log shows it under the model's name.
+   *
+   * The last answer only, and held in state rather than on the message, because
+   * none of it is written down: the history keeps what was said. An answer read
+   * back off the server after a reload has no time behind it and no cost either,
+   * which is the honest answer rather than a gap to be filled with noughts.
+   */
+  const [lastSpend, setLastSpend] = useState<ChatSpend | null>(null);
   const [thoughtOpen, setThoughtOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<number | null>(null);
@@ -454,7 +464,7 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
   useEffect(() => {
     setMessages([]);
     setChatFiles([]);
-    setLastMillis(null);
+    setLastSpend(null);
     setTakeAt({});
     if (currentId === null) return;
 
@@ -979,7 +989,7 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
             // already read.
             onProgress(answer);
           },
-          onDone: (millis) => setLastMillis(millis),
+          onDone: (spend) => setLastSpend(spend),
           onError: (reason) => {
             failure = reason;
           },
@@ -1073,7 +1083,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
               grown[last] = { ...grown[last], content: grown[last].content + piece };
               return grown;
             }),
-          onDone: (millis) => setLastMillis(millis),
+          onDone: (spend) => setLastSpend(spend),
           onError: (reason) => {
             failure = reason;
           },
@@ -1117,7 +1127,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
 
     setSending(true);
     setError(null);
-    setLastMillis(null);
+    setLastSpend(null);
     setMessages((present) => {
       const grown = [...present];
       const last = grown.length - 1;
@@ -1140,7 +1150,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
             grown[last] = { ...grown[last], content: grown[last].content + piece };
             return grown;
           }),
-        onDone: (millis) => setLastMillis(millis),
+        onDone: (spend) => setLastSpend(spend),
         onError: (reason) => {
           failure = reason;
         },
@@ -1448,6 +1458,22 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
   const previewPictures = composerPictures.some((file) => file.id === previewId)
     ? composerPictures
     : chatPictures;
+
+  /*
+   * What to print beside the time, or null for nothing to print.
+   *
+   * Money where the model has prices and tokens where it has none - a bill is
+   * one number, and a model nobody has priced can still say how much was read
+   * and written. Null where the switch is off, where the provider reported no
+   * counts, and for every answer that came back out of the history: three
+   * different reasons to know nothing, and one honest way of showing it.
+   */
+  const spend =
+    session.chatCostShown === true && lastSpend !== null && spendKnown(lastSpend)
+      ? lastSpend.cost === null
+        ? `${tokenCount(lastSpend.inputTokens + lastSpend.outputTokens)} tokens`
+        : costAmount(lastSpend.cost)
+      : null;
 
   return (
     <AppShell
@@ -1822,14 +1848,15 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                       {message.actor ?? current.agentName ?? current.modelName ?? 'assistant'}
                     </span>
                     {/* Only the answer just given has a time behind it. */}
-                    {lastMillis !== null && index === messages.length - 1 && (
+                    {lastSpend !== null && index === messages.length - 1 && (
                       <button
                         type="button"
                         className={styles.thought}
                         onClick={() => setThoughtOpen(!thoughtOpen)}
                         aria-expanded={thoughtOpen}
                       >
-                        Thought for {thinkingTime(lastMillis)}
+                        Thought for {thinkingTime(lastSpend.millis)}
+                        {spend !== null && ` \u00b7 ${spend}`}
                         <img
                           className={thoughtOpen ? styles.thoughtChevronOpen : styles.thoughtChevron}
                           src={chevronDown12Icon}
@@ -1839,10 +1866,25 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                         />
                       </button>
                     )}
-                    {thoughtOpen && lastMillis !== null && index === messages.length - 1 && (
+                    {thoughtOpen && lastSpend !== null && index === messages.length - 1 && (
                       <p className={styles.thoughtDetail}>
-                        The provider took {lastMillis} ms to answer. Nothing else is recorded: the history
-                        keeps what was said, not how it was arrived at.
+                        {spend === null ? (
+                          <>
+                            The provider took {lastSpend.millis} ms to answer. Nothing else is
+                            recorded: the history keeps what was said, not how it was arrived at.
+                          </>
+                        ) : (
+                          <>
+                            The provider took {lastSpend.millis} ms to answer, and charged for{' '}
+                            {tokenCount(lastSpend.inputTokens)} tokens in and{' '}
+                            {tokenCount(lastSpend.outputTokens)} out - every round of this turn, so
+                            a lookup an agent made on the way is counted here too.{' '}
+                            {lastSpend.cost === null
+                              ? 'This model carries no prices, so there is nothing to cost that at.'
+                              : `At the prices recorded for it that is ${costAmount(lastSpend.cost)}.`}{' '}
+                            None of it is kept: the history holds what was said, not what it cost.
+                          </>
+                        )}
                       </p>
                     )}
                     {/* Models write markdown; showing the source shows the asterisks. */}

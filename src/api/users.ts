@@ -27,6 +27,8 @@ export interface AppUser {
   emailChosen: boolean;
   /** Whether the news that rings their bell is posted to their address as well. */
   emailNotifications: boolean;
+  /** Whether their chats print what an answer cost as well as how long it took. */
+  chatCostShown: boolean;
   type: UserType;
   roles: RoleRef[];
   /** False for anybody the identity provider defines. */
@@ -38,7 +40,8 @@ export interface AppUser {
 }
 
 const USER_FIELDS =
-  'id username displayName email emailChosen emailNotifications type roles { id name } editable hasPassword lastModifiedAt lastModifiedBy';
+  'id username displayName email emailChosen emailNotifications chatCostShown type roles { id name } ' +
+  'editable hasPassword lastModifiedAt lastModifiedBy';
 
 /** A token, as it is listed: never its secret, which is shown once. */
 export interface UserToken {
@@ -126,6 +129,21 @@ export async function setUserEmailNotifications(enabled: boolean, id?: string): 
     { id: id ?? null, enabled },
   );
   return data.setUserEmailNotifications;
+}
+
+/**
+ * Turns the cost line in your own chats on or off.
+ *
+ * Yours only - no id, unlike the two above. Those set an address and where mail
+ * goes, which an administrator has a reason to reach; this settles what is drawn
+ * on one person's own screen, on chats nobody else can open.
+ */
+export async function setChatCostShown(shown: boolean): Promise<AppUser> {
+  const data = await graphql<{ setChatCostShown: AppUser }>(
+    `mutation ($shown: Boolean!) { setChatCostShown(shown: $shown) { ${USER_FIELDS} } }`,
+    { shown },
+  );
+  return data.setChatCostShown;
 }
 
 export async function changeMyPassword(currentPassword: string, newPassword: string): Promise<boolean> {
