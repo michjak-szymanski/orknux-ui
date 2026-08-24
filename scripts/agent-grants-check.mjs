@@ -115,22 +115,27 @@ async function readGroup(root, what) {
   const group = root.locator(`[data-grants="${what}"]`);
   if ((await group.count()) === 0) return null;
   return group.evaluate((node) => {
-    const rows = node.querySelector('[data-grant-rows]');
-    const labels = rows === null ? [] : Array.from(rows.querySelectorAll(':scope > label'));
+    const box = node.querySelector('[data-grant-rows]');
+    /*
+     * By the attribute rather than by `> label`. A row carries a way out to
+     * what it names now - issue #251 - so the <label> is the part that toggles
+     * and the row around it is what holds the grant's name.
+     */
+    const rows = box === null ? [] : Array.from(box.querySelectorAll(':scope > [data-grant-name]'));
     return {
       groupHeight: Math.round(node.getBoundingClientRect().height),
-      boxHeight: rows === null ? 0 : Math.round(rows.getBoundingClientRect().height),
+      boxHeight: box === null ? 0 : Math.round(box.getBoundingClientRect().height),
       /* The height the rows want, which is what the old form drew. */
-      wanted: rows === null ? 0 : rows.scrollHeight,
+      wanted: box === null ? 0 : box.scrollHeight,
       searchable: node.querySelector('input[type="search"]') !== null,
       count: node.querySelector('[data-grant-count]')?.textContent?.trim() ?? '',
-      names: labels.map((label) => label.getAttribute('data-grant-name')),
-      kept: labels
-        .filter((label) => label.hasAttribute('data-kept'))
-        .map((label) => label.getAttribute('data-grant-name')),
-      ticked: labels
-        .filter((label) => label.querySelector('input[type="checkbox"]')?.checked === true)
-        .map((label) => label.getAttribute('data-grant-name')),
+      names: rows.map((row) => row.getAttribute('data-grant-name')),
+      kept: rows
+        .filter((row) => row.hasAttribute('data-kept'))
+        .map((row) => row.getAttribute('data-grant-name')),
+      ticked: rows
+        .filter((row) => row.querySelector('input[type="checkbox"]')?.checked === true)
+        .map((row) => row.getAttribute('data-grant-name')),
       marks: node.querySelectorAll('mark').length,
     };
   });
@@ -273,7 +278,7 @@ async function measure(root, where) {
    * in pieces once a search has marked part of it, and `hasText` on a list where
    * one name is a prefix of another picks the wrong row.
    */
-  const keepBox = root.locator(`[data-grants="tools"] [data-grant-rows] > label[data-grant-name="${keep}"]`);
+  const keepBox = root.locator(`[data-grants="tools"] [data-grant-rows] > [data-grant-name="${keep}"]`);
   await keepBox.locator('input[type="checkbox"]').check();
 
   const granted = await readGroup(root, 'tools');

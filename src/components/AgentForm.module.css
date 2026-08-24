@@ -202,6 +202,32 @@
   color: var(--color-text-muted);
 }
 
+/*
+ * The way out to what a grant names - issue #251.
+ *
+ * The same mark the pickers on the trigger, condition and action forms carry,
+ * but its own class rather than the frame's `.jump`: those sit beside a label
+ * in a row of their own, and this sits at the end of something already holding
+ * a tick, a name and a count - so it takes no padding of its own, which at this
+ * row's height would be the difference between six rows in the box and five.
+ *
+ * One class for the checkbox rows and the server chips alike, rather than two
+ * that would say the same thing and drift: what differs between them is the box
+ * around the mark, not the mark. `flex: none` is what keeps it from being
+ * squeezed away by a long name in the editor's narrow panel.
+ */
+.grantJump {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  color: var(--color-accent-brand);
+  text-decoration: none;
+}
+
+.grantJump:hover {
+  color: var(--color-text-primary);
+}
+
 .emptyNote {
   margin: 0;
   font-size: var(--text-md);

@@ -730,6 +730,56 @@ export const TESTS = [
      */
   },
   {
+    name: 'agent-jump-check',
+    what: "the ways out of an agent's settings to the model, catalogs, tools and servers it names",
+    needs: ['workflow'],
+    /*
+     * Issue #251, filed as "yet another missing link in agent settings" - and
+     * the "yet another" is why this drives all five rather than the one that
+     * was reported. Every other form that names a definition had been given the
+     * mark, one report at a time; this one named a model, three kinds of grant
+     * and an MCP server, and pointed at none of them.
+     *
+     * Two assertions could not be taken on trust. A grant row is a checkbox in
+     * a label, so it presses the mark and asserts the grant did not change - a
+     * link put inside that label would turn going to read what a tool does into
+     * granting it. And it follows a memory catalog's mark to the end, because a
+     * catalog is not a page of its own: the link carries which one it means,
+     * and the screen at the other end has to open on that one rather than on
+     * whichever is first.
+     *
+     * Both frames, for the reason agent-grants-check gives - the two marks that
+     * sit beside a label are painted with class names the frame hands in, so a
+     * frame that forgot one is a form with no way out in half the places it is
+     * shown. It makes one MCP server to name and removes it; the agent is never
+     * saved.
+     */
+  },
+  {
+    name: 'model-window-check',
+    what: "a model's context window: set on the screen the refusal names, and read by what refused",
+    needs: ['workspace'],
+    /*
+     * Issue #252. The application told people to set a context window on a
+     * screen that could only print one - `updateModel` had been in the schema
+     * the whole time with no form behind it - so a model discovered from a
+     * provider, or added before anybody knew the number, was stuck at nothing
+     * and every agent on it fell back to the built-in allowance.
+     *
+     * The assertion the rest is scaffolding for is the last one: the same model
+     * is asked for a session memory budget before and after, and it has to come
+     * back refused first, in the sentence that names this screen, and worked
+     * out afterwards against the window that was typed. A form that stored this
+     * somewhere of its own would pass everything else here.
+     *
+     * The other one worth having is that the model's prices survive the save.
+     * `updateModel` replaces a model's details rather than patching them, so a
+     * card that sent only its own two fields would silently clear the three it
+     * does not show. It makes a provider and a model of its own and removes
+     * them.
+     */
+  },
+  {
     name: 'agent-grants-check',
     what: "an agent's grants: bounded, searchable, and explained behind a (?), on the page and in the panel",
     needs: ['workflow'],

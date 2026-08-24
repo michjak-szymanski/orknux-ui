@@ -13,6 +13,7 @@ import {
   removeModel,
   resetIntervalLabel,
   setModelEnabled,
+  updateModel,
   updateModelQuotas,
 } from '../../api/models';
 import type { Model, ModelUsage, ResetInterval } from '../../api/models';
@@ -22,6 +23,7 @@ import toggleOffIcon from '../../assets/toggle-off.svg';
 import toggleOnIcon from '../../assets/toggle-on.svg';
 import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
+import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
@@ -49,6 +51,18 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
 
   const [model, setModel] = useState<Model | null>(null);
   const [usage, setUsage] = useState<ModelUsage | null>(null);
+  /**
+   * The window, and what the model keeps out of it for its own answer.
+   *
+   * Their own state, their own save and their own message, apart from the
+   * quotas below: a quota is what this workspace will allow, and these two are
+   * facts about the model that everything sizing a prompt reads.
+   */
+  const [contextWindow, setContextWindow] = useState('');
+  const [maxOutput, setMaxOutput] = useState('');
+  const [windowError, setWindowError] = useState<string | null>(null);
+  const [windowSaved, setWindowSaved] = useState(false);
+  const [windowSaving, setWindowSaving] = useState(false);
   const [tokenLimit, setTokenLimit] = useState('');
   const [resetInterval, setResetInterval] = useState<ResetInterval>('MONTHLY');
   const [requestsPerMinute, setRequestsPerMinute] = useState('');
@@ -81,6 +95,8 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
 
   function apply(found: Model) {
     setModel(found);
+    setContextWindow(found.contextWindow === null ? '' : String(found.contextWindow));
+    setMaxOutput(found.maxOutput === null ? '' : String(found.maxOutput));
     setTokenLimit(found.tokenLimit === null ? '' : String(found.tokenLimit));
     setResetInterval(found.resetInterval);
     setRequestsPerMinute(found.requestsPerMinute === null ? '' : String(found.requestsPerMinute));
@@ -92,6 +108,43 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
       apply(await setModelEnabled(model.id, !model.enabled));
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : 'Could not change the model.');
+    }
+  }
+
+  /**
+   * The window and the reserved answer, saved.
+   *
+   * `updateModel` replaces a model's own details rather than patching them —
+   * the schema says as much, and the form that was meant to send every field
+   * was never built, which is why there was nowhere at all to record a window.
+   * So the fields this card does not show are sent back exactly as they were
+   * loaded: leaving one out would clear it.
+   */
+  async function handleSaveWindow(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (model === null || windowSaving) return;
+
+    setWindowSaving(true);
+    setWindowError(null);
+    setWindowSaved(false);
+    try {
+      apply(
+        await updateModel(model.id, {
+          name: model.name,
+          modelId: model.modelId,
+          kind: model.kind,
+          contextWindow: toNumber(contextWindow),
+          maxOutput: toNumber(maxOutput),
+          inputCostPerMillion: model.inputCostPerMillion,
+          outputCostPerMillion: model.outputCostPerMillion,
+          voice: model.voice,
+        }),
+      );
+      setWindowSaved(true);
+    } catch (cause) {
+      setWindowError(cause instanceof Error ? cause.message : 'Could not save the context window.');
+    } finally {
+      setWindowSaving(false);
     }
   }
 
@@ -180,20 +233,8 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
                 <span className={styles.detailValue}>{modelKindLabel(model.kind)}</span>
               </div>
               <div className={styles.detail}>
-                <span className={styles.detailLabel}>Max Output</span>
-                <span className={styles.detailValue}>
-                  {model.maxOutput === null ? '—' : `${formatTokens(model.maxOutput)} tokens`}
-                </span>
-              </div>
-              <div className={styles.detail}>
                 <span className={styles.detailLabel}>Model ID</span>
                 <span className={styles.detailMono}>{model.modelId}</span>
-              </div>
-              <div className={styles.detail}>
-                <span className={styles.detailLabel}>Context Window</span>
-                <span className={styles.detailValue}>
-                  {model.contextWindow === null ? '—' : `${formatTokens(model.contextWindow)} tokens`}
-                </span>
               </div>
               <div className={styles.detail}>
                 <span className={styles.detailLabel}>Status</span>
@@ -215,6 +256,82 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
               </div>
             </div>
           </section>
+
+          {/*
+            Where the window is set, which is where the rest of the application
+            says it is set.
+
+            An agent's session memory is a share of this number, and refusing a
+            share said "Set the model's context window on the Models screen
+            first" while the Models screen only ever printed it — recorded when
+            a model was added and unchangeable afterwards, and null on every
+            model that arrived any other way. Issue #252.
+
+            Per model rather than per provider. One provider serves models whose
+            windows differ by an order of magnitude, so a number kept beside the
+            key would be wrong for all but one of them, and it is this row that
+            everything sizing a prompt reads.
+          */}
+          <form className={styles.card} onSubmit={handleSaveWindow}>
+            <h2 className={styles.sectionHeading}>Context Window</h2>
+
+            <div className={styles.fieldRow}>
+              <div className={styles.field}>
+                <span className={styles.labelWithHint}>
+                  <label className={styles.label} htmlFor="context-window">
+                    Context Window
+                  </label>
+                  <FieldHint label="Context Window">
+                    How many tokens this model reads at once, as its provider states it. Nothing here
+                    asks the model: it is what the workspace records, and it is what a share of a
+                    session&rsquo;s memory is worked out from — an agent given a share of a model with
+                    no window recorded falls back to a fixed built-in allowance. Empty means not
+                    recorded.
+                  </FieldHint>
+                </span>
+                <input
+                  id="context-window"
+                  className={`${styles.input} ${styles.inputMono}`}
+                  value={contextWindow}
+                  onChange={(event) => setContextWindow(event.target.value)}
+                  placeholder="Not recorded"
+                  inputMode="numeric"
+                />
+              </div>
+              <div className={styles.field}>
+                <span className={styles.labelWithHint}>
+                  <label className={styles.label} htmlFor="max-output">
+                    Max Output
+                  </label>
+                  <FieldHint label="Max Output">
+                    The most this model will write in one answer. It comes out of the window above, so
+                    it is the other half of what a session may be given: a model that reserves most of
+                    its window for its answer can carry very little conversation.
+                  </FieldHint>
+                </span>
+                <input
+                  id="max-output"
+                  className={`${styles.input} ${styles.inputMono}`}
+                  value={maxOutput}
+                  onChange={(event) => setMaxOutput(event.target.value)}
+                  placeholder="Not recorded"
+                  inputMode="numeric"
+                />
+              </div>
+            </div>
+
+            <div className={styles.formFooter}>
+              {windowError !== null && (
+                <p className={styles.saveError} role="alert">
+                  {windowError}
+                </p>
+              )}
+              {windowSaved && windowError === null && <p className={styles.saved}>Saved.</p>}
+              <button type="submit" className={styles.primaryButton} disabled={windowSaving}>
+                {windowSaving ? 'Saving…' : 'Save Changes'}
+              </button>
+            </div>
+          </form>
 
           <section className={styles.card}>
             <h2 className={styles.sectionHeading}>Usage Metrics</h2>

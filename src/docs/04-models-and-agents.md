@@ -86,6 +86,17 @@ says so in words about the variable, on its row and on its page. That is
 deliberate. A provider that cannot read its key fails a check exactly the way an
 unreachable one does, and "check the endpoint" is the wrong afternoon.
 
+A model's own page carries the two numbers that decide how much can be put in
+front of it: its **Context Window**, which is how much it reads at once, and its
+**Max Output**, which is the most it will write in one answer. Both are in
+tokens, both are as the provider states them — nothing here asks the model — and
+either can be left empty, which means not recorded rather than zero. They belong
+to the model and not to the provider: one provider serves models whose windows
+differ by an order of magnitude, so a single number kept beside the key would be
+wrong for all but one of them. The window is what a session's memory is a share
+of, so a model with none recorded leaves every agent on it with the built-in
+allowance, and setting a share against it is refused until the number is there.
+
 ## Workspace models
 
 Two model choices belong to the workspace rather than to a conversation:
@@ -111,6 +122,12 @@ workflow, where their input comes from the parameters the node is given.
 - **Tools** are things the agent can call, including MCP servers connected to
   the workspace.
 - **Memory** is what a workspace has written down for its agents to read.
+
+Everything this card names is defined somewhere else in the workspace, and every
+one of them carries the mark that opens it: the model beside its picker, and a
+catalog, a tool or an MCP server at the end of its own row. They open in a tab
+of their own, so going to read what something is does not throw away a form that
+has not been saved — and pressing one grants nothing.
 
 ![One agent's settings: its brief, the model it answers on, and the share of
 that model's window its sessions are given](/screens/agent-settings.png)
@@ -264,7 +281,10 @@ reported at four characters to the token. A share the model cannot give is
 refused before it is saved, with a sentence naming that model and its numbers,
 because the alternative is finding out on somebody's turn when the provider
 refuses the request. Choose the model first: until there is one, there is no
-window to take a share of and the slider says so by staying where it is.
+window to take a share of and the slider says so by staying where it is. The
+mark beside the picker opens that model's page in a tab of its own, which is
+where its window is recorded and where a refusal about a window that is not
+recorded is put right.
 
 There are three steps, and they are consulted in this order: **the agent's own
 share, then the workspace's default, then the built-in allowance.** An agent
