@@ -29,8 +29,8 @@ import {
 import type { Attachment } from '../../api/attachments';
 import { AttachmentViewer } from '../../components/AttachmentViewer';
 import { answers, fetchModels } from '../../api/models';
-import { readAloud } from '../../components/readAloud';
-import type { Reading } from '../../components/readAloud';
+import { CHUNKING_DEFAULT, readAloud } from '../../components/readAloud';
+import type { Reading, SpeechChunking } from '../../components/readAloud';
 import { transcribe } from '../../api/transcription';
 import { fetchWorkspace } from '../../api/workspaces';
 import type { Model } from '../../api/models';
@@ -610,6 +610,17 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
    * nothing, and the panel is what knows what that then means.
    */
   const [turnTaking, setTurnTaking] = useState<VoiceTurnTaking | null>(null);
+  /**
+   * Where this workspace has said an answer may be cut for the speech model.
+   *
+   * Off the same request as the three above, and it applies to both readers on
+   * this page: the speaker under an answer and the voice panel are one setting's
+   * business, because they are the same answer being read to the same person.
+   * The default until the workspace has answered - which is what it was before
+   * this could be said, so nothing sounds different while the fetch is in the
+   * air.
+   */
+  const [chunking, setChunking] = useState<SpeechChunking>(CHUNKING_DEFAULT);
 
   useEffect(() => {
     if (workspaceId === null) return;
@@ -617,6 +628,7 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
       .then((held) => {
         setHears(held?.transcriptionModelId != null);
         setReads(held?.speechModelId != null);
+        setChunking(held?.voiceSpeechChunking ?? CHUNKING_DEFAULT);
         setTurnTaking(
           held === null
             ? null
@@ -633,6 +645,7 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
         // Nothing rather than a guess: null in all three is exactly "the
         // workspace has decided nothing", which is the panel's own numbers.
         setTurnTaking(null);
+        setChunking(CHUNKING_DEFAULT);
       });
   }, [workspaceId]);
 
@@ -870,10 +883,11 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
   /**
    * Reads one answer aloud, or stops it if it is the one already talking.
    *
-   * A sentence at a time, and the first of them is asked for on its own: an
-   * answer of any length used to be one request, so the wait before the first
-   * word was the wait for the last one to be synthesised — seconds of a button
-   * that had plainly been pressed and a page saying nothing.
+   * In pieces, and the first of them is asked for on its own: an answer of any
+   * length used to be one request, so the wait before the first word was the
+   * wait for the last one to be synthesised — seconds of a button that had
+   * plainly been pressed and a page saying nothing. Where the pieces end is the
+   * workspace's, and one of the three it can say is that old single request.
    *
    * What is read is what the answer renders to and not the markdown it is
    * written in, which is `readAloud`'s doing and every reader's alike.
@@ -888,22 +902,26 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
 
     setError(null);
     setFetchingSpeech(index);
-    const say = readAloud(workspaceId, {
-      // Speaking when there is sound, not when there is a request.
-      onStart: () => {
-        if (reading.current !== say) return;
-        setFetchingSpeech(null);
-        setSpeaking(index);
+    const say = readAloud(
+      workspaceId,
+      {
+        // Speaking when there is sound, not when there is a request.
+        onStart: () => {
+          if (reading.current !== say) return;
+          setFetchingSpeech(null);
+          setSpeaking(index);
+        },
+        onEnd: () => {
+          if (reading.current === say) hush();
+        },
+        onFailure: (reason) => {
+          if (reading.current !== say) return;
+          hush();
+          setError(reason);
+        },
       },
-      onEnd: () => {
-        if (reading.current === say) hush();
-      },
-      onFailure: (reason) => {
-        if (reading.current !== say) return;
-        hush();
-        setError(reason);
-      },
-    });
+      chunking,
+    );
     reading.current = say;
     say.push(text, true);
   }
@@ -2285,6 +2303,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
             ref={voiceControls}
             workspaceId={workspaceId}
             turnTaking={turnTaking}
+            chunking={chunking}
             onSay={handleVoiceTurn}
             onPhase={setVoicePhase}
             onClose={() => setVoice(false)}

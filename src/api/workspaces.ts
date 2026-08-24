@@ -1,5 +1,6 @@
 import { graphql } from './client';
 import type { PageOf } from './client';
+import type { SpeechChunking } from '../components/readAloud';
 
 export interface Workspace {
   id: string;
@@ -86,12 +87,22 @@ export interface Workspace {
    * what ends a turn. Null means the workspace has decided nothing.
    */
   voiceUnattendedMicrophoneMs: number | null;
+  /**
+   * Where an answer is cut before it is handed to the speech model.
+   *
+   * A value rather than a null, unlike the three above: those store a departure
+   * from a number this half owns, and this stores one of three named things to
+   * ask for. 'SENTENCE' unless somebody says otherwise, and `readAloud` is what
+   * each of them means.
+   */
+  voiceSpeechChunking: SpeechChunking;
 }
 
 const WORKSPACE_FIELDS =
   'id name description roles { id name } adminRoles { id name } administered ' +
   'companionModelId transcriptionModelId speechModelId quickChatModelId quickChatMayWrite ' +
-  'defaultMemoryShare voicePauseEndsTurnMs voiceSpeechOverRoomPercent voiceUnattendedMicrophoneMs';
+  'defaultMemoryShare voicePauseEndsTurnMs voiceSpeechOverRoomPercent voiceUnattendedMicrophoneMs ' +
+  'voiceSpeechChunking';
 
 /** Just enough of a role to name it where a workspace lists what opens it. */
 export interface WorkspaceRole {
@@ -242,6 +253,28 @@ export async function setWorkspaceVoiceTurnTaking(
     { workspaceId, pauseEndsTurnMs, speechOverRoomPercent, unattendedMicrophoneMs },
   );
   return data.setWorkspaceVoiceTurnTaking;
+}
+
+/**
+ * Where an answer is cut for the speech model here.
+ *
+ * Its own call rather than a fourth argument above, although the Voice card
+ * draws both and saves them with one press: turn-taking is three numbers that
+ * are one decision about the half of a turn somebody else is talking, and this
+ * is about the half the model is. Nothing to clear - one of the three is always
+ * chosen, and the one that is chosen by default is on the list by name.
+ */
+export async function setWorkspaceVoiceSpeechChunking(
+  workspaceId: string,
+  chunking: SpeechChunking,
+): Promise<Workspace> {
+  const data = await graphql<{ setWorkspaceVoiceSpeechChunking: Workspace }>(
+    `mutation SetWorkspaceVoiceSpeechChunking($workspaceId: ID!, $chunking: SpeechChunking!) {
+       setWorkspaceVoiceSpeechChunking(workspaceId: $workspaceId, chunking: $chunking) { ${WORKSPACE_FIELDS} }
+     }`,
+    { workspaceId, chunking },
+  );
+  return data.setWorkspaceVoiceSpeechChunking;
 }
 
 export type WorkspaceOperationType = 'ADD' | 'REMOVE' | 'RENAME';

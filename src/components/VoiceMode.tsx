@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import type { Ref } from 'react';
 
-import { readAloud } from './readAloud';
-import type { Reading } from './readAloud';
+import { CHUNKING_DEFAULT, readAloud } from './readAloud';
+import type { Reading, SpeechChunking } from './readAloud';
 import { transcribe } from '../api/transcription';
 import styles from './VoiceMode.module.css';
 
@@ -53,6 +53,16 @@ export interface VoiceModeProps {
    * holds no default of its own.
    */
   turnTaking?: VoiceTurnTaking | null;
+  /**
+   * Where this workspace has said an answer may be cut for the speech model.
+   *
+   * Handed in rather than fetched for the reason `turnTaking` is: the page that
+   * opens this panel has already asked the server about the workspace, and it
+   * is the same answer. Omitted is the default, which is what a hands-free
+   * conversation wants anyway - it is the shape that gets a first word out
+   * soonest.
+   */
+  chunking?: SpeechChunking;
   /**
    * Sends what was heard and resolves with the answer, to be read back.
    *
@@ -210,7 +220,15 @@ interface Said {
   spoken: boolean;
 }
 
-export function VoiceMode({ workspaceId, turnTaking, onSay, onClose, onPhase, ref }: VoiceModeProps) {
+export function VoiceMode({
+  workspaceId,
+  turnTaking,
+  chunking = CHUNKING_DEFAULT,
+  onSay,
+  onClose,
+  onPhase,
+  ref,
+}: VoiceModeProps) {
   const [phase, setPhase] = useState<VoicePhase>('listening');
   const [level, setLevel] = useState(0);
   const [said, setSaid] = useState<Said | null>(null);
@@ -351,17 +369,21 @@ export function VoiceMode({ workspaceId, turnTaking, onSay, onClose, onPhase, re
       setPhase('thinking');
 
       reading.current?.stop();
-      const say = readAloud(workspaceId, {
-        onStart: () => {
-          if (live.current && mine === turn.current) setPhase('speaking');
+      const say = readAloud(
+        workspaceId,
+        {
+          onStart: () => {
+            if (live.current && mine === turn.current) setPhase('speaking');
+          },
+          onEnd: () => {
+            if (live.current && mine === turn.current) nextTurn.current();
+          },
+          onFailure: (reason) => {
+            if (live.current && mine === turn.current) setError(reason);
+          },
         },
-        onEnd: () => {
-          if (live.current && mine === turn.current) nextTurn.current();
-        },
-        onFailure: (reason) => {
-          if (live.current && mine === turn.current) setError(reason);
-        },
-      });
+        chunking,
+      );
       reading.current = say;
 
       void (async () => {
@@ -384,7 +406,7 @@ export function VoiceMode({ workspaceId, turnTaking, onSay, onClose, onPhase, re
         }
       })();
     },
-    [workspaceId],
+    [workspaceId, chunking],
   );
 
   /*

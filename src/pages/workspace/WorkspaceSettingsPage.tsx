@@ -16,6 +16,7 @@ import {
   setWorkspaceQuickChatWrites,
   setWorkspaceSpeechModel,
   setWorkspaceTranscriptionModel,
+  setWorkspaceVoiceSpeechChunking,
   setWorkspaceVoiceTurnTaking,
 } from '../../api/workspaces';
 import type { Workspace } from '../../api/workspaces';
@@ -24,6 +25,8 @@ import { AppShell } from '../../components/AppShell';
 import { CatalogueNote, useCatalogue } from '../../components/Catalogue';
 import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
+import { CHUNKING_DEFAULT } from '../../components/readAloud';
+import type { SpeechChunking } from '../../components/readAloud';
 import { VOICE_TURN_TAKING_DEFAULTS } from '../../components/VoiceMode';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { useInstallation } from '../../session/installation';
@@ -252,6 +255,14 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
   const [pause, setPause] = useState('');
   const [overRoom, setOverRoom] = useState('');
   const [unattended, setUnattended] = useState('');
+  /**
+   * Where an answer is cut for the speech model, drafted.
+   *
+   * Not a string-that-might-be-empty like the three above: one of the three is
+   * always chosen, and the one chosen by default is on the list by name. The
+   * default until the workspace has been read, so the control never draws blank.
+   */
+  const [chunking, setChunking] = useState<SpeechChunking>(CHUNKING_DEFAULT);
   const [voiceSaved, setVoiceSaved] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [voiceSaving, setVoiceSaving] = useState(false);
@@ -267,6 +278,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         setPause(inBox(found?.voicePauseEndsTurnMs ?? null, A_SECOND));
         setOverRoom(inBox(found?.voiceSpeechOverRoomPercent ?? null, AS_IS));
         setUnattended(inBox(found?.voiceUnattendedMicrophoneMs ?? null, A_MINUTE));
+        setChunking(found?.voiceSpeechChunking ?? CHUNKING_DEFAULT);
       })
       .catch((cause: unknown) => {
         setError(cause instanceof Error ? cause.message : 'Could not load the workspace.');
@@ -407,6 +419,14 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
    * Nothing here judges a value first: the bounds are the server's and are
    * stated in the sentence it refuses with, and a copy of them on this page
    * would be a second opinion about what may be saved.
+   *
+   * Two calls behind one press, and in this order. Turn-taking is three numbers
+   * that are one decision and it is the half that can be refused, so a refusal
+   * stops before the chunking is written and the card is left saying no with
+   * nothing saved - rather than half saved, which is the state a reader of this
+   * page cannot see. They are two calls at all because they are two decisions:
+   * one about the half of a turn somebody else is talking and one about the
+   * half the model is, and nothing about either can contradict the other.
    */
   async function listenLike() {
     if (voiceSaving) return;
@@ -415,16 +435,18 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
     setVoiceError(null);
     setVoiceSaved(false);
     try {
-      const updated = await setWorkspaceVoiceTurnTaking(
+      await setWorkspaceVoiceTurnTaking(
         workspaceId,
         asStored(pause, A_SECOND),
         asStored(overRoom, AS_IS),
         asStored(unattended, A_MINUTE),
       );
+      const updated = await setWorkspaceVoiceSpeechChunking(workspaceId, chunking);
       setWorkspace(updated);
       setPause(inBox(updated.voicePauseEndsTurnMs, A_SECOND));
       setOverRoom(inBox(updated.voiceSpeechOverRoomPercent, AS_IS));
       setUnattended(inBox(updated.voiceUnattendedMicrophoneMs, A_MINUTE));
+      setChunking(updated.voiceSpeechChunking);
       setVoiceSaved(true);
     } catch (cause) {
       setVoiceError(cause instanceof Error ? cause.message : 'Could not save that.');
@@ -1090,6 +1112,49 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
               }}
             />
             <span className={styles.unit}>minutes</span>
+          </div>
+        </div>
+
+        {/*
+          Where an answer is cut for the speech model.
+
+          On this card and not the one above it, although what it configures is
+          the speech model: that card points things at models, and this is a
+          judgement about listening. It is the last field here because it is
+          about the half of a turn the model is talking, and the three above are
+          about the half somebody else is.
+
+          Three named things and no fourth. The default is `Sentence` and
+          `Sentence` is on the list, so there is nothing for a "Default" option
+          to mean that one of the three does not already say - and a control
+          offering both would have to explain which of the two it saved.
+        */}
+        <div className={styles.field}>
+          <span className={styles.labelWithHint}>
+            <label className={styles.label} htmlFor="voice-chunking">
+              Speech chunking
+            </label>
+            <FieldHint label="Speech chunking">
+              Where an answer is cut for the speech provider. Sentence starts talking soonest;
+              Paragraph sends fewer, longer requests and reads more smoothly; None waits for the
+              whole answer and sends it once.
+            </FieldHint>
+          </span>
+          <div className={styles.inputWrapper}>
+            <select
+              id="voice-chunking"
+              className={`${styles.input} ${styles.select}`}
+              value={chunking}
+              disabled={workspace === null}
+              onChange={(event) => {
+                setVoiceSaved(false);
+                setChunking(event.target.value as SpeechChunking);
+              }}
+            >
+              <option value="NONE">None</option>
+              <option value="SENTENCE">Sentence</option>
+              <option value="PARAGRAPH">Paragraph</option>
+            </select>
           </div>
         </div>
 

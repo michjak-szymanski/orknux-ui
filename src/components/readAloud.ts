@@ -2,8 +2,8 @@ import { speak } from '../api/speech';
 import { spokenText } from './spokenText';
 
 /**
- * Reading an answer aloud, a sentence at a time, while the rest of it is still
- * being written.
+ * Reading an answer aloud in pieces, while the rest of it is still being
+ * written.
  *
  * The naive shape is one request for the whole answer and one clip played at
  * the end of it, and its cost is silence: a speech model is handed the finished
@@ -24,7 +24,28 @@ import { spokenText } from './spokenText';
  *
  * What is read is what the message *renders to*, never its markdown: see
  * `spokenText`.
+ *
+ * **Where the cuts fall is the workspace's to say.** Sentence ends are the
+ * default and the shape described above; a workspace that would rather hear
+ * fewer joins asks for paragraphs, and one that would rather have a single
+ * clip asks for none at all and waits. See `SpeechChunking`. Everything else
+ * here is the same whichever it is: the same queue, the same one-ahead lid, the
+ * same reading abandoned by one `stop()`.
  */
+
+/**
+ * Where a workspace has said an answer may be cut.
+ *
+ * Named exactly as the server's enum names them, so nothing translates at the
+ * boundary and a value read off a workspace is handed straight to this.
+ */
+export type SpeechChunking = 'NONE' | 'SENTENCE' | 'PARAGRAPH';
+
+/**
+ * What a workspace that has said nothing gets, and what this file was before
+ * any of them could be said.
+ */
+export const CHUNKING_DEFAULT: SpeechChunking = 'SENTENCE';
 
 /**
  * Where the text so far can be cut without reading half a sentence aloud.
@@ -34,6 +55,21 @@ import { spokenText } from './spokenText';
  * being wrong costs a clause read as two, not a wrong word.
  */
 export const SENTENCE_END = /[.!?…]["')\]]*(?=\s)|\n/g;
+
+/**
+ * Where the text so far can be cut without reading half a paragraph aloud.
+ *
+ * A blank line, which is what a paragraph break survives as: `spokenText` draws
+ * the rendered document as lines and leaves exactly one empty line between two
+ * blocks, so this is the same seam the eye sees on the screen. A run of them is
+ * one cut - two blank lines are not two paragraph endings.
+ *
+ * A paragraph is deliberately not a heading, a list or a table row. Those are
+ * lines inside a block and reading them separately is the seam-per-sentence
+ * this mode exists to avoid; a heading and the paragraph under it being spoken
+ * in one breath is what somebody choosing this asked for.
+ */
+export const PARAGRAPH_END = /\n[ \t]*\n+/g;
 
 /**
  * Short fragments are not worth a request of their own.
@@ -57,7 +93,7 @@ export const LONGEST_TO_SPEAK = 220;
 /** A reading in progress: hand it the answer so far, or stop it. */
 export interface Reading {
   /**
-   * Reads whatever whole sentences have arrived since the last time.
+   * Reads whatever whole pieces have arrived since the last time.
    *
    * `whole` is the answer so far, always from the beginning, so an offset is
    * the only state this needs. `done` means there is no more coming, and takes
@@ -79,20 +115,34 @@ export interface Listener {
 }
 
 /**
- * Cuts prose into pieces at sentence ends, each about a breath long.
+ * Cuts prose into pieces, where the workspace has said it may be cut.
  *
  * `upTo` is how much of `text` those pieces account for, which is what the
- * caller advances its offset by - the leftover is a sentence still being
- * written, and it is read the next time round.
+ * caller advances its offset by - the leftover is a piece still being written,
+ * and it is read the next time round.
+ *
+ * Under `NONE` there is no boundary to look for, so nothing is cut until the
+ * answer is over and the tail below is the whole of it. That is the one request
+ * this mode exists to make, and it is also why it can produce nothing at all
+ * from a half-written answer: `push` must not take that for "there was nothing
+ * to say" and drain on it.
  */
-function pieces(text: string, whole: boolean): { parts: string[]; upTo: number } {
+function pieces(
+  text: string,
+  whole: boolean,
+  chunking: SpeechChunking,
+): { parts: string[]; upTo: number } {
+  const boundary = chunking === 'SENTENCE' ? SENTENCE_END : chunking === 'PARAGRAPH' ? PARAGRAPH_END : null;
+
   const cuts: number[] = [];
-  SENTENCE_END.lastIndex = 0;
-  for (let found = SENTENCE_END.exec(text); found !== null; found = SENTENCE_END.exec(text)) {
-    cuts.push(found.index + found[0].length);
+  if (boundary !== null) {
+    boundary.lastIndex = 0;
+    for (let found = boundary.exec(text); found !== null; found = boundary.exec(text)) {
+      cuts.push(found.index + found[0].length);
+    }
   }
-  // Nothing more is coming, so what is left is a sentence whether or not it
-  // was punctuated like one.
+  // Nothing more is coming, so what is left is a piece whether or not it ended
+  // the way one does.
   if (whole && cuts[cuts.length - 1] !== text.length) cuts.push(text.length);
 
   const parts: string[] = [];
@@ -100,10 +150,20 @@ function pieces(text: string, whole: boolean): { parts: string[]; upTo: number }
   let at = 0;
   while (at < cuts.length) {
     let end = cuts[at];
-    // Take the sentences after it too, while they still fit in one breath.
-    while (at + 1 < cuts.length && cuts[at + 1] - start <= LONGEST_TO_SPEAK) {
-      at += 1;
-      end = cuts[at];
+    /*
+     * Take the sentences after it too, while they still fit in one breath.
+     *
+     * Sentences only. A paragraph is already the size somebody asked for when
+     * they chose paragraphs, and gathering two of them up to a ceiling would be
+     * this mode quietly cutting inside a paragraph the moment one ran long -
+     * which is the seam it was chosen to remove. Under `NONE` there is at most
+     * one cut and nothing to gather.
+     */
+    if (chunking === 'SENTENCE') {
+      while (at + 1 < cuts.length && cuts[at + 1] - start <= LONGEST_TO_SPEAK) {
+        at += 1;
+        end = cuts[at];
+      }
     }
     parts.push(text.slice(start, end));
     start = end;
@@ -113,8 +173,18 @@ function pieces(text: string, whole: boolean): { parts: string[]; upTo: number }
   return { parts: parts.map((part) => part.trim()).filter((part) => part !== ''), upTo: start };
 }
 
-/** Starts a reading. Nothing is asked for until something is pushed into it. */
-export function readAloud(workspaceId: string, listener: Listener = {}): Reading {
+/**
+ * Starts a reading. Nothing is asked for until something is pushed into it.
+ *
+ * `chunking` is what the workspace has said about where an answer may be cut,
+ * and it is fixed for the reading: a turn that changed shape halfway through
+ * would be heard as two different readings of one answer.
+ */
+export function readAloud(
+  workspaceId: string,
+  listener: Listener = {},
+  chunking: SpeechChunking = CHUNKING_DEFAULT,
+): Reading {
   /** Pieces that have not been asked for yet, in the order they must be heard. */
   const pending: string[] = [];
   /**
@@ -236,11 +306,25 @@ export function readAloud(workspaceId: string, listener: Listener = {}): Reading
 
       const spoken = spokenText(whole);
       const rest = spoken.slice(read);
-      const { parts, upTo } = pieces(rest, done);
+      const { parts, upTo } = pieces(rest, done, chunking);
 
-      if (parts.length === 0 || (!done && upTo < SHORTEST_TO_SPEAK)) {
+      /*
+       * The short-fragment gate is a sentence's affair.
+       *
+       * "Yes." spoken alone and then the rest sounds like two answers, which is
+       * a thing that only happens where a sentence is a piece. A paragraph is
+       * one by definition however short it is - a one-line paragraph held back
+       * for the next one would be a mode that cuts at paragraph ends except
+       * when it does not - and under `NONE` there is one piece and nothing to
+       * hold it for.
+       */
+      const tooShort = chunking === 'SENTENCE' && !done && upTo < SHORTEST_TO_SPEAK;
+
+      if (parts.length === 0 || tooShort) {
         // Still worth draining when the answer is over: an answer that was
         // empty, or all code, has been read as far as anybody is concerned.
+        // Never on a half-written one, which is what `NONE` looks like right up
+        // until its single piece exists.
         if (done) void drain();
         return;
       }

@@ -767,6 +767,34 @@ export const TESTS = [
      */
   },
   {
+    name: 'speech-chunking-check',
+    what: 'what one answer costs to read aloud on each of the three things a workspace can say about cutting it',
+    needs: ['workspace'],
+    /*
+     * The other side of #263. Reading became pipelined and the pieces became
+     * sentences, which is the right answer for somebody holding a hands-free
+     * conversation and the wrong one for somebody listening to a written
+     * answer: they hear the join between every sentence and pay for a request
+     * behind each one. It is a listening preference rather than a fact, so the
+     * workspace says.
+     *
+     * The assertion that earns it a place is a count on the wire, and
+     * deliberately not the setting read back. Reading it back proves it
+     * persisted, which the server's own test already says and which a page that
+     * saved the value and went on cutting at sentence ends would also pass. The
+     * same answer read three times has to cost one request under None, one per
+     * paragraph under Paragraph, and more than either under Sentence - and
+     * nothing but a setting that reaches the speech provider produces that.
+     *
+     * Beside it: all three read the same words in the same order. A mode
+     * decides where an answer is cut and never what is in it, and a chunking
+     * that dropped a paragraph or read one twice would sail through the counts.
+     *
+     * The model, the three chats and the workspace's own setting are put back
+     * afterwards.
+     */
+  },
+  {
     name: 'agent-jump-check',
     what: "the ways out of an agent's settings to the model, catalogs, tools and servers it names",
     needs: ['workflow'],
