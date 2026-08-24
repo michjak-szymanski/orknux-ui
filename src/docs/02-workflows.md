@@ -113,13 +113,14 @@ again starts it straight.
   making it for stay on screen together. A trigger, an action, a condition, an
   object and an agent can each be made this way, and what you make is chosen
   into the node as soon as it exists.
-- **Open definition**, beside the picker on a node that already points at one,
-  opens it in that same panel — a trigger, an action, a condition and an agent
-  alike. Reading a node is a question about the graph, and answering it by
-  taking the graph off the screen is a poor answer. An object is the exception
-  and opens its own page, because its fields are given there and a panel has
-  nowhere to put them. It is still a link, so `Ctrl`, `Cmd`, `Shift` or the
-  middle button opens the definition's own page in a tab of its own.
+- **The way out**, the mark beside the picker on a node that already points at
+  something, opens it in that same panel — a trigger, an action, a condition
+  and an agent alike. Reading a node is a question about the graph, and
+  answering it by taking the graph off the screen is a poor answer. An object
+  is the exception and opens its own page, because its fields are given there
+  and a panel has nowhere to put them. It is still a link, so `Ctrl`, `Cmd`,
+  `Shift` or the middle button opens the definition's own page in a tab of its
+  own.
 - Anything that navigates is a **link**. Clicking one saves the graph and goes;
   `Ctrl`, `Cmd`, `Shift` or the middle button opens it in a new tab and leaves
   what you were doing where it was.
