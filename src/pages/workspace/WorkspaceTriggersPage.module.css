@@ -118,6 +118,47 @@
 }
 
 /*
+ * The action, and the mark saying Slack will never deliver it.
+ *
+ * A row rather than a bare cell, because the cell now holds two things: the
+ * event's name, which keeps the ellipsis it always had, and — on the rows where
+ * it is true — a warning that must not be the thing clipped away.
+ */
+.actionCell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.actionCell > .muted,
+.actionCell > .mono {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+/*
+ * A trigger that is Enabled, has a connection, has an action, and cannot fire.
+ *
+ * The whole of issue #269's aftermath is that this row looked healthy from
+ * every angle the list drew. It is amber and it does not shrink: the event's
+ * name may be clipped to make room for it, never the other way round.
+ */
+.cannotFire {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.cannotFireBadge {
+  color: var(--color-amber);
+  font-size: var(--text-sm);
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+/*
  * What the trigger last did, and the way into its log. A trigger that starts
  * nothing is silent in every other screen — the executions list only holds runs
  * that began — so this column exists to answer "was it even asked?".

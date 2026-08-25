@@ -9,6 +9,7 @@ import type { WorkspaceConnection } from '../api/integrations';
 import {
   TRIGGER_ACTIONS,
   TRIGGER_ACTION_LABEL,
+  cannotReceive,
   createTrigger,
   fetchSlackBotUsers,
   fetchSupportedTriggerActions,
@@ -228,25 +229,46 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
   const webhook = type === 'WEBHOOK';
   /** The one event that asks whose messages it is watching. */
   const reply = incoming && action === 'REPLY';
+  /**
+   * The two events Slack will not deliver without a history scope.
+   *
+   * A reply needs the answer to draw its rows; a message needs it only to say
+   * whether the token can hear one at all. Both ask the same question, so both
+   * ask it once.
+   */
+  const listens = incoming && (action === 'REPLY' || action === 'MESSAGE');
 
   /*
-   * Who each Slack connection posts as, asked the first time a reply is chosen
-   * and not before.
+   * Who each Slack connection posts as, asked the first time a message or a
+   * reply is chosen and not before.
    *
-   * It is a Slack round trip per connection on a cold cache, and every other
-   * kind of trigger this form makes has no use for the answer - so asking it
-   * with the rest of the catalogues would spend somebody else's rate limit on
-   * every schedule and every webhook anybody ever defined. The rows are drawn
-   * from the connections either way, so nothing waits on this: what arrives is
-   * the handle and the reason, filled in where the row already is.
+   * It is a Slack round trip per connection on a cold cache, and a schedule, a
+   * webhook and a mention have no use for the answer - so asking it with the
+   * rest of the catalogues would spend somebody else's rate limit on every
+   * trigger anybody ever defined. The rows are drawn from the connections
+   * either way, so nothing waits on this: what arrives is the handle and the
+   * reason, filled in where the row already is.
    */
   useEffect(() => {
-    if (!reply || workspaceId === '' || asked) return;
+    if (!listens || workspaceId === '' || asked) return;
     setAsked(true);
     fetchSlackBotUsers(workspaceId)
       .then(setBotUsers)
       .catch(() => setBotUsers([]));
-  }, [reply, workspaceId, asked]);
+  }, [listens, workspaceId, asked]);
+
+  /**
+   * The connection saying this trigger could never fire, where it says so.
+   *
+   * Read off what has already arrived rather than asked a second time, and read
+   * from the boxes rather than from the saved trigger: switching the Action
+   * picker to Message is the moment the answer starts mattering, and it is a
+   * moment before Save rather than after.
+   */
+  const silent = useMemo(
+    () => cannotReceive({ type, action, connectionId: connectionId === '' ? null : connectionId }, botUsers),
+    [type, action, connectionId, botUsers],
+  );
 
   /*
    * What each picker offers, with a second line saying which one this is.
@@ -784,6 +806,24 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                 {action === 'MESSAGE' && (
                   <p className={styles.fieldHint} id="trigger-action-volume">
                     {t('Every message in every channel this bot is in will be measured against this trigger.')}
+                  </p>
+                )}
+                {/*
+                  A warning, so it stays in the open by the rules file's own
+                  list. It is also the whole of issue #269's aftermath: this
+                  trigger is Enabled, it has a connection and it has an action,
+                  and Slack will never deliver it anything - which was drawn in
+                  exactly one place, under a checkbox on a field only a reply
+                  opens, where nobody who had not already guessed would look.
+
+                  The server's sentence verbatim. It is the one the Replies To
+                  rows have always drawn and the one `SlackBotUsers` composes
+                  from the scopes it actually read, so there is nothing here to
+                  drift from it.
+                */}
+                {silent !== null && (
+                  <p className={own.cannotFire} id="trigger-action-receives">
+                    {silent.message}
                   </p>
                 )}
               </div>

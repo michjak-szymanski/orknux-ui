@@ -221,6 +221,23 @@
   white-space: nowrap;
 }
 
+/*
+ * What a Slack bot token cannot do, under what it is.
+ *
+ * Amber and not muted: a connection can be green and still be one no message
+ * will ever arrive on, and the two lines sitting in the same grey would read as
+ * one reassurance. One line, clipped, for the reason `.statusDetail` is.
+ */
+.cannotReceive {
+  margin: 0;
+  width: 100%;
+  overflow: hidden;
+  font-size: var(--text-md);
+  color: var(--color-amber);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .testButton {
   flex-shrink: 0;
   padding: var(--space-8) var(--space-16);

@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import type { PageOf } from '../../api/client';
@@ -6,12 +6,15 @@ import type { SessionUser } from '../../api/session';
 import {
   FIRING_OUTCOME_LABEL,
   TRIGGER_TYPE_LABEL,
+  cannotReceive,
+  fetchSlackBotUsers,
   fetchTriggerFirings,
   fetchWorkspaceTriggerFirings,
   fetchWorkspaceTriggers,
+  listensForMessages,
   setTriggerEnabled,
 } from '../../api/triggers';
-import type { Trigger, TriggerFiring } from '../../api/triggers';
+import type { SlackBotUser, Trigger, TriggerFiring } from '../../api/triggers';
 import refreshIcon from '../../assets/refresh-cw.svg';
 import settingsIcon from '../../assets/settings-14.svg';
 import toggleOffIcon from '../../assets/toggle-off.svg';
@@ -79,6 +82,23 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
   const [history, setHistory] = useState<PageOf<TriggerFiring> | null>(null);
   const [historyPage, setHistoryPage] = useState(1);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  /**
+   * What each Slack connection's bot token can and cannot do.
+   *
+   * One answer for the whole workspace, held beside the list rather than looked
+   * up per row: `slackBotUsers` is a workspace query, so thirty rows are one
+   * question here and — because the server keeps each connection's answer for
+   * ten minutes against the token's own fingerprint — at most one `auth.test`
+   * per connection behind it, not one per row and not one per page turned.
+   */
+  const [botUsers, setBotUsers] = useState<SlackBotUser[]>([]);
+  /**
+   * Which workspace that was asked for, so paging does not ask again.
+   *
+   * A ref and not state: it decides whether to send a request and nothing is
+   * drawn from it, so setting it must not cost a render.
+   */
+  const asked = useRef('');
 
   const load = useCallback(() => {
     if (workspaceId === '') return;
@@ -97,6 +117,32 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
   }, [workspaceId, page]);
 
   useEffect(load, [load]);
+
+  /*
+   * Whether these connections can hear a message at all, asked once and only
+   * where the answer could change what is drawn.
+   *
+   * A workspace of schedules, webhooks and mentions never asks: none of those
+   * is gated on a history scope, so a call to Slack for them would be spent on
+   * a question with no bearing on any row. The moment one row does wait for a
+   * message or a reply the whole list is answered together, because the query
+   * is the workspace's rather than the connection's - which is what keeps a
+   * page of thirty from being thirty of anything.
+   */
+  useEffect(() => {
+    if (workspaceId === '') return;
+    // Another workspace's answers are about another workspace's connections.
+    if (asked.current !== '' && asked.current !== workspaceId) {
+      asked.current = '';
+      setBotUsers([]);
+    }
+    if (asked.current === workspaceId) return;
+    if (!(triggers?.content.some(listensForMessages) ?? false)) return;
+    asked.current = workspaceId;
+    fetchSlackBotUsers(workspaceId)
+      .then(setBotUsers)
+      .catch(() => setBotUsers([]));
+  }, [workspaceId, triggers]);
 
   /*
    * The history is loaded with the page rather than on demand: it is the answer
@@ -186,7 +232,19 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
             <p className={styles.notice}>{t('No triggers yet.')}</p>
           )}
 
-          {triggers?.content.map((trigger) => (
+          {triggers?.content.map((trigger) => {
+            /*
+             * The connection saying this row can never fire, where it says so.
+             *
+             * Here rather than on the trigger's own page alone, because this is
+             * the screen the question is asked on: every column reads healthy -
+             * Enabled, a connection, an action - and the one fact that decides
+             * whether anything will ever happen was drawn nowhere. Null and
+             * false are kept apart inside `cannotReceive`; a connection Slack
+             * said nothing about is not marked.
+             */
+            const silent = cannotReceive(trigger, botUsers);
+            return (
             <Fragment key={trigger.id}>
             <div className={styles.row}>
               <Link
@@ -198,10 +256,22 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
               </Link>
               <span className={`${styles.colType} ${styles.muted}`}>{TRIGGER_TYPE_LABEL[trigger.type]}</span>
               <span className={`${styles.colSource} ${styles.muted}`}>{trigger.source}</span>
-              <span
-                className={`${styles.colAction} ${trigger.type === 'SCHEDULED' ? styles.mono : styles.muted}`}
-              >
-                {trigger.event}
+              <span className={`${styles.colAction} ${styles.actionCell}`}>
+                <span className={trigger.type === 'SCHEDULED' ? styles.mono : styles.muted}>
+                  {trigger.event}
+                </span>
+                {/*
+                  Two words in the open and the sentence behind the (?): the
+                  row has one line to spare and the product already has a
+                  sentence for this, so the short form marks the row and the
+                  long one is a press away rather than a screen away.
+                */}
+                {silent !== null && (
+                  <span className={styles.cannotFire}>
+                    <span className={styles.cannotFireBadge}>{t('Will not fire')}</span>
+                    <FieldHint label={t('Will not fire')}>{silent.message}</FieldHint>
+                  </span>
+                )}
               </span>
               <button
                 type="button"
@@ -308,7 +378,8 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
               </div>
             )}
             </Fragment>
-          ))}
+            );
+          })}
 
           <CompactPagination
             page={page}

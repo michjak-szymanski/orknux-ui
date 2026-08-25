@@ -1773,6 +1773,7 @@ export const PL: Record<string, string> = {
   "Replies To": "Odpowiedzi do",
   "Every message in every channel this bot is in will be measured against this trigger.": "Każda wiadomość w każdym kanale, w którym jest ten bot, zostanie sprawdzona względem tego wyzwalacza.",
   "No Slack connections yet. A reply is matched against the bot a connection posts as, so one is added under the workspace's Integrations and chosen here afterwards.": "Jeszcze żadnych połączeń ze Slackiem. Odpowiedź dopasowuje się do bota, w którego imieniu publikuje połączenie, więc dodaje się je w Integracjach przestrzeni roboczej, a tutaj wybiera później.",
+  "Will not fire": "Nie zadziała",
 
   // --- recently opened ------------------------------------------------------------------
   "Recently opened": "Ostatnio otwarte",

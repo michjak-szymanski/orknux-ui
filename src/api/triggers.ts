@@ -345,6 +345,66 @@ export async function fetchSlackBotUsers(workspaceId: string): Promise<SlackBotU
   return data.slackBotUsers;
 }
 
+/**
+ * The events Slack only delivers to a token carrying a history scope.
+ *
+ * Two, and not "anything on a connection". A mention arrives as `app_mention`
+ * and needs none of these, so a trigger waiting for one is perfectly healthy on
+ * a token with no history scope at all — warning about it would send somebody
+ * to widen a credential that is exactly right for what it is doing.
+ */
+const NEEDS_HISTORY: TriggerAction[] = ['MESSAGE', 'REPLY'];
+
+/**
+ * As much of a trigger as the question needs.
+ *
+ * Written as the three fields rather than as `Trigger` so that a half-filled
+ * form can ask it about what is in its boxes right now, which is where somebody
+ * is when the answer is still worth having.
+ */
+export interface IncomingEvent {
+  type: TriggerType;
+  action: TriggerAction | null;
+  connectionId: string | null;
+}
+
+/**
+ * The connection's own answer where it says this trigger can never fire, and
+ * null everywhere else.
+ *
+ * **`receives === false`, never `!receives`.** Null is Slack having said
+ * nothing about scopes at all — a response that carried no scope header has
+ * reported no absence — and a warning drawn on it sends somebody to fix a token
+ * that is fine. The field's comment on both sides says so; this is the line
+ * that honours it.
+ *
+ * **The sentence comes back with it** rather than being written again here.
+ * `SlackBotUser.message` already holds one, it is the one the Replies To rows
+ * have always drawn, and a second wording is a wording that drifts from the
+ * first the next time either is edited.
+ */
+export function cannotReceive(trigger: IncomingEvent, bots: SlackBotUser[]): SlackBotUser | null {
+  if (!listensForMessages(trigger)) return null;
+  const bot = bots.find((held) => held.connectionId === trigger.connectionId);
+  return bot !== undefined && bot.receives === false ? bot : null;
+}
+
+/**
+ * Whether this trigger waits for one of the events a history scope gates.
+ *
+ * Asked before the answer is there, by a list deciding whether the question is
+ * worth a round trip at all: a page of schedules, webhooks and mentions has
+ * nothing to learn from `slackBotUsers` and should not spend a call on it.
+ */
+export function listensForMessages(trigger: IncomingEvent): boolean {
+  return (
+    trigger.type === 'INCOMING_CONNECTION' &&
+    trigger.connectionId !== null &&
+    trigger.action !== null &&
+    NEEDS_HISTORY.includes(trigger.action)
+  );
+}
+
 export const TRIGGER_ACTION_LABEL: Record<TriggerAction, string> = {
   MENTION: 'Mention',
   REPLY: 'Reply',
