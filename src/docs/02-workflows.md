@@ -430,6 +430,25 @@ saving; see **Draft and published**, below. **Variables are deliberately not
 versioned.** Their values are encrypted, and keeping old ones would mean keeping
 old secrets.
 
+## Trying a function before a workflow uses it
+
+A function's editor has a **run** mark in its corner. It opens a window with a
+field per parameter, each offered as the type that parameter has — a number
+field for a number, and a JSON box only for the shapes that have no spelling as
+a plain word.
+
+What runs is **what is stored**, not what is in the column: the same sandbox an
+action node would use, the same imports and libraries, and the workspace's
+variables it is granted resolved the same way. So save first to try a change, and
+the window says so when the column has moved on.
+
+The variables it is granted are fields too, each left blank meaning the
+workspace's own value. Fill one in and the run is given that instead — which is
+how you test a signature check against a secret nobody may read back, or on a
+workspace where the variable has not been set yet. Nothing that runs on its own
+can pass one, and the workspace's audit names the ones that were given by hand,
+so a run that behaved differently from the real one is never mistaken for it.
+
 ## Leaving with something unsaved
 
 The function, tool, object and skill editors hold work the server has not been

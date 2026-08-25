@@ -192,7 +192,10 @@ something deleted is not listed at all.
 ![Preferences: what belongs to you rather than to any workspace](/screens/preferences.png)
 
 Preferences belong to the person signed in rather than to any workspace —
-the theme among them — so they follow you into every workspace you can see.
+the theme and the **language** among them — so they follow you into every
+workspace you can see. The interface is in English and in Polish; what the
+server refuses is said in the same language, because a form that asks in one
+and refuses in another is worse than one that asks in English throughout.
 
 Every keystroke this application listens for is set here too: **Quick
 Actions**, **Save**, **Format**, **Turn Node**, **Add Node**, **Undo**,

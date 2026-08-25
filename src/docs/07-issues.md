@@ -417,6 +417,20 @@ front of the person who should see it without assigning them the work. Naming
 nobody puts the installation's administrators on instead, which is the answer to
 the empty room above: a report nobody was told about is a report nobody read.
 
+## Handing it to an agent
+
+An issue assigned to an **agent** offers **Start by AI**. It hands that agent the
+whole issue — the title, the kind, the labels, the description and the thread —
+moves the issue to In progress, and says so in the thread under the agent's own
+name, with a link to the task so you can watch it work. See *Tasks* under Models
+and agents for what a task is and when it stops.
+
+Pressing it twice is safe: an issue with a task already working on it refuses a
+second, and the page draws what is running instead of the button. A closed issue
+is not started at all. When the task ends, nothing moves the issue back — the
+status is yours, and the issue's room is told what became of the task so you can
+put it where you want it.
+
 ## Who can do what
 
 Anyone who can see the workspace can read its issues, file one, comment, assign,

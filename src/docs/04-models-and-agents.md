@@ -348,6 +348,42 @@ recorded in the audit log.
 An agent that starts a workflow which asks an agent is a loop nothing here
 breaks, so grant it where that is not a risk.
 
+## Tasks
+
+A **task** is an agent given a problem and left to work at it until it says it is
+done. A workflow is a graph somebody drew, and every step of it was decided in
+advance; a task is the other bargain — you say what you want, the agent decides
+what to do, and what you get is the working.
+
+Start one from the **Tasks** section, or from an issue with **Start by AI**. Its
+page fills in as the model works: what it is thinking, what it called, what came
+back. You do not have to reload it — the log is followed as it is written, and
+the block being written is the one that is open. Tool calls arrive folded, so a
+long run reads as a list of what was done rather than as a wall.
+
+A task ends in one of four ways. It says it is **done**, and its summary is the
+last thing it writes. It **stops to ask** — a question, or permission for a
+capability — and waits for you rather than guessing; answer it and it carries on
+with exactly what you said. It runs out of **turns**. Or it runs out of **working
+time**.
+
+Those last two are the ceilings, and they bound different things. A turn is one
+round of the agent's own tool loop: it is asked, it may call its tools, and it
+answers. Working time is the sum of those turns — a task parked for two days
+waiting for you has spent none of it. **Turns Per Task** is on the workspace's
+settings page under Agents; left empty it means the installation's own number.
+Both are copied onto a task when it starts, so raising one gives the next task
+more and leaves the ones already running as they were.
+
+Starting a task from an issue hands the agent the issue as a person would read
+it: the number, the title and the kind, the labels, the description whole, and
+the thread oldest-first with who said what. A long thread is cut from the front
+and the prompt says how many were left out, because a decision is reached at the
+end of an argument rather than at the start. The issue is picked up, and the
+agent says so in the thread under its own name with a link to the task. Nothing
+puts the issue back afterwards: the status is your statement about your own
+tracker, not the machine's.
+
 ## Letting an agent run commands on a machine
 
 An agent's settings carry a second switch of that kind: **Shells**. An agent
