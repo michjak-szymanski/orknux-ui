@@ -391,13 +391,13 @@ const IN_THE_OPEN = [
 
   // ---- A reading of what a form is looking at ----------------------------
   {
-    file: 'src/components/ActionDialog.tsx',
+    file: 'src/components/ActionForm.tsx',
     says: 'Created with this action, taking nothing and returning a map.',
     because: 'status',
     why: 'what saving is about to create, once somebody has chosen to create it',
   },
   {
-    file: 'src/components/ActionDialog.tsx',
+    file: 'src/components/ActionForm.tsx',
     says: 'This function takes no arguments.',
     because: 'status',
     why: 'a reading of the function just chosen',
@@ -462,7 +462,7 @@ const IN_THE_OPEN = [
 
   // ---- Part of what the thing is called ----------------------------------
   {
-    file: 'src/components/ActionDialog.tsx',
+    file: 'src/components/ActionForm.tsx',
     says: 'How long to wait, in seconds',
     because: 'label',
     why: 'the unit. A number box says nothing about what its number counts, and behind a hover somebody types 30 meaning minutes. Pinned as staying by scripts/dialog-hint-check.mjs',

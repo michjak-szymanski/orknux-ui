@@ -41,9 +41,14 @@
   color: var(--color-text-secondary);
 }
 
+/* A link now, so the same box has to say it is one: centred contents and no
+   underline, exactly as the conditions list spells its own. */
 .createAction {
+  display: flex;
   flex-shrink: 0;
+  align-items: center;
   padding: var(--space-8) var(--space-14);
+  text-decoration: none;
   background: var(--color-accent-brand);
   border: 0;
   border-radius: var(--radius-6);
@@ -182,7 +187,6 @@
 }
 
 /* The name opens the row, so it reads as something to click. */
-.nameButton,
 .nameLink {
   padding: 0;
   background: none;
@@ -193,7 +197,6 @@
   cursor: pointer;
 }
 
-.nameButton:hover,
 .nameLink:hover {
   color: #c084fc;
 }

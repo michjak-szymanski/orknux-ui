@@ -335,3 +335,92 @@ select.input {
   align-items: center;
   gap: var(--space-6);
 }
+
+/*
+ * What the action form needs on top of the fields every settings page uses.
+ *
+ * The same form is shown in the workflow editor's node panel, where these names
+ * are `Dialog.module.css`'s — so it paints itself with names handed in rather
+ * than with a stylesheet of its own, and these are this page's answers to the
+ * few it asks for that were not here already: a block that is rows rather than
+ * one field, and the parameters the server reads off the settings.
+ */
+.paramHeading {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.paramList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0 0 0 var(--space-8);
+  list-style: none;
+}
+
+.paramRow {
+  position: relative;
+  padding-left: var(--space-12);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.paramRow::before {
+  position: absolute;
+  top: 8px;
+  left: 0;
+  width: 4px;
+  height: 4px;
+  background: var(--color-text-muted);
+  border-radius: 50%;
+  content: '';
+}
+
+.mappingList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+.mappingRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+/* The argument being mapped, in the width the design gives it. */
+.mappingArgument {
+  flex-shrink: 0;
+  width: 64px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.mappingRow .inputWrapper {
+  flex: 1 0 0;
+  min-width: 0;
+}
+
+/* The sentence under a page title saying what the thing on it is for. */
+.subtitle {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+/* Keep and Delete side by side, while a deletion is waiting for its second click. */
+.dangerButtons {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-8);
+}

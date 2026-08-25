@@ -20,6 +20,7 @@ import { WorkspaceIssuePage } from './pages/workspace/WorkspaceIssuePage';
 import { WorkspaceIssuesPage } from './pages/workspace/WorkspaceIssuesPage';
 import { AdminUsersPage } from './pages/admin/AdminUsersPage';
 import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
+import { ActionSettingsPage } from './pages/workspace/ActionSettingsPage';
 import { WorkspaceSettingsPage as AdminWorkspaceSettingsPage } from './pages/workspace-settings/WorkspaceSettingsPage';
 import { AgentSettingsPage } from './pages/workspace/AgentSettingsPage';
 import { AgentsPage } from './pages/workspace/AgentsPage';
@@ -104,7 +105,9 @@ export const PAGE_ELEMENTS: Record<PagePath, PageElement> = {
   '/workspace/:workspaceId/audit': (session, onSignOut) => <WorkspaceAuditPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/settings': (session, onSignOut) => <WorkspaceSettingsPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/executions/:executionId': (session, onSignOut) => <ExecutionDetailPage session={session} onSignOut={onSignOut} />,
-  '/workspace/:workspaceId/actions/:actionId': (session, onSignOut) => <WorkspaceActionsPage session={session} onSignOut={onSignOut} />,
+  /* Before the one with an id in it: `new` is a page, not an action called new. */
+  '/workspace/:workspaceId/actions/new': (session, onSignOut) => <ActionSettingsPage session={session} onSignOut={onSignOut} />,
+  '/workspace/:workspaceId/actions/:actionId': (session, onSignOut) => <ActionSettingsPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/functions/new': (session, onSignOut) => <FunctionEditorPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/functions/:functionId/settings': (session, onSignOut) => <FunctionSettingsPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/functions/:functionId': (session, onSignOut) => <FunctionEditorPage session={session} onSignOut={onSignOut} />,
