@@ -163,6 +163,16 @@ export function TestRunDialog({
           <p className={styles.dialogMessage}>{t('Save this function first — a run is of what is stored.')}</p>
         ) : (
           <>
+            {/*
+              A function that takes nothing says so.
+              
+              The window is a column of fields, and with no parameters to draw
+              it was a heading, a gap and two buttons - which reads as something
+              that failed to load rather than as a function that needs nothing.
+            */}
+            {params.length === 0 && (
+              <p className={styles.dialogMessage}>{t('This function takes no parameters.')}</p>
+            )}
             <div className={styles.fields}>
               {params.map((param) => (
                 <div key={param.name} className={styles.field}>

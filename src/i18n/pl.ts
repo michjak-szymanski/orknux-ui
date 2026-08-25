@@ -15,6 +15,7 @@
  * of English on an otherwise Polish screen.
  */
 export const PL: Record<string, string> = {
+  "This function takes no parameters.": "Ta funkcja nie przyjmuje parametrów.",
   'Nothing imports it.': 'Nic tego nie importuje.',
   'Imported by': 'Importowane przez',
   'Fetched once from': 'Pobrane raz z',
