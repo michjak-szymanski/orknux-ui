@@ -1285,6 +1285,34 @@ export const TESTS = [
     needs: ['workspace'],
   },
   {
+    name: 'remove-comment-check',
+    what: 'a comment comes off a thread, without the question quoting it back or the history losing it',
+    needs: ['workspace'],
+    /*
+     * Issue #276. Three of its assertions could not be made anywhere but in a
+     * browser, and the server suite already covers everything else.
+     *
+     * The dialog must not repeat what the comment said. That is a product
+     * decision invisible to any test of the mutation, and it is the one most
+     * likely to be undone by somebody making the question "clearer": the reason
+     * a comment is usually being removed is that those exact words should not be
+     * in front of anybody.
+     *
+     * The history entry must read as a removal. `said()` falls through to
+     * "commented" for a kind nobody wrote a sentence for, so an unhandled event
+     * renders as the opposite of what happened, perfectly, with no error
+     * anywhere. It is counted rather than matched - one comment is left, so one
+     * "commented" line - because the fallthrough produces a second one.
+     *
+     * And the words are asked for again over GraphQL after the fact, as the
+     * whole issue, so a tombstone the interface merely hides fails here while
+     * passing everything about the thread.
+     *
+     * Files and deletes an issue of its own, and sweeps what an earlier killed
+     * run left behind.
+     */
+  },
+  {
     name: 'new-issue-blank-check',
     what: 'a new issue starts empty however it was reached, and a run of them still keeps its labels',
     needs: ['workspace'],
