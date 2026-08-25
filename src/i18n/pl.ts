@@ -15,6 +15,8 @@
  * of English on an otherwise Polish screen.
  */
 export const PL: Record<string, string> = {
+  'Nothing imports it.': 'Nic tego nie importuje.',
+  'Imported by': 'Importowane przez',
   'Fetched once from': 'Pobrane raz z',
   'Registry': 'Repozytorium',
   'Remove library': 'Usuń bibliotekę',

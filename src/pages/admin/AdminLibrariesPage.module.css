@@ -335,3 +335,10 @@
 .noticeError {
   color: var(--color-danger);
 }
+
+/* What imports a library, inside the dialog that is about to remove it. */
+.confirmUses {
+  margin: var(--space-8) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}

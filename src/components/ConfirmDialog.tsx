@@ -12,6 +12,15 @@ export interface ConfirmDialogProps {
   /** What is being acted on, named, or null when the dialog is closed. */
   subject: string | null;
   kind: ConfirmKind;
+  /**
+   * What the caller knows and the copy above cannot: the rows this is about to
+   * disturb, named.
+   *
+   * The general sentence says a function that imports this stops working; the
+   * page asking already holds the list of which ones. Drawn under the message
+   * rather than inside it, so the warning stays one shape whatever is passed.
+   */
+  detail?: ReactNode;
   onClose: () => void;
   onConfirm: () => Promise<void>;
 }
@@ -27,7 +36,7 @@ export interface ConfirmDialogProps {
  * doing one job is the drift this codebase keeps paying for, so it is one, and
  * what it confirms against is a `subject`.
  */
-export function ConfirmDialog({ subject, kind, onClose, onConfirm }: ConfirmDialogProps) {
+export function ConfirmDialog({ subject, kind, detail, onClose, onConfirm }: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,7 +132,10 @@ export function ConfirmDialog({ subject, kind, onClose, onConfirm }: ConfirmDial
           <span className={kind === 'remove' || kind === 'deleteChat' ? styles.warningBadge : styles.warningBadgeAmber}>
             <img src={kind === 'remove' || kind === 'deleteChat' ? trash2Icon : alertTriangleIcon} alt="" width={18} height={18} />
           </span>
-          <p className={styles.warningMessage}>{message}</p>
+          <div className={styles.warningMessage}>
+            <p className={styles.warningLine}>{message}</p>
+            {detail}
+          </div>
         </div>
 
         {error !== null && (

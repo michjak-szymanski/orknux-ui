@@ -399,9 +399,34 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
         ))}
       </section>
 
+      {/*
+        The dialog names what imports it, rather than warning in general.
+        
+        The page is already holding that list - it draws it under every row -
+        and the copy above says only that "a function or tool that imports it
+        stops working". Which ones is the question somebody is about to answer
+        by pressing Remove, and the server refuses on exactly this set, so
+        saying it here is saying what will happen rather than guessing at it.
+      */}
       <ConfirmDialog
         subject={libraries?.find((library) => library.id === confirming)?.key ?? null}
         kind="removeLibrary"
+        detail={(() => {
+          const library = libraries?.find((held) => held.id === confirming);
+          if (library === undefined) return undefined;
+          return (
+            <p className={styles.confirmUses}>
+              {library.usedBy.length === 0 ? (
+                t('Nothing imports it.')
+              ) : (
+                <>
+                  {t('Imported by')}{' '}
+                  <DependantLinks entries={library.usedBy} hidden={0} showWorkspace none="" />
+                </>
+              )}
+            </p>
+          );
+        })()}
         onClose={() => setConfirming(null)}
         onConfirm={async () => {
           const library = libraries?.find((held) => held.id === confirming);
