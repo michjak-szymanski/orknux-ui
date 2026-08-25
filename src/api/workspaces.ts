@@ -68,6 +68,14 @@ export interface Workspace {
    */
   defaultMemoryShare: number | null;
   /**
+   * How many times a task started here may ask its model before it is stopped.
+   *
+   * Null means the workspace has decided nothing and the installation's own
+   * number is used. Read when a task is created and copied onto it, so this
+   * decides what the next task gets.
+   */
+  taskMaxTurns: number | null;
+  /**
    * How long a pause has to run, after somebody has been talking, before voice
    * mode decides they have finished and sends what it heard.
    *
@@ -107,7 +115,7 @@ export interface Workspace {
 const WORKSPACE_FIELDS =
   'id name description roles { id name } adminRoles { id name } administered ' +
   'companionModelId transcriptionModelId speechModelId imageModelId quickChatModelId quickChatMayWrite ' +
-  'defaultMemoryShare voicePauseEndsTurnMs voiceSpeechOverRoomPercent voiceUnattendedMicrophoneMs ' +
+  'defaultMemoryShare taskMaxTurns voicePauseEndsTurnMs voiceSpeechOverRoomPercent voiceUnattendedMicrophoneMs ' +
   'voiceSpeechChunking';
 
 /** Just enough of a role to name it where a workspace lists what opens it. */
@@ -230,6 +238,20 @@ export async function setWorkspaceDefaultMemoryShare(
     { workspaceId, share },
   );
   return data.setWorkspaceDefaultMemoryShare;
+}
+
+/** Null clears it, which puts the workspace back on the installation's number. */
+export async function setWorkspaceTaskMaxTurns(
+  workspaceId: string,
+  turns: number | null,
+): Promise<Workspace> {
+  const data = await graphql<{ setWorkspaceTaskMaxTurns: Workspace }>(
+    `mutation SetWorkspaceTaskMaxTurns($workspaceId: ID!, $turns: Int) {
+       setWorkspaceTaskMaxTurns(workspaceId: $workspaceId, turns: $turns) { ${WORKSPACE_FIELDS} }
+     }`,
+    { workspaceId, turns },
+  );
+  return data.setWorkspaceTaskMaxTurns;
 }
 
 /**

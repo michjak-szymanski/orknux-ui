@@ -40,22 +40,12 @@ export interface InstallationSettings {
   revisionRetentionDays: number;
   /** What a fresh installation would keep: ORKNUX_REVISION_RETENTION_DAYS. */
   revisionRetentionDaysConfigured: number;
-  /**
-   * How many times a task may ask its model before it is stopped.
-   *
-   * Copied onto a task when it is created, so changing it decides what the
-   * next task is given and leaves the ones already running as they are.
-   */
-  taskMaxTurns: number;
-  /** What a fresh installation would allow: ORKNUX_TASK_MAX_TURNS. */
-  taskMaxTurnsConfigured: number;
 }
 
 const FIELDS =
   'attachmentsEnabled attachmentsConfigurable attachmentStorage attachmentLocation attachmentMaxFileSizeMb ' +
   'chatEnabled chatConfigurable metricsAnonymous metricsAnonymousConfigured ' +
-  'revisionRetentionDays revisionRetentionDaysConfigured ' +
-  'taskMaxTurns taskMaxTurnsConfigured';
+  'revisionRetentionDays revisionRetentionDaysConfigured';
 
 export async function fetchInstallationSettings(): Promise<InstallationSettings> {
   const data = await graphql<{ installationSettings: InstallationSettings }>(
@@ -114,14 +104,4 @@ export async function setRevisionRetentionDays(days: number): Promise<Installati
     { days },
   );
   return data.setRevisionRetentionDays;
-}
-
-export async function setTaskMaxTurns(turns: number): Promise<InstallationSettings> {
-  const data = await graphql<{ setTaskMaxTurns: InstallationSettings }>(
-    `mutation SetTaskMaxTurns($turns: Int!) {
-       setTaskMaxTurns(turns: $turns) { ${FIELDS} }
-     }`,
-    { turns },
-  );
-  return data.setTaskMaxTurns;
 }

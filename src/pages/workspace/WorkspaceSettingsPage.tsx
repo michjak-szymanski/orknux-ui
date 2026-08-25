@@ -15,6 +15,7 @@ import {
   setWorkspaceCompanionModel,
   setWorkspaceImageModel,
   setWorkspaceDefaultMemoryShare,
+  setWorkspaceTaskMaxTurns,
   setWorkspaceQuickChatModel,
   setWorkspaceQuickChatWrites,
   setWorkspaceSpeechModel,
@@ -247,6 +248,16 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
    * rather than in whichever card the last select was in.
    */
   const [share, setShare] = useState<number | null>(null);
+  /**
+   * How many turns a task started here may take, as typed.
+   *
+   * Text rather than a number, so the box can be emptied - and empty is a real
+   * answer here: it means the workspace has decided nothing and the
+   * installation's own number is used.
+   */
+  const [turns, setTurns] = useState('');
+  /** What the server said about a number it would not take. */
+  const [turnsError, setTurnsError] = useState<string | null>(null);
   /** Whether that share may be saved at all, which is the bounds and nothing else. */
   const [verdict, setVerdict] = useState<SessionMemoryBudget | null>(null);
   /** Which model the figures are figures for; '' is none, and shows none. */
@@ -294,6 +305,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         setName(found?.name ?? '');
         setDescription(found?.description ?? '');
         setShare(found?.defaultMemoryShare ?? null);
+        setTurns(found?.taskMaxTurns === null || found?.taskMaxTurns === undefined ? '' : String(found.taskMaxTurns));
         setPause(inBox(found?.voicePauseEndsTurnMs ?? null, A_SECOND));
         setOverRoom(inBox(found?.voiceSpeechOverRoomPercent ?? null, AS_IS));
         setUnattended(inBox(found?.voiceUnattendedMicrophoneMs ?? null, A_MINUTE));
@@ -425,6 +437,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       const updated = await setWorkspaceDefaultMemoryShare(workspaceId, share);
       setWorkspace(updated);
       setShare(updated.defaultMemoryShare);
+      setTurns(updated.taskMaxTurns === null ? '' : String(updated.taskMaxTurns));
       setMemorySaved(true);
     } catch (cause) {
       setMemoryError(cause instanceof Error ? cause.message : t('Could not save that.'));
@@ -964,6 +977,63 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         {memoryError !== null && (
           <p className={styles.error} role="alert">
             {memoryError}
+          </p>
+        )}
+
+        {/*
+          What a task here may spend, beside what an agent here remembers.
+
+          On the workspace and not the installation because it is a judgement
+          about the work this workspace does: one running overnight research and
+          one answering questions in a chat have no reason to agree on it. Its
+          own field rather than part of the save above, so a number typed here
+          is not held hostage by a share the card is refusing.
+        */}
+        <div className={styles.field}>
+          <span className={styles.labelWithHint}>
+            <label className={styles.label} htmlFor="workspace-task-turns">
+              {t('Turns A Task May Take')}
+            </label>
+            <FieldHint label={t('Turns A Task May Take')}>
+              {t('One turn is one round of the agent’s own tool loop: it is asked, it may call its tools, and it answers. A task that has used them all is stopped and says so, which is the signal that it is going round in circles rather than working. Left empty, the workspace has decided nothing and the installation’s own number is used, which is where every workspace starts. It is read when a task is created and copied onto it, so raising it gives the next task more and leaves the ones already running as they were. It is not the only ceiling — a task is also stopped once its working time is spent, which is what bounds a turn sitting on a slow tool.')}
+            </FieldHint>
+          </span>
+
+          <div className={styles.shareRow}>
+            <input
+              id="workspace-task-turns"
+              className={styles.input}
+              type="number"
+              min={1}
+              max={200}
+              placeholder={t('the installation’s own')}
+              value={turns}
+              onChange={(event) => setTurns(event.target.value)}
+            />
+            <button
+              type="button"
+              className={styles.save}
+              onClick={() =>
+                void setWorkspaceTaskMaxTurns(workspaceId, turns.trim() === '' ? null : Number(turns))
+                  .then((updated) => {
+                    setWorkspace(updated);
+                    setTurns(updated.taskMaxTurns === null ? '' : String(updated.taskMaxTurns));
+                    setTurnsError(null);
+                  })
+                  .catch((cause: unknown) => {
+                    setTurnsError(cause instanceof Error ? cause.message : t('It could not be saved.'));
+                  })
+              }
+              disabled={workspace === null}
+            >
+              {t('Save')}
+            </button>
+          </div>
+        </div>
+
+        {turnsError !== null && (
+          <p className={styles.error} role="alert">
+            {turnsError}
           </p>
         )}
 
