@@ -213,12 +213,6 @@ const IN_THE_OPEN = [
     why: 'the issue was filed and the form has been cleared for another',
   },
   {
-    file: 'src/pages/chat/ChatPage.tsx',
-    says: 'Everything above was carried over from the session',
-    because: 'status',
-    why: 'where the lines above this one came from, in this conversation',
-  },
-  {
     file: 'src/pages/workspace/ExecutionDetailPage.tsx',
     says: 'Carried over from the earlier run',
     because: 'status',

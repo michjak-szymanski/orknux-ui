@@ -188,16 +188,6 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
   return (
     <AppShell
       user={shellUser(session)}
-      /*
-        The tab is named after the task, the way every other page about one
-        particular thing names itself. Without it the shell walks up to the
-        section and every task open at once reads "Tasks" — which is exactly
-        the tab strip this mechanism exists to prevent. A task's title is the
-        first line of its prompt where nobody gave it one, so it is already the
-        short name a tab wants. Undefined until it arrives, which falls back to
-        the section rather than drawing a gap.
-      */
-      title={task?.title}
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
