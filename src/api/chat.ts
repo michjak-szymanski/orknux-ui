@@ -24,6 +24,33 @@ export interface ChatSession {
   agentName: string | null;
   /** The LLM session this chat is continuing, or null for one continuing none. */
   llmSessionId: string | null;
+  /**
+   * What this whole chat has read and written, kept on the server and added to
+   * as each turn lands.
+   *
+   * Not the last answer's, which is `ChatSpend` and is gone the moment the page
+   * is left. This survives, which is the point of it: somebody coming back to a
+   * conversation a week later can still see what it has cost them.
+   *
+   * Every round of every turn, an agent's lookups included, and a regenerated
+   * answer counts on top of the one it replaced - both were paid for. Tokens
+   * rather than money because prices belong to the model and models are
+   * repriced; the per-answer line keeps the money, where the model that
+   * answered and its prices are both in front of you.
+   *
+   * Zero means nothing was recorded rather than that nothing was spent, and the
+   * screen draws nothing for it.
+   */
+  spentInputTokens: number;
+  spentOutputTokens: number;
+  /**
+   * How many pictures were drawn in this chat.
+   *
+   * Counted rather than costed in tokens: an image model charges per picture
+   * and reports no counts at all, so a drawing folded into the totals above
+   * would add nothing and read as free.
+   */
+  spentPictures: number;
 }
 
 /**
@@ -148,7 +175,8 @@ export interface ChatPicture {
 }
 
 const SESSION_FIELDS =
-  'id workspaceId title pinned modelId modelName createdAt lastMessageAt agentId agentName llmSessionId';
+  'id workspaceId title pinned modelId modelName createdAt lastMessageAt agentId agentName llmSessionId ' +
+  'spentInputTokens spentOutputTokens spentPictures';
 
 export async function fetchChatSessions(workspaceId: string): Promise<ChatSession[]> {
   const data = await graphql<{ chatSessions: ChatSession[] }>(

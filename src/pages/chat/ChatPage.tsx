@@ -75,7 +75,7 @@ import { useLastWorkspaceId } from '../../session/lastWorkspace';
 import { FieldHint } from '../../components/FieldHint';
 import { OpenDefinitionIcon } from '../../components/OpenDefinitionIcon';
 import styles from './ChatPage.module.css';
-import { t } from '../../i18n';
+import { t, tf } from '../../i18n';
 
 export interface ChatPageProps {
   session: SessionUser;
@@ -1684,22 +1684,49 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
       : null;
 
   /*
-   * What the last answer cost, under the corner of the composer.
+   * What this chat has spent altogether, under the corner of the composer.
    *
-   * It used to ride on the disclosure beside "Thought for 9 seconds", where a
-   * bare number next to a duration is a second unlabelled figure on a control
-   * that is about something else. Down here it is one thing saying one thing,
-   * out of the way of the conversation and next to the box the next question is
-   * typed into - which is where somebody wondering what this is costing them is
-   * already looking.
+   * The whole conversation and not the last answer, which is the difference
+   * that makes it worth drawing. It used to be `lastSpend`, which came off the
+   * stream's last frame and was held here in the browser - so a chat said what
+   * its newest answer cost and, the moment the page reloaded, nothing at all.
+   * This comes off the chat row, is added to as each turn lands, and is still
+   * there a week later.
    *
-   * The same three silences as before: the switch off, a provider that reported
-   * no counts, and an answer read back out of the history.
+   * Nothing is added up here. The server keeps the total and the sidebar is
+   * re-read at the end of every turn, so the number on screen is the number in
+   * the database rather than a second tally kept beside it - which is the tally
+   * that would start again from nought on a reload, in a second tab, or on
+   * another machine.
+   *
+   * Silent on nought, and nought covers every case where the truth is "not
+   * recorded": a chat nobody has spoken in, a provider that reported no counts,
+   * and a chat older than the column. Same rule as the per-answer line, and for
+   * the same reason - a conversation that says it cost nothing is worse than
+   * one that says nothing.
    */
+  const spentTokens = (current?.spentInputTokens ?? 0) + (current?.spentOutputTokens ?? 0);
+  const spentPictures = current?.spentPictures ?? 0;
+  /*
+   * Pictures are said beside the tokens, never folded into them.
+   *
+   * An image model charges per picture and reports no counts at all. Counted
+   * the ordinary way a drawing adds nought, which would leave a chat that spent
+   * real money on pictures reading as a chat that spent nothing.
+   */
+  const spentPart = spentTokens > 0 ? `${tokenCount(spentTokens)} ${t('tokens')}` : null;
+  const drawnPart =
+    spentPictures === 0
+      ? null
+      : spentPictures === 1
+        ? t('1 picture')
+        : tf('{count} pictures', { count: tokenCount(spentPictures) });
   const spent =
-    session.chatCostShown === true && lastSpend !== null && spendKnown(lastSpend) && !drawn
-      ? tokenCount(lastSpend.inputTokens + lastSpend.outputTokens)
-      : null;
+    session.chatCostShown !== true
+      ? null
+      : spentPart !== null && drawnPart !== null
+        ? tf('{tokens} and {pictures}', { tokens: spentPart, pictures: drawnPart })
+        : (spentPart ?? drawnPart);
 
   return (
     <AppShell
@@ -2158,7 +2185,14 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                             {lastSpend.cost === null
                               ? t('This model carries no prices, so there is nothing to cost that at.')
                               : `At the prices recorded for it that is ${costAmount(lastSpend.cost)}.`}{' '}
-                            None of it is kept: the history holds what was said, not what it cost.
+                            {/*
+                              This used to say none of it was kept, which was
+                              true of every one of these numbers until the chat
+                              began keeping a total. The breakdown still is not
+                              kept - it belongs to a turn, and a turn is over -
+                              and the line under the box below is.
+                            */}
+                            Only the chat's total is kept, on the line below.
                           </>
                         )}
                       </p>
@@ -2426,8 +2460,8 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
           )}
 
           {spent !== null && (
-            <p className={styles.spent} title={t('What the last answer read and wrote')}>
-              {spent} {t('tokens')}
+            <p className={styles.spent} title={t('What this chat has read and written, all of it')}>
+              {spent}
             </p>
           )}
           <form className={styles.composer} onSubmit={handleSend}>
