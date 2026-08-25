@@ -1,4 +1,5 @@
 import { graphql } from './client';
+import { payloadOf, readEventStream } from './sse';
 
 /**
  * One conversation.
@@ -207,9 +208,6 @@ export async function sendChatMessage(id: string, text: string): Promise<ChatAns
   return data.sendChatMessage;
 }
 
-/** An SSE frame ends with a blank line. */
-const BLANK_LINE = '\n\n';
-
 /** What a streaming send reports as it goes. */
 export interface ChatStreamHandlers {
   onChunk: (text: string) => void;
@@ -223,10 +221,6 @@ export interface ChatStreamHandlers {
  * Server-sent events over a POST, so `fetch` rather than `EventSource` — which
  * only does GET, and there is a message to send. The session cookie rides along
  * as it does on every other call.
- *
- * Frames can split across reads, so the buffer is only consumed up to the last
- * complete one: an event ends with a blank line, and half of one parses as
- * nothing.
  */
 export async function streamChatMessage(
   id: string,
@@ -270,86 +264,35 @@ export async function regenerateChatAnswer(id: string, handlers: ChatStreamHandl
  * The answer coming back, frame by frame.
  *
  * Shared by both doors because they differ only in what was sent: what comes
- * back is the same three events either way, and a second copy of this loop is a
- * second place for the buffering to be got wrong.
+ * back is the same three events either way. The buffering underneath is
+ * `readEventStream`'s and is shared further still — the task page follows a
+ * running agent through the same reader, and a second copy of that loop is a
+ * second place for half a frame to be parsed as a whole one.
  */
 async function read(response: Response, handlers: ChatStreamHandlers): Promise<void> {
-  if (!response.ok || response.body === null) {
-    const body = await response.text().catch(() => '');
-    const said = refusal(body);
-    throw new Error(said ?? (body === '' ? `The server answered ${response.status}.` : body));
-  }
+  await readEventStream(response, (frame) => {
+    const payload = payloadOf<{
+      text?: string;
+      millis?: number;
+      inputTokens?: number;
+      outputTokens?: number;
+      cost?: number | null;
+      reason?: string;
+    }>(frame);
+    if (payload === null) return;
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-
-    let split = buffer.indexOf(BLANK_LINE);
-    while (split !== -1) {
-      handleFrame(buffer.slice(0, split), handlers);
-      buffer = buffer.slice(split + 2);
-      split = buffer.indexOf(BLANK_LINE);
+    if (frame.event === 'chunk' && payload.text !== undefined) handlers.onChunk(payload.text);
+    else if (frame.event === 'done') {
+      handlers.onDone({
+        millis: payload.millis ?? 0,
+        inputTokens: payload.inputTokens ?? 0,
+        outputTokens: payload.outputTokens ?? 0,
+        cost: payload.cost ?? null,
+      });
+    } else if (frame.event === 'error') {
+      handlers.onError(payload.reason ?? 'The model could not answer.');
     }
-  }
-}
-
-/**
- * The sentence out of a refusal, where there is one.
- *
- * These two endpoints are the only ones that are not GraphQL, so `ApiError` is
- * not what a refusal arrives as: it is a `ProblemDetail`, and its `detail` is
- * the line the server wrote for a person to read. Without this the chat put the
- * whole JSON object on screen.
- */
-function refusal(body: string): string | null {
-  try {
-    const held = JSON.parse(body) as { detail?: unknown };
-    return typeof held.detail === 'string' && held.detail !== '' ? held.detail : null;
-  } catch {
-    return null;
-  }
-}
-
-/** One `event:`/`data:` pair. Anything else on the wire is ignored. */
-function handleFrame(frame: string, handlers: ChatStreamHandlers): void {
-  let event = 'message';
-  let data = '';
-  for (const line of frame.split('\n')) {
-    if (line.startsWith('event:')) event = line.slice('event:'.length).trim();
-    else if (line.startsWith('data:')) data += line.slice('data:'.length).trim();
-  }
-  if (data === '') return;
-
-  let payload: {
-    text?: string;
-    millis?: number;
-    inputTokens?: number;
-    outputTokens?: number;
-    cost?: number | null;
-    reason?: string;
-  };
-  try {
-    payload = JSON.parse(data);
-  } catch {
-    return;
-  }
-
-  if (event === 'chunk' && payload.text !== undefined) handlers.onChunk(payload.text);
-  else if (event === 'done') {
-    handlers.onDone({
-      millis: payload.millis ?? 0,
-      inputTokens: payload.inputTokens ?? 0,
-      outputTokens: payload.outputTokens ?? 0,
-      cost: payload.cost ?? null,
-    });
-  } else if (event === 'error') {
-    handlers.onError(payload.reason ?? 'The model could not answer.');
-  }
+  });
 }
 
 /** 2400 -> "2 seconds", 800 -> "0.8 seconds": what the model thought for. */

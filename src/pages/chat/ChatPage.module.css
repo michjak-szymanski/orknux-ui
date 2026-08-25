@@ -567,105 +567,18 @@
 }
 
 /*
- * A call the agent made, between the turns it was made between.
+ * Where a call sits in the thread, and nothing about how one looks.
  *
- * Narrower than the log and inset, so it reads as something happening beside
- * the conversation rather than as another voice in it - and edged and chipped
- * in the cyan the session's transcript already uses for a tool, so the two
- * pages say the same thing the same way.
+ * What a call looks like is `CallLine`'s, because a task's page draws the same
+ * thing and the two had already drifted once. What is left here is the only part
+ * that is this page's business: narrower than the log and inset, so it reads as
+ * something happening beside the conversation rather than as another voice in
+ * it.
  */
 .call {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-8);
   align-self: flex-start;
   max-width: 70%;
   margin-left: 48px;
-  padding: var(--space-8) var(--space-12);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-left: 3px solid var(--color-cyan);
-  border-radius: var(--radius-8);
-}
-
-.callHead {
-  display: flex;
-  align-items: center;
-  gap: var(--space-8);
-  margin: 0;
-  min-width: 0;
-}
-
-.callBadge {
-  flex-shrink: 0;
-  padding: var(--space-2) var(--space-8);
-  background: var(--color-cyan-soft);
-  border-radius: var(--radius-4);
-  font-weight: 600;
-  font-size: var(--text-2xs);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: var(--color-cyan);
-}
-
-.callName {
-  overflow: hidden;
-  font-family: var(--font-mono);
-  font-weight: 600;
-  font-size: var(--text-sm);
-  color: var(--color-text-primary);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* A call that passed nothing still happened, and still says so. */
-.callNote {
-  margin: 0;
-  overflow: hidden;
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.callArgs {
-  margin: 0;
-  padding: var(--space-8) var(--space-12);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-6);
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  line-height: 18px;
-  color: var(--color-text-secondary);
-  overflow-x: auto;
-}
-
-/*
- * Folded rather than scrolled, the way the session's page folds one: a box with
- * its own scrollbar inside a log that scrolls swallows the wheel, and what is
- * wanted here is the shape of the conversation with the long call opened only
- * when it is the one being read.
- */
-.callFolded {
-  max-height: 140px;
-  overflow: hidden;
-  mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
-}
-
-.callFold {
-  align-self: flex-start;
-  padding: 0;
-  background: none;
-  border: 0;
-  font: inherit;
-  font-size: var(--text-sm);
-  color: var(--color-accent-brand);
-  cursor: pointer;
-}
-
-.callFold:hover {
-  text-decoration: underline;
 }
 
 /*

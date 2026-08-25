@@ -1,0 +1,124 @@
+/*
+ * A tool call, drawn the same wherever one is drawn.
+ *
+ * The layout came off the chat, which had taken it off the session's page, and
+ * the variables are the ones every card here uses - so it sits inside a chat
+ * thread and inside a task's session view without either page saying anything
+ * about it beyond how wide it may be.
+ */
+.call {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-12);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-cyan);
+  border-radius: var(--radius-8);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  margin: 0;
+  min-width: 0;
+}
+
+.badge {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-8);
+  background: var(--color-cyan-soft);
+  border-radius: var(--radius-4);
+  font-weight: 600;
+  font-size: var(--text-2xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--color-cyan);
+}
+
+.name {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * Whether it has answered yet, which on a page being watched live is the state
+ * that changes under somebody's eyes. A call is recorded before its tool runs,
+ * so this reads "running" for exactly as long as the tool takes.
+ */
+.state {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-size: var(--text-2xs);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.state[data-running='true'] {
+  color: var(--color-cyan);
+}
+
+/* A call that passed nothing still happened, and still says so. */
+.note {
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.body {
+  margin: 0;
+  padding: var(--space-8) var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 18px;
+  color: var(--color-text-secondary);
+  overflow-x: auto;
+}
+
+/* What came back, set apart from what was asked so the two do not read as one. */
+.label {
+  margin: 0;
+  font-size: var(--text-2xs);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/*
+ * Folded rather than scrolled: a box with its own scrollbar inside a page that
+ * scrolls is two ways to move one thing, and a call that returned a file would
+ * otherwise be the whole screen.
+ */
+.folded {
+  max-height: 140px;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+}
+
+.fold {
+  align-self: flex-start;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-accent-brand);
+  cursor: pointer;
+}
+
+.fold:hover {
+  text-decoration: underline;
+}

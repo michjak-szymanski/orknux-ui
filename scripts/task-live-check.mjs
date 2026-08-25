@@ -1,0 +1,231 @@
+/**
+ * A task watched while it runs, and the page keeping up with it on its own.
+ *
+ * The point of this check is the word *while*. Reading a finished task's log
+ * proves nothing about a live view - the old page did that perfectly, one
+ * refresh at a time - so what is asserted here is that lines the page did not
+ * have when it was drawn were on it afterwards, with nothing having reloaded and
+ * nothing having polled.
+ *
+ * **How it can prove that without a model.** Three things make it airtight:
+ *
+ *   1. There is no refresh control on the page any more, and this asserts that
+ *      too. If a poll comes back, this check starts lying, so it also checks
+ *      that it cannot.
+ *   2. A marker is put on `window` after the page settles. A reload would take
+ *      it away, so its survival is proof that nothing navigated.
+ *   3. The count of lines the page had drawn is read *before* the task ends and
+ *      compared with what it holds afterwards. Only the stream can have put the
+ *      difference there.
+ *
+ * And it does not need a model that answers, for the reason `task-check` gives:
+ * the prompt is written into the task's log before the model is asked, and a
+ * model that never answers is recorded as a note saying so. So the session gets
+ * lines either way - a question, a note about the model, a note about the ending
+ * - and they arrive over the stream one at a time exactly as an agent's would.
+ * The model it makes points at `.invalid`, which by definition cannot resolve,
+ * so nothing here touches a network.
+ *
+ * The second half opens the finished task in a *new* page, which is the other
+ * half of the promise: somebody arriving after the fact must get the same
+ * account without the streaming. Same lines, same order, from the same record.
+ */
+import { BASE, WORKSPACE, open, check, record, shot, finish } from './suite/harness.mjs';
+
+const stamp = Date.now();
+const PROVIDER = `zzScratchLiveProvider${stamp}`;
+const MODEL = `zzScratchLiveModel${stamp}`;
+const PROMPT = `zz Scratch Live Task ${stamp} - look at something and report back`;
+
+const { browser, context, page, graphql } = await open({ viewport: { width: 1440, height: 900 } });
+
+/*
+ * Anything an earlier run left behind. Swept at the start rather than guarded at
+ * the end, because a `finally` cannot clean up after the suite's own timeout.
+ */
+const before = await graphql(
+  `query ($workspaceId: ID!) {
+     workspaceTasks(workspaceId: $workspaceId, page: 0, size: 200) { content { id title status } }
+     modelProviders(workspaceId: $workspaceId) { id name }
+   }`,
+  { workspaceId: WORKSPACE },
+);
+for (const old of before.workspaceTasks.content.filter((row) => row.title.startsWith('zz Scratch Live Task'))) {
+  if (!['DONE', 'FAILED', 'STOPPED'].includes(old.status)) {
+    await graphql(`mutation ($id: ID!) { stopTask(id: $id) { id } }`, { id: old.id }).catch(() => undefined);
+  }
+  await graphql(`mutation ($id: ID!) { deleteTask(id: $id) }`, { id: old.id }).catch(() => undefined);
+  console.log(`swept task ${old.title} (#${old.id}) from an earlier run`);
+}
+for (const old of before.modelProviders.filter((row) => row.name.startsWith('zzScratchLiveProvider'))) {
+  await graphql(`mutation ($id: ID!) { removeModelProvider(id: $id) }`, { id: old.id }).catch(() => undefined);
+  console.log(`swept provider ${old.name} (#${old.id}) from an earlier run`);
+}
+
+// A model that cannot answer, which is all this check needs one to be.
+const provider = (
+  await graphql(`mutation ($input: CreateModelProviderInput!) { createModelProvider(input: $input) { id } }`, {
+    input: {
+      workspaceId: WORKSPACE,
+      name: PROVIDER,
+      endpoint: 'http://nowhere.invalid',
+      secret: 'sk-scratch',
+    },
+  })
+).createModelProvider;
+const model = (
+  await graphql(`mutation ($input: CreateModelInput!) { createModel(input: $input) { id } }`, {
+    input: { providerId: provider.id, name: MODEL, modelId: 'scratch', kind: 'CHAT' },
+  })
+).createModel;
+console.log(`made ${MODEL} (#${model.id}) for the task to be given`);
+
+// --- start it from the page, so the page is open while it works -------------
+
+await page.goto(`${BASE}/workspace/${WORKSPACE}/tasks`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('h1:text("Tasks")', { timeout: 20_000 });
+await page.locator('#task-prompt').fill(PROMPT);
+await page.locator('#task-worker').selectOption(`model:${model.id}`);
+await page.locator('button:text("Start")').click();
+await page.waitForURL(/\/tasks\/\d+$/, { timeout: 20_000 });
+const taskId = page.url().split('/').pop();
+console.log(`started task #${taskId} with the page already on it`);
+
+await page.waitForSelector('[data-testid="task-log"]', { timeout: 20_000 });
+
+/*
+ * The marker. Anything that navigates takes it with it, so every assertion after
+ * this one is also an assertion that the page never reloaded.
+ */
+await page.evaluate(() => {
+  window.__orknuxNeverReloaded = true;
+});
+
+// --- there is no refresh control, and that matters ---------------------------
+
+/*
+ * Asserted rather than assumed. If an AutoRefresh came back, the growth this
+ * check measures below could be a poll rather than the stream, and the check
+ * would go on passing while testing nothing - which is the failure mode the
+ * whole suite is written against.
+ */
+const refreshers = await page.locator('select[aria-label="Refresh automatically"]').count();
+check(
+  refreshers === 0,
+  'the page has no refresh control, so nothing on it can be arriving by poll',
+  'a refresh control is on the page, and anything arriving could be a poll rather than the stream',
+);
+
+// --- what it holds while it is still going -----------------------------------
+
+const lines = () => page.locator('[data-testid="task-log"] [data-kind]').count();
+const stateNow = () => page.locator('[data-testid="task-state"]').innerText();
+
+/*
+ * The reading taken while it is working. The prompt is in the log before the
+ * model is asked, so there is something here even at the first look; what
+ * matters is that it is *fewer* than there will be.
+ */
+let drawnWhileGoing = await lines();
+let stateWhileGoing = (await stateNow()).trim();
+let sawItGoing = !['Done', 'Failed', 'Stopped'].includes(stateWhileGoing);
+
+/*
+ * Keep looking until it is over, and keep the last reading taken while it was
+ * not. Reading the browser only - no reload, no navigation, no GraphQL - so the
+ * only thing that can move these numbers is the stream.
+ */
+let ended = null;
+for (let look = 0; look < 120 && ended === null; look += 1) {
+  const state = (await stateNow()).trim();
+  if (['Done', 'Failed', 'Stopped'].includes(state)) {
+    ended = state;
+    break;
+  }
+  sawItGoing = true;
+  stateWhileGoing = state;
+  drawnWhileGoing = await lines();
+  await page.waitForTimeout(250);
+}
+
+check(
+  sawItGoing,
+  `the page showed the task working before it ended: "${stateWhileGoing}"`,
+  'the task was already over by the time the page was looked at, so nothing here watched it run',
+);
+
+check(
+  ended !== null,
+  `the page reached the ending on its own: "${ended}"`,
+  'the page never showed the task ending, having neither been reloaded nor polled',
+);
+
+const drawnAtEnd = await lines();
+check(
+  drawnAtEnd > drawnWhileGoing,
+  `lines arrived on the open page while the task ran: ${drawnWhileGoing} while going, ${drawnAtEnd} at the end`,
+  `nothing arrived on the open page: it held ${drawnWhileGoing} lines while the task was going and ${drawnAtEnd} at the end`,
+);
+
+/*
+ * And none of it was a reload. This is the assertion the three above lean on:
+ * without it "the page changed" could always have been "the page was rebuilt".
+ */
+const marker = await page.evaluate(() => window.__orknuxNeverReloaded === true);
+check(
+  marker,
+  'the page never reloaded, so what appeared on it was streamed onto it',
+  'the page reloaded at some point, so nothing above says anything about streaming',
+);
+
+/*
+ * The page says so, too. A screen that promises what is on it is what is
+ * happening has to be honest about having stopped, and a finished task is the
+ * one case where "live" would be a lie for ever.
+ */
+const watching = (await page.locator('[data-testid="task-watching"]').innerText()).trim();
+check(
+  watching === 'Finished',
+  'a finished task says it is finished rather than going on claiming to be live',
+  `the page still says "${watching}" on a task that has ended`,
+);
+
+await page.screenshot({ path: shot('task-live-check.png'), fullPage: true });
+
+// --- and it reads the same after the fact ------------------------------------
+
+/*
+ * A page that never saw any of it happen. Everything the first one was handed a
+ * line at a time is in the session, so this must hold the same account - which
+ * is the whole reason the stream relays a durable log rather than carrying the
+ * work itself.
+ */
+const later = await context.newPage();
+await later.goto(`${BASE}/workspace/${WORKSPACE}/tasks/${taskId}`, { waitUntil: 'domcontentloaded' });
+await later.waitForSelector('[data-testid="task-log"]', { timeout: 20_000 });
+const drawnLater = await later.locator('[data-testid="task-log"] [data-kind]').count();
+
+check(
+  drawnLater === drawnAtEnd,
+  `a page opened after the fact shows the same ${drawnLater} lines, without having streamed any of them`,
+  `the page that watched it holds ${drawnAtEnd} lines and one opened afterwards holds ${drawnLater}`,
+);
+
+const laterHasPrompt = (await later.locator(`[data-testid="task-log"] :text("${PROMPT}")`).count()) > 0;
+record(laterHasPrompt, 'and it is the same account: what was asked is on it');
+
+const laterState = (await later.locator('[data-testid="task-state"]').innerText()).trim();
+check(
+  laterState === ended,
+  `and the same ending: "${laterState}"`,
+  `the ending reads "${laterState}" after the fact and read "${ended}" live`,
+);
+
+await later.close();
+
+// --- put it back the way it was ---------------------------------------------
+
+await graphql(`mutation ($id: ID!) { deleteTask(id: $id) }`, { id: taskId }).catch(() => undefined);
+await graphql(`mutation ($id: ID!) { removeModelProvider(id: $id) }`, { id: provider.id }).catch(() => undefined);
+
+await finish(browser);

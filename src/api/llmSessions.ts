@@ -39,6 +39,16 @@ export interface LlmSessionEvent {
   /** The agent, the tool, whoever asked. Every line names somebody. */
   actor: string;
   content: string | null;
+  /**
+   * What a call gave back, and null on every line that is not one.
+   *
+   * Null on a call too, while its tool has not answered — the call is recorded
+   * before the tool runs, so arguments with no result is a lookup that was asked
+   * for and has not come back. On a task being watched live that is a state
+   * somebody sees change; everywhere else it is how a hung tool is visible at
+   * all.
+   */
+  result: string | null;
   at: string;
 }
 
@@ -65,7 +75,7 @@ export const EVENT_KINDS: LlmSessionEventKind[] = ['USER', 'AGENT', 'TOOL', 'SYS
 
 const SESSION_FIELDS = 'id workspaceId key keyPrefix eventCount createdAt lastEventAt';
 
-const EVENT_FIELDS = 'id kind actor content at';
+const EVENT_FIELDS = 'id kind actor content result at';
 
 export async function fetchLlmSessions(
   workspaceId: string,

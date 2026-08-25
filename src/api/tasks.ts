@@ -1,4 +1,6 @@
 import { graphql } from './client';
+import type { LlmSessionEventKind } from './llmSessions';
+import { payloadOf, readEventStream } from './sse';
 
 /**
  * Where a task has got to.
@@ -272,4 +274,136 @@ export async function deleteTask(id: string): Promise<boolean> {
     { id },
   );
   return data.deleteTask;
+}
+
+/**
+ * How a task's page is watching, in the words it says out loud.
+ *
+ * Three, and the middle one is the honest one. A page that has lost the stream
+ * and is coming back must not draw itself as live, because the whole promise of
+ * this screen is that what is on it is what is happening.
+ */
+export type TaskWatchState = 'live' | 'returning' | 'ended';
+
+/** One line of a task's session, as the stream sends it. */
+export interface TaskStep {
+  id: string;
+  kind: LlmSessionEventKind;
+  actor: string;
+  content: string | null;
+  /** What a call gave back. Null while its tool has not answered. */
+  result: string | null;
+  at: string;
+}
+
+export interface TaskWatchHandlers {
+  /**
+   * A line arrived, or one already drawn was filled in.
+   *
+   * The same id can arrive twice on purpose: a call is sent the moment it is
+   * made, with nothing back from it, and again when its tool answers. The page
+   * merges by id, which is why the id is on the frame at all.
+   */
+  onStep: (step: TaskStep) => void;
+  /** The task itself, whenever anything about it changed. */
+  onTask: (task: Task) => void;
+  /** What the page should say it is doing. */
+  onWatching: (state: TaskWatchState) => void;
+}
+
+/**
+ * How long to wait before coming back after a stream that failed.
+ *
+ * Only after a *failure*. A stint that ended the way it was meant to reconnects
+ * at once, because nothing is wrong and a gap there would be a page that stops
+ * being live for a second every four minutes.
+ */
+const RETURN_AFTER_MS = 2_000;
+
+/**
+ * Follows a task as it works, and returns the way to stop.
+ *
+ * The connection is not the account — the account is in the database, and this
+ * is a cursor over it. So a drop is not an error to report: the page keeps the
+ * id of the newest line it holds, and coming back asks for everything after it.
+ * Nothing is replayed from the beginning, which for a task that ran overnight is
+ * the difference between a reconnect and rebuilding the page.
+ *
+ * The server ends a stint every few minutes on purpose and says `again` when it
+ * does. That is the same path a dropped connection takes, which is the point of
+ * doing it: a recovery path that only runs when something has gone wrong is one
+ * nobody finds out is broken until the night it is needed.
+ *
+ * @param from the newest event id the page already holds, or '0' for a page
+ *   holding none. A page that has just drawn the log so far passes the highest
+ *   of what it drew and is given only what came after.
+ */
+export function watchTask(id: string, from: string, handlers: TaskWatchHandlers): () => void {
+  const stopper = new AbortController();
+  let cursor = from;
+  let stopped = false;
+
+  async function stint(): Promise<'again' | 'ended'> {
+    const response = await fetch(`/api/tasks/${id}/stream?after=${encodeURIComponent(cursor)}`, {
+      credentials: 'same-origin',
+      headers: { Accept: 'text/event-stream' },
+      signal: stopper.signal,
+    });
+
+    let ending: 'again' | 'ended' = 'again';
+    await readEventStream(response, (frame) => {
+      if (frame.event === 'step') {
+        const step = payloadOf<TaskStep>(frame);
+        if (step === null) return;
+        /*
+         * The cursor moves on the frame's id, and only forwards. A call is sent
+         * once when it is made and again when its tool answers, so the second
+         * frame carries an id the page has already passed - and a cursor that
+         * followed it would ask the server for everything since, all over again.
+         */
+        if (frame.id !== null && Number(frame.id) > Number(cursor)) cursor = frame.id;
+        handlers.onStep(step);
+      } else if (frame.event === 'state') {
+        const task = payloadOf<Task>(frame);
+        if (task !== null) handlers.onTask(task);
+      } else if (frame.event === 'end') {
+        ending = 'ended';
+      }
+      // `again` needs nothing done to it: the stream is about to close and the
+      // loop below opens the next one, which is what it was announcing.
+    });
+    return ending;
+  }
+
+  void (async () => {
+    for (;;) {
+      if (stopped) return;
+      try {
+        handlers.onWatching('live');
+        const ending = await stint();
+        if (stopped) return;
+        if (ending === 'ended') {
+          handlers.onWatching('ended');
+          return;
+        }
+      } catch (cause: unknown) {
+        if (stopped || (cause instanceof DOMException && cause.name === 'AbortError')) return;
+        /*
+         * Anything else — the server restarting, a network that went away, a
+         * proxy that closed it — is the same thing and is answered the same way.
+         * There is nothing to report, because nothing is lost: the cursor says
+         * what is still owed and the next attempt asks for exactly that.
+         */
+        handlers.onWatching('returning');
+        await new Promise((wake) => {
+          window.setTimeout(wake, RETURN_AFTER_MS);
+        });
+      }
+    }
+  })();
+
+  return () => {
+    stopped = true;
+    stopper.abort();
+  };
 }
