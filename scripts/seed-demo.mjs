@@ -802,20 +802,45 @@ const { createAction: replyInThread } = await gql(
     },
   },
 );
-await gql('mutation($input: CreateActionInput!) { createAction(input: $input) { id } }', {
-  input: {
-    workspaceId: ws,
-    name: 'Page the on-call',
-    type: 'EXECUTE',
-    subtype: 'HTTP_REQUEST',
-    url: 'https://events.pagerduty.com/v2/enqueue',
-    method: 'POST',
-    headers: '{"Content-Type":"application/json"}',
-    timeoutSeconds: 10,
-    retryIntervalSeconds: 30,
-    icon: 'bell',
+/*
+ * Held onto, unlike the sibling above it, because the flagship graph wires it
+ * to the responder's failure handle: an agent that could not reach a model has
+ * somewhere to go, and what a support desk does about that is wake somebody.
+ */
+const { createAction: pageOnCall } = await gql(
+  'mutation($input: CreateActionInput!) { createAction(input: $input) { id name } }',
+  {
+    input: {
+      workspaceId: ws,
+      name: 'Page the on-call',
+      type: 'EXECUTE',
+      subtype: 'HTTP_REQUEST',
+      url: 'https://events.pagerduty.com/v2/enqueue',
+      method: 'POST',
+      headers: '{"Content-Type":"application/json"}',
+      /*
+       * An HTTP action asks its node for a url and a body, so a definition that
+       * says nothing about the body seeds a node asking upstream for a field
+       * called `body` - and nothing upstream produces one. The editor is right
+       * to report that, and the manual's opening picture is the wrong place to
+       * photograph it being right. What the body says is PagerDuty's own
+       * envelope, with a routing key that goes nowhere.
+       */
+      content: JSON.stringify({
+        routing_key: 'R0UT1NGK3YN0RTHW1NDSUPP0RTD3SK',
+        event_action: 'trigger',
+        payload: {
+          summary: 'Support responder could not answer a question in Slack',
+          severity: 'error',
+          source: 'orknux',
+        },
+      }),
+      timeoutSeconds: 10,
+      retryIntervalSeconds: 30,
+      icon: 'bell',
+    },
   },
-});
+);
 const { createAction: holdBriefly } = await gql(
   'mutation($input: CreateActionInput!) { createAction(input: $input) { id name } }',
   {
@@ -1002,6 +1027,7 @@ const TRIGGER_KEY = 'trigger-slack';
 const TICKET_KEY = 'action-ticket';
 const AGENT_KEY = 'agent-responder';
 const REPLY_KEY = 'action-reply';
+const ONCALL_KEY = 'action-oncall';
 // `_NODE` rather than `_KEY` like its four siblings: what a session node
 // carries is called a session key, and two things named `SESSION_KEY` ten
 // lines apart is a paragraph nobody can read twice the same way.
@@ -1069,6 +1095,30 @@ await gql(
           x: 640,
           y: 700,
         },
+        /*
+         * The node the manual's opening picture is of, and the one that carries
+         * the two answers to "what happens when this goes wrong".
+         *
+         * A model call is the step in this graph most likely to fail for a
+         * reason the graph knows nothing about - a timeout, a rate limit, a
+         * provider having an afternoon - so it is the node a retry policy
+         * belongs on. Five attempts at eight seconds doubling is 8, 16, 32 and
+         * 64 seconds of waiting, which the panel reads back as "Up to 5 attempts
+         * over about 2m": long enough to sit out an outage, short enough that
+         * somebody who asked a question in Slack is still there.
+         *
+         * The ceiling, the jitter and the budget are deliberately left unset.
+         * They are real and they are one disclosure away, but a demonstration
+         * that sets all six turns the shortest useful sentence about a policy
+         * into a form, and opens a fold that pushes the failure switch below the
+         * fold of the picture.
+         *
+         * `fallbackEnabled` is the other half: on, the node grows a second
+         * handle and the graph gets to say what a failure means here rather than
+         * the run simply ending. The two ways out keep the interface's own words
+         * - If works, If fails - because those are what somebody drawing their
+         * first graph will see.
+         */
         {
           key: AGENT_KEY,
           kind: 'AGENT',
@@ -1076,6 +1126,10 @@ await gql(
           agentId: responder.id,
           outputName: 'llmResult',
           icon: 'bot',
+          retryAttempts: 5,
+          retryBackoffSeconds: 8,
+          retryMultiplier: 2,
+          fallbackEnabled: true,
           mappings: [
             { name: 'prompt', expression: 'trigger.text', mode: 'REFERENCE', sourceNodeKey: TRIGGER_KEY },
             { name: 'systemPrompt', expression: 'reference', mode: 'REFERENCE', sourceNodeKey: TICKET_KEY },
@@ -1097,12 +1151,37 @@ await gql(
           x: 1160,
           y: 170,
         },
+        /*
+         * Where the failure handle leads. Nothing feeds it but the failure, so
+         * a run reaching it is a run that spent its five attempts and still had
+         * no answer - and the graph says out loud that somebody is woken rather
+         * than that the question goes unanswered.
+         *
+         * Under the reply rather than below it: the canvas draws its minimap in
+         * the bottom right corner, and a graph fitted to the frame puts whatever
+         * is furthest down and right underneath it. Placed here the two ways out
+         * of the agent read as what they are - one line up to the answer, one
+         * down to the alarm - and neither ends behind anything.
+         *
+         * No mappings: the action's own url and body are the seed, which is
+         * what a node freshly pointed at one takes.
+         */
+        {
+          key: ONCALL_KEY,
+          kind: 'ACTION',
+          name: 'Page the on-call',
+          actionId: pageOnCall.id,
+          icon: 'bell',
+          x: 1160,
+          y: 500,
+        },
       ],
       edges: [
         { source: TRIGGER_KEY, target: TICKET_KEY },
         { source: TICKET_KEY, target: AGENT_KEY },
         { source: SESSION_NODE, target: AGENT_KEY },
         { source: AGENT_KEY, target: REPLY_KEY },
+        { source: AGENT_KEY, target: ONCALL_KEY, branch: 'FAILURE' },
       ],
     },
   },
