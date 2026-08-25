@@ -259,7 +259,16 @@
   color: var(--color-text-muted);
 }
 
+/*
+ * What the task came back with, set in from the card's edge.
+ *
+ * It had none, so the first line of the outcome started against the border
+ * while the OUTCOME label above it was inset by the head's own padding - the
+ * one line on the card that is worth reading, and the only one not lined up
+ * with anything.
+ */
 .said {
+  padding: var(--space-12) var(--space-16);
   font-size: var(--text-md);
   color: var(--color-text-body);
 }
@@ -302,6 +311,22 @@
 
 .watching[data-watching='returning']::before {
   background: var(--color-amber);
+}
+
+/*
+ * Finished, and finished is an outcome rather than an absence.
+ *
+ * `live` and `returning` said what they were in colour and this fell through to
+ * the muted grey a disabled control wears - so the one state that means the work
+ * is over and there is something to read looked like the state where nothing is
+ * happening. Green, the same as a task's own DONE beside it.
+ */
+.watching[data-watching='ended'] {
+  color: var(--color-success);
+}
+
+.watching[data-watching='ended']::before {
+  background: var(--color-success);
 }
 
 .grant {
