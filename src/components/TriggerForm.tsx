@@ -779,6 +779,15 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                     a bot token is a Slack user, so choosing which bots to watch is choosing which user ids
                     a reply is measured against. Replies written by bots never fire it, or a workflow
                     answering in a thread it watches would start itself for ever.
+                    <br />
+                    <br />
+                    Both of those also need the event itself subscribed in your Slack app, under{' '}
+                    <em>Event Subscriptions</em> &rarr; <em>Subscribe to bot events</em>:{' '}
+                    <code>message.channels</code>, and <code>message.groups</code>,{' '}
+                    <code>message.im</code> or <code>message.mpim</code> for the other kinds. A new app
+                    has only <code>app_mention</code> there, and the scope above is not a substitute:
+                    a scope says what the token may read, a subscription says what Slack will send. This
+                    installation cannot check it — Slack shows an app&apos;s subscriptions to no bot token.
                   </FieldHint>
                 </span>
                 <div className={styles.inputWrapper}>

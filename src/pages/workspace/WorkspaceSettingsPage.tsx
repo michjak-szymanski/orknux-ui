@@ -992,9 +992,9 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         <div className={styles.field}>
           <span className={styles.labelWithHint}>
             <label className={styles.label} htmlFor="workspace-task-turns">
-              {t('Turns A Task May Take')}
+              {t('Turns Per Task')}
             </label>
-            <FieldHint label={t('Turns A Task May Take')}>
+            <FieldHint label={t('Turns Per Task')}>
               {t('One turn is one round of the agent’s own tool loop: it is asked, it may call its tools, and it answers. A task that has used them all is stopped and says so, which is the signal that it is going round in circles rather than working. Left empty, the workspace has decided nothing and the installation’s own number is used, which is where every workspace starts. It is read when a task is created and copied onto it, so raising it gives the next task more and leaves the ones already running as they were. It is not the only ceiling — a task is also stopped once its working time is spent, which is what bounds a turn sitting on a slow tool.')}
             </FieldHint>
           </span>

@@ -293,8 +293,7 @@ export type IssueEventKind =
    * `was` is who wrote it; what it said is deliberately nowhere. The one kind
    * here written because a row went away rather than because something changed.
    */
-  | 'COMMENT_REMOVED'
-  | 'TASK_STARTED';
+  | 'COMMENT_REMOVED';
 
 export interface IssueEvent {
   /** Unique across all three sources: an event and a comment can both be row 5. */

@@ -21,17 +21,55 @@ workflow.
 
 ## What a Slack connection trigger needs
 
-A **Mention** arrives on any working bot token. A **Message** and a **Reply**
-do not: Slack delivers a `message` event only to a token carrying one of the
-history scopes — `channels:history` for public channels, and `groups:`, `im:`
-or `mpim:` for the other kinds of conversation. A bot token set up only to
-post carries none of them, and a trigger waiting on one will never fire.
+A **Mention** arrives on any working bot token, because every Slack app that
+can be mentioned is already subscribed to `app_mention` — it is what the app
+was set up for. A **Message** and a **Reply** need two more things, and they
+are configured in two different places on Slack's own site. Missing either one
+gives the same symptom: the trigger is enabled, a workflow instances it, its
+log is empty, and nothing ever happens.
 
-The product asks Slack which scopes a token holds and says so where it
-matters: the trigger's row in the list is marked **Will not fire**, its own
-settings page prints the reason under the Action picker, and the connection's
-page says what its token cannot do. Nothing is marked where Slack said nothing
-about scopes at all — an absence nobody reported is not an absence.
+**1. The event, under Event Subscriptions.** In api.slack.com → your app →
+*Event Subscriptions* → **Subscribe to bot events**, add the events for the
+conversations you want to hear:
+
+| Conversation | Event |
+| --- | --- |
+| Public channels | `message.channels` |
+| Private channels | `message.groups` |
+| Direct messages | `message.im` |
+| Group direct messages | `message.mpim` |
+
+A new app has only `app_mention` in that list. **This is the one that catches
+people out**, because adding the scope in the next step feels like it should be
+enough and is not: a scope says what the token is allowed to read, and a
+subscription says what Slack will trouble itself to send. Without the
+subscription Slack sends nothing, so there is nothing to be allowed to read.
+
+**2. The scope, under OAuth & Permissions.** `channels:history` for public
+channels, and `groups:history`, `im:history` or `mpim:history` for the other
+kinds. Slack adds the matching scope for you when you add the event above, but
+check it: a token that predates the change carries the old scopes until the app
+is **reinstalled to the workspace**, which is the step people skip. A bot token
+set up only to post carries none of them.
+
+Add the bot to the channel as well. A subscription and a scope do not put it in
+a room it was never invited to.
+
+**What the product can and cannot tell you.** It asks Slack which scopes a
+token holds and says so where it matters: the trigger's row in the list is
+marked **Will not fire**, its own settings page prints the reason under the
+Action picker, and the connection's page says what its token cannot do. Nothing
+is marked where Slack said nothing about scopes at all — an absence nobody
+reported is not an absence.
+
+It cannot see your event subscriptions. Slack exposes an app's subscription
+list to no bot token, so a connection with every scope granted and no
+subscription looks, from here, exactly like one nobody has written to. What it
+does instead is say when something *did* arrive: the first reply that reaches a
+reply trigger without being an answer to one of its watched bots leaves a line
+in the trigger's own log. So an empty log means Slack has sent nothing — go and
+look at Event Subscriptions — and a log with one line in it means delivery
+works and the trigger is watching the wrong bot.
 
 ## Webhooks
 
