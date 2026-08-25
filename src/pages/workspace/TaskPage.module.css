@@ -138,6 +138,18 @@
   white-space: pre-wrap;
 }
 
+/*
+  The deadline on a parked task, under what it asked. Quieter than the question
+  itself — it is the standing arrangement rather than the thing to answer — and
+  it carries two words and a date, so it is not a paragraph in the open.
+*/
+.patience {
+  margin: 0;
+  padding: var(--space-8) var(--space-16) 0;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
 .askingRow {
   display: flex;
   align-items: center;

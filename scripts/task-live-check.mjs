@@ -126,19 +126,49 @@ let taskId = null;
 let drawnWhileGoing = 0;
 let stateWhileGoing = '';
 
+/**
+ * What the page held the moment it was drawn, and never touched again.
+ *
+ * The growth assertion used to be made against `drawnWhileGoing`, which the
+ * watching loop overwrites every quarter second - so what it actually asserted
+ * was that a line landed in the last 250ms before the ending, which is a
+ * quarter-second window this check has no way to aim at. It passes or fails on
+ * where the ending happened to fall between two polls of the browser, and both
+ * outcomes say nothing about the stream.
+ *
+ * This one is the reading taken before any of it, so the comparison is "the
+ * page has more on it than it was drawn with" - which is the claim, and is not
+ * a race.
+ */
+let drawnAtFirst = 0;
+
+/**
+ * Whether a line landed while the task was still going, seen while it still
+ * was.
+ *
+ * The assertion actually worth having, and the one the brief for this page
+ * asks for: reading a finished task's log proves nothing, and even growth
+ * measured after the ending could in principle be the last frames of a task
+ * that had already stopped. This is set inside the loop, on a page whose state
+ * still reads as running, so it can only have been put there by the stream
+ * mid-task.
+ */
+let grewWhileGoing = false;
+
 for (let attempt = 1; attempt <= ATTEMPTS && taskId === null; attempt += 1) {
   const started = await startFromThePage();
   const state = (await stateNow()).trim();
 
   if (OVER.includes(state)) {
     console.log(`task #${started} was already "${state}" when the page drew; starting another`);
-    await gql(`mutation ($id: ID!) { deleteTask(id: $id) }`, { id: started }).catch(() => undefined);
+    await graphql(`mutation ($id: ID!) { deleteTask(id: $id) }`, { id: started }).catch(() => undefined);
     continue;
   }
 
   taskId = started;
   stateWhileGoing = state;
   drawnWhileGoing = await lines();
+  drawnAtFirst = drawnWhileGoing;
   console.log(`watching task #${taskId}, which reads "${state}" with ${drawnWhileGoing} line(s) drawn`);
 }
 
@@ -186,6 +216,13 @@ for (let look = 0; look < 120 && ended === null; look += 1) {
   }
   stateWhileGoing = state;
   drawnWhileGoing = await lines();
+  /*
+   * Noted here, inside the branch where the state still reads as running. That
+   * is what makes it "while": the page says the task has not finished and the
+   * page already holds more than it was drawn with, so a line arrived mid-task
+   * over the stream.
+   */
+  if (drawnWhileGoing > drawnAtFirst) grewWhileGoing = true;
   await page.waitForTimeout(250);
 }
 
@@ -196,10 +233,27 @@ check(
 );
 
 const drawnAtEnd = await lines();
+
+/*
+ * The assertion this check exists for.
+ *
+ * Not "the page ended up with more lines than it started with", which a task
+ * that delivered everything in its dying moment would also satisfy - but that
+ * a line was on the page at a moment when the page still said the task was
+ * running. Read from the browser only, on a page that has not reloaded and has
+ * no refresh control, so the stream is the only thing that can have put it
+ * there.
+ */
 check(
-  drawnAtEnd > drawnWhileGoing,
-  `lines arrived on the open page while the task ran: ${drawnWhileGoing} while going, ${drawnAtEnd} at the end`,
-  `nothing arrived on the open page: it held ${drawnWhileGoing} lines while the task was going and ${drawnAtEnd} at the end`,
+  grewWhileGoing,
+  `a line arrived on the open page while the task was still running: ${drawnAtFirst} drawn, then more before it ended`,
+  `nothing arrived while the task was running: the page held ${drawnAtFirst} lines throughout and only changed once it was over`,
+);
+
+check(
+  drawnAtEnd > drawnAtFirst,
+  `and the page grew without being touched: ${drawnAtFirst} when drawn, ${drawnAtEnd} at the end`,
+  `the page never grew: it held ${drawnAtFirst} lines when drawn and ${drawnAtEnd} at the end`,
 );
 
 /*
