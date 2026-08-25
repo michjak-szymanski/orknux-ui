@@ -685,13 +685,27 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
           {webhook ? null : incoming ? (
             <>
               <div className={styles.field}>
-                <span className={own.labelWithHint}>
-                  <label className={styles.label} htmlFor="trigger-connection">
-                    {t('Connection')}
-                  </label>
-                  <FieldHint label={t('Connection')}>
-                    {t('Select the connection that will trigger this event.')}
-                  </FieldHint>
+                <span className={styles.labelRow}>
+                  <span className={own.labelWithHint}>
+                    <label className={styles.label} htmlFor="trigger-connection">
+                      {t('Connection')}
+                    </label>
+                    <FieldHint label={t('Connection')}>
+                      {t('Select the connection that will trigger this event.')}
+                    </FieldHint>
+                  </span>
+                  {connectionId !== '' && (
+                    <Link
+                      className={styles.jump}
+                      to={`/workspace/${workspaceId}/integrations/connections/${connectionId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={t('Opens the connection in a new tab')}
+                      aria-label={t("Open the connection's definition")}
+                    >
+                      <OpenDefinitionIcon />
+                    </Link>
+                  )}
                 </span>
                 {/* Nothing to make from here: a connection is a URL, a token and a
                     handshake with the service, none of which can be got from a name
