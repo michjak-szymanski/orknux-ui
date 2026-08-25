@@ -69,14 +69,26 @@ const NAME = `${MARK}-chore`;
 
 await page.goto(`${BASE}/workspace/${WORKSPACE}/settings`, { waitUntil: 'domcontentloaded' });
 if (await drawn(page, 'workspace settings')) {
+  /*
+   * `drawn` says the page has settled on something, not that this card is on
+   * it: the shell and the heading arrive first and the workspace itself - which
+   * is what `administered` is read off, and this card is behind - arrives after.
+   * So counting the box the moment `drawn` returns is a coin toss, and it came
+   * down tails often enough to report a missing card on a page that then let
+   * the very next line type into it.
+   *
+   * Every wait in this file is on the thing about to be read, with the count
+   * left to decide. A box that never arrives is still counted as zero.
+   */
   const box = page.locator('input#new-issue-type');
+  await box.waitFor({ timeout: 15_000 }).catch(() => undefined);
   record((await box.count()) === 1, 'settings: the Issues card is on the workspace settings page');
 
   await box.fill(NAME);
   await page.locator('button', { hasText: /^Add$/ }).first().click();
-  await page.waitForTimeout(1500);
 
   const row = page.locator('button', { hasText: NAME }).first();
+  await row.waitFor({ timeout: 15_000 }).catch(() => undefined);
   record((await row.count()) === 1, `settings: ${NAME} is in the list after adding it`);
 
   // The count is on the row, before anything is pressed. That is the point of
@@ -100,21 +112,50 @@ const untyped = await file(`${MARK} nobody has decided`);
 
 await page.goto(`${BASE}/workspace/${WORKSPACE}/issues?q=${MARK}`, { waitUntil: 'domcontentloaded' });
 if (await drawn(page, 'the issue list')) {
-  await page.waitForTimeout(1500);
-
+  // The filter is only drawn once the workspace's types have been fetched, and
+  // the rows once the search has: both after `drawn` is satisfied by the shell.
   const filter = page.locator('select[aria-label="Filter by type"]');
+  await filter.waitFor({ timeout: 15_000 }).catch(() => undefined);
   record((await filter.count()) === 1, 'list: there is a type filter beside the states');
 
-  const both = await page.locator('a[href*="/issues/"]').allInnerTexts();
+  const rows = page.locator('a[href*="/issues/"]');
+  await rows.nth(1).waitFor({ timeout: 15_000 }).catch(() => undefined);
+  const both = await rows.allInnerTexts();
   record(
     both.some((said) => said.includes('something broke')) && both.some((said) => said.includes('nobody has decided')),
     `list: unfiltered, both issues are there (${both.length} rows)`,
   );
 
+  /*
+   * Choosing a filter re-queries, and while it does the list holds nothing at
+   * all: the rows are behind `!loading` and the loader draws nothing for its
+   * first three seconds. So the window between pressing and answering is an
+   * empty list, indistinguishable from a filter that matched nothing - which is
+   * exactly what a naive "wait until the other one has gone" walks into, and
+   * did: it was satisfied by the blank and read `[]` off both filters.
+   *
+   * What is waited for is the query settling, not the answer being the right
+   * one: a row drawn, or the sentence a settled empty answer prints. Which rows
+   * they are is left to the assertion, which is the whole point of it. The half
+   * second in front is for the refetch to start, so a list that has not yet
+   * been emptied is not mistaken for one that has already come back.
+   */
+  const settled = () =>
+    page
+      .waitForFunction(
+        () =>
+          document.querySelectorAll('a[href*="/issues/"]').length > 0 ||
+          /Nothing matches that\.|Nothing open\./.test(document.body.innerText ?? ''),
+        undefined,
+        { timeout: 15_000 },
+      )
+      .catch(() => undefined);
+
   if ((await filter.count()) === 1 && mine !== undefined) {
     await filter.selectOption(mine.id);
-    await page.waitForTimeout(1800);
-    const only = await page.locator('a[href*="/issues/"]').allInnerTexts();
+    await page.waitForTimeout(500);
+    await settled();
+    const only = await rows.allInnerTexts();
     record(
       only.some((said) => said.includes('something broke')) &&
         !only.some((said) => said.includes('nobody has decided')),
@@ -124,8 +165,9 @@ if (await drawn(page, 'the issue list')) {
     // The half a nullable id could not have asked for, and the half that
     // matters most on a tracker older than its types.
     await filter.selectOption('untyped');
-    await page.waitForTimeout(1800);
-    const none = await page.locator('a[href*="/issues/"]').allInnerTexts();
+    await page.waitForTimeout(500);
+    await settled();
+    const none = await rows.allInnerTexts();
     record(
       none.some((said) => said.includes('nobody has decided')) && !none.some((said) => said.includes('something broke')),
       `list: filtered to Untyped, only the untyped one is left (${JSON.stringify(none.map((s) => s.slice(0, 40)))})`,
@@ -138,18 +180,20 @@ if (await drawn(page, 'the issue list')) {
 
 await page.goto(`${BASE}/workspace/${WORKSPACE}/settings`, { waitUntil: 'domcontentloaded' });
 if (await drawn(page, 'workspace settings')) {
-  await page.waitForTimeout(1200);
+  const held = page.locator('li').filter({ hasText: NAME });
+  await held.first().waitFor({ timeout: 15_000 }).catch(() => undefined);
 
-  const said = await page.locator('li').filter({ hasText: NAME }).allInnerTexts();
+  const said = await held.allInnerTexts();
   record(
     said.some((one) => one.includes('1 issue')),
     `settings: the row now says one issue carries it (${JSON.stringify(said)})`,
   );
 
   await page.locator(`button[aria-label="Delete ${NAME}"]`).click();
-  await page.waitForTimeout(1800);
 
-  const refusal = await page.locator('[role="alert"]').allInnerTexts();
+  const alert = page.locator('[role="alert"]');
+  await alert.first().waitFor({ timeout: 15_000 }).catch(() => undefined);
+  const refusal = await alert.allInnerTexts();
   record(
     refusal.some((one) => one.includes('cannot be deleted') && one.includes('1 issue')),
     `settings: deleting it is refused, and the refusal says how many (${JSON.stringify(refusal)})`,

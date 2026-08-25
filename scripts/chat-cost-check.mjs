@@ -49,17 +49,44 @@ async function readControl(page) {
       text: option.textContent.trim(),
       on: option.getAttribute('aria-checked') === 'true',
     }));
-    const box = label.getBoundingClientRect();
-    const lineHeight = Number.parseFloat(getComputedStyle(label).lineHeight);
+    /*
+     * How many lines the label is drawn on, counted from the line boxes the
+     * text actually occupies rather than from its height over its line-height.
+     *
+     * The arithmetic was the whole of the assertion and it could not fail.
+     * Nothing in this stylesheet declares a `line-height` on the label, so the
+     * computed value is the string `normal`, `parseFloat` of that is NaN, and
+     * the NaN branch answered 1 - for a label of any length, on any number of
+     * lines. Measured against a label deliberately grown into a sentence, the
+     * box was 32px tall over two 16px lines and the check still said one.
+     *
+     * A range over the contents gives one client rect per line box, which needs
+     * no line-height to exist and is what wrapping actually means. Distinct
+     * tops rather than a count of rects, because a label made of two elements
+     * side by side is still one line.
+     */
+    const range = document.createRange();
+    range.selectNodeContents(label);
+    const tops = new Set([...range.getClientRects()].map((rect) => Math.round(rect.top)));
+
+    /*
+     * What the setting says out loud, with the label, the (?) and the two
+     * buttons taken out of it. Anything left is prose printed in the open,
+     * which is the failure the house rule is about - and the old test for it
+     * looked for an *open* popover, which at this moment there never is.
+     */
+    const spare = setting.cloneNode(true);
+    for (const part of spare.querySelectorAll(
+      '[class*="_settingLabel_"], [role="radiogroup"], button[data-hint]',
+    )) {
+      part.remove();
+    }
+
     return {
       label: label.textContent.trim(),
-      // One line, measured rather than counted in characters: what makes a
-      // label a sentence is that it wraps, and how many words that takes is the
-      // font's business and not this check's.
-      lines: Number.isNaN(lineHeight) ? 1 : Math.round(box.height / lineHeight),
-      // What the note says is not this check's business either - that it is
-      // behind the (?) and not on the page is.
-      noteOpen: document.querySelector('[class*="_popover_"]') !== null,
+      lines: Math.max(tops.size, 1),
+      // Whatever is drawn in the setting besides the label and its two buttons.
+      beside: spare.textContent.replace(/\s+/g, ' ').trim(),
       options,
     };
   }, HINT);
@@ -94,12 +121,13 @@ record(
     : `it did not start off (${JSON.stringify(before?.options)})`,
 );
 
-const oneLine = before !== null && before.lines === 1 && !before.noteOpen;
+const oneLine = before !== null && before.lines === 1 && before.beside === '';
 record(
   oneLine,
   oneLine
     ? `"${before.label}" is one line, with the rest behind the (?)`
-    : `the label runs to ${before?.lines} lines, or a note is printed under it`,
+    : `the label runs to ${before?.lines} lines, or something else is printed beside it: ` +
+      `${JSON.stringify(before?.beside)}`,
 );
 
 // The note is a click away, and says which rounds the figure covers.
