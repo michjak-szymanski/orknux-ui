@@ -6,6 +6,7 @@ import type { Connection, ConnectionType } from '../api/integrations';
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
 import { FieldHint } from './FieldHint';
 import styles from './Dialog.module.css';
+import { t } from '../i18n';
 
 export interface ConnectionDialogProps {
   /** True to add a default; a connection to edit the one given. */
@@ -30,8 +31,8 @@ const TYPES: ConnectionType[] = ['SLACK', 'SMTP'];
 
 const TYPE_LABELS: Record<ConnectionType, string> = {
   SLACK: 'Slack',
-  SMTP: 'Email (SMTP)',
-  HTTP: 'HTTP endpoint',
+  SMTP: t('Email (SMTP)'),
+  HTTP: t('HTTP endpoint'),
 };
 
 /** Add / Edit Default Connection, from the connection modals frame. */
@@ -83,7 +84,7 @@ export function ConnectionDialog({ open, onClose, onSaved }: ConnectionDialogPro
           : await updateConnection(editing.id, input);
       onSaved(saved);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save the connection.');
+      setError(cause instanceof Error ? cause.message : t('Could not save the connection.'));
       setSubmitting(false);
     }
   }
@@ -97,7 +98,7 @@ export function ConnectionDialog({ open, onClose, onSaved }: ConnectionDialogPro
       await deleteConnection(editing.id);
       onSaved(editing);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not delete the connection.');
+      setError(cause instanceof Error ? cause.message : t('Could not delete the connection.'));
       setSubmitting(false);
     }
   }
@@ -106,27 +107,25 @@ export function ConnectionDialog({ open, onClose, onSaved }: ConnectionDialogPro
     <dialog ref={dialogRef} className={`${styles.dialog} ${styles.dialogWide}`} onCancel={onClose} onClose={onClose}>
       <form className={styles.body} onSubmit={handleSubmit}>
         <header className={styles.header}>
-          <h2 className={styles.title}>{editing === null ? 'Add Default Connection' : 'Edit Default Connection'}</h2>
+          <h2 className={styles.title}>{editing === null ? t('Add Default Connection') : t('Edit Default Connection')}</h2>
         </header>
 
         <p className={styles.dialogMessage}>
           {editing === null
-            ? 'Define a connection that will be automatically assigned to new workspaces'
-            : 'Update the default connection settings for all workspaces'}
+            ? t('Define a connection that will be automatically assigned to new workspaces')
+            : t('Update the default connection settings for all workspaces')}
         </p>
 
         <div className={styles.fields}>
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="connection-name">
-              Name
-            </label>
+            <label className={styles.label} htmlFor="connection-name">{t('Name')}</label>
             <div className={styles.inputWrapper}>
               <input
                 id="connection-name"
                 name="connectionName"
                 className={styles.input}
                 type="text"
-                placeholder="e.g. Production Slack"
+                placeholder={t('e.g. Production Slack')}
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 autoFocus
@@ -136,9 +135,7 @@ export function ConnectionDialog({ open, onClose, onSaved }: ConnectionDialogPro
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="connection-type">
-              Type
-            </label>
+            <label className={styles.label} htmlFor="connection-type">{t('Type')}</label>
             <div className={styles.inputWrapper}>
               <select
                 id="connection-type"
@@ -148,9 +145,7 @@ export function ConnectionDialog({ open, onClose, onSaved }: ConnectionDialogPro
                 onChange={(event) => setType(event.target.value as ConnectionType | '')}
                 required
               >
-                <option value="" disabled>
-                  Select type...
-                </option>
+                <option value="" disabled>{t('Select type...')}</option>
                 {TYPES.map((candidate) => (
                   <option key={candidate} value={candidate}>
                     {TYPE_LABELS[candidate]}
@@ -188,14 +183,14 @@ export function ConnectionDialog({ open, onClose, onSaved }: ConnectionDialogPro
                   checked={addToExistingWorkspaces}
                   onChange={(event) => setAddToExistingWorkspaces(event.target.checked)}
                 />
-                <span>Also add to existing workspaces</span>
+                <span>{t('Also add to existing workspaces')}</span>
               </label>
               {/*
                 Beside the box, not inside its label: the (?) is a button, and a
                 button inside a <label> would tick the box on its way to opening.
               */}
-              <FieldHint label="Also add to existing workspaces">
-                Otherwise only workspaces created from now on receive it.
+              <FieldHint label={t('Also add to existing workspaces')}>
+                {t('Otherwise only workspaces created from now on receive it.')}
               </FieldHint>
             </span>
           )}
@@ -221,9 +216,7 @@ export function ConnectionDialog({ open, onClose, onSaved }: ConnectionDialogPro
               className={styles.destructiveGhost}
               onClick={() => setConfirmingDelete(true)}
               disabled={submitting}
-            >
-              Delete
-            </button>
+            >{t('Delete')}</button>
           )}
           {confirmingDelete ? (
             <>
@@ -232,20 +225,18 @@ export function ConnectionDialog({ open, onClose, onSaved }: ConnectionDialogPro
                 className={styles.ghost}
                 onClick={() => setConfirmingDelete(false)}
                 disabled={submitting}
-              >
-                Keep
-              </button>
+              >{t('Keep')}</button>
               <button type="button" className={styles.destructive} onClick={handleDelete} disabled={submitting}>
-                {submitting ? 'Deleting…' : 'Delete Connection'}
+                {submitting ? t('Deleting…') : t('Delete Connection')}
               </button>
             </>
           ) : (
             <>
               <button type="button" className={styles.ghost} onClick={onClose} disabled={submitting}>
-                Cancel
+                {t('Cancel')}
               </button>
               <button type="submit" className={styles.filled} disabled={!complete || submitting}>
-                {submitting ? 'Saving…' : editing === null ? 'Add Connection' : 'Save Changes'}
+                {submitting ? t('Saving…') : editing === null ? t('Add Connection') : t('Save Changes')}
               </button>
             </>
           )}

@@ -1,5 +1,6 @@
 import { speak } from '../api/speech';
 import { spokenText } from './spokenText';
+import { t } from '../i18n';
 
 /**
  * Reading an answer aloud in pieces, while the rest of it is still being
@@ -208,7 +209,7 @@ export function readAloud(
   function fail(cause: unknown) {
     if (complained) return;
     complained = true;
-    listener.onFailure?.(cause instanceof Error ? cause.message : 'That could not be read aloud.');
+    listener.onFailure?.(cause instanceof Error ? cause.message : t('That could not be read aloud.'));
   }
 
   /**

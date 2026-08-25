@@ -1,4 +1,5 @@
 import { graphql } from './client';
+import { t } from '../i18n';
 
 export type WorkflowStatus = 'DRAFT' | 'PUBLISHED';
 export type NodeKind = 'TRIGGER' | 'AGENT' | 'ACTION' | 'CONDITION' | 'OBJECT' | 'SESSION';
@@ -278,10 +279,10 @@ export async function publishWorkflow(workspaceId: string, workflowId: string): 
 /** The label shown above the node name, and its accent colour. */
 export const NODE_KIND_LABEL: Record<NodeKind, string> = {
   TRIGGER: 'Trigger',
-  AGENT: 'LLM Agent',
+  AGENT: t('LLM Agent'),
   ACTION: 'Action',
   CONDITION: 'Condition',
   OBJECT: 'Object',
-  SESSION: 'LLM Session',
+  SESSION: t('LLM Session'),
 };
 

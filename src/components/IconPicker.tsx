@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import searchIcon from '../assets/search.svg';
 import styles from './IconPicker.module.css';
+import { t } from '../i18n';
 
 /**
  * Every icon the interface ships, by name.
@@ -138,13 +139,13 @@ export function IconPickerDialog({ open, selected, onPick, onClose }: IconPicker
       }}
     >
       <header className={styles.head}>
-        <h2 className={styles.title}>Choose an icon</h2>
+        <h2 className={styles.title}>{t('Choose an icon')}</h2>
         <div className={styles.searchBox}>
           <Icon name="search" className={styles.searchGlyph} />
           <input
             className={styles.search}
             value={search}
-            placeholder="Search icons"
+            placeholder={t('Search icons')}
             spellCheck={false}
             autoFocus
             onChange={(event) => setSearch(event.target.value)}
@@ -177,9 +178,7 @@ export function IconPickerDialog({ open, selected, onPick, onClose }: IconPicker
       )}
 
       <footer className={styles.actions}>
-        <button type="button" className={styles.ghost} onClick={onClose}>
-          Cancel
-        </button>
+        <button type="button" className={styles.ghost} onClick={onClose}>{t('Cancel')}</button>
       </footer>
     </dialog>
   );

@@ -1,4 +1,5 @@
 import { graphql } from './client';
+import { t } from '../i18n';
 
 /**
  * A machine this installation can run commands on, over SSH.
@@ -63,9 +64,9 @@ export function shellStatusLabel(status: ShellStatus): string {
     case 'FAILED':
       return 'Unreachable';
     case 'NOT_CHECKED':
-      return 'Not checked';
+      return t('Not checked');
     case 'NOT_CONFIGURED':
-      return 'No key';
+      return t('No key');
   }
 }
 

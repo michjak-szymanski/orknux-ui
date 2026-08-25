@@ -1,4 +1,5 @@
 import { graphql } from './client';
+import { t } from '../i18n';
 
 /**
  * One conversation.
@@ -348,7 +349,7 @@ function handleFrame(frame: string, handlers: ChatStreamHandlers): void {
       cost: payload.cost ?? null,
     });
   } else if (event === 'error') {
-    handlers.onError(payload.reason ?? 'The model could not answer.');
+    handlers.onError(payload.reason ?? t('The model could not answer.'));
   }
 }
 

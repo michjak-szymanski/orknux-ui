@@ -6,6 +6,7 @@ import { FieldHint } from './FieldHint';
 import { FieldPicker } from './FieldPicker';
 import type { FieldOption, FieldPickerLabels } from './FieldPicker';
 import styles from './HeaderRowsEditor.module.css';
+import { t } from '../i18n';
 
 /**
  * One row: a name, and where its value comes from.
@@ -49,7 +50,7 @@ export function HeaderRowsEditor({
   headers,
   onChange,
   compact = false,
-  heading = 'Custom Headers',
+  heading = t('Custom Headers'),
   variables,
 }: HeaderRowsEditorProps) {
   function update(index: number, patch: Partial<HeaderRow>) {
@@ -75,9 +76,9 @@ export function HeaderRowsEditor({
       */}
       {variables !== undefined && (
         <span className={styles.hintRow}>
-          <span className={styles.hintLead}>Source</span>
+          <span className={styles.hintLead}>{t('Source')}</span>
           <FieldHint label={heading}>
-            <strong>Value</strong> is used exactly as written. <strong>Reference</strong> reads one of this
+            <strong>{t('Value')}</strong> is used exactly as written. <strong>{t('Reference')}</strong> reads one of this
             workspace&apos;s variables, and what that variable holds is never shown here.
           </FieldHint>
         </span>
@@ -110,7 +111,7 @@ export function HeaderRowsEditor({
             <input
               className={styles.input}
               type="text"
-              placeholder="Header name"
+              placeholder={t('Header name')}
               aria-label={`Header ${index + 1} name`}
               value={header.name}
               onChange={(event) => update(index, { name: event.target.value })}
@@ -148,7 +149,7 @@ export function HeaderRowsEditor({
                     disabled={option === 'REFERENCE' && (variables?.length ?? 0) === 0}
                     title={
                       option === 'REFERENCE' && (variables?.length ?? 0) === 0
-                        ? 'This workspace has no variables to point at yet'
+                        ? t('This workspace has no variables to point at yet')
                         : undefined
                     }
                   >
@@ -172,7 +173,7 @@ export function HeaderRowsEditor({
               <input
                 className={styles.input}
                 type="text"
-                placeholder="Value"
+                placeholder={t('Value')}
                 aria-label={`Header ${index + 1} value`}
                 value={header.value}
                 onChange={(event) => update(index, { value: event.target.value })}
@@ -185,7 +186,7 @@ export function HeaderRowsEditor({
               className={styles.remove}
               onClick={() => onChange(headers.filter((_, at) => at !== index))}
               aria-label={`Remove header ${index + 1}`}
-              title="Remove header"
+              title={t('Remove header')}
             >
               <img src={trashIcon} alt="" width={16} height={16} />
             </button>
@@ -199,7 +200,7 @@ export function HeaderRowsEditor({
         onClick={() => onChange([...headers, { name: '', value: '', variableId: null }])}
       >
         <img src={plusIcon} alt="" width={16} height={16} />
-        Add Header
+        {t('Add Header')}
       </button>
     </div>
   );
@@ -218,10 +219,10 @@ const SOURCES = ['VALUE', 'REFERENCE'] as const;
  * offer several.
  */
 const VARIABLE_LABELS: FieldPickerLabels = {
-  empty: 'Choose a variable…',
-  search: 'Search variables',
-  none: 'This workspace has no variables yet.',
-  noMatch: 'No variable matches',
+  empty: t('Choose a variable…'),
+  search: t('Search variables'),
+  none: t('This workspace has no variables yet.'),
+  noMatch: t('No variable matches'),
   gone: 'no longer in this workspace',
 };
 

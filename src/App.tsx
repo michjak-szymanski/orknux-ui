@@ -5,11 +5,13 @@ import { currentSession, login, logout } from './api/session';
 import styles from './App.module.css';
 import type { Credentials, SessionUser } from './api/session';
 import { fetchWorkspaces } from './api/workspaces';
+import { adoptLanguage } from './session/language';
 import { ForgotPasswordPage } from './pages/login/ForgotPasswordPage';
 import { LoginPage } from './pages/login/LoginPage';
 import { ResetPasswordPage } from './pages/login/ResetPasswordPage';
 import { PAGES } from './navigation';
 import { PAGE_ELEMENTS } from './routes';
+import { t } from './i18n';
 
 export function App() {
   const navigate = useNavigate();
@@ -40,6 +42,15 @@ export function App() {
       currentSession()
         .then((found) => {
           if (cancelled) return;
+          /*
+           * Their own choice, before anything is drawn with it. Null means they
+           * have never chosen, and the browser's guess stands.
+           *
+           * True means the page is reloading into another language, and there
+           * is nothing for this tab to draw: setting state now would render a
+           * screen in the old one for the moment before it goes.
+           */
+          if (adoptLanguage(found?.language)) return;
           setSession(found);
           setReachable(true);
           setCheckingSession(false);
@@ -77,7 +88,9 @@ export function App() {
 
   const handleSignIn = useCallback(async (credentials: Credentials) => {
     setHome(undefined);
-    setSession(await login(credentials));
+    const signedIn = await login(credentials);
+    if (adoptLanguage(signedIn.language)) return;
+    setSession(signedIn);
   }, []);
 
   const handleSignOut = useCallback(async () => {
@@ -92,8 +105,10 @@ export function App() {
   if (!reachable && session === null) {
     return (
       <div className={styles.unreachable} role="status">
-        <p className={styles.unreachableTitle}>Cannot reach the server</p>
-        <p className={styles.unreachableDetail}>Trying again — this page will carry on by itself.</p>
+        <p className={styles.unreachableTitle}>{t('Cannot reach the server')}</p>
+        <p className={styles.unreachableDetail}>
+          {t('Trying again — this page will carry on by itself.')}
+        </p>
       </div>
     );
   }

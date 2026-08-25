@@ -23,6 +23,7 @@ import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './MemoryEditorPage.module.css';
+import { t } from '../../i18n';
 
 export interface MemoryEditorPageProps {
   session: SessionUser;
@@ -49,11 +50,11 @@ const MARKS: { key: string; label?: string; icon?: string; title: string; mark: 
     title: 'Link',
     mark: { kind: 'wrap', before: '[', after: '](https://)', placeholder: 'text' },
   },
-  { key: 'list', icon: listIcon, title: 'Bulleted list', mark: { kind: 'line', prefix: () => '- ' } },
+  { key: 'list', icon: listIcon, title: t('Bulleted list'), mark: { kind: 'line', prefix: () => '- ' } },
   {
     key: 'list-ordered',
     icon: listOrderedIcon,
-    title: 'Numbered list',
+    title: t('Numbered list'),
     mark: { kind: 'line', prefix: (index) => `${index + 1}. ` },
   },
 ];
@@ -100,7 +101,7 @@ export function MemoryEditorPage({ session, onSignOut }: MemoryEditorPageProps) 
     fetchMemory(memoryId)
       .then((found) => {
         if (found === null) {
-          setError('That memory does not exist, or you do not have access to it.');
+          setError(t('That memory does not exist, or you do not have access to it.'));
           return;
         }
         setMemory(found);
@@ -109,7 +110,7 @@ export function MemoryEditorPage({ session, onSignOut }: MemoryEditorPageProps) 
         setCatalogId(found.catalogId);
       })
       .catch((cause: unknown) => {
-        setError(cause instanceof Error ? cause.message : 'Could not load the memory.');
+        setError(cause instanceof Error ? cause.message : t('Could not load the memory.'));
       });
   }, [memoryId]);
 
@@ -169,7 +170,7 @@ export function MemoryEditorPage({ session, onSignOut }: MemoryEditorPageProps) 
       }
       setSaved(true);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save the memory.');
+      setError(cause instanceof Error ? cause.message : t('Could not save the memory.'));
     } finally {
       setSaving(false);
     }
@@ -182,7 +183,7 @@ export function MemoryEditorPage({ session, onSignOut }: MemoryEditorPageProps) 
       await deleteMemory(memory.id);
       navigate(`/workspace/${workspaceId}/memory`);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not delete the memory.');
+      setError(cause instanceof Error ? cause.message : t('Could not delete the memory.'));
     }
   }
 
@@ -191,7 +192,7 @@ export function MemoryEditorPage({ session, onSignOut }: MemoryEditorPageProps) 
 
   return (
     <AppShell
-      title={adding ? 'New note' : memory?.title}
+      title={adding ? t('New note') : memory?.title}
       user={shellUser(session)}
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
@@ -199,16 +200,16 @@ export function MemoryEditorPage({ session, onSignOut }: MemoryEditorPageProps) 
       sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <header className={styles.breadcrumbBar}>
-        <BackLink to={`/workspace/${workspaceId}/memory`} label="Memory" />
+        <BackLink to={`/workspace/${workspaceId}/memory`} label={t('Memory')} />
         <p className={styles.breadcrumbs}>
           <span className={styles.crumb}>{catalogName}</span>
           <span className={styles.crumbSeparator}>/</span>
-          <span className={styles.crumbCurrent}>{adding ? 'New memory' : (memory?.title ?? '…')}</span>
+          <span className={styles.crumbCurrent}>{adding ? t('New memory') : (memory?.title ?? '…')}</span>
         </p>
         <span className={styles.spacer} />
-        {saved && <span className={styles.saved}>Saved.</span>}
+        {saved && <span className={styles.saved}>{t('Saved.')}</span>}
         <button type="button" className={styles.save} onClick={() => void handleSave()} disabled={!complete || saving}>
-          {saving ? 'Saving…' : adding ? 'Create Memory' : 'Save Changes'}
+          {saving ? t('Saving…') : adding ? t('Create Memory') : t('Save Changes')}
         </button>
       </header>
 
@@ -229,13 +230,13 @@ export function MemoryEditorPage({ session, onSignOut }: MemoryEditorPageProps) 
           <section className={styles.editorCard}>
             <div className={styles.section}>
               <label className={styles.sectionLabel} htmlFor="memory-title">
-                MEMORY TITLE
+                {t('MEMORY TITLE')}
               </label>
               <input
                 id="memory-title"
                 className={styles.titleInput}
                 type="text"
-                placeholder="REST API Authentication Flow"
+                placeholder={t('REST API Authentication Flow')}
                 value={title}
                 onChange={(event) => {
                   setTitle(event.target.value);
@@ -245,7 +246,7 @@ export function MemoryEditorPage({ session, onSignOut }: MemoryEditorPageProps) 
             </div>
 
             <div className={styles.contentLabelRow}>
-              <span className={styles.sectionLabel}>MEMORY CONTENT</span>
+              <span className={styles.sectionLabel}>{t('MEMORY CONTENT')}</span>
             </div>
 
             {/* Markdown, put in rather than hidden: what is stored is what was typed. */}
@@ -273,8 +274,8 @@ export function MemoryEditorPage({ session, onSignOut }: MemoryEditorPageProps) 
               className={styles.content}
               value={content}
               spellCheck={false}
-              aria-label="Memory content"
-              placeholder="What should be remembered, and anything an agent would need to act on it."
+              aria-label={t('Memory content')}
+              placeholder={t('What should be remembered, and anything an agent would need to act on it.')}
               onChange={(event) => {
                 setContent(event.target.value);
                 setSaved(false);
@@ -284,12 +285,10 @@ export function MemoryEditorPage({ session, onSignOut }: MemoryEditorPageProps) 
 
           <aside className={styles.properties}>
             <div className={styles.propertySection}>
-              <p className={styles.propertyHeading}>MEMORY DETAILS</p>
+              <p className={styles.propertyHeading}>{t('MEMORY DETAILS')}</p>
 
               <div className={styles.field}>
-                <label className={styles.fieldLabel} htmlFor="memory-catalog">
-                  Catalog
-                </label>
+                <label className={styles.fieldLabel} htmlFor="memory-catalog">{t('Catalog')}</label>
                 <div className={styles.selectWrapper}>
                   <select
                     id="memory-catalog"
@@ -312,22 +311,20 @@ export function MemoryEditorPage({ session, onSignOut }: MemoryEditorPageProps) 
 
               {/* Who wrote it, which editing does not change. */}
               <div className={styles.field}>
-                <span className={styles.fieldLabel}>Author</span>
+                <span className={styles.fieldLabel}>{t('Author')}</span>
                 <span className={styles.fieldValue}>{adding ? session.username : (memory?.createdBy ?? '…')}</span>
               </div>
             </div>
 
             {memory !== null && (
               <div className={styles.field}>
-                <span className={styles.metaLabel}>Last modified</span>
+                <span className={styles.metaLabel}>{t('Last modified')}</span>
                 <span className={styles.fieldValue}>{timeAgo(memory.lastModifiedAt)}</span>
               </div>
             )}
 
             {memory !== null && (
-              <button type="button" className={styles.delete} onClick={() => void handleDelete()}>
-                Delete
-              </button>
+              <button type="button" className={styles.delete} onClick={() => void handleDelete()}>{t('Delete')}</button>
             )}
           </aside>
         </div>

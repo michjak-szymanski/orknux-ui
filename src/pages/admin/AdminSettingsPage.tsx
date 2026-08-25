@@ -18,6 +18,7 @@ import { Loader } from '../../components/Loader';
 import { forgetInstallation } from '../../session/installation';
 import { shellUser } from '../../session/user';
 import styles from './AdminSettingsPage.module.css';
+import { t } from '../../i18n';
 
 export interface AdminSettingsPageProps {
   session: SessionUser;
@@ -54,7 +55,7 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
         setRetention(String(held.revisionRetentionDays));
       })
       .catch((cause: unknown) => {
-        setError(cause instanceof Error ? cause.message : 'Could not read the settings.');
+        setError(cause instanceof Error ? cause.message : t('Could not read the settings.'));
       });
   }, []);
 
@@ -74,7 +75,7 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
       forgetInstallation();
       setSaved(true);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'That could not be saved.');
+      setError(cause instanceof Error ? cause.message : t('That could not be saved.'));
     } finally {
       setBusy(false);
     }
@@ -89,8 +90,10 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
       <section className={styles.card}>
         <header className={styles.header}>
           <div className={styles.titleBlock}>
-            <h1 className={styles.title}>Settings</h1>
-            <p className={styles.subtitle}>What this installation allows, for every workspace in it.</p>
+            <h1 className={styles.title}>{t('Settings')}</h1>
+            <p className={styles.subtitle}>
+              {t('What this installation allows, for every workspace in it.')}
+            </p>
           </div>
         </header>
 
@@ -109,8 +112,8 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
           <>
             <h2 className={styles.sectionHeading}>
               <span className={styles.headingWithHint}>
-                Chat
-                <FieldHint label="Chat">
+                {t('Chat')}
+                <FieldHint label={t('Chat')}>
                   Set in the configuration file, under <code>orknux.chat</code>.
                 </FieldHint>
               </span>
@@ -118,11 +121,11 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
 
             <div className={styles.setting}>
               <div className={styles.settingText}>
-                <p className={styles.settingLabel}>Chat</p>
+                <p className={styles.settingLabel}>{t('Chat')}</p>
                 <p className={styles.settingNote}>
                   {settings.chatConfigurable
-                    ? 'Whether this installation has a chat. Off takes the tab away and refuses new messages; the conversations already had are kept.'
-                    : 'Turned off in the configuration file, which is the operator’s decision: this cannot switch it back on.'}
+                    ? t('Whether this installation has a chat. Off takes the tab away and refuses new messages; the conversations already had are kept.')
+                    : t('Turned off in the configuration file, which is the operator’s decision: this cannot switch it back on.')}
                 </p>
               </div>
               <button
@@ -132,7 +135,7 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
                 disabled={busy || !settings.chatConfigurable}
                 role="switch"
                 aria-checked={settings.chatEnabled}
-                aria-label={settings.chatEnabled ? 'Turn chat off' : 'Turn chat on'}
+                aria-label={settings.chatEnabled ? t('Turn chat off') : t('Turn chat on')}
               >
                 <img
                   src={settings.chatEnabled ? toggleOnIcon : toggleOffIcon}
@@ -146,8 +149,8 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
 
             <h2 className={styles.sectionHeading}>
               <span className={styles.headingWithHint}>
-                Attachments
-                <FieldHint label="Attachments">
+                {t('Attachments')}
+                <FieldHint label={t('Attachments')}>
                   Set in the configuration file, under <code>orknux.attachments</code>. Each
                   workspace keeps its files in its own directory beneath that location.
                 </FieldHint>
@@ -156,11 +159,11 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
 
             <div className={styles.setting}>
               <div className={styles.settingText}>
-                <p className={styles.settingLabel}>Files in chats</p>
+                <p className={styles.settingLabel}>{t('Files in chats')}</p>
                 <p className={styles.settingNote}>
                   {settings.attachmentsConfigurable
-                    ? 'Whether people may attach files to a chat. Off takes the button away; what has already been uploaded stays where it is.'
-                    : 'Turned off in the configuration file, which is the operator’s decision: this cannot switch it back on.'}
+                    ? t('Whether people may attach files to a chat. Off takes the button away; what has already been uploaded stays where it is.')
+                    : t('Turned off in the configuration file, which is the operator’s decision: this cannot switch it back on.')}
                 </p>
               </div>
               <button
@@ -170,7 +173,7 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
                 disabled={busy || !settings.attachmentsConfigurable}
                 role="switch"
                 aria-checked={settings.attachmentsEnabled}
-                aria-label={settings.attachmentsEnabled ? 'Turn attachments off' : 'Turn attachments on'}
+                aria-label={settings.attachmentsEnabled ? t('Turn attachments off') : t('Turn attachments on')}
               >
                 <img
                   src={settings.attachmentsEnabled ? toggleOnIcon : toggleOffIcon}
@@ -189,30 +192,30 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
             */}
             <dl className={styles.facts}>
               <div className={styles.fact}>
-                <dt className={styles.factName}>Storage</dt>
+                <dt className={styles.factName}>{t('Storage')}</dt>
                 <dd className={styles.factValue}>{settings.attachmentStorage}</dd>
               </div>
               <div className={styles.fact}>
-                <dt className={styles.factName}>Location</dt>
+                <dt className={styles.factName}>{t('Location')}</dt>
                 <dd className={`${styles.factValue} ${styles.mono}`}>{settings.attachmentLocation}</dd>
               </div>
               <div className={styles.fact}>
-                <dt className={styles.factName}>Largest file</dt>
+                <dt className={styles.factName}>{t('Largest file')}</dt>
                 <dd className={styles.factValue}>{settings.attachmentMaxFileSizeMb} MB</dd>
               </div>
             </dl>
-            <h2 className={styles.sectionHeading}>Metrics</h2>
+            <h2 className={styles.sectionHeading}>{t('Metrics')}</h2>
 
             <div className={styles.setting}>
               <div className={styles.settingText}>
                 <span className={styles.labelWithHint}>
-                  <p className={styles.settingLabel}>Scraping without signing in</p>
+                  <p className={styles.settingLabel}>{t('Scraping without signing in')}</p>
                   {/*
                     What turning this on exposes is exactly the sort of
                     consequence the rules put behind the (?): read once by
                     somebody deciding, and in the way of everybody else.
                   */}
-                  <FieldHint label="Scraping without signing in">
+                  <FieldHint label={t('Scraping without signing in')}>
                     On publishes <code>/actuator/prometheus</code> to anybody who can reach this
                     server’s port: how many workspaces exist, how often workflows run and how often
                     they fail. Turn it on only where the scrape crosses a network the scraper alone is
@@ -230,8 +233,8 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
                 aria-checked={settings.metricsAnonymous}
                 aria-label={
                   settings.metricsAnonymous
-                    ? 'Stop answering metrics to callers who have not signed in'
-                    : 'Answer metrics to callers who have not signed in'
+                    ? t('Stop answering metrics to callers who have not signed in')
+                    : t('Answer metrics to callers who have not signed in')
                 }
               >
                 <img
@@ -246,7 +249,7 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
 
             {settings.metricsAnonymous && (
               <p className={styles.warning}>
-                Open now: anyone who can reach this port is reading those numbers without an account.
+                {t('Open now: anyone who can reach this port is reading those numbers without an account.')}
               </p>
             )}
 
@@ -275,18 +278,14 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
               )}
             </p>
 
-            <h2 className={styles.sectionHeading}>Component history</h2>
+            <h2 className={styles.sectionHeading}>{t('Component history')}</h2>
 
             <div className={styles.setting}>
               <div className={styles.settingText}>
                 <span className={styles.labelWithHint}>
-                  <p className={styles.settingLabel}>How long versions are kept</p>
-                  <FieldHint label="How long versions are kept">
-                    Every save of a function, tool, skill or agent keeps what it was before, and every
-                    publication of a workflow is kept as a version of it. A version is a whole copy —
-                    the code, the parameters, the prompt — so this is what decides how much disk the
-                    history takes. Counted from when a version stopped being current, not from when it
-                    was written. A workflow’s live publication is never swept, however old it is.
+                  <p className={styles.settingLabel}>{t('How long versions are kept')}</p>
+                  <FieldHint label={t('How long versions are kept')}>
+                    {t('Every save of a function, tool, skill or agent keeps what it was before, and every publication of a workflow is kept as a version of it. A version is a whole copy — the code, the parameters, the prompt — so this is what decides how much disk the history takes. Counted from when a version stopped being current, not from when it was written. A workflow’s live publication is never swept, however old it is.')}
                   </FieldHint>
                 </span>
               </div>
@@ -301,9 +300,9 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
                   value={retention}
                   onChange={(event) => setRetention(event.target.value)}
                   disabled={busy}
-                  aria-label="How many days of component history to keep"
+                  aria-label={t('How many days of component history to keep')}
                 />
-                <span className={styles.retentionUnit}>days</span>
+                <span className={styles.retentionUnit}>{t('days')}</span>
                 <button
                   type="button"
                   className={styles.primaryButton}
@@ -313,9 +312,7 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
                     retention.trim() === '' ||
                     Number(retention) === settings.revisionRetentionDays
                   }
-                >
-                  Save
-                </button>
+                >{t('Save')}</button>
               </div>
             </div>
 
@@ -333,7 +330,7 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
               </p>
             )}
 
-            {saved && <p className={styles.saved}>Saved.</p>}
+            {saved && <p className={styles.saved}>{t('Saved.')}</p>}
           </>
         )}
       </section>

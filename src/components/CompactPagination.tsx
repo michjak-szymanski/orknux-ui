@@ -1,5 +1,6 @@
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
 import styles from './CompactPagination.module.css';
+import { t } from '../i18n';
 
 export interface CompactPaginationProps {
   /** 1-based page number. */
@@ -44,7 +45,7 @@ export function CompactPagination({
           <>
             {' · '}
             <label className={styles.perPage}>
-              Show
+              {t('Show')}
               <span className={styles.selectWrapper}>
                 <select
                   className={styles.perPageSelect}
@@ -71,9 +72,7 @@ export function CompactPagination({
           className={styles.step}
           onClick={() => onPageChange(current - 1)}
           disabled={current === 1}
-        >
-          Previous
-        </button>
+        >{t('Previous')}</button>
         <span className={styles.current} aria-current="page">
           {current}
         </span>
@@ -82,9 +81,7 @@ export function CompactPagination({
           className={styles.step}
           onClick={() => onPageChange(current + 1)}
           disabled={current === totalPages}
-        >
-          Next
-        </button>
+        >{t('Next')}</button>
       </div>
     </div>
   );

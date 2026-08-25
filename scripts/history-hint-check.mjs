@@ -100,9 +100,20 @@ record(
   `the panel is one component in ${FRAMES.length} frames - the interface renders it from: ${renderers.join(', ') || 'nowhere'}`,
 );
 
+/*
+ * Either spelling of the label. Since the interface was translated a label is
+ * written `label={t('History')}` rather than `label="History"`, and both are
+ * the same affordance - what this is asserting is that the explanation is
+ * behind a (?) at all, not how the attribute is quoted.
+ */
+const hintFor = (source, label) =>
+  source.includes(`<FieldHint label="${label}">`) ||
+  source.includes(`<FieldHint label={t('${label}')}>`) ||
+  source.includes(`<FieldHint label={t("${label}")}>`);
+
 const held = readFileSync('src/components/RevisionHistory.tsx', 'utf8');
 record(
-  held.includes('<FieldHint label="History">'),
+  hintFor(held, 'History'),
   'and that component hands its explanation to a FieldHint',
 );
 record(
@@ -127,7 +138,7 @@ record(
 );
 const publicationSource = readFileSync('src/components/PublicationHistory.tsx', 'utf8');
 record(
-  publicationSource.includes('<FieldHint label="Publications">'),
+  hintFor(publicationSource, 'Publications'),
   'and it hands its explanation to a FieldHint as well',
 );
 record(

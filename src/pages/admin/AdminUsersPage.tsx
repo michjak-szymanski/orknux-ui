@@ -13,6 +13,7 @@ import { AppShell } from '../../components/AppShell';
 import { Loader } from '../../components/Loader';
 import { shellUser } from '../../session/user';
 import styles from './AdminUsersPage.module.css';
+import { t } from '../../i18n';
 
 export interface AdminUsersPageProps {
   session: SessionUser;
@@ -53,7 +54,7 @@ export function AdminUsersPage({ session, onSignOut }: AdminUsersPageProps) {
         })
         .catch((cause: unknown) => {
           if (!current) return;
-          setError(cause instanceof Error ? cause.message : 'Could not load the users.');
+          setError(cause instanceof Error ? cause.message : t('Could not load the users.'));
           setLoading(false);
         });
     }, SEARCH_PAUSE_MS);
@@ -73,14 +74,14 @@ export function AdminUsersPage({ session, onSignOut }: AdminUsersPageProps) {
       <section className={styles.card}>
         <header className={styles.header}>
           <div className={styles.titleGroup}>
-            <h1 className={styles.title}>Users</h1>
+            <h1 className={styles.title}>{t('Users')}</h1>
             <p className={styles.subtitle}>
-              Everybody this installation knows — recorded at sign-in, or created here.
+              {t('Everybody this installation knows — recorded at sign-in, or created here.')}
             </p>
           </div>
           <button type="button" className={styles.create} onClick={() => navigate('/admin/users/new')}>
             <img src={plusIcon} alt="" width={14} height={14} />
-            Add User
+            {t('Add User')}
           </button>
         </header>
 
@@ -90,8 +91,8 @@ export function AdminUsersPage({ session, onSignOut }: AdminUsersPageProps) {
             className={styles.search}
             type="search"
             value={search}
-            placeholder="Search by name…"
-            aria-label="Search users"
+            placeholder={t('Search by name…')}
+            aria-label={t('Search users')}
             onChange={(event) => setSearch(event.target.value)}
           />
         </div>
@@ -104,11 +105,11 @@ export function AdminUsersPage({ session, onSignOut }: AdminUsersPageProps) {
 
         <div className={styles.table}>
           <div className={styles.tableHeader}>
-            <span className={styles.colUser}>User</span>
-            <span className={styles.colEmail}>Email</span>
-            <span className={styles.colType}>Type</span>
-            <span className={styles.colRoles}>Roles</span>
-            <span className={styles.colModified}>Last Modified</span>
+            <span className={styles.colUser}>{t('User')}</span>
+            <span className={styles.colEmail}>{t('Email')}</span>
+            <span className={styles.colType}>{t('Type')}</span>
+            <span className={styles.colRoles}>{t('Roles')}</span>
+            <span className={styles.colModified}>{t('Last Modified')}</span>
             <span className={styles.colActions} aria-hidden="true" />
           </div>
 
@@ -119,7 +120,7 @@ export function AdminUsersPage({ session, onSignOut }: AdminUsersPageProps) {
           )}
           {!loading && users?.length === 0 && (
             <p className={styles.notice}>
-              {search.trim() === '' ? 'Nobody yet. Users appear when they sign in.' : 'Nobody by that name.'}
+              {search.trim() === '' ? t('Nobody yet. Users appear when they sign in.') : t('Nobody by that name.')}
             </p>
           )}
 
@@ -162,7 +163,7 @@ export function AdminUsersPage({ session, onSignOut }: AdminUsersPageProps) {
                     className={styles.edit}
                     to={`/admin/users/${user.id}`}
                     aria-label={user.editable ? `Edit ${user.displayName}` : `Edit ${user.displayName}'s email`}
-                    title={user.editable ? 'Edit' : 'Edit email'}
+                    title={user.editable ? 'Edit' : t('Edit email')}
                   >
                     <img src={pencilIcon} alt="" width={14} height={14} />
                   </Link>

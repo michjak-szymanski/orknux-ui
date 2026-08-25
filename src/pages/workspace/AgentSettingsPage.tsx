@@ -15,6 +15,7 @@ import { UsedBy } from '../../components/UsedBy';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './AgentSettingsPage.module.css';
+import { t } from '../../i18n';
 
 export interface AgentSettingsPageProps {
   session: SessionUser;
@@ -70,13 +71,13 @@ export function AgentSettingsPage({ session, onSignOut }: AgentSettingsPageProps
     fetchAgent(agentId)
       .then((found) => {
         if (found === null) {
-          setLoadError('That agent does not exist, or you do not have access to it.');
+          setLoadError(t('That agent does not exist, or you do not have access to it.'));
           return;
         }
         setAgent(found);
       })
       .catch((cause: unknown) => {
-        setLoadError(cause instanceof Error ? cause.message : 'Could not load the agent.');
+        setLoadError(cause instanceof Error ? cause.message : t('Could not load the agent.'));
       });
   }, [agentId]);
 
@@ -91,14 +92,14 @@ export function AgentSettingsPage({ session, onSignOut }: AgentSettingsPageProps
     >
       <header className={styles.headerBlock}>
         <p className={styles.breadcrumbs}>
-          <BackLink to={`/workspace/${workspaceId}/agents`} label="Agents" />
+          <BackLink to={`/workspace/${workspaceId}/agents`} label={t('Agents')} />
           <Link className={styles.crumbLink} to={`/workspace/${workspaceId}/agents`}>
-            Agents
+            {t('Agents')}
           </Link>
           <span className={styles.crumbSeparator}>/</span>
           <span className={styles.crumbCurrent}>{agent?.name ?? '…'}</span>
         </p>
-        <h1 className={styles.pageTitle}>Agent Settings</h1>
+        <h1 className={styles.pageTitle}>{t('Agent Settings')}</h1>
       </header>
 
       {loadError !== null ? (
@@ -161,15 +162,15 @@ export function AgentSettingsPage({ session, onSignOut }: AgentSettingsPageProps
           </section>
 
           <section className={`${styles.card} ${styles.dangerCard}`}>
-            <h2 className={styles.dangerHeading}>Danger Zone</h2>
+            <h2 className={styles.dangerHeading}>{t('Danger Zone')}</h2>
             <div className={styles.dangerRow}>
               <div className={styles.dangerText}>
-                <p className={styles.dangerTitle}>Delete Agent</p>
-                <p className={styles.dangerMessage}>Permanently remove this agent and its configuration.</p>
+                <p className={styles.dangerTitle}>{t('Delete Agent')}</p>
+                <p className={styles.dangerMessage}>
+                  {t('Permanently remove this agent and its configuration.')}
+                </p>
               </div>
-              <button type="button" className={styles.delete} onClick={() => setConfirmingDelete(true)}>
-                Delete Agent
-              </button>
+              <button type="button" className={styles.delete} onClick={() => setConfirmingDelete(true)}>{t('Delete Agent')}</button>
             </div>
           </section>
         </>

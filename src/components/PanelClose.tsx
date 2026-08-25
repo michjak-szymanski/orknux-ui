@@ -1,6 +1,7 @@
 import type { KeyboardEvent } from 'react';
 
 import styles from './Dialog.module.css';
+import { t } from '../i18n';
 
 export interface PanelCloseProps {
   onClose: () => void;
@@ -28,7 +29,7 @@ export interface PanelCloseProps {
  */
 export function PanelClose({ onClose }: PanelCloseProps) {
   return (
-    <button type="button" className={styles.panelClose} onClick={onClose} aria-label="Close" title="Close">
+    <button type="button" className={styles.panelClose} onClick={onClose} aria-label={t('Close')} title={t('Close')}>
       ✕
     </button>
   );

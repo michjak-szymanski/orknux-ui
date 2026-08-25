@@ -22,6 +22,7 @@ import toolIcon from '../assets/tool.svg';
 import { rememberVisit, useRecentlyOpened } from '../session/recentlyOpened';
 import { matches, useRecentShortcut, usePaletteShortcut } from '../session/shortcut';
 import styles from './CommandPalette.module.css';
+import { t } from '../i18n';
 
 export interface CommandPaletteProps {
   /** The workspace the pages belong to; without one only the rest is offered. */
@@ -334,7 +335,7 @@ export function CommandPalette({ workspacePath, showAdmin = true, showChat = tru
     if (onRecent && needle === '') {
       return {
         found: recent,
-        headings: new Map<number, string>(recent.length > 0 ? [[0, 'Recently opened']] : []),
+        headings: new Map<number, string>(recent.length > 0 ? [[0, t('Recently opened')]] : []),
         empty: ready ? ('unopened' as const) : ('waiting' as const),
       };
     }
@@ -351,8 +352,8 @@ export function CommandPalette({ workspacePath, showAdmin = true, showChat = tru
       const head = recent.slice(0, RECENT_AT_REST);
       const headings = new Map<number, string>();
       if (head.length > 0) {
-        headings.set(0, 'Recently opened');
-        headings.set(head.length, 'Quick actions');
+        headings.set(0, t('Recently opened'));
+        headings.set(head.length, t('Quick actions'));
       }
       return {
         found: [...head, ...actions, ...commands].slice(0, SHOWN),
@@ -451,8 +452,8 @@ export function CommandPalette({ workspacePath, showAdmin = true, showChat = tru
           ref={inputRef}
           className={styles.input}
           value={text}
-          placeholder="Quick actions…"
-          aria-label="Quick actions"
+          placeholder={t('Quick actions…')}
+          aria-label={t('Quick actions')}
           /*
             Only opens it. Which list it opens onto is decided by whatever put
             the caret here, and that includes the keystroke below, which focuses
@@ -475,13 +476,13 @@ export function CommandPalette({ workspacePath, showAdmin = true, showChat = tru
       {open && (
         <ul className={styles.results} role="listbox">
           {found.length === 0 && empty === 'unfound' && (
-            <li className={styles.empty}>Nothing goes by that name.</li>
+            <li className={styles.empty}>{t('Nothing goes by that name.')}</li>
           )}
           {found.length === 0 && empty === 'unopened' && (
-            <li className={styles.empty}>Nothing opened yet.</li>
+            <li className={styles.empty}>{t('Nothing opened yet.')}</li>
           )}
           {/* The names it has to read the addresses against are still on their way. */}
-          {found.length === 0 && empty === 'waiting' && <li className={styles.empty}>Loading…</li>}
+          {found.length === 0 && empty === 'waiting' && <li className={styles.empty}>{t('Loading…')}</li>}
           {/* Two variables in different catalogues share a destination, so the
               name and the position are part of what tells one row from another. */}
           {found.map((one, index) => (

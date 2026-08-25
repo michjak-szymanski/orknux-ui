@@ -1,4 +1,5 @@
 import { graphql } from './client';
+import { t } from '../i18n';
 
 /**
  * Files attached to a chat.
@@ -31,7 +32,7 @@ export async function uploadAttachments(workspaceId: string, files: File[]): Pro
     | { attachments?: Attachment[]; error?: string; message?: string }
     | null;
   if (!answer.ok) {
-    throw new Error(said?.error ?? said?.message ?? 'Those files could not be uploaded.');
+    throw new Error(said?.error ?? said?.message ?? t('Those files could not be uploaded.'));
   }
   return said?.attachments ?? [];
 }

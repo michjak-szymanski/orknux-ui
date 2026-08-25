@@ -12,6 +12,7 @@ import {
 } from '../api/issues';
 import type { Issue, IssueRef, IssueRelation, IssueRelationKind } from '../api/issues';
 import styles from './IssueRelationList.module.css';
+import { t } from '../i18n';
 
 /** How long typing has to pause before the list is asked again. */
 const SEARCH_PAUSE_MS = 200;
@@ -96,7 +97,7 @@ export function IssueRelationList({
     try {
       onChanged(await work);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'That could not be changed.');
+      setError(cause instanceof Error ? cause.message : t('That could not be changed.'));
     } finally {
       setBusy(false);
     }
@@ -129,7 +130,7 @@ export function IssueRelationList({
       const again = await fetchIssue(workspaceId, number);
       if (again !== null) onChanged(again);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'That link could not be removed.');
+      setError(cause instanceof Error ? cause.message : t('That link could not be removed.'));
     } finally {
       setBusy(false);
     }
@@ -138,7 +139,7 @@ export function IssueRelationList({
   return (
     <section className={styles.related}>
       <span className={styles.head}>
-        <span className={styles.label}>Linked issues</span>
+        <span className={styles.label}>{t('Linked issues')}</span>
         <button
           type="button"
           className={styles.textButton}
@@ -148,7 +149,7 @@ export function IssueRelationList({
             setError(null);
           }}
         >
-          {adding ? 'Cancel' : 'Link an issue'}
+          {adding ? 'Cancel' : t('Link an issue')}
         </button>
       </span>
 
@@ -163,7 +164,7 @@ export function IssueRelationList({
           <select
             className={styles.kind}
             value={kind}
-            aria-label="How they are linked"
+            aria-label={t('How they are linked')}
             onChange={(event) => setKind(event.target.value as IssueRelationKind)}
           >
             {ISSUE_RELATION_KINDS.map((one) => (
@@ -178,15 +179,15 @@ export function IssueRelationList({
             type="search"
             value={search}
             autoFocus
-            placeholder="#124, or a few words of the title…"
-            aria-label="Find an issue to link to"
+            placeholder={t('#124, or a few words of the title…')}
+            aria-label={t('Find an issue to link to')}
             onChange={(event) => setSearch(event.target.value)}
           />
 
           <div className={styles.found}>
-            {loading && <p className={styles.notice}>Looking…</p>}
+            {loading && <p className={styles.notice}>{t('Looking…')}</p>}
             {!loading && found.length === 0 && (
-              <p className={styles.notice}>Nothing here by that number or name.</p>
+              <p className={styles.notice}>{t('Nothing here by that number or name.')}</p>
             )}
             {found.map((one) => (
               <button
@@ -209,7 +210,7 @@ export function IssueRelationList({
 
       {related.length === 0 ? (
         <p className={styles.nothing}>
-          Nothing linked yet. What blocks this, what it duplicates, what is worth reading beside it.
+          {t('Nothing linked yet. What blocks this, what it duplicates, what is worth reading beside it.')}
         </p>
       ) : (
         <ul className={styles.list}>

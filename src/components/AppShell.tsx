@@ -11,7 +11,7 @@ import orknuxMark from '../assets/orknux-mark.svg';
 import settingsIcon from '../assets/settings.svg';
 import shieldIcon from '../assets/shield.svg';
 import { rememberWorkspace, useLastWorkspaceId } from '../session/lastWorkspace';
-import { TOP_SECTIONS, sectionAt, sectionHome, whereAt, workspaceSwitchPath } from '../navigation';
+import { TOP_SECTIONS, sectionAt, sectionHome, sectionLabel, whereAt, workspaceSwitchPath } from '../navigation';
 import { useAuthentication } from '../session/authentication';
 import { useInstallation } from '../session/installation';
 import { setSidebarCollapsed, useSidebarCollapsed } from '../session/sidebar';
@@ -21,6 +21,7 @@ import { askBeforeLeaving } from './leaveGuard';
 import { NotificationBell } from './NotificationBell';
 import { QuickChat } from './QuickChat';
 import styles from './AppShell.module.css';
+import { t } from '../i18n';
 
 export interface AppShellUser {
   name: string;
@@ -261,7 +262,7 @@ export function AppShell({
           lists each section first. Nothing about which pages are in which
           section is decided here.
         */}
-        <nav className={styles.navLinks} aria-label="Sections">
+        <nav className={styles.navLinks} aria-label={t('Sections')}>
           <span className={styles.navDivider} aria-hidden="true" />
           {TOP_SECTIONS.map((name) => {
             /*
@@ -284,7 +285,7 @@ export function AppShell({
 
             return (
               <TopNavLink key={name} to={to} current={where === name}>
-                {name}
+                {sectionLabel(name)}
               </TopNavLink>
             );
           })}
@@ -318,14 +319,14 @@ export function AppShell({
         <div className={styles.topRight}>
           <WorkspaceSwitcher workspacePath={workspaceHere} />
           <div className={styles.topRightIcons}>
-            <TopIconLink to="/docs" icon={bookIcon} label="Docs" current={where === 'Docs'} />
+            <TopIconLink to="/docs" icon={bookIcon} label={t('Docs')} current={where === 'Docs'} />
             {/*
               Not rendered at all for anybody else, rather than hidden: a button
               drawn and then covered is still in the tab order and still read
               aloud, and the pages behind it refuse them anyway.
             */}
             {canAdmin && (
-              <TopIconLink to="/admin" icon={shieldIcon} label="Admin" current={where === 'Admin'} />
+              <TopIconLink to="/admin" icon={shieldIcon} label={t('Admin')} current={where === 'Admin'} />
             )}
             <NotificationBell />
           </div>
@@ -344,7 +345,7 @@ export function AppShell({
         {!hideSidebar && (
           <nav
             className={collapsed ? `${styles.sidebar} ${styles.sidebarCollapsed}` : styles.sidebar}
-            aria-label="Primary"
+            aria-label={t('Primary')}
           >
             {sidebar}
           </nav>
@@ -371,9 +372,9 @@ export function AppShell({
             type="button"
             className={collapsed ? `${styles.edgeHandle} ${styles.edgeHandleShut}` : styles.edgeHandle}
             onClick={() => setSidebarCollapsed(!collapsed)}
-            aria-label={collapsed ? 'Expand the menu' : 'Collapse the menu'}
+            aria-label={collapsed ? t('Expand the menu') : t('Collapse the menu')}
             aria-expanded={!collapsed}
-            title={collapsed ? 'Expand the menu' : 'Collapse the menu'}
+            title={collapsed ? t('Expand the menu') : t('Collapse the menu')}
           >
             <img src={chevronDown12Icon} alt="" width={12} height={12} />
           </button>
@@ -517,7 +518,7 @@ function UserMenu({
             onClick={() => setOpen(false)}
           >
             <img src={settingsIcon} alt="" width={14} height={14} />
-            Preferences
+            {t('Preferences')}
           </Link>
           {canSignOut && <span className={styles.menuRule} aria-hidden="true" />}
           {canSignOut && (
@@ -531,7 +532,7 @@ function UserMenu({
               }}
             >
               <img src={doorOpenIcon} alt="" width={14} height={14} />
-              Logout
+              {t('Logout')}
             </button>
           )}
         </div>
@@ -670,7 +671,7 @@ export function LdapStatus({ connected = true }: { connected?: boolean }) {
       <hr className={styles.divider} />
       <p className={styles.ldapStatus}>
         <span className={connected ? styles.statusDotOnline : styles.statusDotOffline} aria-hidden="true" />
-        {connected ? 'LDAP Connected' : 'LDAP Unavailable'}
+        {connected ? t('LDAP Connected') : t('LDAP Unavailable')}
       </p>
     </div>
   );
@@ -710,7 +711,7 @@ function WorkspaceSelector({ workspaces, selectedId, onSelect }: WorkspaceSelect
         onChange={(event) => {
           if (!onSelect(event.target.value)) event.target.value = selectedId;
         }}
-        aria-label="Selected workspace"
+        aria-label={t('Selected workspace')}
       >
         {workspaces.map((workspace) => (
           <option key={workspace.id} value={workspace.id}>

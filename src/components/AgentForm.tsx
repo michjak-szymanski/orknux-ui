@@ -24,6 +24,7 @@ import { IconField } from './IconField';
 import { OpenDefinitionIcon } from './OpenDefinitionIcon';
 import { segments } from './searchMatches';
 import own from './AgentForm.module.css';
+import { t } from '../i18n';
 
 /**
  * The class names the form paints itself with.
@@ -347,7 +348,7 @@ function GrantList<Item>({
               </div>
             );
           })}
-          {shown.length === 0 && <p className={own.emptyNote}>Nothing by that name.</p>}
+          {shown.length === 0 && <p className={own.emptyNote}>{t('Nothing by that name.')}</p>}
         </div>
       )}
     </div>
@@ -427,7 +428,7 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
    * on the form changes if this list never arrives - the chips are drawn from
    * the agent, and only the way out is missing.
    */
-  const serverCatalogue = useCatalogue<McpServer>('MCP servers', () => fetchMcpServers(workspaceId), [workspaceId], {
+  const serverCatalogue = useCatalogue<McpServer>(t('MCP servers'), () => fetchMcpServers(workspaceId), [workspaceId], {
     skip: noWorkspace,
   });
 
@@ -581,7 +582,7 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
       setSaved(true);
       onSaved(updated);
     } catch (cause) {
-      setSaveError(cause instanceof Error ? cause.message : 'Could not save the agent.');
+      setSaveError(cause instanceof Error ? cause.message : t('Could not save the agent.'));
     } finally {
       setSaving(false);
     }
@@ -593,9 +594,7 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
 
       <div className={styles.fields}>
         <div className={styles.field}>
-          <label className={styles.label} htmlFor="agent-name">
-            Agent Name
-          </label>
+          <label className={styles.label} htmlFor="agent-name">{t('Agent Name')}</label>
           <div className={styles.inputWrapper}>
             <input
               id="agent-name"
@@ -610,9 +609,7 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
         </div>
 
         <div className={styles.field}>
-          <label className={styles.label} htmlFor="agent-description">
-            Description
-          </label>
+          <label className={styles.label} htmlFor="agent-description">{t('Description')}</label>
           <div className={`${styles.inputWrapper} ${styles.inputWrapperTall}`}>
             <textarea
               id="agent-description"
@@ -627,7 +624,7 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
         <IconField
           value={icon}
           onChange={setIcon}
-          hint="Nodes drawn from this agent start with it; each node can change its own."
+          hint={t("Nodes drawn from this agent start with it; each node can change its own.")}
         />
 
         <div className={styles.field}>
@@ -645,7 +642,7 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
               width={16}
               height={16}
             />
-            System Prompt
+            {t('System Prompt')}
           </button>
           {promptOpen && (
             <div className={`${styles.inputWrapper} ${styles.inputWrapperTall}`}>
@@ -653,7 +650,7 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
                 id="agent-system-prompt"
                 name="systemPrompt"
                 className={`${styles.input} ${styles.textarea} ${own.promptInput}`}
-                placeholder="You are a research agent specialized in web search and data synthesis…"
+                placeholder={t('You are a research agent specialized in web search and data synthesis…')}
                 value={systemPrompt}
                 onChange={(event) => setSystemPrompt(event.target.value)}
               />
@@ -672,17 +669,15 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
             forms, because this one is reached in the middle of an edit.
           */}
           <span className={styles.labelRow}>
-            <label className={styles.label} htmlFor="agent-model">
-              Model
-            </label>
+            <label className={styles.label} htmlFor="agent-model">{t('Model')}</label>
             {chosenModel !== null && (
               <Link
                 className={styles.jump}
                 to={`/workspace/${workspaceId}/models/${chosenModel}`}
                 target="_blank"
                 rel="noreferrer"
-                title="Opens the model's settings in a new tab"
-                aria-label="Open the model's settings"
+                title={t('Opens the model\'s settings in a new tab')}
+                aria-label={t('Open the model\'s settings')}
               >
                 <OpenDefinitionIcon />
               </Link>
@@ -695,7 +690,7 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
               value={modelId}
               onChange={(event) => setModelId(event.target.value)}
             >
-              <option value="">None — this agent cannot run</option>
+              <option value="">{t('None — this agent cannot run')}</option>
               {/* An agent talks; these hear and read rather than answer. */}
               {models.filter(answers).map((model) => (
                 <option key={model.id} value={model.id}>
@@ -736,17 +731,10 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
         <div className={styles.field}>
           <span className={own.labelWithHint}>
             <label className={styles.label} htmlFor="agent-memory-share">
-              Session Memory
+              {t('Session Memory')}
             </label>
-            <FieldHint label="Session Memory">
-              How much of the chosen model&rsquo;s context window one of this agent&rsquo;s sessions may
-              hand back on its next turn: what was said in it, and what its tools last returned. At
-              Default this agent follows whatever its workspace has decided for the agents in it, and
-              where the workspace has decided nothing either, a fixed built-in allowance that knows
-              nothing of the window; the figures below say which of the two it is. A share is worked out
-              from the window, which is why a model has to be chosen before one can be set. Token
-              figures are approximate — they are counted in characters and reported at four characters
-              to the token.
+            <FieldHint label={t('Session Memory')}>
+              {t('How much of the chosen model’s context window one of this agent’s sessions may hand back on its next turn: what was said in it, and what its tools last returned. At Default this agent follows whatever its workspace has decided for the agents in it, and where the workspace has decided nothing either, a fixed built-in allowance that knows nothing of the window; the figures below say which of the two it is. A share is worked out from the window, which is why a model has to be chosen before one can be set. Token figures are approximate — they are counted in characters and reported at four characters to the token.')}
             </FieldHint>
           </span>
 
@@ -805,7 +793,7 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
                 */}
                 {asked === null && (
                   <div className={own.budgetRow}>
-                    <dt>Default is</dt>
+                    <dt>{t('Default is')}</dt>
                     <dd>
                       {budget.inherited && budget.share !== null && budget.refusal === null
                         ? `the workspace's ${budget.share}%`
@@ -814,17 +802,17 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
                   </div>
                 )}
                 <div className={own.budgetRow}>
-                  <dt>Altogether</dt>
+                  <dt>{t('Altogether')}</dt>
                   <dd>{thousands(budget.totalTokens)} tokens</dd>
                 </div>
                 <div className={own.budgetRow}>
-                  <dt>Conversation</dt>
+                  <dt>{t('Conversation')}</dt>
                   <dd>
                     {thousands(budget.conversationTokens)} tokens, {budget.turns} turns
                   </dd>
                 </div>
                 <div className={own.budgetRow}>
-                  <dt>Tool results</dt>
+                  <dt>{t('Tool results')}</dt>
                   <dd>
                     {thousands(budget.toolResultTokens)} tokens, longest{' '}
                     {thousands(budget.longestResultTokens)}
@@ -851,11 +839,11 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
           an agent given none reads none.
         */}
         <GrantList<MemoryCatalog>
-          label="Memory Catalogs"
+          label={t('Memory Catalogs')}
           what="memory catalogs"
           styles={styles}
           catalogue={memoryCatalogue}
-          empty="No catalogs in this workspace yet."
+          empty={t("No catalogs in this workspace yet.")}
           keyOf={(catalog) => catalog.id}
           nameOf={(catalog) => catalog.name}
           metaOf={(catalog) => catalog.memoryCount}
@@ -870,11 +858,11 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
           is decided once rather than once per skill.
         */}
         <GrantList<SkillCatalog>
-          label="Skill Catalogs"
+          label={t('Skill Catalogs')}
           what="skill catalogs"
           styles={styles}
           catalogue={skillCatalogue}
-          empty="No skill catalogs in this workspace yet."
+          empty={t("No skill catalogs in this workspace yet.")}
           keyOf={(catalog) => catalog.id}
           nameOf={(catalog) => catalog.name}
           metaOf={(catalog) => catalog.skillCount}
@@ -888,11 +876,11 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
           page this agent reads, a tool is code it runs.
         */}
         <GrantList<Tool>
-          label="Tools"
+          label={t('Tools')}
           what="tools"
           styles={styles}
           catalogue={toolCatalogue}
-          empty="No tools in this workspace yet."
+          empty={t("No tools in this workspace yet.")}
           keyOf={(tool) => tool.id}
           nameOf={(tool) => tool.name}
           metaOf={(tool) => (tool.enabled ? null : 'off')}
@@ -925,12 +913,10 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
                 checked={orknuxAccess}
                 onChange={(event) => setOrknuxAccess(event.target.checked)}
               />
-              <span>Let this agent ask orknux about orknux</span>
+              <span>{t('Let this agent ask orknux about orknux')}</span>
             </label>
             <FieldHint label="Orknux">
-              Its workspace’s workflows, runs and agents — and it can start a workflow, which really
-              runs it. An agent that starts a workflow which asks an agent is a loop nothing here
-              breaks.
+              {t('Its workspace’s workflows, runs and agents — and it can start a workflow, which really runs it. An agent that starts a workflow which asks an agent is a loop nothing here breaks.')}
             </FieldHint>
           </div>
         </div>
@@ -942,7 +928,7 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
           machine; which one it gets is decided when the session opens.
         */}
         <div className={styles.field}>
-          <span className={styles.label}>Shells</span>
+          <span className={styles.label}>{t('Shells')}</span>
           {/*
             Beside the row for the same reason, and this is the one where it
             matters most: what the note says is what an account on that machine
@@ -956,22 +942,20 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
                 checked={shellAccess}
                 onChange={(event) => setShellAccess(event.target.checked)}
               />
-              <span>Let this agent open a shell and run commands on it</span>
+              <span>{t('Let this agent open a shell and run commands on it')}</span>
             </label>
-            <FieldHint label="Shells">
-              It opens a session on one of the machines an administrator set up under Admin →
-              Shell, gets a working directory of its own on it, and runs commands there. What
-              contains that is the machine and the account named on it, not anything here: an
-              agent given this can do whatever that account can. Every command is written down in
-              the audit log under this agent&apos;s name.
+            <FieldHint label={t('Shells')}>
+              {t('It opens a session on one of the machines an administrator set up under Admin → Shell, gets a working directory of its own on it, and runs commands there. What contains that is the machine and the account named on it, not anything here: an agent given this can do whatever that account can. Every command is written down in the audit log under this agent\'s name.')}
             </FieldHint>
           </div>
         </div>
 
         <div className={styles.field} data-grants="mcp servers">
           <span className={own.labelWithHint}>
-            <span className={styles.label}>MCP Servers</span>
-            <FieldHint label="MCP Servers">External tool servers this agent can connect to.</FieldHint>
+            <span className={styles.label}>{t('MCP Servers')}</span>
+            <FieldHint label={t('MCP Servers')}>
+              {t('External tool servers this agent can connect to.')}
+            </FieldHint>
           </span>
           <div className={own.servers}>
             {/*
@@ -1037,12 +1021,10 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
                 onChange={(event) => setNewServer(event.target.value)}
                 onKeyDown={handleServerKeyDown}
                 onBlur={addServer}
-                aria-label="New MCP server"
+                aria-label={t('New MCP server')}
               />
             ) : (
-              <button type="button" className={own.addServer} onClick={() => setAddingServer(true)}>
-                + Add Server
-              </button>
+              <button type="button" className={own.addServer} onClick={() => setAddingServer(true)}>{t('+ Add Server')}</button>
             )}
           </div>
         </div>
@@ -1056,11 +1038,11 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
 
       <div className={styles.actions}>
         {saved && saveError === null && styles.savedNote !== undefined && (
-          <p className={styles.savedNote}>Saved.</p>
+          <p className={styles.savedNote}>{t('Saved.')}</p>
         )}
         {onCancel !== undefined && (
           <button type="button" className={styles.ghost} onClick={onCancel} disabled={saving}>
-            Cancel
+            {t('Cancel')}
           </button>
         )}
         {/*
@@ -1073,7 +1055,7 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
           className={styles.filled}
           disabled={name.trim() === '' || saving || refusal !== null}
         >
-          {saving ? 'Saving…' : 'Save Changes'}
+          {saving ? t('Saving…') : t('Save Changes')}
         </button>
       </div>
     </form>

@@ -5,6 +5,7 @@ import { createProxyRule, deleteProxyRule, updateProxyRule } from '../api/networ
 import type { ProxyRule } from '../api/networking';
 import styles from './Dialog.module.css';
 import { FieldHint } from './FieldHint';
+import { t } from '../i18n';
 
 export interface ProxyRuleDialogProps {
   /** True to add a rule; a rule to edit the one given. */
@@ -97,7 +98,7 @@ export function ProxyRuleDialog({ open, onClose, onSaved }: ProxyRuleDialogProps
       }
       onSaved();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save the rule.');
+      setError(cause instanceof Error ? cause.message : t('Could not save the rule.'));
       setSubmitting(false);
     }
   }
@@ -110,7 +111,7 @@ export function ProxyRuleDialog({ open, onClose, onSaved }: ProxyRuleDialogProps
       await deleteProxyRule(editing.id);
       onSaved();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not delete the rule.');
+      setError(cause instanceof Error ? cause.message : t('Could not delete the rule.'));
       setSubmitting(false);
     }
   }
@@ -125,26 +126,23 @@ export function ProxyRuleDialog({ open, onClose, onSaved }: ProxyRuleDialogProps
       <form className={styles.body} onSubmit={handleSubmit}>
         <header className={styles.header}>
           <span className={styles.titleRow}>
-            <h2 className={styles.title}>{editing === null ? 'Add Proxy Rule' : 'Edit Proxy Rule'}</h2>
-            <FieldHint label="Proxy rule">
-              Every request whose URL matches the pattern goes through this proxy. Everything else
-              carries on going out the way it does now.
+            <h2 className={styles.title}>{editing === null ? t('Add Proxy Rule') : t('Edit Proxy Rule')}</h2>
+            <FieldHint label={t('Proxy rule')}>
+              {t('Every request whose URL matches the pattern goes through this proxy. Everything else carries on going out the way it does now.')}
             </FieldHint>
           </span>
         </header>
 
         <div className={styles.fields}>
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="proxy-rule-name">
-              Name
-            </label>
+            <label className={styles.label} htmlFor="proxy-rule-name">{t('Name')}</label>
             <div className={styles.inputWrapper}>
               <input
                 id="proxy-rule-name"
                 name="proxyRuleName"
                 className={styles.input}
                 type="text"
-                placeholder="e.g. Entra ID"
+                placeholder={t('e.g. Entra ID')}
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 autoFocus
@@ -156,11 +154,10 @@ export function ProxyRuleDialog({ open, onClose, onSaved }: ProxyRuleDialogProps
           <div className={styles.field}>
             <span className={styles.labelWithHint}>
               <label className={styles.label} htmlFor="proxy-rule-pattern">
-                URL pattern
+                {t('URL pattern')}
               </label>
-              <FieldHint label="URL pattern">
-                A regular expression, matched against the whole URL and found anywhere in it,
-                ignoring case. Anchor it with ^ and $ to match the whole address.
+              <FieldHint label={t('URL pattern')}>
+                {t('A regular expression, matched against the whole URL and found anywhere in it, ignoring case. Anchor it with ^ and $ to match the whole address.')}
               </FieldHint>
             </span>
             <div className={styles.inputWrapper}>
@@ -179,12 +176,9 @@ export function ProxyRuleDialog({ open, onClose, onSaved }: ProxyRuleDialogProps
 
           <div className={styles.field}>
             <span className={styles.labelWithHint}>
-              <label className={styles.label} htmlFor="proxy-rule-host">
-                Proxy host
-              </label>
-              <FieldHint label="Proxy host">
-                A host name, without a scheme. A proxy is spoken to over plain HTTP whatever the
-                request going through it is.
+              <label className={styles.label} htmlFor="proxy-rule-host">{t('Proxy host')}</label>
+              <FieldHint label={t('Proxy host')}>
+                {t('A host name, without a scheme. A proxy is spoken to over plain HTTP whatever the request going through it is.')}
               </FieldHint>
             </span>
             <div className={styles.inputWrapper}>
@@ -202,9 +196,7 @@ export function ProxyRuleDialog({ open, onClose, onSaved }: ProxyRuleDialogProps
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="proxy-rule-port">
-              Proxy port
-            </label>
+            <label className={styles.label} htmlFor="proxy-rule-port">{t('Proxy port')}</label>
             <div className={styles.inputWrapper}>
               <input
                 id="proxy-rule-port"
@@ -223,7 +215,7 @@ export function ProxyRuleDialog({ open, onClose, onSaved }: ProxyRuleDialogProps
 
           <div className={styles.field}>
             <label className={styles.label} htmlFor="proxy-rule-username">
-              Proxy username
+              {t('Proxy username')}
             </label>
             <div className={styles.inputWrapper}>
               <input
@@ -231,7 +223,7 @@ export function ProxyRuleDialog({ open, onClose, onSaved }: ProxyRuleDialogProps
                 name="proxyRuleUsername"
                 className={styles.input}
                 type="text"
-                placeholder="Optional"
+                placeholder={t('Optional')}
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
               />
@@ -241,11 +233,10 @@ export function ProxyRuleDialog({ open, onClose, onSaved }: ProxyRuleDialogProps
           <div className={styles.field}>
             <span className={styles.labelWithHint}>
               <label className={styles.label} htmlFor="proxy-rule-password">
-                Proxy password
+                {t('Proxy password')}
               </label>
-              <FieldHint label="Proxy password">
-                Stored encrypted and never shown again. Leaving this empty keeps whatever is already
-                stored.
+              <FieldHint label={t('Proxy password')}>
+                {t('Stored encrypted and never shown again. Leaving this empty keeps whatever is already stored.')}
               </FieldHint>
             </span>
             <div className={styles.inputWrapper}>
@@ -255,7 +246,7 @@ export function ProxyRuleDialog({ open, onClose, onSaved }: ProxyRuleDialogProps
                 className={styles.input}
                 type="password"
                 autoComplete="new-password"
-                placeholder={editing?.passwordSet === true ? 'Stored; type to replace' : 'Optional'}
+                placeholder={editing?.passwordSet === true ? t('Stored; type to replace') : 'Optional'}
                 value={password}
                 onChange={(event) => {
                   setPassword(event.target.value);
@@ -277,14 +268,14 @@ export function ProxyRuleDialog({ open, onClose, onSaved }: ProxyRuleDialogProps
                     if (event.target.checked) setPassword('');
                   }}
                 />
-                <span>Remove the stored password</span>
+                <span>{t('Remove the stored password')}</span>
               </label>
               {/*
                 Beside the box, not inside its label: the (?) is a button, and a
                 button inside a <label> would tick the box on its way to opening.
               */}
-              <FieldHint label="Remove the stored password">
-                The proxy will be called without one
+              <FieldHint label={t('Remove the stored password')}>
+                {t('The proxy will be called without one')}
               </FieldHint>
             </span>
           )}
@@ -309,9 +300,7 @@ export function ProxyRuleDialog({ open, onClose, onSaved }: ProxyRuleDialogProps
               className={styles.destructiveGhost}
               onClick={() => setConfirmingDelete(true)}
               disabled={submitting}
-            >
-              Delete
-            </button>
+            >{t('Delete')}</button>
           )}
           {confirmingDelete ? (
             <>
@@ -320,25 +309,23 @@ export function ProxyRuleDialog({ open, onClose, onSaved }: ProxyRuleDialogProps
                 className={styles.ghost}
                 onClick={() => setConfirmingDelete(false)}
                 disabled={submitting}
-              >
-                Keep
-              </button>
+              >{t('Keep')}</button>
               <button
                 type="button"
                 className={styles.destructive}
                 onClick={() => void handleDelete()}
                 disabled={submitting}
               >
-                {submitting ? 'Deleting…' : 'Delete Rule'}
+                {submitting ? t('Deleting…') : t('Delete Rule')}
               </button>
             </>
           ) : (
             <>
               <button type="button" className={styles.ghost} onClick={onClose} disabled={submitting}>
-                Cancel
+                {t('Cancel')}
               </button>
               <button type="submit" className={styles.filled} disabled={!complete || submitting}>
-                {submitting ? 'Saving…' : editing === null ? 'Add Rule' : 'Save Changes'}
+                {submitting ? t('Saving…') : editing === null ? t('Add Rule') : t('Save Changes')}
               </button>
             </>
           )}

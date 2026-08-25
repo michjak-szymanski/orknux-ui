@@ -74,6 +74,40 @@ src/styles/      design tokens
   a reset. A new shortcut goes there and is offered there — a binding hardcoded
   into a page is one nobody can change and one that collides with somebody's
   screen reader.
+- **The English sentence is the translation key.** The interface is read in
+  English or in Polish, and the source still says `t('Add Connection')` rather
+  than a key nobody could guess: `src/i18n/pl.ts` maps that sentence to the
+  Polish one, and `t` falls back to what it was handed, so a string nobody has
+  translated reads as correct English rather than as a key. Three reasons, and
+  the third settled it - there are sixteen hundred of these and inventing
+  sixteen hundred names is sixteen hundred chances to paste the wrong one;
+  `git grep "Add Connection"` is how anybody finds the screen a report is about;
+  and `hint-prose-check` reads the source for prose, so a key would have blinded
+  it to every sentence in the product at once. It learnt to unfold `{t('…')}`
+  instead, and sees exactly what it saw before.
+
+  What that costs is that rewording an English string orphans its translation,
+  silently. `catalogue-check` is what makes it loud: it fails on any entry keyed
+  on English that has left `src/`. A call site with no Polish is only counted,
+  because a language being worked on is the ordinary state of one.
+
+  Identifiers, hosts, token prefixes, example values and the product's own name
+  are not wrapped, deliberately: they are the same in every language.
+
+- **A refusal from the server is translated from its code, not its sentence.**
+  Every `…ExceptionResolver` sends `extensions.code` - the exception's class
+  name, less `Exception` - and `extensions.arguments` where the sentence carries
+  values; `src/i18n/refusals.ts` is keyed on that, and `client.ts` puts it
+  together in one place rather than at the ninety `catch`es that print
+  `cause.message`. The English sentence still arrives in `message` and is what
+  is shown for anything the catalogue has no Polish for.
+
+- **The language is a property of the person**, held on their row and mirrored
+  into `localStorage` so the first paint is right. `src/session/language.ts` is
+  the one place it lives; `navigator.language` is an opening guess and only for
+  somebody who has never chosen. `t` is not reactive by itself - `App.tsx` keys
+  the whole tree on the language, so a switch remounts the application.
+
 - **What a model writes is rendered markdown, not text.** `Markdown` wraps
   `react-markdown` with GFM and `remark-breaks` — the last because a chat is not a
   document and a model that answers on ten lines means ten lines. Raw HTML stays

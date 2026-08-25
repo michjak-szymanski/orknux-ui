@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 
 import type { SessionUser } from '../../api/session';
-import { setChatCostShown, setUserEmail, setUserEmailNotifications } from '../../api/users';
+import { setChatCostShown, setMyLanguage, setUserEmail, setUserEmailNotifications } from '../../api/users';
 import moonIcon from '../../assets/moon.svg';
 import sunIcon from '../../assets/sun.svg';
 import { AppShell } from '../../components/AppShell';
 import { FieldHint } from '../../components/FieldHint';
+import { currentLanguage, LANGUAGE_NAMES, LANGUAGES, setLanguage } from '../../session/language';
+import type { Language } from '../../session/language';
 import { applyTheme, currentTheme, rememberTheme } from '../../session/theme';
 import type { Theme } from '../../session/theme';
 import { shellUser } from '../../session/user';
@@ -44,6 +46,7 @@ import {
   useSaveShortcut,
 } from '../../session/shortcut';
 import styles from './PreferencesPage.module.css';
+import { t } from '../../i18n';
 
 export interface PreferencesPageProps {
   session: SessionUser;
@@ -147,6 +150,34 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
   const [theme, setTheme] = useState<Theme>(currentTheme);
 
   /*
+   * The language, sent before it is applied.
+   *
+   * The other way round for the theme beside it, which is applied first because
+   * a repaint is instant and costs nothing if the server never hears. This one
+   * reloads the page - `session/language.ts` says why - so applying it first
+   * would tear the tab down with the mutation still in the air, and the choice
+   * would hold until the next reload and then quietly be gone. Sending first
+   * also means a refusal leaves everything as it was, with the reason on screen.
+   */
+  const language = currentLanguage();
+  const [choosing, setChoosing] = useState(false);
+  const [languageError, setLanguageError] = useState<string | null>(null);
+
+  async function chooseLanguage(next: Language) {
+    if (next === language || choosing) return;
+    setLanguageError(null);
+    setChoosing(true);
+    try {
+      await setMyLanguage(next);
+      // Applies it, remembers it, and reloads into it. Nothing after this runs.
+      setLanguage(next);
+    } catch (cause) {
+      setLanguageError(cause instanceof Error ? cause.message : t('Could not save that.'));
+      setChoosing(false);
+    }
+  }
+
+  /*
    * The address, as it is now and as it is being typed.
    *
    * Seeded from the session because that is where the answer already arrives -
@@ -173,11 +204,11 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
       setSavedEmail(held.email ?? '');
       setEmailSaid(
         held.email === null
-          ? 'Cleared. Your directory entry fills it in again at your next sign-in.'
-          : 'Saved. Signing in no longer overwrites it.',
+          ? t('Cleared. Your directory entry fills it in again at your next sign-in.')
+          : t('Saved. Signing in no longer overwrites it.'),
       );
     } catch (cause) {
-      setEmailError(cause instanceof Error ? cause.message : 'Could not save the address.');
+      setEmailError(cause instanceof Error ? cause.message : t('Could not save the address.'));
     } finally {
       setSavingEmail(false);
     }
@@ -208,7 +239,7 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
       setNotify(held.emailNotifications);
     } catch (cause) {
       setNotify(!next);
-      setNotifyError(cause instanceof Error ? cause.message : 'Could not save that.');
+      setNotifyError(cause instanceof Error ? cause.message : t('Could not save that.'));
     } finally {
       setSavingNotify(false);
     }
@@ -238,7 +269,7 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
       setCostShown(held.chatCostShown);
     } catch (cause) {
       setCostShown(!next);
-      setCostError(cause instanceof Error ? cause.message : 'Could not save that.');
+      setCostError(cause instanceof Error ? cause.message : t('Could not save that.'));
     } finally {
       setSavingCost(false);
     }
@@ -262,23 +293,22 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
       <div className={styles.page}>
         <div className={styles.container}>
           <header className={styles.header}>
-            <h1 className={styles.title}>User Preferences</h1>
+            <h1 className={styles.title}>{t('User Preferences')}</h1>
             <p className={styles.subtitle}>
-              Manage your developer profile, app appearance, models, and security keys.
+              {t('Manage your developer profile, app appearance, models, and security keys.')}
             </p>
           </header>
 
           <section className={styles.card}>
-            <h2 className={styles.sectionTitle}>Profile</h2>
+            <h2 className={styles.sectionTitle}>{t('Profile')}</h2>
 
             <div className={styles.setting}>
               <span className={styles.labelWithHint}>
                 <label className={styles.settingLabel} htmlFor="profile-email">
-                  Email Address
+                  {t('Email Address')}
                 </label>
-                <FieldHint label="Email Address">
-                  Taken from your directory entry to begin with, and refreshed from it each time you
-                  sign in until you set one here. Emptying it hands it back.
+                <FieldHint label={t('Email Address')}>
+                  {t('Taken from your directory entry to begin with, and refreshed from it each time you sign in until you set one here. Emptying it hands it back.')}
                 </FieldHint>
               </span>
               <div className={styles.row}>
@@ -301,7 +331,7 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                   onClick={() => void saveEmail()}
                   disabled={savingEmail || email.trim() === savedEmail}
                 >
-                  {savingEmail ? 'Saving…' : 'Save'}
+                  {savingEmail ? t('Saving…') : 'Save'}
                 </button>
               </div>
               {emailSaid !== null && <p className={styles.done}>{emailSaid}</p>}
@@ -314,19 +344,13 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
           </section>
 
           <section className={styles.card}>
-            <h2 className={styles.sectionTitle}>Notifications</h2>
+            <h2 className={styles.sectionTitle}>{t('Notifications')}</h2>
 
             <div className={styles.setting}>
               <span className={styles.labelWithHint}>
-                <span className={styles.settingLabel} id="issue-email">
-                  Issue Email
-                </span>
-                <FieldHint label="Issue Email">
-                  Sends you what the bell already shows - an issue you filed, hold or observe being
-                  opened, assigned, commented on or closed, and any comment with your name in it. It
-                  changes nothing about what you hear, only where. Mail goes to the address above, so
-                  without one there is nothing to send; an installation whose administrator has not
-                  configured a mail server sends nothing either way.
+                <span className={styles.settingLabel} id="issue-email">{t('Issue Email')}</span>
+                <FieldHint label={t('Issue Email')}>
+                  {t('Sends you what the bell already shows - an issue you filed, hold or observe being opened, assigned, commented on or closed, and any comment with your name in it. It changes nothing about what you hear, only where. Mail goes to the address above, so without one there is nothing to send; an installation whose administrator has not configured a mail server sends nothing either way.')}
                 </FieldHint>
               </span>
               <div className={styles.options} role="radiogroup" aria-labelledby="issue-email">
@@ -337,9 +361,7 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                   disabled={savingNotify}
                   className={notify ? styles.optionCurrent : styles.option}
                   onClick={() => void chooseNotify(true)}
-                >
-                  On
-                </button>
+                >{t('On')}</button>
                 <button
                   type="button"
                   role="radio"
@@ -347,9 +369,7 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                   disabled={savingNotify}
                   className={notify ? styles.option : styles.optionCurrent}
                   onClick={() => void chooseNotify(false)}
-                >
-                  Off
-                </button>
+                >{t('Off')}</button>
               </div>
               {notifyError !== null && (
                 <p className={styles.error} role="alert">
@@ -360,30 +380,26 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
           </section>
 
           <section className={styles.card}>
-            <h2 className={styles.sectionTitle}>Chat</h2>
+            <h2 className={styles.sectionTitle}>{t('Chat')}</h2>
 
             <div className={styles.setting}>
               <span className={styles.labelWithHint}>
-                <span className={styles.settingLabel} id="answer-cost">
-                  Answer Cost
-                </span>
-                <FieldHint label="Answer Cost">
+                <span className={styles.settingLabel} id="answer-cost">{t('Answer Cost')}</span>
+                <FieldHint label={t('Answer Cost')}>
                   <p>
-                    Puts what an answer cost beside how long it took, on the answer just given.
+                    {t('Puts what an answer cost beside how long it took, on the answer just given.')}
                   </p>
                   <ul>
                     <li>
-                      It is the <strong>whole turn</strong>, not the last call in it: an agent that
+                      It is the <strong>{t('whole turn')}</strong>, not the last call in it: an agent that
                       looks something up before it answers has paid for two rounds, and both are
                       counted.
                     </li>
                     <li>
-                      Money needs prices, which are recorded on the model. A model carrying none
-                      shows the tokens and nothing else, because no price is not a price of nothing.
+                      {t('Money needs prices, which are recorded on the model. A model carrying none shows the tokens and nothing else, because no price is not a price of nothing.')}
                     </li>
                     <li>
-                      Nothing is shown where the provider reported no counts, or for any answer read
-                      back out of the history - what was said is kept, what it cost is not.
+                      {t('Nothing is shown where the provider reported no counts, or for any answer read back out of the history - what was said is kept, what it cost is not.')}
                     </li>
                   </ul>
                 </FieldHint>
@@ -396,9 +412,7 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                   disabled={savingCost}
                   className={costShown ? styles.optionCurrent : styles.option}
                   onClick={() => void chooseCost(true)}
-                >
-                  On
-                </button>
+                >{t('On')}</button>
                 <button
                   type="button"
                   role="radio"
@@ -406,9 +420,7 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                   disabled={savingCost}
                   className={costShown ? styles.option : styles.optionCurrent}
                   onClick={() => void chooseCost(false)}
-                >
-                  Off
-                </button>
+                >{t('Off')}</button>
               </div>
               {costError !== null && (
                 <p className={styles.error} role="alert">
@@ -431,16 +443,51 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
             happening would be no use at all.
           */}
           <section className={styles.card}>
-            <h2 className={styles.sectionTitle}>Appearance</h2>
+            <h2 className={styles.sectionTitle}>{t('Appearance')}</h2>
+
+            <div className={styles.setting}>
+              <span className={styles.labelWithHint}>
+                <span className={styles.settingLabel} id="interface-language">{t('Language')}</span>
+                <FieldHint label={t('Language')}>
+                  {t('Kept with your account, so it follows you to another machine.')}
+                </FieldHint>
+              </span>
+              {/*
+                Each language names itself in itself - Polski, not Polish.
+                Somebody looking for their own language is looking for the word
+                they call it by, and a list written in a language they cannot
+                read is a list they cannot use.
+              */}
+              <div className={styles.options} role="radiogroup" aria-labelledby="interface-language">
+                {LANGUAGES.map((one) => (
+                  <button
+                    key={one}
+                    type="button"
+                    role="radio"
+                    lang={one}
+                    disabled={choosing}
+                    aria-checked={language === one}
+                    className={language === one ? styles.optionCurrent : styles.option}
+                    onClick={() => void chooseLanguage(one)}
+                  >
+                    {LANGUAGE_NAMES[one]}
+                  </button>
+                ))}
+              </div>
+              {languageError !== null && (
+                <p className={styles.error} role="alert">
+                  {languageError}
+                </p>
+              )}
+            </div>
 
             <div className={styles.setting}>
               <span className={styles.labelWithHint}>
                 <span className={styles.settingLabel} id="interface-theme">
-                  Interface Theme
+                  {t('Interface Theme')}
                 </span>
-                <FieldHint label="Interface Theme">
-                  Kept in this browser, so it applies before the first paint rather than after a
-                  round trip.
+                <FieldHint label={t('Interface Theme')}>
+                  {t('Kept in this browser, so it applies before the first paint rather than after a round trip.')}
                 </FieldHint>
               </span>
               <div className={styles.options} role="radiogroup" aria-labelledby="interface-theme">
@@ -452,7 +499,7 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                   onClick={() => choose('dark')}
                 >
                   <img src={moonIcon} alt="" width={14} height={14} />
-                  Dark Mode
+                  {t('Dark Mode')}
                 </button>
                 <button
                   type="button"
@@ -462,7 +509,7 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                   onClick={() => choose('light')}
                 >
                   <img src={sunIcon} alt="" width={14} height={14} />
-                  Light Mode
+                  {t('Light Mode')}
                 </button>
               </div>
             </div>
@@ -470,7 +517,7 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
             <div className={styles.setting}>
               <span className={styles.labelWithHint}>
                 <span className={styles.settingLabel} id="palette-shortcut">
-                  Quick Actions Shortcut
+                  {t('Quick Actions Shortcut')}
                 </span>
                 {/*
                   "Go To Shortcut" until issue #218, which is what the box in
@@ -482,9 +529,8 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                   "Turn Node Shortcut" - not because the box is called that.
                   The keystroke and where it is stored are unchanged.
                 */}
-                <FieldHint label="Quick Actions Shortcut">
-                  Opens the box in the top bar from anywhere. Yours to choose: which keys are free
-                  depends on your browser and your machine, not on this application.
+                <FieldHint label={t('Quick Actions Shortcut')}>
+                  {t('Opens the box in the top bar from anywhere. Yours to choose: which keys are free depends on your browser and your machine, not on this application.')}
                 </FieldHint>
               </span>
               <div className={styles.options}>
@@ -503,9 +549,7 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                     type="button"
                     className={styles.option}
                     onClick={() => setPaletteShortcut(DEFAULT_SHORTCUT)}
-                  >
-                    Reset
-                  </button>
+                  >{t('Reset')}</button>
                 )}
               </div>
               {recording === 'palette' && (
@@ -525,13 +569,10 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
             <div className={styles.setting}>
               <span className={styles.labelWithHint}>
                 <span className={styles.settingLabel} id="recent-shortcut">
-                  Recently Opened Shortcut
+                  {t('Recently Opened Shortcut')}
                 </span>
-                <FieldHint label="Recently Opened Shortcut">
-                  Opens the same box in the top bar, but onto what you last had open rather than
-                  onto everything. The list is kept in this browser and goes no further; it holds
-                  addresses only, so anything renamed since is listed under the name it has now and
-                  anything deleted is not listed at all.
+                <FieldHint label={t('Recently Opened Shortcut')}>
+                  {t('Opens the same box in the top bar, but onto what you last had open rather than onto everything. The list is kept in this browser and goes no further; it holds addresses only, so anything renamed since is listed under the name it has now and anything deleted is not listed at all.')}
                 </FieldHint>
               </span>
               <div className={styles.options}>
@@ -543,16 +584,14 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                     setRecording((held) => (held === 'recent' ? null : 'recent'));
                   }}
                 >
-                  {recording === 'recent' ? 'Press any keys…' : recent}
+                  {recording === 'recent' ? t('Press any keys…') : recent}
                 </button>
                 {recent !== DEFAULT_RECENT_SHORTCUT && recording !== 'recent' && (
                   <button
                     type="button"
                     className={styles.option}
                     onClick={() => setRecentShortcut(DEFAULT_RECENT_SHORTCUT)}
-                  >
-                    Reset
-                  </button>
+                  >{t('Reset')}</button>
                 )}
               </div>
               {recording === 'recent' && (
@@ -571,12 +610,9 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
 
             <div className={styles.setting}>
               <span className={styles.labelWithHint}>
-                <span className={styles.settingLabel} id="save-shortcut">
-                  Save Shortcut
-                </span>
-                <FieldHint label="Save Shortcut">
-                  Saves whatever editor you are in, and stops the browser offering to save the page
-                  instead. The function editor shows this key beside its details.
+                <span className={styles.settingLabel} id="save-shortcut">{t('Save Shortcut')}</span>
+                <FieldHint label={t('Save Shortcut')}>
+                  {t('Saves whatever editor you are in, and stops the browser offering to save the page instead. The function editor shows this key beside its details.')}
                 </FieldHint>
               </span>
               <div className={styles.options}>
@@ -595,9 +631,7 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                     type="button"
                     className={styles.option}
                     onClick={() => setSaveShortcut(DEFAULT_SAVE_SHORTCUT)}
-                  >
-                    Reset
-                  </button>
+                  >{t('Reset')}</button>
                 )}
               </div>
               {recording === 'save' && (
@@ -617,12 +651,10 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
             <div className={styles.setting}>
               <span className={styles.labelWithHint}>
                 <span className={styles.settingLabel} id="format-shortcut">
-                  Format Shortcut
+                  {t('Format Shortcut')}
                 </span>
-                <FieldHint label="Format Shortcut">
-                  Lays out the code in the function editor, with the same language service that
-                  completes and checks it. Prevented from reaching the browser, which has its own
-                  ideas about this one.
+                <FieldHint label={t('Format Shortcut')}>
+                  {t('Lays out the code in the function editor, with the same language service that completes and checks it. Prevented from reaching the browser, which has its own ideas about this one.')}
                 </FieldHint>
               </span>
               <div className={styles.options}>
@@ -634,16 +666,14 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                     setRecording((held) => (held === 'format' ? null : 'format'));
                   }}
                 >
-                  {recording === 'format' ? 'Press any keys…' : format}
+                  {recording === 'format' ? t('Press any keys…') : format}
                 </button>
                 {format !== DEFAULT_FORMAT_SHORTCUT && recording !== 'format' && (
                   <button
                     type="button"
                     className={styles.option}
                     onClick={() => setFormatShortcut(DEFAULT_FORMAT_SHORTCUT)}
-                  >
-                    Reset
-                  </button>
+                  >{t('Reset')}</button>
                 )}
               </div>
               {recording === 'format' && (
@@ -663,12 +693,10 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
             <div className={styles.setting}>
               <span className={styles.labelWithHint}>
                 <span className={styles.settingLabel} id="turn-shortcut">
-                  Turn Node Shortcut
+                  {t('Turn Node Shortcut')}
                 </span>
-                <FieldHint label="Turn Node Shortcut">
-                  Turns the selected node on the workflow canvas, so a graph can run down the screen
-                  instead of off the side of it. A bare letter is allowed here, unlike the others:
-                  this one is only heard on the canvas, never while typing.
+                <FieldHint label={t('Turn Node Shortcut')}>
+                  {t('Turns the selected node on the workflow canvas, so a graph can run down the screen instead of off the side of it. A bare letter is allowed here, unlike the others: this one is only heard on the canvas, never while typing.')}
                 </FieldHint>
               </span>
               <div className={styles.options}>
@@ -680,28 +708,26 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                     setRecording((held) => (held === 'turn' ? null : 'turn'));
                   }}
                 >
-                  {recording === 'turn' ? 'Press any keys…' : turn}
+                  {recording === 'turn' ? t('Press any keys…') : turn}
                 </button>
                 {turn !== DEFAULT_TURN_SHORTCUT && recording !== 'turn' && (
-                  <button type="button" className={styles.option} onClick={() => setTurnShortcut(DEFAULT_TURN_SHORTCUT)}>
-                    Reset
-                  </button>
+                  <button type="button" className={styles.option} onClick={() => setTurnShortcut(DEFAULT_TURN_SHORTCUT)}>{t('Reset')}</button>
                 )}
               </div>
               {recording === 'turn' && (
-                <p className={styles.settingNote}>Press the combination you want. Escape leaves it as it is.</p>
+                <p className={styles.settingNote}>
+                  {t('Press the combination you want. Escape leaves it as it is.')}
+                </p>
               )}
             </div>
 
             <div className={styles.setting}>
               <span className={styles.labelWithHint}>
                 <span className={styles.settingLabel} id="add-shortcut">
-                  Add Node Shortcut
+                  {t('Add Node Shortcut')}
                 </span>
-                <FieldHint label="Add Node Shortcut">
-                  Opens the workflow editor's Add menu and puts the first kind of node under the
-                  keyboard, so a graph can be built without reaching for the toolbar. A bare letter
-                  is allowed here for the same reason it is above: only the canvas hears it.
+                <FieldHint label={t('Add Node Shortcut')}>
+                  {t('Opens the workflow editor\'s Add menu and puts the first kind of node under the keyboard, so a graph can be built without reaching for the toolbar. A bare letter is allowed here for the same reason it is above: only the canvas hears it.')}
                 </FieldHint>
               </span>
               <div className={styles.options}>
@@ -713,26 +739,24 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                     setRecording((held) => (held === 'add' ? null : 'add'));
                   }}
                 >
-                  {recording === 'add' ? 'Press any keys…' : add}
+                  {recording === 'add' ? t('Press any keys…') : add}
                 </button>
                 {add !== DEFAULT_ADD_SHORTCUT && recording !== 'add' && (
-                  <button type="button" className={styles.option} onClick={() => setAddShortcut(DEFAULT_ADD_SHORTCUT)}>
-                    Reset
-                  </button>
+                  <button type="button" className={styles.option} onClick={() => setAddShortcut(DEFAULT_ADD_SHORTCUT)}>{t('Reset')}</button>
                 )}
               </div>
               {recording === 'add' && (
-                <p className={styles.settingNote}>Press the combination you want. Escape leaves it as it is.</p>
+                <p className={styles.settingNote}>
+                  {t('Press the combination you want. Escape leaves it as it is.')}
+                </p>
               )}
             </div>
 
             <div className={styles.setting}>
               <span className={styles.labelWithHint}>
-                <span className={styles.settingLabel} id="undo-shortcut">
-                  Undo Shortcut
-                </span>
-                <FieldHint label="Undo Shortcut">
-                  Steps back through what you have drawn on the workflow canvas. Ignored while a caret is in a text box, where the browser&apos;s own undo is the right one.
+                <span className={styles.settingLabel} id="undo-shortcut">{t('Undo Shortcut')}</span>
+                <FieldHint label={t('Undo Shortcut')}>
+                  {t('Steps back through what you have drawn on the workflow canvas. Ignored while a caret is in a text box, where the browser\'s own undo is the right one.')}
                 </FieldHint>
               </span>
               <div className={styles.options}>
@@ -744,26 +768,24 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                     setRecording((held) => (held === 'undo' ? null : 'undo'));
                   }}
                 >
-                  {recording === 'undo' ? 'Press any keys…' : undo}
+                  {recording === 'undo' ? t('Press any keys…') : undo}
                 </button>
                 {undo !== DEFAULT_UNDO_SHORTCUT && recording !== 'undo' && (
-                  <button type="button" className={styles.option} onClick={() => setUndoShortcut(DEFAULT_UNDO_SHORTCUT)}>
-                    Reset
-                  </button>
+                  <button type="button" className={styles.option} onClick={() => setUndoShortcut(DEFAULT_UNDO_SHORTCUT)}>{t('Reset')}</button>
                 )}
               </div>
               {recording === 'undo' && (
-                <p className={styles.settingNote}>Press the combination you want. Escape leaves it as it is.</p>
+                <p className={styles.settingNote}>
+                  {t('Press the combination you want. Escape leaves it as it is.')}
+                </p>
               )}
             </div>
 
             <div className={styles.setting}>
               <span className={styles.labelWithHint}>
-                <span className={styles.settingLabel} id="redo-shortcut">
-                  Redo Shortcut
-                </span>
-                <FieldHint label="Redo Shortcut">
-                  Steps forward again. Ctrl+Y is heard as well, whatever is chosen here, because it is the other habit people arrive with.
+                <span className={styles.settingLabel} id="redo-shortcut">{t('Redo Shortcut')}</span>
+                <FieldHint label={t('Redo Shortcut')}>
+                  {t('Steps forward again. Ctrl+Y is heard as well, whatever is chosen here, because it is the other habit people arrive with.')}
                 </FieldHint>
               </span>
               <div className={styles.options}>
@@ -775,28 +797,26 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                     setRecording((held) => (held === 'redo' ? null : 'redo'));
                   }}
                 >
-                  {recording === 'redo' ? 'Press any keys…' : redo}
+                  {recording === 'redo' ? t('Press any keys…') : redo}
                 </button>
                 {redo !== DEFAULT_REDO_SHORTCUT && recording !== 'redo' && (
-                  <button type="button" className={styles.option} onClick={() => setRedoShortcut(DEFAULT_REDO_SHORTCUT)}>
-                    Reset
-                  </button>
+                  <button type="button" className={styles.option} onClick={() => setRedoShortcut(DEFAULT_REDO_SHORTCUT)}>{t('Reset')}</button>
                 )}
               </div>
               {recording === 'redo' && (
-                <p className={styles.settingNote}>Press the combination you want. Escape leaves it as it is.</p>
+                <p className={styles.settingNote}>
+                  {t('Press the combination you want. Escape leaves it as it is.')}
+                </p>
               )}
             </div>
 
             <div className={styles.setting}>
               <span className={styles.labelWithHint}>
                 <span className={styles.settingLabel} id="duplicate-shortcut">
-                  Duplicate Node Shortcut
+                  {t('Duplicate Node Shortcut')}
                 </span>
-                <FieldHint label="Duplicate Node Shortcut">
-                  Puts a second copy of the selected node on the workflow canvas, pointed at the same
-                  action, trigger or agent and wired to nothing. The browser&apos;s own meaning for the
-                  usual choice is a bookmark, which the editor takes instead.
+                <FieldHint label={t('Duplicate Node Shortcut')}>
+                  {t('Puts a second copy of the selected node on the workflow canvas, pointed at the same action, trigger or agent and wired to nothing. The browser\'s own meaning for the usual choice is a bookmark, which the editor takes instead.')}
                 </FieldHint>
               </span>
               <div className={styles.options}>
@@ -808,33 +828,30 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                     setRecording((held) => (held === 'duplicate' ? null : 'duplicate'));
                   }}
                 >
-                  {recording === 'duplicate' ? 'Press any keys…' : duplicate}
+                  {recording === 'duplicate' ? t('Press any keys…') : duplicate}
                 </button>
                 {duplicate !== DEFAULT_DUPLICATE_SHORTCUT && recording !== 'duplicate' && (
                   <button
                     type="button"
                     className={styles.option}
                     onClick={() => setDuplicateShortcut(DEFAULT_DUPLICATE_SHORTCUT)}
-                  >
-                    Reset
-                  </button>
+                  >{t('Reset')}</button>
                 )}
               </div>
               {recording === 'duplicate' && (
-                <p className={styles.settingNote}>Press the combination you want. Escape leaves it as it is.</p>
+                <p className={styles.settingNote}>
+                  {t('Press the combination you want. Escape leaves it as it is.')}
+                </p>
               )}
             </div>
 
             <div className={styles.setting}>
               <span className={styles.labelWithHint}>
                 <span className={styles.settingLabel} id="publish-shortcut">
-                  Publish Shortcut
+                  {t('Publish Shortcut')}
                 </span>
-                <FieldHint label="Publish Shortcut">
-                  Saves the workflow on the canvas and makes that version the one that runs, without
-                  reaching for the toolbar. A modifier is required here, unlike the two canvas keys
-                  above: publishing changes what everybody else&apos;s runs do, which is not something
-                  a single letter should be able to do by accident.
+                <FieldHint label={t('Publish Shortcut')}>
+                  {t('Saves the workflow on the canvas and makes that version the one that runs, without reaching for the toolbar. A modifier is required here, unlike the two canvas keys above: publishing changes what everybody else\'s runs do, which is not something a single letter should be able to do by accident.')}
                 </FieldHint>
               </span>
               <div className={styles.options}>
@@ -846,20 +863,20 @@ export function PreferencesPage({ session, onSignOut }: PreferencesPageProps) {
                     setRecording((held) => (held === 'publish' ? null : 'publish'));
                   }}
                 >
-                  {recording === 'publish' ? 'Press any keys…' : publish}
+                  {recording === 'publish' ? t('Press any keys…') : publish}
                 </button>
                 {publish !== DEFAULT_PUBLISH_SHORTCUT && recording !== 'publish' && (
                   <button
                     type="button"
                     className={styles.option}
                     onClick={() => setPublishShortcut(DEFAULT_PUBLISH_SHORTCUT)}
-                  >
-                    Reset
-                  </button>
+                  >{t('Reset')}</button>
                 )}
               </div>
               {recording === 'publish' && (
-                <p className={styles.settingNote}>Press the combination you want. Escape leaves it as it is.</p>
+                <p className={styles.settingNote}>
+                  {t('Press the combination you want. Escape leaves it as it is.')}
+                </p>
               )}
             </div>
           </section>

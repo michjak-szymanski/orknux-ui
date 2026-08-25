@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 /** One turn of the panel's conversation. Nothing here is stored anywhere. */
 export interface QuickChatTurn {
   role: 'user' | 'assistant';
@@ -80,6 +81,6 @@ export async function askQuickChat(
         toolSuggestion?: QuickChatToolSuggestion;
       }
     | null;
-  if (!answer.ok) throw new Error(said?.error ?? 'That could not be answered.');
+  if (!answer.ok) throw new Error(said?.error ?? t('That could not be answered.'));
   return { answer: said?.answer ?? '', suggestion: said?.suggestion, toolSuggestion: said?.toolSuggestion };
 }

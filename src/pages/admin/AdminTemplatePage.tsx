@@ -20,6 +20,7 @@ import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { shellUser } from '../../session/user';
 import styles from './AdminTemplatePage.module.css';
+import { t } from '../../i18n';
 
 export interface AdminTemplatePageProps {
   session: SessionUser;
@@ -67,7 +68,7 @@ export function AdminTemplatePage({ session, onSignOut }: AdminTemplatePageProps
       .then((found) => {
         if (!current) return;
         if (found === null) {
-          setLoadError('That template no longer exists.');
+          setLoadError(t('That template no longer exists.'));
           return;
         }
         setTemplate(found);
@@ -75,7 +76,7 @@ export function AdminTemplatePage({ session, onSignOut }: AdminTemplatePageProps
         setDescription(found.description ?? '');
       })
       .catch((cause: unknown) => {
-        if (current) setLoadError(cause instanceof Error ? cause.message : 'Could not load the template.');
+        if (current) setLoadError(cause instanceof Error ? cause.message : t('Could not load the template.'));
       });
     return () => {
       current = false;
@@ -120,7 +121,7 @@ export function AdminTemplatePage({ session, onSignOut }: AdminTemplatePageProps
         setSaving(false);
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save the template.');
+      setError(cause instanceof Error ? cause.message : t('Could not save the template.'));
       setSaving(false);
     }
   }
@@ -131,7 +132,7 @@ export function AdminTemplatePage({ session, onSignOut }: AdminTemplatePageProps
     try {
       saveJson(`${template.name.replace(/[^\w-]/g, '-')}.orkx.json`, await fetchTemplateEnvelope(templateId));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not download it.');
+      setError(cause instanceof Error ? cause.message : t('Could not download it.'));
     }
   }
 
@@ -143,16 +144,16 @@ export function AdminTemplatePage({ session, onSignOut }: AdminTemplatePageProps
       await deleteComponentTemplate(templateId);
       navigate('/admin/templates');
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not delete the template.');
+      setError(cause instanceof Error ? cause.message : t('Could not delete the template.'));
       setSaving(false);
     }
   }
 
-  const called = adding ? 'New Template' : (template?.name ?? '…');
+  const called = adding ? t('New Template') : (template?.name ?? '…');
 
   return (
     <AppShell
-      title={adding ? 'New template' : template?.name}
+      title={adding ? t('New template') : template?.name}
       user={shellUser(session)}
       showAdmin={session.admin}
       onSignOut={onSignOut}
@@ -160,18 +161,14 @@ export function AdminTemplatePage({ session, onSignOut }: AdminTemplatePageProps
     >
       <header className={styles.headerBlock}>
         <p className={styles.breadcrumbs}>
-          <BackLink to="/admin/templates" label="Templates" />
-          <Link className={styles.crumbLink} to="/admin/templates">
-            Templates
-          </Link>
+          <BackLink to="/admin/templates" label={t('Templates')} />
+          <Link className={styles.crumbLink} to="/admin/templates">{t('Templates')}</Link>
           <span className={styles.crumbSeparator}>/</span>
           <span className={styles.crumbCurrent}>{called}</span>
         </p>
         <h1 className={styles.pageTitle}>{called}</h1>
         <p className={styles.subtitle}>
-          An exported component, published for every workspace on this installation. It holds a copy
-          taken when the file was uploaded and follows nothing: editing what it was made from does not
-          change it, and replacing the file here is what brings it up to date.
+          {t('An exported component, published for every workspace on this installation. It holds a copy taken when the file was uploaded and follows nothing: editing what it was made from does not change it, and replacing the file here is what brings it up to date.')}
         </p>
       </header>
 
@@ -180,9 +177,7 @@ export function AdminTemplatePage({ session, onSignOut }: AdminTemplatePageProps
           <p className={styles.loadError} role="alert">
             {loadError}
           </p>
-          <Link className={styles.crumbLink} to="/admin/templates">
-            Back to Templates
-          </Link>
+          <Link className={styles.crumbLink} to="/admin/templates">{t('Back to Templates')}</Link>
         </section>
       ) : !adding && template === null ? (
         <section className={styles.card}>
@@ -191,7 +186,7 @@ export function AdminTemplatePage({ session, onSignOut }: AdminTemplatePageProps
       ) : (
         <form className={styles.form} onSubmit={(event) => void handleSubmit(event)}>
           <section className={styles.card}>
-            <h2 className={styles.cardTitle}>Template</h2>
+            <h2 className={styles.cardTitle}>{t('Template')}</h2>
             <div className={styles.divider} />
 
             <div className={styles.field}>
@@ -199,15 +194,15 @@ export function AdminTemplatePage({ session, onSignOut }: AdminTemplatePageProps
                 <label className={styles.label} htmlFor="template-name">
                   Name <span className={styles.required}>*</span>
                 </label>
-                <FieldHint label="Name">
-                  What it is called everywhere it is offered, and unique across this installation.
+                <FieldHint label={t('Name')}>
+                  {t('What it is called everywhere it is offered, and unique across this installation.')}
                 </FieldHint>
               </span>
               <input
                 id="template-name"
                 className={styles.input}
                 type="text"
-                placeholder="e.g. Order handling"
+                placeholder={t('e.g. Order handling')}
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 maxLength={120}
@@ -219,17 +214,16 @@ export function AdminTemplatePage({ session, onSignOut }: AdminTemplatePageProps
             <div className={styles.field}>
               <span className={styles.labelWithHint}>
                 <label className={styles.label} htmlFor="template-description">
-                  Description
+                  {t('Description')}
                 </label>
-                <FieldHint label="Description">
-                  A template with a name and nothing else is a row people scroll past. Say what it
-                  does and what somebody has to have already.
+                <FieldHint label={t('Description')}>
+                  {t('A template with a name and nothing else is a row people scroll past. Say what it does and what somebody has to have already.')}
                 </FieldHint>
               </span>
               <textarea
                 id="template-description"
                 className={`${styles.input} ${styles.textarea}`}
-                placeholder="What it is for, and when somebody would reach for it"
+                placeholder={t('What it is for, and when somebody would reach for it')}
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 maxLength={1000}
@@ -241,8 +235,8 @@ export function AdminTemplatePage({ session, onSignOut }: AdminTemplatePageProps
           <section className={styles.card}>
             <h2 className={styles.cardTitle}>
               <span className={styles.labelWithHint}>
-                {adding ? 'File' : 'What is inside'}
-                <FieldHint label="File">
+                {adding ? 'File' : t('What is inside')}
+                <FieldHint label={t('File')}>
                   The JSON an Export control downloads. It is read before anything is saved, so a
                   file this installation cannot read is refused here rather than at the button
                   somebody presses later.
@@ -301,7 +295,7 @@ export function AdminTemplatePage({ session, onSignOut }: AdminTemplatePageProps
                     Exported file <span className={styles.required}>*</span>
                   </>
                 ) : (
-                  'Replace the file'
+                  t('Replace the file')
                 )}
               </label>
               <input
@@ -318,18 +312,14 @@ export function AdminTemplatePage({ session, onSignOut }: AdminTemplatePageProps
                   className={styles.secondaryButton}
                   onClick={() => fileRef.current?.click()}
                   disabled={saving}
-                >
-                  Choose a file
-                </button>
+                >{t('Choose a file')}</button>
                 {!adding && (
                   <button
                     type="button"
                     className={styles.secondaryButton}
                     onClick={() => void handleDownload()}
                     disabled={saving}
-                  >
-                    Download
-                  </button>
+                  >{t('Download')}</button>
                 )}
               </div>
               {fileName !== '' && <p className={styles.fileName}>{fileName}</p>}
@@ -343,11 +333,9 @@ export function AdminTemplatePage({ session, onSignOut }: AdminTemplatePageProps
                 className={styles.secondaryButton}
                 onClick={() => navigate('/admin/templates')}
                 disabled={saving}
-              >
-                Cancel
-              </button>
+              >{t('Cancel')}</button>
               <button type="submit" className={styles.primaryButton} disabled={!complete || saving}>
-                {saving ? 'Saving…' : adding ? 'Publish Template' : 'Save Changes'}
+                {saving ? t('Saving…') : adding ? t('Publish Template') : t('Save Changes')}
               </button>
             </div>
           </div>
@@ -362,15 +350,15 @@ export function AdminTemplatePage({ session, onSignOut }: AdminTemplatePageProps
 
       {!adding && loadError === null && template !== null && (
         <section className={styles.dangerCard}>
-          <h2 className={styles.dangerHeading}>Danger Zone</h2>
+          <h2 className={styles.dangerHeading}>{t('Danger Zone')}</h2>
           <div className={styles.divider} />
           <div className={styles.dangerRow}>
             <div className={styles.dangerText}>
-              <span className={styles.dangerTitle}>Delete Template</span>
+              <span className={styles.dangerTitle}>{t('Delete Template')}</span>
               <span className={styles.dangerNote}>
                 {confirmingDelete
                   ? `Delete ${template.name}? Nothing any workspace took from it is touched — those are copies of their own.`
-                  : 'Take it off the list. What it has already created stays where it is'}
+                  : t('Take it off the list. What it has already created stays where it is')}
               </span>
             </div>
             {confirmingDelete ? (
@@ -380,16 +368,14 @@ export function AdminTemplatePage({ session, onSignOut }: AdminTemplatePageProps
                   className={styles.secondaryButton}
                   onClick={() => setConfirmingDelete(false)}
                   disabled={saving}
-                >
-                  Keep
-                </button>
+                >{t('Keep')}</button>
                 <button
                   type="button"
                   className={styles.dangerButton}
                   onClick={() => void handleDelete()}
                   disabled={saving}
                 >
-                  {saving ? 'Deleting…' : 'Delete Template'}
+                  {saving ? t('Deleting…') : t('Delete Template')}
                 </button>
               </div>
             ) : (
@@ -398,9 +384,7 @@ export function AdminTemplatePage({ session, onSignOut }: AdminTemplatePageProps
                 className={styles.dangerButton}
                 onClick={() => setConfirmingDelete(true)}
                 disabled={saving}
-              >
-                Delete Template
-              </button>
+              >{t('Delete Template')}</button>
             )}
           </div>
         </section>

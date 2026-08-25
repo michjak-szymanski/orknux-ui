@@ -35,6 +35,7 @@ import { useInstallation } from '../../session/installation';
 import { shellUser } from '../../session/user';
 import { forgetWorkspaces } from '../../session/workspaces';
 import styles from './WorkspaceSettingsPage.module.css';
+import { t } from '../../i18n';
 
 export interface WorkspaceSettingsPageProps {
   session: SessionUser;
@@ -134,17 +135,17 @@ function Figures({ budget }: { budget: SessionMemoryBudget }) {
   return (
     <dl className={styles.budget}>
       <div className={styles.budgetRow}>
-        <dt>Altogether</dt>
+        <dt>{t('Altogether')}</dt>
         <dd>{thousands(budget.totalTokens)} tokens</dd>
       </div>
       <div className={styles.budgetRow}>
-        <dt>Conversation</dt>
+        <dt>{t('Conversation')}</dt>
         <dd>
           {thousands(budget.conversationTokens)} tokens, {budget.turns} turns
         </dd>
       </div>
       <div className={styles.budgetRow}>
-        <dt>Tool results</dt>
+        <dt>{t('Tool results')}</dt>
         <dd>
           {thousands(budget.toolResultTokens)} tokens, longest {thousands(budget.longestResultTokens)}
         </dd>
@@ -298,7 +299,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         setChunking(found?.voiceSpeechChunking ?? CHUNKING_DEFAULT);
       })
       .catch((cause: unknown) => {
-        setError(cause instanceof Error ? cause.message : 'Could not load the workspace.');
+        setError(cause instanceof Error ? cause.message : t('Could not load the workspace.'));
       });
   }, [workspaceId]);
 
@@ -425,7 +426,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       setShare(updated.defaultMemoryShare);
       setMemorySaved(true);
     } catch (cause) {
-      setMemoryError(cause instanceof Error ? cause.message : 'Could not save that.');
+      setMemoryError(cause instanceof Error ? cause.message : t('Could not save that.'));
     } finally {
       setMemorySaving(false);
     }
@@ -473,7 +474,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       setChunking(updated.voiceSpeechChunking);
       setVoiceSaved(true);
     } catch (cause) {
-      setVoiceError(cause instanceof Error ? cause.message : 'Could not save that.');
+      setVoiceError(cause instanceof Error ? cause.message : t('Could not save that.'));
     } finally {
       setVoiceSaving(false);
     }
@@ -489,7 +490,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       setWorkspace(await setWorkspaceTranscriptionModel(workspaceId, modelId === '' ? null : modelId));
       setSaved(true);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save that.');
+      setError(cause instanceof Error ? cause.message : t('Could not save that.'));
     }
   }
 
@@ -503,7 +504,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       setWorkspace(await setWorkspaceQuickChatModel(workspaceId, modelId === '' ? null : modelId));
       setSaved(true);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save that.');
+      setError(cause instanceof Error ? cause.message : t('Could not save that.'));
     }
   }
 
@@ -515,7 +516,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       setWorkspace(await setWorkspaceQuickChatWrites(workspaceId, allowed));
       setSaved(true);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save that.');
+      setError(cause instanceof Error ? cause.message : t('Could not save that.'));
     }
   }
 
@@ -529,7 +530,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       setWorkspace(await setWorkspaceSpeechModel(workspaceId, modelId === '' ? null : modelId));
       setSaved(true);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save that.');
+      setError(cause instanceof Error ? cause.message : t('Could not save that.'));
     }
   }
 
@@ -557,7 +558,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       setWorkspace(updated);
       setNamingSaved(true);
     } catch (cause) {
-      setNamingError(cause instanceof Error ? cause.message : 'Could not save the workspace.');
+      setNamingError(cause instanceof Error ? cause.message : t('Could not save the workspace.'));
     } finally {
       setNaming(false);
     }
@@ -579,7 +580,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       await work();
       setTypes(await fetchIssueTypes(workspaceId));
     } catch (cause) {
-      setTypeError(cause instanceof Error ? cause.message : 'Could not change the issue types.');
+      setTypeError(cause instanceof Error ? cause.message : t('Could not change the issue types.'));
     } finally {
       setTypeBusy(false);
     }
@@ -594,7 +595,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       setWorkspace(await setWorkspaceCompanionModel(workspaceId, modelId === '' ? null : modelId));
       setSaved(true);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save that.');
+      setError(cause instanceof Error ? cause.message : t('Could not save that.'));
     }
   }
 
@@ -607,7 +608,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <header className={styles.header}>
-        <h1 className={styles.title}>Workspace Settings</h1>
+        <h1 className={styles.title}>{t('Workspace Settings')}</h1>
       </header>
 
       {/*
@@ -639,24 +640,21 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         <form className={styles.card} onSubmit={rename}>
           <div className={styles.sectionTitle}>
             <span className={styles.labelWithHint}>
-              <h2 className={styles.sectionHeading}>General</h2>
+              <h2 className={styles.sectionHeading}>{t('General')}</h2>
               {/*
                 Against the card rather than against a field: it is about what
                 this card does not decide, which is not a footnote to the name
                 or to the description on their own.
               */}
-              <FieldHint label="General">
-                Who can see this workspace is set on the Roles screen by an installation administrator,
-                not here.
+              <FieldHint label={t('General')}>
+                {t('Who can see this workspace is set on the Roles screen by an installation administrator, not here.')}
               </FieldHint>
             </span>
             <div className={styles.rule} />
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="workspace-name">
-              Workspace Name
-            </label>
+            <label className={styles.label} htmlFor="workspace-name">{t('Workspace Name')}</label>
             <div className={styles.inputWrapper}>
               <input
                 id="workspace-name"
@@ -671,7 +669,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
 
           <div className={styles.field}>
             <label className={styles.label} htmlFor="workspace-description">
-              Description
+              {t('Description')}
             </label>
             <div className={`${styles.inputWrapper} ${styles.inputWrapperTall}`}>
               <textarea
@@ -690,9 +688,9 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
           )}
 
           <div className={styles.formActions}>
-            {namingSaved && namingError === null && <p className={styles.saved}>Saved.</p>}
+            {namingSaved && namingError === null && <p className={styles.saved}>{t('Saved.')}</p>}
             <button type="submit" className={styles.save} disabled={name.trim() === '' || naming}>
-              {naming ? 'Saving…' : 'Save Changes'}
+              {naming ? t('Saving…') : t('Save Changes')}
             </button>
           </div>
         </form>
@@ -710,20 +708,16 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         <section className={styles.card}>
           <div className={styles.sectionTitle}>
             <span className={styles.labelWithHint}>
-              <h2 className={styles.sectionHeading}>Issues</h2>
-              <FieldHint label="Issues">
-                A type is what an issue is - one of these, or none. Labels are
-                what a workspace says about an issue and stay free text, as many
-                at once as it likes. Renaming a type carries every issue on it;
-                deleting one is refused while any issue still carries it, and the
-                refusal says how many.
+              <h2 className={styles.sectionHeading}>{t('Issues')}</h2>
+              <FieldHint label={t('Issues')}>
+                {t('A type is what an issue is - one of these, or none. Labels are what a workspace says about an issue and stay free text, as many at once as it likes. Renaming a type carries every issue on it; deleting one is refused while any issue still carries it, and the refusal says how many.')}
               </FieldHint>
             </span>
             <div className={styles.rule} />
           </div>
 
           <div className={styles.field}>
-            <span className={styles.label}>Issue types</span>
+            <span className={styles.label}>{t('Issue types')}</span>
             <ul className={styles.typeList}>
               {types.map((type) => (
                 <li key={type.id} className={styles.typeRow}>
@@ -748,14 +742,14 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                     <button
                       type="button"
                       className={styles.typeName}
-                      title="Rename"
+                      title={t('Rename')}
                       onClick={() => setRenaming({ id: type.id, name: type.name })}
                     >
                       {type.name}
                     </button>
                   )}
                   <span className={styles.typeCount}>
-                    {type.issues === 1 ? '1 issue' : `${type.issues} issues`}
+                    {type.issues === 1 ? t('1 issue') : `${type.issues} issues`}
                   </span>
                   <button
                     type="button"
@@ -768,14 +762,12 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                   </button>
                 </li>
               ))}
-              {types.length === 0 && <li className={styles.typeNone}>None yet.</li>}
+              {types.length === 0 && <li className={styles.typeNone}>{t('None yet.')}</li>}
             </ul>
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="new-issue-type">
-              Add a type
-            </label>
+            <label className={styles.label} htmlFor="new-issue-type">{t('Add a type')}</label>
             <div className={styles.typeAdd}>
               <div className={styles.inputWrapper}>
                 <input
@@ -784,7 +776,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                   type="text"
                   value={newType}
                   maxLength={60}
-                  placeholder="chore"
+                  placeholder={t('chore')}
                   onChange={(event) => setNewType(event.target.value)}
                   onKeyDown={(event) => {
                     if (event.key !== 'Enter') return;
@@ -809,9 +801,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                     setNewType('');
                   });
                 }}
-              >
-                Add
-              </button>
+              >{t('Add')}</button>
             </div>
           </div>
 
@@ -837,7 +827,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       */}
       <section className={styles.card}>
         <div className={styles.sectionTitle}>
-          <h2 className={styles.sectionHeading}>Agents</h2>
+          <h2 className={styles.sectionHeading}>{t('Agents')}</h2>
           <div className={styles.rule} />
         </div>
 
@@ -856,20 +846,10 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
           <div className={styles.field}>
             <span className={styles.labelWithHint}>
               <label className={styles.label} htmlFor="workspace-memory-share">
-                Default Session Memory
+                {t('Default Session Memory')}
               </label>
-              <FieldHint label="Default Session Memory">
-                How much of its model&rsquo;s context window one of an agent&rsquo;s sessions may hand
-                back on its next turn: what was said in it, and what its tools last returned. This is
-                what agents here are given when they set no share of their own — an agent that has set
-                one keeps it. At Default nothing is decided and those agents get a fixed built-in
-                allowance, which is what every workspace does until somebody sets this. It is a
-                percentage rather than a count of tokens because the workspace runs several models
-                whose windows differ by an order of magnitude, so the same share is a different number
-                of tokens on each of them: the figures below are for the one model named beside them,
-                and the picker changes which. A share a particular model cannot give is refused where
-                that agent&rsquo;s budget is worked out, not here. Token figures are approximate — they
-                are counted in characters and reported at four characters to the token.
+              <FieldHint label={t('Default Session Memory')}>
+                {t('How much of its model’s context window one of an agent’s sessions may hand back on its next turn: what was said in it, and what its tools last returned. This is what agents here are given when they set no share of their own — an agent that has set one keeps it. At Default nothing is decided and those agents get a fixed built-in allowance, which is what every workspace does until somebody sets this. It is a percentage rather than a count of tokens because the workspace runs several models whose windows differ by an order of magnitude, so the same share is a different number of tokens on each of them: the figures below are for the one model named beside them, and the picker changes which. A share a particular model cannot give is refused where that agent’s budget is worked out, not here. Token figures are approximate — they are counted in characters and reported at four characters to the token.')}
               </FieldHint>
             </span>
 
@@ -929,7 +909,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             <>
               <div className={styles.previewPick}>
                 <label className={styles.label} htmlFor="workspace-memory-against">
-                  Worked Out Against
+                  {t('Worked Out Against')}
                 </label>
                 <div className={styles.inputWrapper}>
                   <select
@@ -938,7 +918,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                     value={against}
                     onChange={(event) => setAgainst(event.target.value)}
                   >
-                    <option value="">None — no figures shown</option>
+                    <option value="">{t('None — no figures shown')}</option>
                     {answering.map((model) => (
                       <option key={model.id} value={model.id}>
                         {model.name}
@@ -973,7 +953,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         )}
 
         <div className={styles.formActions}>
-          {memorySaved && memoryError === null && <p className={styles.saved}>Saved.</p>}
+          {memorySaved && memoryError === null && <p className={styles.saved}>{t('Saved.')}</p>}
           {/*
             A refused share stops the save here as well as at the server. Not
             instead of: the mutation refuses it from the same calculation, and
@@ -985,7 +965,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             onClick={() => void remember()}
             disabled={workspace === null || memorySaving || refusal !== null}
           >
-            {memorySaving ? 'Saving…' : 'Save Changes'}
+            {memorySaving ? t('Saving…') : t('Save Changes')}
           </button>
         </div>
       </section>
@@ -1005,18 +985,15 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       {hasChat && (
       <section className={styles.card}>
         <div className={styles.sectionTitle}>
-          <h2 className={styles.sectionHeading}>Chat</h2>
+          <h2 className={styles.sectionHeading}>{t('Chat')}</h2>
           <div className={styles.rule} />
         </div>
 
         <div className={styles.field}>
           <span className={styles.labelWithHint}>
-            <label className={styles.label} htmlFor="companion-model">
-              Companion Model
-            </label>
-            <FieldHint label="Companion Model">
-              Used for the workspace&rsquo;s own small jobs rather than for the conversation — naming a
-              chat from what was said. A cheap model is the right choice here.
+            <label className={styles.label} htmlFor="companion-model">{t('Companion Model')}</label>
+            <FieldHint label={t('Companion Model')}>
+              {t('Used for the workspace’s own small jobs rather than for the conversation — naming a chat from what was said. A cheap model is the right choice here.')}
             </FieldHint>
           </span>
           <div className={styles.inputWrapper}>
@@ -1027,7 +1004,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
               onChange={(event) => void choose(event.target.value)}
               disabled={workspace === null}
             >
-              <option value="">None — chats keep the name they were given</option>
+              <option value="">{t('None — chats keep the name they were given')}</option>
               {/* A small job is still a chat job: it asks a model for a title. */}
               {models
                 .filter(answers)
@@ -1039,7 +1016,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             </select>
             <img src={chevronDown12Icon} alt="" width={12} height={12} />
           </div>
-          {messageIn === 'chat' && saved && <p className={styles.saved}>Saved.</p>}
+          {messageIn === 'chat' && saved && <p className={styles.saved}>{t('Saved.')}</p>}
           {messageIn === 'chat' && error !== null && (
             <p className={styles.error} role="alert">
               {error}
@@ -1055,11 +1032,10 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         <div className={styles.field}>
           <span className={styles.labelWithHint}>
             <label className={styles.label} htmlFor="transcription-model">
-              Speech-to-text Model
+              {t('Speech-to-text Model')}
             </label>
-            <FieldHint label="Speech-to-text Model">
-              Chosen once for the workspace: it is about what this installation runs, not about any one
-              conversation.
+            <FieldHint label={t('Speech-to-text Model')}>
+              {t('Chosen once for the workspace: it is about what this installation runs, not about any one conversation.')}
             </FieldHint>
           </span>
           <div className={styles.inputWrapper}>
@@ -1070,7 +1046,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
               onChange={(event) => void hear(event.target.value)}
               disabled={workspace === null}
             >
-              <option value="">None — the microphone is not offered</option>
+              <option value="">{t('None — the microphone is not offered')}</option>
               {models
                 .filter((model) => model.kind === 'TRANSCRIPTION')
                 .map((model) => (
@@ -1090,8 +1066,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             !modelCatalogue.loading &&
             !models.some((model) => model.kind === 'TRANSCRIPTION') && (
               <p className={styles.fieldNote}>
-                No transcription model has been added yet. Add one under Models, pointing at your Whisper
-                instance.
+                {t('No transcription model has been added yet. Add one under Models, pointing at your Whisper instance.')}
               </p>
             )
           ) : (
@@ -1107,10 +1082,10 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         <div className={styles.field}>
           <span className={styles.labelWithHint}>
             <label className={styles.label} htmlFor="speech-model">
-              Text-to-speech Model
+              {t('Text-to-speech Model')}
             </label>
-            <FieldHint label="Text-to-speech Model">
-              A speaker appears under every answer in a chat, which reads it in this model&rsquo;s voice.
+            <FieldHint label={t('Text-to-speech Model')}>
+              {t('A speaker appears under every answer in a chat, which reads it in this model’s voice.')}
             </FieldHint>
           </span>
           <div className={styles.inputWrapper}>
@@ -1121,7 +1096,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
               onChange={(event) => void read(event.target.value)}
               disabled={workspace === null}
             >
-              <option value="">None — answers are not read aloud</option>
+              <option value="">{t('None — answers are not read aloud')}</option>
               {models
                 .filter((model) => model.kind === 'SPEECH')
                 .map((model) => (
@@ -1136,8 +1111,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             !modelCatalogue.loading &&
             !models.some((model) => model.kind === 'SPEECH') && (
               <p className={styles.fieldNote}>
-                No speech model has been added yet. Add one under Models, pointing at whatever reads text
-                aloud.
+                {t('No speech model has been added yet. Add one under Models, pointing at whatever reads text aloud.')}
               </p>
             )
           ) : (
@@ -1172,17 +1146,13 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       <section className={styles.card}>
         <div className={styles.sectionTitle}>
           <span className={styles.labelWithHint}>
-            <h2 className={styles.sectionHeading}>Voice</h2>
+            <h2 className={styles.sectionHeading}>{t('Voice')}</h2>
             {/*
               Against the card rather than a field: what an empty box means is
               true of all three and a footnote to none of them.
             */}
-            <FieldHint label="Voice">
-              How the hands-free voice panel decides you have finished talking, so it can answer without
-              you pressing anything between turns. Leave a box empty and voice mode uses its own value,
-              which is what every workspace does until somebody changes one &mdash; the empty box says
-              what that value is. None of this touches the microphone beside Send, which records until
-              you press it again.
+            <FieldHint label={t('Voice')}>
+              {t('How the hands-free voice panel decides you have finished talking, so it can answer without you pressing anything between turns. Leave a box empty and voice mode uses its own value, which is what every workspace does until somebody changes one — the empty box says what that value is. None of this touches the microphone beside Send, which records until you press it again.')}
             </FieldHint>
           </span>
           <div className={styles.rule} />
@@ -1191,14 +1161,10 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         <div className={styles.field}>
           <span className={styles.labelWithHint}>
             <label className={styles.label} htmlFor="voice-pause">
-              Pause Before It Answers
+              {t('Pause Before It Answers')}
             </label>
-            <FieldHint label="Pause Before It Answers">
-              How long you can go quiet, once it has heard you speak, before it takes that as your turn
-              ending and sends what you said. Raise it if it answers while you are still talking: people
-              stop to think in the middle of a sentence, and every one of those stops is this clock
-              running. Lower it if it sits there after you have finished. Nothing is sent while a room is
-              merely quiet &mdash; this only starts once somebody has spoken.
+            <FieldHint label={t('Pause Before It Answers')}>
+              {t('How long you can go quiet, once it has heard you speak, before it takes that as your turn ending and sends what you said. Raise it if it answers while you are still talking: people stop to think in the middle of a sentence, and every one of those stops is this clock running. Lower it if it sits there after you have finished. Nothing is sent while a room is merely quiet — this only starts once somebody has spoken.')}
             </FieldHint>
           </span>
           <div className={styles.inputWrapper}>
@@ -1216,22 +1182,17 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                 setPause(event.target.value);
               }}
             />
-            <span className={styles.unit}>seconds</span>
+            <span className={styles.unit}>{t('seconds')}</span>
           </div>
         </div>
 
         <div className={styles.field}>
           <span className={styles.labelWithHint}>
             <label className={styles.label} htmlFor="voice-over-room">
-              Voice Above The Room
+              {t('Voice Above The Room')}
             </label>
-            <FieldHint label="Voice Above The Room">
-              How far above the room&rsquo;s own noise a sound has to stand to count as a voice rather
-              than as the room &mdash; 300 is three times the room. Turn this down if it stops while you
-              are still talking, and if you speak quietly or sit away from the microphone. Turn it up in a
-              room with something going on in it, where a fan or a conversation behind you is heard as you
-              and the turn never ends at all. The room is measured as it is actually heard, which is why
-              this travels between microphones in a way a fixed loudness does not.
+            <FieldHint label={t('Voice Above The Room')}>
+              {t('How far above the room’s own noise a sound has to stand to count as a voice rather than as the room — 300 is three times the room. Turn this down if it stops while you are still talking, and if you speak quietly or sit away from the microphone. Turn it up in a room with something going on in it, where a fan or a conversation behind you is heard as you and the turn never ends at all. The room is measured as it is actually heard, which is why this travels between microphones in a way a fixed loudness does not.')}
             </FieldHint>
           </span>
           <div className={styles.inputWrapper}>
@@ -1256,15 +1217,10 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         <div className={styles.field}>
           <span className={styles.labelWithHint}>
             <label className={styles.label} htmlFor="voice-unattended">
-              Unattended Microphone
+              {t('Unattended Microphone')}
             </label>
-            <FieldHint label="Unattended Microphone">
-              How long an open microphone stays open when nothing else has ended the turn. A fuse rather
-              than a limit on how much you may say: the pause above is what ends a turn, and this fires
-              only where no pause ever came &mdash; a microphone left open in an empty room, or a room
-              noisy enough to be heard as somebody talking. Every value here that looked like a
-              reasonable limit on a turn turned out to cut somebody off in the middle of a thought, so it
-              sits well past anything anybody says in one breath.
+            <FieldHint label={t('Unattended Microphone')}>
+              {t('How long an open microphone stays open when nothing else has ended the turn. A fuse rather than a limit on how much you may say: the pause above is what ends a turn, and this fires only where no pause ever came — a microphone left open in an empty room, or a room noisy enough to be heard as somebody talking. Every value here that looked like a reasonable limit on a turn turned out to cut somebody off in the middle of a thought, so it sits well past anything anybody says in one breath.')}
             </FieldHint>
           </span>
           <div className={styles.inputWrapper}>
@@ -1282,7 +1238,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                 setUnattended(event.target.value);
               }}
             />
-            <span className={styles.unit}>minutes</span>
+            <span className={styles.unit}>{t('minutes')}</span>
           </div>
         </div>
 
@@ -1302,20 +1258,18 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         */}
         <div className={styles.field}>
           <span className={styles.labelWithHint}>
-            <label className={styles.label} htmlFor="voice-chunking">
-              Speech chunking
-            </label>
-            <FieldHint label="Speech chunking">
-              <p>Where an answer is cut for the speech provider.</p>
+            <label className={styles.label} htmlFor="voice-chunking">{t('Speech chunking')}</label>
+            <FieldHint label={t('Speech chunking')}>
+              <p>{t('Where an answer is cut for the speech provider.')}</p>
               <ul>
                 <li>
-                  <strong>Sentence</strong> starts talking soonest.
+                  <strong>{t('Sentence')}</strong> starts talking soonest.
                 </li>
                 <li>
-                  <strong>Paragraph</strong> sends fewer, longer requests and reads more smoothly.
+                  <strong>{t('Paragraph')}</strong> sends fewer, longer requests and reads more smoothly.
                 </li>
                 <li>
-                  <strong>None</strong> waits for the whole answer and sends it once.
+                  <strong>{t('None')}</strong> waits for the whole answer and sends it once.
                 </li>
               </ul>
             </FieldHint>
@@ -1331,9 +1285,9 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                 setChunking(event.target.value as SpeechChunking);
               }}
             >
-              <option value="NONE">None</option>
-              <option value="SENTENCE">Sentence</option>
-              <option value="PARAGRAPH">Paragraph</option>
+              <option value="NONE">{t('None')}</option>
+              <option value="SENTENCE">{t('Sentence')}</option>
+              <option value="PARAGRAPH">{t('Paragraph')}</option>
             </select>
             <img src={chevronDown12Icon} alt="" width={12} height={12} />
           </div>
@@ -1351,14 +1305,14 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         )}
 
         <div className={styles.formActions}>
-          {voiceSaved && voiceError === null && <p className={styles.saved}>Saved.</p>}
+          {voiceSaved && voiceError === null && <p className={styles.saved}>{t('Saved.')}</p>}
           <button
             type="button"
             className={styles.save}
             onClick={() => void listenLike()}
             disabled={workspace === null || voiceSaving}
           >
-            {voiceSaving ? 'Saving…' : 'Save Changes'}
+            {voiceSaving ? t('Saving…') : t('Save Changes')}
           </button>
         </div>
       </section>
@@ -1379,18 +1333,17 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       */}
       <section className={styles.card}>
         <div className={styles.sectionTitle}>
-          <h2 className={styles.sectionHeading}>Quick Chat</h2>
+          <h2 className={styles.sectionHeading}>{t('Quick Chat')}</h2>
           <div className={styles.rule} />
         </div>
 
         <div className={styles.field}>
           <span className={styles.labelWithHint}>
             <label className={styles.label} htmlFor="quick-chat-model">
-              Quick Chat Model
+              {t('Quick Chat Model')}
             </label>
-            <FieldHint label="Quick Chat Model">
-              Answers questions about the page somebody is on, and can look up this workspace&rsquo;s
-              workflows and runs to do it.
+            <FieldHint label={t('Quick Chat Model')}>
+              {t('Answers questions about the page somebody is on, and can look up this workspace’s workflows and runs to do it.')}
             </FieldHint>
           </span>
           <div className={styles.inputWrapper}>
@@ -1401,7 +1354,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
               onChange={(event) => void quick(event.target.value)}
               disabled={workspace === null}
             >
-              <option value="">None — the AI button is not offered</option>
+              <option value="">{t('None — the AI button is not offered')}</option>
               {models
                 .filter((model) => model.kind === 'CHAT')
                 .map((model) => (
@@ -1426,7 +1379,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                   checked={workspace.quickChatMayWrite}
                   onChange={(event) => void writes(event.target.checked)}
                 />
-                <span>Let it make changes</span>
+                <span>{t('Let it make changes')}</span>
               </label>
               {/*
                 Beside the box rather than inside the label: the (?) is a button,
@@ -1438,17 +1391,14 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                 one explanation hides and the next sits in the open is worse
                 than either convention on its own.
               */}
-              <FieldHint label="Let it make changes">
-                Off, it can only look things up. On, it can act on this workspace when asked: start a run,
-                repeat one, and turn a workflow or an agent on or off. Those are real — a run that messaged
-                somebody messages them again — and the panel opens over whatever somebody happens to be
-                reading. It cannot delete anything either way.
+              <FieldHint label={t('Let it make changes')}>
+                {t('Off, it can only look things up. On, it can act on this workspace when asked: start a run, repeat one, and turn a workflow or an agent on or off. Those are real — a run that messaged somebody messages them again — and the panel opens over whatever somebody happens to be reading. It cannot delete anything either way.')}
               </FieldHint>
             </div>
           )}
 
           {/* The same message the card above has, about this card's own saves. */}
-          {messageIn === 'quick' && saved && <p className={styles.saved}>Saved.</p>}
+          {messageIn === 'quick' && saved && <p className={styles.saved}>{t('Saved.')}</p>}
           {messageIn === 'quick' && error !== null && (
             <p className={styles.error} role="alert">
               {error}

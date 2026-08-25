@@ -1,5 +1,6 @@
 import { graphql } from './client';
 import type { PageOf } from './client';
+import { t } from '../i18n';
 
 export type AgentType = 'LLM';
 
@@ -267,5 +268,5 @@ export async function deleteAgent(id: string): Promise<boolean> {
 
 /** How the table names an agent's type. There is only one. */
 export function agentTypeLabel(_type: AgentType): string {
-  return 'LLM Agent';
+  return t('LLM Agent');
 }

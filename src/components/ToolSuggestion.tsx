@@ -6,6 +6,7 @@ import { compile } from './monaco';
 import { diffLines, diffSummary } from './diff';
 import type { DiffLine } from './diff';
 import styles from './CodeSuggestion.module.css';
+import { t } from '../i18n';
 
 export interface ToolSuggestionProps {
   suggestion: QuickChatToolSuggestion;
@@ -78,9 +79,9 @@ export function ToolSuggestion({ suggestion, onSettled }: ToolSuggestionProps) {
        * what they have just accepted.
        */
       window.dispatchEvent(new CustomEvent('orknux:tool-saved', { detail: { id: suggestion.toolId } }));
-      onSettled('I accepted the change and it is saved.');
+      onSettled(t('I accepted the change and it is saved.'));
     } catch (cause) {
-      const reason = cause instanceof Error ? cause.message : 'It could not be saved.';
+      const reason = cause instanceof Error ? cause.message : t('It could not be saved.');
       setFailed(reason);
       onSettled(`I tried to accept it and it could not be saved — ${reason}`);
       setSettled('rejected');
@@ -91,10 +92,10 @@ export function ToolSuggestion({ suggestion, onSettled }: ToolSuggestionProps) {
 
   function reject() {
     setSettled('rejected');
-    onSettled('I rejected the change. The tool is unchanged.');
+    onSettled(t('I rejected the change. The tool is unchanged.'));
   }
 
-  if (before === null) return <p className={styles.loading}>Reading what is there now…</p>;
+  if (before === null) return <p className={styles.loading}>{t('Reading what is there now…')}</p>;
 
   const lines: DiffLine[] = diffLines(before, suggestion.code);
 
@@ -129,15 +130,15 @@ export function ToolSuggestion({ suggestion, onSettled }: ToolSuggestionProps) {
       {settled === null ? (
         <div className={styles.buttons}>
           <button type="button" className={styles.accept} onClick={() => void accept()} disabled={saving}>
-            {saving ? 'Saving…' : 'Accept'}
+            {saving ? t('Saving…') : 'Accept'}
           </button>
           <button type="button" className={styles.reject} onClick={reject} disabled={saving}>
-            Reject
+            {t('Reject')}
           </button>
         </div>
       ) : (
         <p className={settled === 'accepted' ? styles.accepted : styles.rejected}>
-          {settled === 'accepted' ? 'Accepted and saved.' : 'Rejected. Nothing was changed.'}
+          {settled === 'accepted' ? t('Accepted and saved.') : t('Rejected. Nothing was changed.')}
         </p>
       )}
     </section>

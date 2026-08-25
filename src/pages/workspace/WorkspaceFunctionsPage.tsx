@@ -25,6 +25,7 @@ import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceFunctionsPage.module.css';
+import { t } from '../../i18n';
 
 export interface WorkspaceFunctionsPageProps {
   session: SessionUser;
@@ -97,7 +98,7 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
       })
       .catch((cause: unknown) => {
         setFunctions(null);
-        setError(cause instanceof Error ? cause.message : 'Could not load the functions.');
+        setError(cause instanceof Error ? cause.message : t('Could not load the functions.'));
         setLoading(false);
       });
   }, [workspaceId, page]);
@@ -140,8 +141,10 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
       <section className={styles.card}>
         <header className={styles.header}>
           <div className={styles.titleGroup}>
-            <h1 className={styles.title}>Functions</h1>
-            <p className={styles.subtitle}>Named JavaScript functions callable from workflow actions.</p>
+            <h1 className={styles.title}>{t('Functions')}</h1>
+            <p className={styles.subtitle}>
+              {t('Named JavaScript functions callable from workflow actions.')}
+            </p>
           </div>
           {/*
             Straight to the editor, the way duplicating one goes.
@@ -157,19 +160,17 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
               type="button"
               className={styles.createFunction}
               onClick={() => navigate(`/workspace/${workspaceId}/functions/new`)}
-            >
-              + Create Function
-            </button>
+            >{t('+ Create Function')}</button>
           </div>
         </header>
 
         <div className={styles.table}>
           <div className={styles.tableHeader}>
-            <span className={styles.colName}>Name</span>
-            <span className={styles.colParams}>Parameters</span>
-            <span className={styles.colReturn}>Return Type</span>
-            <span className={styles.colModified}>Last Modified</span>
-            <span className={styles.colActions}>Actions</span>
+            <span className={styles.colName}>{t('Name')}</span>
+            <span className={styles.colParams}>{t('Parameters')}</span>
+            <span className={styles.colReturn}>{t('Return Type')}</span>
+            <span className={styles.colModified}>{t('Last Modified')}</span>
+            <span className={styles.colActions}>{t('Actions')}</span>
           </div>
 
           {/* Also while the page a new one is on is being worked out, or the
@@ -177,7 +178,7 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
           {(loading || findingMade) && <p className={styles.notice}><Loader /></p>}
           {error !== null && <p className={`${styles.notice} ${styles.noticeError}`}>{error}</p>}
           {!loading && !findingMade && error === null && functions?.content.length === 0 && (
-            <p className={styles.notice}>No functions yet.</p>
+            <p className={styles.notice}>{t('No functions yet.')}</p>
           )}
 
           {!findingMade &&

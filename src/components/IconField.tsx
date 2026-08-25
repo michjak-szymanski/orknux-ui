@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { FieldHint } from './FieldHint';
 import { Icon, IconPickerDialog } from './IconPicker';
 import styles from './IconField.module.css';
+import { t } from '../i18n';
 
 export interface IconFieldProps {
   /** The name chosen, or null for whatever the kind draws by itself. */
@@ -38,22 +39,18 @@ export function IconField({ value, onChange, hint }: IconFieldProps) {
     <div className={styles.field}>
       <span className={styles.labelRow}>
         <span className={styles.labelWithHint}>
-          <span className={styles.label}>Icon</span>
-          {hint !== undefined && <FieldHint label="Icon">{hint}</FieldHint>}
+          <span className={styles.label}>{t('Icon')}</span>
+          {hint !== undefined && <FieldHint label={t('Icon')}>{hint}</FieldHint>}
         </span>
         {value !== null && (
-          <button type="button" className={styles.textButton} onClick={() => onChange(null)}>
-            Clear
-          </button>
+          <button type="button" className={styles.textButton} onClick={() => onChange(null)}>{t('Clear')}</button>
         )}
       </span>
 
       <div className={styles.box}>
         {value !== null && <Icon name={value} className={styles.preview} />}
         <span className={value === null ? styles.none : styles.name}>{value ?? 'None'}</span>
-        <button type="button" className={styles.textButton} onClick={() => setBrowsing(true)}>
-          Browse…
-        </button>
+        <button type="button" className={styles.textButton} onClick={() => setBrowsing(true)}>{t('Browse…')}</button>
       </div>
 
       <IconPickerDialog

@@ -27,6 +27,7 @@ import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './SessionDetailPage.module.css';
+import { t } from '../../i18n';
 
 export interface SessionDetailPageProps {
   session: SessionUser;
@@ -103,7 +104,7 @@ function EventLine({ event }: { event: LlmSessionEvent }) {
         </span>
       </div>
       {text.trim() === '' ? (
-        <p className={styles.nothing}>Nothing was recorded on this line.</p>
+        <p className={styles.nothing}>{t('Nothing was recorded on this line.')}</p>
       ) : (
         <>
           {/*
@@ -115,7 +116,7 @@ function EventLine({ event }: { event: LlmSessionEvent }) {
           </pre>
           {long && (
             <button type="button" className={styles.fold} onClick={() => setOpen((held) => !held)}>
-              {open ? 'Show less' : `Show all ${text.length.toLocaleString()} characters`}
+              {open ? t('Show less') : `Show all ${text.length.toLocaleString()} characters`}
             </button>
           )}
         </>
@@ -193,7 +194,7 @@ export function SessionDetailPage({ session, onSignOut }: SessionDetailPageProps
       })
       .catch((cause: unknown) => {
         setEvents(null);
-        setError(cause instanceof Error ? cause.message : 'Could not load the transcript.');
+        setError(cause instanceof Error ? cause.message : t('Could not load the transcript.'));
         setLoading(false);
       });
   }, [sessionId, debouncedSearch, kinds, page, pageSize, order, ascending]);
@@ -214,9 +215,9 @@ export function SessionDetailPage({ session, onSignOut }: SessionDetailPageProps
     >
       <header className={styles.contentHeader}>
         <p className={styles.breadcrumb}>
-          <BackLink to={`/workspace/${workspaceId}/sessions`} label="Sessions" />
+          <BackLink to={`/workspace/${workspaceId}/sessions`} label={t('Sessions')} />
           <Link className={styles.crumbLink} to={`/workspace/${workspaceId}/sessions`}>
-            Sessions
+            {t('Sessions')}
           </Link>
           <span className={styles.crumbSeparator}>/</span>
           <span className={styles.crumbCurrent}>{held?.key ?? 'Session'}</span>
@@ -224,7 +225,7 @@ export function SessionDetailPage({ session, onSignOut }: SessionDetailPageProps
 
         {missing ? (
           <p className={styles.gone} role="alert">
-            There is no such session, or it is not one you can see.
+            {t('There is no such session, or it is not one you can see.')}
           </p>
         ) : (
           <>
@@ -260,12 +261,12 @@ export function SessionDetailPage({ session, onSignOut }: SessionDetailPageProps
                         .catch((cause: unknown) => {
                           setContinuing(false);
                           setRemoveError(
-                            cause instanceof Error ? cause.message : 'That conversation could not be continued.',
+                            cause instanceof Error ? cause.message : t('That conversation could not be continued.'),
                           );
                         });
                     }}
                   >
-                    {continuing ? 'Opening…' : 'Continue in chat'}
+                    {continuing ? t('Opening…') : t('Continue in chat')}
                   </button>
                   <button
                     type="button"
@@ -278,12 +279,12 @@ export function SessionDetailPage({ session, onSignOut }: SessionDetailPageProps
                       void removeLlmSession(held.id)
                         .then(() => navigate(`/workspace/${workspaceId}/sessions`))
                         .catch((cause: unknown) =>
-                          setRemoveError(cause instanceof Error ? cause.message : 'That could not be removed.'),
+                          setRemoveError(cause instanceof Error ? cause.message : t('That could not be removed.')),
                         );
                     }}
                     onBlur={() => setConfirming(false)}
                   >
-                    {confirming ? 'Remove it, and everything said in it' : 'Remove session'}
+                    {confirming ? t('Remove it, and everything said in it') : t('Remove session')}
                   </button>
                 </div>
               )}
@@ -298,7 +299,7 @@ export function SessionDetailPage({ session, onSignOut }: SessionDetailPageProps
                 'Loading…'
               ) : (
                 <>
-                  {held.keyPrefix === null ? 'No prefix' : <>Prefix {held.keyPrefix}</>}
+                  {held.keyPrefix === null ? t('No prefix') : <>Prefix {held.keyPrefix}</>}
                   {' · '}
                   {held.eventCount} {held.eventCount === 1 ? 'line' : 'lines'}
                   {' · '}opened {timeAgo(held.createdAt)}
@@ -321,14 +322,14 @@ export function SessionDetailPage({ session, onSignOut }: SessionDetailPageProps
               <input
                 className={styles.searchField}
                 type="search"
-                placeholder="Search what was said, and who said it…"
+                placeholder={t('Search what was said, and who said it…')}
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                aria-label="Search this transcript"
+                aria-label={t('Search this transcript')}
               />
             </div>
 
-            <div className={styles.kindFilter} role="group" aria-label="Which kinds to show">
+            <div className={styles.kindFilter} role="group" aria-label={t('Which kinds to show')}>
               {EVENT_KINDS.map((kind) => {
                 const on = kinds.includes(kind);
                 return (
@@ -350,9 +351,7 @@ export function SessionDetailPage({ session, onSignOut }: SessionDetailPageProps
             </div>
 
             <div className={styles.sortRow}>
-              <label className={styles.sortLabel} htmlFor="event-order">
-                Sort
-              </label>
+              <label className={styles.sortLabel} htmlFor="event-order">{t('Sort')}</label>
               <span className={styles.selectWrapper}>
                 <select
                   id="event-order"
@@ -372,8 +371,8 @@ export function SessionDetailPage({ session, onSignOut }: SessionDetailPageProps
                 type="button"
                 className={styles.sortDirection}
                 onClick={() => setAscending((was) => !was)}
-                title={ascending ? 'Oldest first - press for newest first' : 'Newest first - press for oldest first'}
-                aria-label={ascending ? 'Oldest first' : 'Newest first'}
+                title={ascending ? t('Oldest first - press for newest first') : t('Newest first - press for oldest first')}
+                aria-label={ascending ? t('Oldest first') : t('Newest first')}
               >
                 {ascending ? '↑' : '↓'}
               </button>
@@ -394,8 +393,8 @@ export function SessionDetailPage({ session, onSignOut }: SessionDetailPageProps
             {!loading && error === null && events?.content.length === 0 && (
               <p className={styles.notice}>
                 {filtered
-                  ? 'Nothing in this session matches that.'
-                  : 'This session was opened but nothing has been recorded in it.'}
+                  ? t('Nothing in this session matches that.')
+                  : t('This session was opened but nothing has been recorded in it.')}
               </p>
             )}
 

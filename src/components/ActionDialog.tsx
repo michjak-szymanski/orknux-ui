@@ -47,6 +47,7 @@ import { OpenDefinitionIcon } from './OpenDefinitionIcon';
 import { PanelClose, panelEscape } from './PanelClose';
 import { SlackTargetField } from './SlackTargetField';
 import styles from './Dialog.module.css';
+import { t } from '../i18n';
 
 export interface ActionDialogProps {
   /**
@@ -120,8 +121,8 @@ function sentRows(rows: HeaderRow[]): ActionHeaderInput[] {
  * form that re-renders on every keystroke, would be a picker nobody can arrow
  * down through.
  */
-const NEW_FUNCTION_ROW = { value: NEW_FUNCTION, label: '+ New function' };
-const NEW_CONDITION_ROW = { value: NEW_CONDITION, label: '+ New condition' };
+const NEW_FUNCTION_ROW = { value: NEW_FUNCTION, label: t('+ New function') };
+const NEW_CONDITION_ROW = { value: NEW_CONDITION, label: t('+ New condition') };
 
 /**
  * Create Action, and the same form again for editing one.
@@ -467,7 +468,7 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
         : await createAction({ workspaceId, type, ...settings });
       onSaved(saved);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save the action.');
+      setError(cause instanceof Error ? cause.message : t('Could not save the action.'));
       setSubmitting(false);
     }
   }
@@ -479,7 +480,7 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
       await deleteAction(action.id);
       onDeleted?.();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not delete the action.');
+      setError(cause instanceof Error ? cause.message : t('Could not delete the action.'));
       setSubmitting(false);
     }
   }
@@ -494,24 +495,22 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
     >
       <form className={styles.body} onSubmit={handleSubmit}>
         <header className={styles.header}>
-          <h2 className={styles.title}>{editing ? 'Action Settings' : 'Create Action'}</h2>
+          <h2 className={styles.title}>{editing ? t('Action Settings') : t('Create Action')}</h2>
           {placement === 'panel' && <PanelClose onClose={onClose} />}
         </header>
 
-        <p className={styles.dialogMessage}>Define a reusable action block for workflows.</p>
+        <p className={styles.dialogMessage}>{t('Define a reusable action block for workflows.')}</p>
 
         <div className={styles.fields}>
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="action-name">
-              Action Name
-            </label>
+            <label className={styles.label} htmlFor="action-name">{t('Action Name')}</label>
             <div className={styles.inputWrapper}>
               <input
                 id="action-name"
                 name="actionName"
                 className={styles.input}
                 type="text"
-                placeholder="e.g. Send Slack Notification"
+                placeholder={t('e.g. Send Slack Notification')}
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 autoFocus
@@ -523,13 +522,11 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
           <IconField
             value={icon}
             onChange={setIcon}
-            hint="Nodes drawn from this action start with it; each node can change its own."
+            hint={t("Nodes drawn from this action start with it; each node can change its own.")}
           />
 
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="action-type">
-              Type
-            </label>
+            <label className={styles.label} htmlFor="action-type">{t('Type')}</label>
             <div className={styles.inputWrapper}>
               <select
                 id="action-type"
@@ -552,7 +549,7 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
 
           <div className={styles.field}>
             <label className={styles.label} htmlFor="action-subtype">
-              {type === 'EXECUTE' ? 'Execute Type' : 'Until'}
+              {type === 'EXECUTE' ? t('Execute Type') : 'Until'}
             </label>
             <div className={styles.inputWrapper}>
               <select
@@ -585,11 +582,10 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                 <span className={styles.labelRow}>
                   <span className={styles.labelWithHint}>
                     <label className={styles.label} htmlFor="action-connection">
-                      Connection
+                      {t('Connection')}
                     </label>
-                    <FieldHint label="Connection">
-                      A connection set up under this workspace&apos;s Integrations, which is where the
-                      credentials for it live. This picks which one the message goes through.
+                    <FieldHint label={t('Connection')}>
+                      {t('A connection set up under this workspace\'s Integrations, which is where the credentials for it live. This picks which one the message goes through.')}
                     </FieldHint>
                   </span>
                   {connectionId !== '' && (
@@ -598,8 +594,8 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                       to={`/workspace/${workspaceId}/integrations/connections/${connectionId}`}
                       target="_blank"
                       rel="noreferrer"
-                      title="Opens the connection in a new tab"
-                      aria-label="Open the connection's definition"
+                      title={t('Opens the connection in a new tab')}
+                      aria-label={t('Open the connection\'s definition')}
                     >
                       <OpenDefinitionIcon />
                     </Link>
@@ -610,8 +606,8 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                   value={connectionId}
                   options={connectionOptions}
                   onChoose={setConnectionId}
-                  placeholder="Select connection…"
-                  searchPlaceholder="Search connections…"
+                  placeholder={t('Select connection…')}
+                  searchPlaceholder={t("Search connections…")}
                   failure={connectionCatalogue.failure}
                 />
                 {/* Nothing to make from here: a connection is a URL, a token and a
@@ -619,12 +615,12 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                     name. What is left printed is the empty state - what the field
                     has instead of contents - and where they come from went behind
                     the (?), which is a question rather than a fact about now. */}
-                <CatalogueNote catalogue={connectionCatalogue} className={styles.fieldHint} empty="None set up yet." />
+                <CatalogueNote catalogue={connectionCatalogue} className={styles.fieldHint} empty={t("None set up yet.")} />
               </div>
 
               <div className={styles.field}>
                 <label className={styles.label} htmlFor="action-connection-action">
-                  Action
+                  {t('Action')}
                 </label>
                 <div className={styles.inputWrapper}>
                   <select
@@ -645,18 +641,16 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
 
               <div className={styles.field}>
                 <span className={styles.labelWithHint}>
-                  <label className={styles.label} htmlFor="action-content">
-                    Content
-                  </label>
-                  <FieldHint label="Content">
-                    Sent exactly as written. Leave it empty and each node says what to send.
+                  <label className={styles.label} htmlFor="action-content">{t('Content')}</label>
+                  <FieldHint label={t('Content')}>
+                    {t('Sent exactly as written. Leave it empty and each node says what to send.')}
                   </FieldHint>
                 </span>
                 <div className={`${styles.inputWrapper} ${styles.inputWrapperTall}`}>
                   <textarea
                     id="action-content"
                     className={`${styles.input} ${styles.textarea}`}
-                    placeholder="Your request has been approved"
+                    placeholder={t('Your request has been approved')}
                     value={content}
                     onChange={(event) => setContent(event.target.value)}
                   />
@@ -679,12 +673,9 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
               */}
               <div className={styles.field}>
                 <span className={styles.labelWithHint}>
-                  <label className={styles.label} htmlFor="action-target-name">
-                    Target
-                  </label>
-                  <FieldHint label="Target">
-                    Type or pick a channel or a person — a name, a handle, an address or an id is
-                    found either way, with or without its # or @.
+                  <label className={styles.label} htmlFor="action-target-name">{t('Target')}</label>
+                  <FieldHint label={t('Target')}>
+                    {t('Type or pick a channel or a person — a name, a handle, an address or an id is found either way, with or without its # or @.')}
                   </FieldHint>
                 </span>
                 {/*
@@ -715,7 +706,7 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                   id="action-target-name"
                   className={styles.input}
                   wrapperClassName={styles.inputWrapper}
-                  placeholder="#notifications or @someone"
+                  placeholder={t('#notifications or @someone')}
                   value={targetName}
                   onChange={setTargetName}
                   connectionId={asking ? slackConnection?.id ?? null : null}
@@ -738,11 +729,10 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                 <span className={styles.labelRow}>
                   <span className={styles.labelWithHint}>
                     <label className={styles.label} htmlFor="action-mail-connection">
-                      Mail Server
+                      {t('Mail Server')}
                     </label>
-                    <FieldHint label="Mail Server">
-                      An SMTP connection from this workspace&apos;s integrations. The from-address is
-                      the connection&apos;s, so every mail sent through it agrees about who it is from.
+                    <FieldHint label={t('Mail Server')}>
+                      {t('An SMTP connection from this workspace\'s integrations. The from-address is the connection\'s, so every mail sent through it agrees about who it is from.')}
                     </FieldHint>
                   </span>
                   {connectionUsable && (
@@ -751,8 +741,8 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                       to={`/workspace/${workspaceId}/integrations/connections/${connectionId}`}
                       target="_blank"
                       rel="noreferrer"
-                      title="Opens the mail server's connection in a new tab"
-                      aria-label="Open the mail server's definition"
+                      title={t('Opens the mail server\'s connection in a new tab')}
+                      aria-label={t('Open the mail server\'s definition')}
                     >
                       <OpenDefinitionIcon />
                     </Link>
@@ -768,21 +758,19 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                   onChoose={setConnectionId}
                   placeholder={
                     mailConnections.length === 0
-                      ? 'No mail connection in this workspace'
-                      : 'Select connection…'
+                      ? t('No mail connection in this workspace')
+                      : t('Select connection…')
                   }
-                  searchPlaceholder="Search mail servers…"
+                  searchPlaceholder={t("Search mail servers…")}
                   failure={connectionCatalogue.failure}
                 />
               </div>
 
               <div className={styles.field}>
                 <span className={styles.labelWithHint}>
-                  <label className={styles.label} htmlFor="action-mail-to">
-                    To
-                  </label>
-                  <FieldHint label="To">
-                    Sent exactly as written. Leave it empty and each node says who the mail goes to.
+                  <label className={styles.label} htmlFor="action-mail-to">{t('To')}</label>
+                  <FieldHint label={t('To')}>
+                    {t('Sent exactly as written. Leave it empty and each node says who the mail goes to.')}
                   </FieldHint>
                 </span>
                 <div className={styles.inputWrapper}>
@@ -798,15 +786,13 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
               </div>
 
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="action-mail-subject">
-                  Subject
-                </label>
+                <label className={styles.label} htmlFor="action-mail-subject">{t('Subject')}</label>
                 <div className={styles.inputWrapper}>
                   <input
                     id="action-mail-subject"
                     className={styles.input}
                     type="text"
-                    placeholder="Your request has been approved"
+                    placeholder={t('Your request has been approved')}
                     value={emailSubject}
                     onChange={(event) => setEmailSubject(event.target.value)}
                   />
@@ -815,18 +801,16 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
 
               <div className={styles.field}>
                 <span className={styles.labelWithHint}>
-                  <label className={styles.label} htmlFor="action-mail-body">
-                    Body
-                  </label>
-                  <FieldHint label="Body">
-                    Plain text. Leave it empty and each node says what the mail says.
+                  <label className={styles.label} htmlFor="action-mail-body">{t('Body')}</label>
+                  <FieldHint label={t('Body')}>
+                    {t('Plain text. Leave it empty and each node says what the mail says.')}
                   </FieldHint>
                 </span>
                 <div className={`${styles.inputWrapper} ${styles.inputWrapperTall}`}>
                   <textarea
                     id="action-mail-body"
                     className={`${styles.input} ${styles.textarea}`}
-                    placeholder="Your request has been approved."
+                    placeholder={t('Your request has been approved.')}
                     value={content}
                     onChange={(event) => setContent(event.target.value)}
                   />
@@ -834,15 +818,13 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
               </div>
 
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="action-mail-cc">
-                  Cc
-                </label>
+                <label className={styles.label} htmlFor="action-mail-cc">{t('Cc')}</label>
                 <div className={styles.inputWrapper}>
                   <input
                     id="action-mail-cc"
                     className={styles.input}
                     type="text"
-                    placeholder="Optional"
+                    placeholder={t('Optional')}
                     value={emailCc}
                     onChange={(event) => setEmailCc(event.target.value)}
                   />
@@ -851,14 +833,14 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
 
               <div className={styles.field}>
                 <label className={styles.label} htmlFor="action-mail-reply-to">
-                  Reply To
+                  {t('Reply To')}
                 </label>
                 <div className={styles.inputWrapper}>
                   <input
                     id="action-mail-reply-to"
                     className={styles.input}
                     type="text"
-                    placeholder="Optional; answers go to the from-address otherwise"
+                    placeholder={t('Optional; answers go to the from-address otherwise')}
                     value={emailReplyTo}
                     onChange={(event) => setEmailReplyTo(event.target.value)}
                   />
@@ -871,7 +853,7 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
             <>
               <div className={styles.field}>
                 <label className={styles.label} htmlFor="action-url">
-                  URL
+                  {t('URL')}
                 </label>
                 <div className={styles.inputWrapper}>
                   <input
@@ -887,9 +869,7 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
               </div>
 
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="action-method">
-                  Method
-                </label>
+                <label className={styles.label} htmlFor="action-method">{t('Method')}</label>
                 <div className={styles.inputWrapper}>
                   <select
                     id="action-method"
@@ -922,7 +902,7 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                   <HeaderRowsEditor
                     headers={headerRows}
                     onChange={setHeaderRows}
-                    heading="Headers"
+                    heading={t('Headers')}
                     variables={variables}
                     compact
                   />
@@ -930,12 +910,10 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                   <>
                     <span className={styles.labelRow}>
                       <label className={styles.label} htmlFor="action-headers">
-                        Headers
+                        {t('Headers')}
                       </label>
-                      <FieldHint label="Headers">
-                        What is stored for this action is not readable as JSON, so it sends no headers at all -
-                        which is what it has been doing. Correct it here and it becomes rows the next time this
-                        opens; empty it and the action sends none on purpose.
+                      <FieldHint label={t('Headers')}>
+                        {t('What is stored for this action is not readable as JSON, so it sends no headers at all - which is what it has been doing. Correct it here and it becomes rows the next time this opens; empty it and the action sends none on purpose.')}
                       </FieldHint>
                     </span>
                     <div className={`${styles.inputWrapper} ${styles.inputWrapperTall}`}>
@@ -962,17 +940,15 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                     picker is on a name: the function is created when the action
                     is saved, not before. */}
                 <span className={styles.labelRow}>
-                  <label className={styles.label} htmlFor="action-function">
-                    Function
-                  </label>
+                  <label className={styles.label} htmlFor="action-function">{t('Function')}</label>
                   {functionId !== '' && functionId !== NEW_FUNCTION && (
                     <Link
                       className={styles.jump}
                       to={`/workspace/${workspaceId}/functions/${functionId}`}
                       target="_blank"
                       rel="noreferrer"
-                      title="Opens the function in a new tab"
-                      aria-label="Open the function's definition"
+                      title={t('Opens the function in a new tab')}
+                      aria-label={t('Open the function\'s definition')}
                     >
                       <OpenDefinitionIcon />
                     </Link>
@@ -986,8 +962,8 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                   value={functionId}
                   options={functionOptions}
                   onChoose={setFunctionId}
-                  placeholder="Select function…"
-                  searchPlaceholder="Search functions…"
+                  placeholder={t('Select function…')}
+                  searchPlaceholder={t("Search functions…")}
                   create={NEW_FUNCTION_ROW}
                   failure={functionCatalogue.failure}
                 />
@@ -998,7 +974,7 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                         id="action-new-function"
                         className={`${styles.input} ${styles.inputMono}`}
                         type="text"
-                        aria-label="New function name"
+                        aria-label={t('New function name')}
                         placeholder={NEW_FUNCTION_NAME}
                         value={newFunctionName}
                         // Selected on focus, as the function editor does it: the box
@@ -1016,8 +992,7 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                       only label above it says Function, which is the picker's.
                     */}
                     <p className={styles.fieldHint}>
-                      Created with this action, taking nothing and returning a map. Open it in Functions to
-                      write what it does.
+                      {t('Created with this action, taking nothing and returning a map. Open it in Functions to write what it does.')}
                     </p>
                   </>
                 )}
@@ -1031,10 +1006,9 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                 */}
                 <p className={styles.paramHeading}>
                   <span className={styles.labelWithHint}>
-                    Parameters Mapping
-                    <FieldHint label="Parameters Mapping">
-                      Left empty, an argument is taken from the field of that name. Anything typed
-                      here is passed as it stands.
+                    {t('Parameters Mapping')}
+                    <FieldHint label={t('Parameters Mapping')}>
+                      {t('Left empty, an argument is taken from the field of that name. Anything typed here is passed as it stands.')}
                     </FieldHint>
                   </span>
                 </p>
@@ -1062,7 +1036,7 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                   {/* A reading of the function that was chosen, not a note about
                       the block: it is what these rows have instead of contents. */}
                   {mappings.length === 0 && (
-                    <p className={styles.fieldHint}>This function takes no arguments.</p>
+                    <p className={styles.fieldHint}>{t('This function takes no arguments.')}</p>
                   )}
                 </div>
               </div>
@@ -1077,11 +1051,10 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
               <span className={styles.labelRow}>
                 <span className={styles.labelWithHint}>
                   <label className={styles.label} htmlFor="action-saved-condition">
-                    Condition
+                    {t('Condition')}
                   </label>
-                  <FieldHint label="Condition">
-                    A condition defined in Conditions, or one made here. The action waits until it
-                    holds, checking again every retry interval until the timeout runs out.
+                  <FieldHint label={t('Condition')}>
+                    {t('A condition defined in Conditions, or one made here. The action waits until it holds, checking again every retry interval until the timeout runs out.')}
                   </FieldHint>
                 </span>
                 {conditionId !== '' && (
@@ -1090,8 +1063,8 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                     to={`/workspace/${workspaceId}/conditions/${conditionId}`}
                     target="_blank"
                     rel="noreferrer"
-                    title="Opens the condition in a new tab"
-                    aria-label="Open the condition's definition"
+                    title={t('Opens the condition in a new tab')}
+                    aria-label={t('Open the condition\'s definition')}
                   >
                     <OpenDefinitionIcon />
                   </Link>
@@ -1107,8 +1080,8 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                   if (picked === NEW_CONDITION) setMakingCondition(true);
                   else setConditionId(picked);
                 }}
-                placeholder="Select condition…"
-                searchPlaceholder="Search conditions…"
+                placeholder={t('Select condition…')}
+                searchPlaceholder={t("Search conditions…")}
                 create={NEW_CONDITION_ROW}
                 failure={conditionCatalogue.failure}
               />
@@ -1117,7 +1090,7 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
               <CatalogueNote
                 catalogue={conditionCatalogue}
                 className={styles.fieldHint}
-                empty="None defined yet. Make one here."
+                empty={t("None defined yet. Make one here.")}
               />
             </div>
           )}
@@ -1128,10 +1101,10 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
               <div className={styles.field}>
                 <span className={styles.labelWithHint}>
                   <label className={styles.label} htmlFor="action-condition">
-                    Expression
+                    {t('Expression')}
                   </label>
-                  <FieldHint label="Expression">
-                    JavaScript over what the previous node produced.
+                  <FieldHint label={t('Expression')}>
+                    {t('JavaScript over what the previous node produced.')}
                   </FieldHint>
                 </span>
                 <div className={styles.inputWrapper}>
@@ -1149,9 +1122,7 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
               )}
 
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="action-timeout">
-                  Timeout
-                </label>
+                <label className={styles.label} htmlFor="action-timeout">{t('Timeout')}</label>
                 <div className={styles.inputWrapper}>
                   <input
                     id="action-timeout"
@@ -1168,13 +1139,11 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                   lines are the only thing that does - behind a hover, somebody
                   types 30 meaning minutes and finds out half a minute later.
                 */}
-                <p className={styles.fieldHint}>Timeout in seconds</p>
+                <p className={styles.fieldHint}>{t('Timeout in seconds')}</p>
               </div>
 
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="action-retry">
-                  Retry Interval
-                </label>
+                <label className={styles.label} htmlFor="action-retry">{t('Retry Interval')}</label>
                 <div className={styles.inputWrapper}>
                   <input
                     id="action-retry"
@@ -1185,16 +1154,14 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                     onChange={(event) => setRetryIntervalSeconds(event.target.value)}
                   />
                 </div>
-                <p className={styles.fieldHint}>Seconds between condition checks</p>
+                <p className={styles.fieldHint}>{t('Seconds between condition checks')}</p>
               </div>
             </>
           )}
 
           {subtype === 'TIME' && (
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="action-duration">
-                Duration
-              </label>
+              <label className={styles.label} htmlFor="action-duration">{t('Duration')}</label>
               <div className={styles.inputWrapper}>
                 <input
                   id="action-duration"
@@ -1206,18 +1173,18 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                   required
                 />
               </div>
-              <p className={styles.fieldHint}>How long to wait, in seconds</p>
+              <p className={styles.fieldHint}>{t('How long to wait, in seconds')}</p>
             </div>
           )}
 
           {editing && (
             <>
               <div className={styles.field}>
-                <p className={styles.paramHeading}>Input Parameters</p>
+                <p className={styles.paramHeading}>{t('Input Parameters')}</p>
                 <ParamList params={action.inputParams.map((param) => param.display)} />
               </div>
               <div className={styles.field}>
-                <p className={styles.paramHeading}>Output Parameters</p>
+                <p className={styles.paramHeading}>{t('Output Parameters')}</p>
                 <ParamList params={action.outputParams.map((param) => param.display)} />
               </div>
             </>
@@ -1237,15 +1204,13 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
               className={styles.danger}
               onClick={handleDelete}
               disabled={submitting}
-            >
-              Delete
-            </button>
+            >{t('Delete')}</button>
           )}
           <button type="button" className={styles.ghost} onClick={onClose} disabled={submitting}>
-            Cancel
+            {t('Cancel')}
           </button>
           <button type="submit" className={styles.filled} disabled={!complete || submitting}>
-            {submitting ? 'Saving…' : editing ? 'Save Changes' : 'Create Action'}
+            {submitting ? t('Saving…') : editing ? t('Save Changes') : t('Create Action')}
           </button>
         </div>
       </form>

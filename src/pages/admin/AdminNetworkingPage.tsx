@@ -20,6 +20,7 @@ import { Loader } from '../../components/Loader';
 import { ProxyRuleDialog } from '../../components/ProxyRuleDialog';
 import { shellUser } from '../../session/user';
 import styles from './AdminNetworkingPage.module.css';
+import { t } from '../../i18n';
 
 export interface AdminNetworkingPageProps {
   session: SessionUser;
@@ -59,7 +60,7 @@ export function AdminNetworkingPage({ session, onSignOut }: AdminNetworkingPageP
       })
       .catch((cause: unknown) => {
         setRules(null);
-        setError(cause instanceof Error ? cause.message : 'Could not load the proxy rules.');
+        setError(cause instanceof Error ? cause.message : t('Could not load the proxy rules.'));
         setLoading(false);
       });
   }, []);
@@ -74,7 +75,7 @@ export function AdminNetworkingPage({ session, onSignOut }: AdminNetworkingPageP
       await setProxyRuleEnabled(rule.id, !rule.enabled);
       load();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not change the rule.');
+      setError(cause instanceof Error ? cause.message : t('Could not change the rule.'));
     } finally {
       setBusy(false);
     }
@@ -87,7 +88,7 @@ export function AdminNetworkingPage({ session, onSignOut }: AdminNetworkingPageP
     try {
       setRules(await moveProxyRule(rule.id, up));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not move the rule.');
+      setError(cause instanceof Error ? cause.message : t('Could not move the rule.'));
     } finally {
       setBusy(false);
     }
@@ -102,7 +103,7 @@ export function AdminNetworkingPage({ session, onSignOut }: AdminNetworkingPageP
     try {
       setRoute(await fetchProxyRoute(testUrl.trim()));
     } catch (cause) {
-      setTestError(cause instanceof Error ? cause.message : 'Could not test that address.');
+      setTestError(cause instanceof Error ? cause.message : t('Could not test that address.'));
     } finally {
       setTesting(false);
     }
@@ -120,12 +121,12 @@ export function AdminNetworkingPage({ session, onSignOut }: AdminNetworkingPageP
         <div className={styles.titleBlock}>
           <h1 className={styles.title}>
             <span className={styles.titleWithHint}>
-              Networking
+              {t('Networking')}
               {/*
                 Was the footer under the table. Same words, behind the one
                 affordance this product uses for an explanation.
               */}
-              <FieldHint label="Networking">
+              <FieldHint label={t('Networking')}>
                 These rules apply to every outbound request this installation makes - connection
                 checks, MCP servers, model providers and the token grants they need, Slack, the
                 identity provider an OIDC installation signs in against, and anything a workflow
@@ -137,23 +138,22 @@ export function AdminNetworkingPage({ session, onSignOut }: AdminNetworkingPageP
             </span>
           </h1>
           <p className={styles.subtitle}>
-            How this installation reaches the outside. A rule sends the requests it matches through
-            a proxy; everything else goes out directly.
+            {t('How this installation reaches the outside. A rule sends the requests it matches through a proxy; everything else goes out directly.')}
           </p>
         </div>
         <button type="button" className={styles.addRule} onClick={() => setDialog(true)}>
           <img src={plusIcon} alt="" width={14} height={14} />
-          Add Proxy Rule
+          {t('Add Proxy Rule')}
         </button>
       </header>
 
       <section className={styles.card}>
         <div className={styles.tableHeader}>
-          <div className={styles.colOrder}>Order</div>
-          <div className={styles.colName}>Name</div>
-          <div className={styles.colPattern}>URL pattern</div>
-          <div className={styles.colProxy}>Proxy</div>
-          <div className={styles.colEnabled}>On</div>
+          <div className={styles.colOrder}>{t('Order')}</div>
+          <div className={styles.colName}>{t('Name')}</div>
+          <div className={styles.colPattern}>{t('URL pattern')}</div>
+          <div className={styles.colProxy}>{t('Proxy')}</div>
+          <div className={styles.colEnabled}>{t('On')}</div>
           <div className={styles.colActions} />
         </div>
 
@@ -165,7 +165,7 @@ export function AdminNetworkingPage({ session, onSignOut }: AdminNetworkingPageP
         {error !== null && <p className={`${styles.notice} ${styles.noticeError}`}>{error}</p>}
         {!loading && error === null && listed.length === 0 && (
           <p className={styles.notice}>
-            No proxy rules yet. Every request goes out the way this host does.
+            {t('No proxy rules yet. Every request goes out the way this host does.')}
           </p>
         )}
 
@@ -179,7 +179,7 @@ export function AdminNetworkingPage({ session, onSignOut }: AdminNetworkingPageP
                 onClick={() => void move(rule, true)}
                 disabled={busy || index === 0}
                 aria-label={`Move ${rule.name} earlier`}
-                title="Consult this rule earlier"
+                title={t('Consult this rule earlier')}
               >
                 ↑
               </button>
@@ -189,7 +189,7 @@ export function AdminNetworkingPage({ session, onSignOut }: AdminNetworkingPageP
                 onClick={() => void move(rule, false)}
                 disabled={busy || index === listed.length - 1}
                 aria-label={`Move ${rule.name} later`}
-                title="Consult this rule later"
+                title={t('Consult this rule later')}
               >
                 ↓
               </button>
@@ -241,7 +241,7 @@ export function AdminNetworkingPage({ session, onSignOut }: AdminNetworkingPageP
                 className={styles.rowAction}
                 onClick={() => setDialog(rule)}
                 aria-label={`Edit ${rule.name}`}
-                title="Edit"
+                title={t('Edit')}
               >
                 <img src={settingsIcon} alt="" width={14} height={14} />
               </button>
@@ -258,10 +258,9 @@ export function AdminNetworkingPage({ session, onSignOut }: AdminNetworkingPageP
       <section className={styles.testCard}>
         <h2 className={styles.testTitle}>
           <span className={styles.titleWithHint}>
-            Which rule fires for an address
-            <FieldHint label="Which rule fires for an address">
-              Rules are consulted from the top and the first one that matches is used. Put an
-              address in here to see which one that is, and which rules it beat to it.
+            {t('Which rule fires for an address')}
+            <FieldHint label={t('Which rule fires for an address')}>
+              {t('Rules are consulted from the top and the first one that matches is used. Put an address in here to see which one that is, and which rules it beat to it.')}
             </FieldHint>
           </span>
         </h2>
@@ -272,7 +271,7 @@ export function AdminNetworkingPage({ session, onSignOut }: AdminNetworkingPageP
             placeholder="https://login.microsoftonline.com/contoso/oauth2/v2.0/token"
             value={testUrl}
             onChange={(event) => setTestUrl(event.target.value)}
-            aria-label="An address to test against the rules"
+            aria-label={t('An address to test against the rules')}
           />
           <button
             type="submit"
@@ -288,7 +287,7 @@ export function AdminNetworkingPage({ session, onSignOut }: AdminNetworkingPageP
         {route !== null && (
           <div className={styles.testAnswer}>
             {route.matched === null ? (
-              <p>This address matches no rule, so the request goes out directly.</p>
+              <p>{t('This address matches no rule, so the request goes out directly.')}</p>
             ) : (
               <p>
                 Goes through <strong>{route.matched.name}</strong> at {route.matched.proxyHost}:

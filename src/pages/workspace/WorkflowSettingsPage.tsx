@@ -13,6 +13,7 @@ import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { shellUser } from '../../session/user';
 import styles from './AgentSettingsPage.module.css';
+import { t } from '../../i18n';
 
 export interface WorkflowSettingsPageProps {
   session: SessionUser;
@@ -53,7 +54,7 @@ export function WorkflowSettingsPage({ session, onSignOut }: WorkflowSettingsPag
       .then((page) => {
         const found = page.content.find((candidate) => candidate.id === workflowId) ?? null;
         if (found === null) {
-          setLoadError('That workflow is not assigned to this workspace, or you do not have access to it.');
+          setLoadError(t('That workflow is not assigned to this workspace, or you do not have access to it.'));
           return;
         }
         setWorkflow(found);
@@ -61,7 +62,7 @@ export function WorkflowSettingsPage({ session, onSignOut }: WorkflowSettingsPag
         setDescription(found.description ?? '');
       })
       .catch((cause: unknown) => {
-        setLoadError(cause instanceof Error ? cause.message : 'Could not load the workflow.');
+        setLoadError(cause instanceof Error ? cause.message : t('Could not load the workflow.'));
       });
   }, [workspaceId, workflowId]);
 
@@ -80,7 +81,7 @@ export function WorkflowSettingsPage({ session, onSignOut }: WorkflowSettingsPag
       setWorkflow(updated);
       setSaved(true);
     } catch (cause) {
-      setSaveError(cause instanceof Error ? cause.message : 'Could not save the workflow.');
+      setSaveError(cause instanceof Error ? cause.message : t('Could not save the workflow.'));
     } finally {
       setSaving(false);
     }
@@ -98,12 +99,12 @@ export function WorkflowSettingsPage({ session, onSignOut }: WorkflowSettingsPag
       <header className={styles.headerBlock}>
         <p className={styles.breadcrumbs}>
           <Link className={styles.crumbLink} to={`/workspace/${workspaceId}`}>
-            Workflows
+            {t('Workflows')}
           </Link>
           <span className={styles.crumbSeparator}>/</span>
           <span className={styles.crumbCurrent}>{workflow?.name ?? '…'}</span>
         </p>
-        <h1 className={styles.pageTitle}>Workflow Settings</h1>
+        <h1 className={styles.pageTitle}>{t('Workflow Settings')}</h1>
       </header>
 
       {loadError !== null ? (
@@ -119,13 +120,11 @@ export function WorkflowSettingsPage({ session, onSignOut }: WorkflowSettingsPag
       ) : (
         <>
           <form className={styles.card} onSubmit={handleSave}>
-            <h2 className={styles.sectionHeading}>General</h2>
+            <h2 className={styles.sectionHeading}>{t('General')}</h2>
 
             <div className={styles.field}>
               <span className={styles.labelWithHint}>
-                <label className={styles.label} htmlFor="workflow-name">
-                  Workflow Name
-                </label>
+                <label className={styles.label} htmlFor="workflow-name">{t('Workflow Name')}</label>
                 {/*
                   Behind the (?), like every other consequence in the product.
                   It was printed here on the argument that a consequence read
@@ -135,9 +134,8 @@ export function WorkflowSettingsPage({ session, onSignOut }: WorkflowSettingsPag
                   thing it is about, and a screen keeping its own answer is the
                   inconsistency the whole convention exists to end.
                 */}
-                <FieldHint label="Workflow Name">
-                  The definition is shared, so renaming it affects every workspace using this
-                  workflow.
+                <FieldHint label={t('Workflow Name')}>
+                  {t('The definition is shared, so renaming it affects every workspace using this workflow.')}
                 </FieldHint>
               </span>
               <div className={styles.inputWrapper}>
@@ -155,7 +153,7 @@ export function WorkflowSettingsPage({ session, onSignOut }: WorkflowSettingsPag
 
             <div className={styles.field}>
               <label className={styles.label} htmlFor="workflow-description">
-                Description
+                {t('Description')}
               </label>
               <div className={`${styles.inputWrapper} ${styles.inputWrapperTall}`}>
                 <textarea
@@ -175,9 +173,9 @@ export function WorkflowSettingsPage({ session, onSignOut }: WorkflowSettingsPag
             )}
 
             <div className={styles.cardActions}>
-              {saved && saveError === null && <p className={styles.savedNote}>Saved.</p>}
+              {saved && saveError === null && <p className={styles.savedNote}>{t('Saved.')}</p>}
               <button type="submit" className={styles.save} disabled={name.trim() === '' || saving}>
-                {saving ? 'Saving…' : 'Save Changes'}
+                {saving ? t('Saving…') : t('Save Changes')}
               </button>
             </div>
           </form>
@@ -197,7 +195,7 @@ export function WorkflowSettingsPage({ session, onSignOut }: WorkflowSettingsPag
             {restored !== null && (
               <p className={styles.savedNote}>
                 {restored === 'PUBLISHED'
-                  ? 'Restored. What runs is what the editor is drawing.'
+                  ? t('Restored. What runs is what the editor is drawing.')
                   : 'Restored. What runs is now that publication; the draft on the canvas is untouched, ' +
                     'so the workflow reads as a draft until it is published again.'}
               </p>
@@ -205,17 +203,15 @@ export function WorkflowSettingsPage({ session, onSignOut }: WorkflowSettingsPag
           </section>
 
           <section className={`${styles.card} ${styles.dangerCard}`}>
-            <h2 className={styles.dangerHeading}>Danger Zone</h2>
+            <h2 className={styles.dangerHeading}>{t('Danger Zone')}</h2>
             <div className={styles.dangerRow}>
               <div className={styles.dangerText}>
-                <p className={styles.dangerTitle}>Remove Workflow</p>
+                <p className={styles.dangerTitle}>{t('Remove Workflow')}</p>
                 <p className={styles.dangerMessage}>
-                  Unassign this workflow from the workspace. The workflow definition is kept.
+                  {t('Unassign this workflow from the workspace. The workflow definition is kept.')}
                 </p>
               </div>
-              <button type="button" className={styles.delete} onClick={() => setRemoving(true)}>
-                Remove Workflow
-              </button>
+              <button type="button" className={styles.delete} onClick={() => setRemoving(true)}>{t('Remove Workflow')}</button>
             </div>
           </section>
         </>

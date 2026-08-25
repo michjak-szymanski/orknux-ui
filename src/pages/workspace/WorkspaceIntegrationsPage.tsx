@@ -19,6 +19,7 @@ import { WorkspaceConnectionDialog } from '../../components/WorkspaceConnectionD
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceIntegrationsPage.module.css';
+import { t } from '../../i18n';
 
 export interface WorkspaceIntegrationsPageProps {
   session: SessionUser;
@@ -58,7 +59,7 @@ export function WorkspaceIntegrationsPage({ session, onSignOut }: WorkspaceInteg
       .catch((cause: unknown) => {
         setServers(null);
         setConnections(null);
-        setError(cause instanceof Error ? cause.message : 'Could not load the integrations.');
+        setError(cause instanceof Error ? cause.message : t('Could not load the integrations.'));
       });
   }, [workspaceId]);
 
@@ -73,8 +74,10 @@ export function WorkspaceIntegrationsPage({ session, onSignOut }: WorkspaceInteg
       sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <header className={styles.contentHeader}>
-        <h1 className={styles.title}>Integrations</h1>
-        <p className={styles.subtitle}>Manage external service connections and MCP servers</p>
+        <h1 className={styles.title}>{t('Integrations')}</h1>
+        <p className={styles.subtitle}>
+          {t('Manage external service connections and MCP servers')}
+        </p>
       </header>
 
       {error !== null && (
@@ -85,21 +88,19 @@ export function WorkspaceIntegrationsPage({ session, onSignOut }: WorkspaceInteg
 
       <section className={styles.card}>
         <div className={styles.cardHeader}>
-          <h2 className={styles.cardTitle}>MCP Servers</h2>
-          <button type="button" className={styles.addButton} onClick={() => setAddingServer(true)}>
-            + Add Server
-          </button>
+          <h2 className={styles.cardTitle}>{t('MCP Servers')}</h2>
+          <button type="button" className={styles.addButton} onClick={() => setAddingServer(true)}>{t('+ Add Server')}</button>
         </div>
 
         <div className={styles.tableHeader}>
-          <span className={styles.colName}>Name</span>
-          <span className={styles.colGrow}>Address</span>
-          <span className={styles.colMeta}>Auth</span>
-          <span className={styles.colActions}>Actions</span>
+          <span className={styles.colName}>{t('Name')}</span>
+          <span className={styles.colGrow}>{t('Address')}</span>
+          <span className={styles.colMeta}>{t('Auth')}</span>
+          <span className={styles.colActions}>{t('Actions')}</span>
         </div>
 
         {servers === null && error === null && <p className={styles.notice}><Loader /></p>}
-        {servers?.length === 0 && <p className={styles.notice}>No MCP servers yet.</p>}
+        {servers?.length === 0 && <p className={styles.notice}>{t('No MCP servers yet.')}</p>}
 
         {servers?.map((server) => (
           <div
@@ -134,25 +135,23 @@ export function WorkspaceIntegrationsPage({ session, onSignOut }: WorkspaceInteg
       <section className={styles.card}>
         <div className={styles.cardHeader}>
           <div className={styles.cardTitles}>
-            <h2 className={styles.cardTitle}>Connections</h2>
+            <h2 className={styles.cardTitle}>{t('Connections')}</h2>
             <p className={styles.cardSubtitle}>
-              Connections inherited from admin defaults. Override credentials per connection.
+              {t('Connections inherited from admin defaults. Override credentials per connection.')}
             </p>
           </div>
-          <button type="button" className={styles.addButton} onClick={() => setAddingConnection(true)}>
-            + Add Connection
-          </button>
+          <button type="button" className={styles.addButton} onClick={() => setAddingConnection(true)}>{t('+ Add Connection')}</button>
         </div>
 
         <div className={styles.tableHeader}>
-          <span className={styles.colName}>Name</span>
-          <span className={styles.colGrow}>Type</span>
-          <span className={styles.colMeta}>Status</span>
-          <span className={styles.colActions}>Actions</span>
+          <span className={styles.colName}>{t('Name')}</span>
+          <span className={styles.colGrow}>{t('Type')}</span>
+          <span className={styles.colMeta}>{t('Status')}</span>
+          <span className={styles.colActions}>{t('Actions')}</span>
         </div>
 
         {connections === null && error === null && <p className={styles.notice}><Loader /></p>}
-        {connections?.length === 0 && <p className={styles.notice}>No connections yet.</p>}
+        {connections?.length === 0 && <p className={styles.notice}>{t('No connections yet.')}</p>}
 
         {connections?.map((connection) => (
           // The whole row opens it: a cog at the far right is a small target

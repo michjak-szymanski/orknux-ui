@@ -165,6 +165,24 @@ const IN_THE_OPEN = [
     why: 'what the shell is doing about a connection it has lost',
   },
   {
+    file: 'src/pages/docs/DocsPage.tsx',
+    says: 'This page is not translated yet.',
+    because: 'status',
+    why: 'the state of the page being read - there is no Polish version of it, so the English one is shown. There is no control here to hang a (?) on, and a reader who is not told reads it as a bug',
+  },
+  {
+    file: 'src/pages/workspace/FunctionEditorPage.tsx',
+    says: 'There are no objects in this workspace yet, so define one first or use map.',
+    because: 'status',
+    why: "the state of the workspace, on the field that would have offered one: there are no objects to point a parameter at. It was invisible to this check until the interface was translated - it was written `{'…'}` rather than between the tags, and a bare expression broke the run. `t('…')` is unfolded now, so it is seen. The sentence itself is unchanged",
+  },
+  {
+    file: 'src/pages/chat/ChatPage.tsx',
+    says: 'out - every round of this turn, so a lookup an agent made on the way is counted here too.',
+    because: 'status',
+    why: "how long this particular answer took, what it cost, and what was kept of it. The sentence this entry used to quote is the other arm of the same ternary - #227 gave the paragraph two of them, and what is recorded here is whichever arm reads longest. The entry went briefly missing from this table: after #227 the scanner could not see into a fragment at all, so it read as excusing something that no longer existed and was deleted. It existed the whole time; `fragmentsIn` is why it can be seen again",
+  },
+  {
     file: 'src/components/CodeSuggestion.tsx',
     says: 'Reading what is there now…',
     because: 'status',
@@ -193,12 +211,6 @@ const IN_THE_OPEN = [
     says: '. The next one is ready.',
     because: 'status',
     why: 'the issue was filed and the form has been cleared for another',
-  },
-  {
-    file: 'src/pages/chat/ChatPage.tsx',
-    says: 'ms to answer. Nothing else is recorded: the history keeps what was said, not how it was ar',
-    because: 'status',
-    why: 'how long this particular answer took, and what was kept of it',
   },
   {
     file: 'src/pages/chat/ChatPage.tsx',
@@ -650,6 +662,136 @@ function pastElement(src, i) {
 }
 
 /**
+ * `{t('…')}`, unfolded to the sentence inside it.
+ *
+ * Since the interface was translated, prose is written `{t('English here')}`
+ * rather than bare between the tags. That is still hard-coded text - the
+ * English is in the source, in the diff, and on the screen for anybody reading
+ * English - and a check that treated it as an expression would have gone blind
+ * to every sentence in the product on the same day this one arrived.
+ *
+ * A single string literal and nothing else. `t(x)` or `t('a' + b)` is not a
+ * sentence somebody typed, and is left to break the run the way any other
+ * expression does.
+ */
+const TRANSLATED = /^\{\s*t\(\s*(['"])((?:[^'"\\]|\\.)*)\1\s*(?:,\s*(['"])(?:[^'"\\]|\\.)*\3\s*)?\)\s*\}/;
+
+function translated(src, i) {
+  const found = TRANSLATED.exec(src.slice(i));
+  if (found === null) return null;
+  return { says: found[2].replace(/\\(['"\\])/g, '$1'), end: i + found[0].length };
+}
+
+/** Past a quoted string, from its opening quote. */
+function pastString(src, i) {
+  const quote = src[i];
+  i += 1;
+  while (i < src.length) {
+    if (src[i] === '\\') {
+      i += 2;
+      continue;
+    }
+    if (src[i] === quote) return i + 1;
+    i += 1;
+  }
+  return i;
+}
+
+/** From just inside a `<>`, the index of the `</>` that closes it. */
+function pastFragment(src, from, to) {
+  let depth = 0;
+  let i = from;
+  while (i < to) {
+    if (src[i] === '<' && src[i + 1] === '>') {
+      depth += 1;
+      i += 2;
+      continue;
+    }
+    if (src.startsWith('</>', i)) {
+      if (depth === 0) return i;
+      depth -= 1;
+      i += 3;
+      continue;
+    }
+    if (src[i] === '<' && /[A-Za-z]/.test(src[i + 1] ?? '')) {
+      i = pastElement(src, i);
+      continue;
+    }
+    if (src[i] === '"' || src[i] === "'" || src[i] === '`') {
+      i = pastString(src, i);
+      continue;
+    }
+    i += 1;
+  }
+  return to;
+}
+
+/**
+ * The fragments a JSX expression hands back, as spans of what is inside them.
+ *
+ * This is here because of issue #227's chat cost. A paragraph that read
+ *
+ *     <p className={styles.thoughtDetail}>
+ *       The provider took {ms} ms to answer. Nothing else is recorded: …
+ *
+ * became
+ *
+ *     <p className={styles.thoughtDetail}>
+ *       {spend === null ? (<>The provider took {ms} ms to answer. …</>) : (<>…</>)}
+ *
+ * and this check stopped being able to see a word of it: the whole expression
+ * was skipped, the paragraph read as having no text of its own, and the entry
+ * excusing it began failing as one that "no longer exists". It had not gone
+ * anywhere. A `<>` renders no DOM node, so every one of those words is still
+ * the paragraph's own prose on screen - the scanner had gone blind, and the
+ * honest reading of a guard that stops seeing something is not that the thing
+ * stopped existing.
+ *
+ * So a fragment inside an expression is descended into and its words counted as
+ * the enclosing element's. A *named* element inside the expression is not: it
+ * draws a node of its own and its words are its own, which is the same rule the
+ * top of `ownText` already applies.
+ *
+ * The arms of a ternary stay separate runs rather than being joined. They are
+ * alternatives - only one is ever on screen - and running them together would
+ * manufacture a sentence the interface never prints.
+ */
+function fragmentsIn(src, from, to) {
+  const spans = [];
+  let i = from;
+  while (i < to) {
+    const c = src[i];
+    if (c === '"' || c === "'" || c === '`') {
+      i = pastString(src, i);
+      continue;
+    }
+    if (c === '/' && src[i + 1] === '*') {
+      const end = src.indexOf('*/', i + 2);
+      i = end === -1 ? to : end + 2;
+      continue;
+    }
+    if (c === '/' && src[i + 1] === '/') {
+      const end = src.indexOf('\n', i);
+      i = end === -1 ? to : end + 1;
+      continue;
+    }
+    if (c === '<' && src[i + 1] === '>') {
+      const inner = i + 2;
+      const close = pastFragment(src, inner, to);
+      spans.push([inner, close]);
+      i = close + 3;
+      continue;
+    }
+    if (c === '<' && /[A-Za-z]/.test(src[i + 1] ?? '')) {
+      i = pastElement(src, i);
+      continue;
+    }
+    i += 1;
+  }
+  return spans;
+}
+
+/**
  * The runs of hard-coded text an element writes itself.
  *
  * A child's text is not this element's: a `<div>` wrapping a paragraph would
@@ -664,9 +806,33 @@ function ownText(src, from, to) {
   while (i < to) {
     const c = src[i];
     if (c === '{') {
+      const said = translated(src, i);
+      if (said !== null) {
+        held += said.says;
+        i = said.end;
+        continue;
+      }
+      const past = pastBraces(src, i);
       runs.push(held);
       held = '';
-      i = pastBraces(src, i);
+      /*
+       * An expression breaks the run, but what it hands back may still be this
+       * element's own words: a `<>` renders nothing, so its text lands here.
+       * Each fragment is read as runs of its own - see `fragmentsIn`.
+       */
+      for (const [at, end] of fragmentsIn(src, i + 1, past - 1)) {
+        runs.push(...ownText(src, at, end));
+      }
+      i = past;
+      continue;
+    }
+    if (c === '<' && src[i + 1] === '>') {
+      // A fragment written straight into the element. Transparent: descend.
+      const close = pastFragment(src, i + 2, to);
+      runs.push(held);
+      held = '';
+      runs.push(...ownText(src, i + 2, close));
+      i = close + 3;
       continue;
     }
     if (c === '<') {

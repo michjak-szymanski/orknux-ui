@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 
 import { ApiError } from '../api/client';
 import styles from './Catalogue.module.css';
+import { t } from '../i18n';
 
 /**
  * A list of the workspace's things, and the difference between having none of
@@ -211,7 +212,7 @@ export function CatalogueNote({ catalogue, empty, className }: CatalogueNoteProp
       <p className={className === undefined ? styles.failed : `${className} ${styles.failed}`} role="alert">
         {catalogue.failure}{' '}
         <button type="button" className={styles.retry} onClick={catalogue.reload}>
-          Try again
+          {t('Try again')}
         </button>
       </p>
     );

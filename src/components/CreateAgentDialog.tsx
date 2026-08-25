@@ -7,6 +7,7 @@ import { AgentForm } from './AgentForm';
 import type { AgentFormStyles } from './AgentForm';
 import { PanelClose, panelEscape } from './PanelClose';
 import styles from './Dialog.module.css';
+import { t } from '../i18n';
 
 export interface CreateAgentDialogProps {
   /**
@@ -98,7 +99,7 @@ export function CreateAgentDialog({ open, workspaceId, agent = null, onClose, on
         await createAgent({ workspaceId, name: name.trim(), type: 'LLM', description: description.trim() || undefined }),
       );
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not create the agent.');
+      setError(cause instanceof Error ? cause.message : t('Could not create the agent.'));
       setSubmitting(false);
     }
   }
@@ -108,7 +109,7 @@ export function CreateAgentDialog({ open, workspaceId, agent = null, onClose, on
       {agent !== null ? (
         <div className={styles.body}>
           <header className={styles.header}>
-            <h2 className={styles.title}>Agent Settings</h2>
+            <h2 className={styles.title}>{t('Agent Settings')}</h2>
             {placement === 'panel' && <PanelClose onClose={onClose} />}
           </header>
 
@@ -132,22 +133,20 @@ export function CreateAgentDialog({ open, workspaceId, agent = null, onClose, on
       ) : (
         <form className={styles.body} onSubmit={handleSubmit}>
           <header className={styles.header}>
-            <h2 className={styles.title}>Create agent</h2>
+            <h2 className={styles.title}>{t('Create agent')}</h2>
             {placement === 'panel' && <PanelClose onClose={onClose} />}
           </header>
 
           <div className={styles.fields}>
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="create-agent-name">
-                Agent name
-              </label>
+              <label className={styles.label} htmlFor="create-agent-name">{t('Agent name')}</label>
               <div className={styles.inputWrapper}>
                 <input
                   id="create-agent-name"
                   name="agentName"
                   className={styles.input}
                   type="text"
-                  placeholder="e.g. Research Agent"
+                  placeholder={t('e.g. Research Agent')}
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   autoFocus
@@ -158,14 +157,14 @@ export function CreateAgentDialog({ open, workspaceId, agent = null, onClose, on
 
             <div className={styles.field}>
               <label className={styles.label} htmlFor="create-agent-description">
-                Description
+                {t('Description')}
               </label>
               <div className={`${styles.inputWrapper} ${styles.inputWrapperTall}`}>
                 <textarea
                   id="create-agent-description"
                   name="agentDescription"
                   className={`${styles.input} ${styles.textarea}`}
-                  placeholder="What this agent does."
+                  placeholder={t('What this agent does.')}
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
                 />
@@ -181,10 +180,10 @@ export function CreateAgentDialog({ open, workspaceId, agent = null, onClose, on
 
           <div className={styles.actions}>
             <button type="button" className={styles.ghost} onClick={onClose} disabled={submitting}>
-              Cancel
+              {t('Cancel')}
             </button>
             <button type="submit" className={styles.filled} disabled={name.trim() === '' || submitting}>
-              {submitting ? 'Creating…' : 'Create'}
+              {submitting ? t('Creating…') : 'Create'}
             </button>
           </div>
         </form>

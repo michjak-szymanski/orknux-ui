@@ -25,6 +25,7 @@ import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceAuditPage.module.css';
+import { t } from '../../i18n';
 
 export interface WorkspaceAuditPageProps {
   session: SessionUser;
@@ -91,7 +92,7 @@ export function WorkspaceAuditPage({ session, onSignOut }: WorkspaceAuditPagePro
       })
       .catch((cause: unknown) => {
         setEntries(null);
-        setError(cause instanceof Error ? cause.message : 'Could not load the audit log.');
+        setError(cause instanceof Error ? cause.message : t('Could not load the audit log.'));
         setLoading(false);
       });
   }, [workspaceId, page, debouncedSearch, category, userId, days]);
@@ -107,8 +108,8 @@ export function WorkspaceAuditPage({ session, onSignOut }: WorkspaceAuditPagePro
       sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <header className={styles.titleHeader}>
-        <h1 className={styles.title}>Audit Log</h1>
-        <p className={styles.subtitle}>Track all actions and changes within the workspace</p>
+        <h1 className={styles.title}>{t('Audit Log')}</h1>
+        <p className={styles.subtitle}>{t('Track all actions and changes within the workspace')}</p>
       </header>
 
       <div className={styles.filterBar}>
@@ -117,42 +118,42 @@ export function WorkspaceAuditPage({ session, onSignOut }: WorkspaceAuditPagePro
           <input
             className={styles.searchField}
             type="search"
-            placeholder="Search actions, users or servers..."
+            placeholder={t('Search actions, users or servers...')}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            aria-label="Search the audit log"
+            aria-label={t('Search the audit log')}
           />
         </div>
 
         <label className={styles.filter}>
-          <span className={styles.filterLabel}>Action Type:</span>
+          <span className={styles.filterLabel}>{t('Action Type:')}</span>
           <select
             className={styles.filterSelect}
             value={category}
             onChange={(event) => setCategory(event.target.value as ActivityCategory | '')}
           >
-            <option value="">All Actions</option>
-            <option value="WORKFLOW">Workflows</option>
-            <option value="AGENT">Agents</option>
-            <option value="WORKSPACE">Workspace</option>
-            <option value="INTEGRATION">Integrations</option>
-            <option value="SHELL">Shell commands</option>
-            <option value="MODEL">Models</option>
-            <option value="MEMORY">Memory</option>
-            <option value="OBJECT">Objects</option>
-            <option value="CHAT">Chats</option>
+            <option value="">{t('All Actions')}</option>
+            <option value="WORKFLOW">{t('Workflows')}</option>
+            <option value="AGENT">{t('Agents')}</option>
+            <option value="WORKSPACE">{t('Workspace')}</option>
+            <option value="INTEGRATION">{t('Integrations')}</option>
+            <option value="SHELL">{t('Shell commands')}</option>
+            <option value="MODEL">{t('Models')}</option>
+            <option value="MEMORY">{t('Memory')}</option>
+            <option value="OBJECT">{t('Objects')}</option>
+            <option value="CHAT">{t('Chats')}</option>
           </select>
           <img src={chevronDown12Icon} alt="" width={12} height={12} />
         </label>
 
         <label className={styles.filter}>
-          <span className={styles.filterLabel}>User:</span>
+          <span className={styles.filterLabel}>{t('User:')}</span>
           <select
             className={styles.filterSelect}
             value={userId}
             onChange={(event) => setUserId(event.target.value)}
           >
-            <option value="">All Users</option>
+            <option value="">{t('All Users')}</option>
             {users.map((user) => (
               <option key={user} value={user}>
                 {user}
@@ -168,12 +169,12 @@ export function WorkspaceAuditPage({ session, onSignOut }: WorkspaceAuditPagePro
             className={`${styles.filterSelect} ${styles.filterValue}`}
             value={days}
             onChange={(event) => setDays(event.target.value === '' ? '' : Number(event.target.value))}
-            aria-label="Date range"
+            aria-label={t('Date range')}
           >
-            <option value={1}>Last 24 Hours</option>
-            <option value={7}>Last 7 Days</option>
-            <option value={30}>Last 30 Days</option>
-            <option value="">All Time</option>
+            <option value={1}>{t('Last 24 Hours')}</option>
+            <option value={7}>{t('Last 7 Days')}</option>
+            <option value={30}>{t('Last 30 Days')}</option>
+            <option value="">{t('All Time')}</option>
           </select>
           <img src={chevronDown12Icon} alt="" width={12} height={12} />
         </label>
@@ -188,8 +189,8 @@ export function WorkspaceAuditPage({ session, onSignOut }: WorkspaceAuditPagePro
             type="button"
             className={styles.refresh}
             onClick={load}
-            aria-label="Refresh the audit log"
-            title="Refresh the audit log"
+            aria-label={t('Refresh the audit log')}
+            title={t('Refresh the audit log')}
           >
             <img src={refreshIcon} alt="" width={14} height={14} />
           </button>
@@ -199,16 +200,16 @@ export function WorkspaceAuditPage({ session, onSignOut }: WorkspaceAuditPagePro
 
       <section className={styles.card}>
         <div className={styles.tableHeader}>
-          <span className={styles.colAction}>Action</span>
-          <span className={styles.colUser}>User</span>
-          <span className={styles.colTimestamp}>Timestamp</span>
+          <span className={styles.colAction}>{t('Action')}</span>
+          <span className={styles.colUser}>{t('User')}</span>
+          <span className={styles.colTimestamp}>{t('Timestamp')}</span>
         </div>
 
         <div className={styles.tableBody}>
           {loading && <p className={styles.notice}><Loader /></p>}
           {error !== null && <p className={`${styles.notice} ${styles.noticeError}`}>{error}</p>}
           {!loading && error === null && entries?.content.length === 0 && (
-            <p className={styles.notice}>Nothing matches those filters.</p>
+            <p className={styles.notice}>{t('Nothing matches those filters.')}</p>
           )}
 
           {entries?.content.map((entry) => (

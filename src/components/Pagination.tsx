@@ -1,4 +1,5 @@
 import styles from './Pagination.module.css';
+import { t } from '../i18n';
 
 export interface PaginationProps {
   /** 1-based page number. */
@@ -28,9 +29,7 @@ export function Pagination({ page, pageSize, totalItems, onPageChange, label }: 
           className={styles.pageButton}
           onClick={() => onPageChange(current - 1)}
           disabled={current === 1}
-        >
-          Previous
-        </button>
+        >{t('Previous')}</button>
 
         <div className={styles.pageNumbers}>
           {pageWindow(current, totalPages).map((entry, index) =>
@@ -58,9 +57,7 @@ export function Pagination({ page, pageSize, totalItems, onPageChange, label }: 
           className={styles.pageButton}
           onClick={() => onPageChange(current + 1)}
           disabled={current === totalPages}
-        >
-          Next
-        </button>
+        >{t('Next')}</button>
       </div>
     </div>
   );

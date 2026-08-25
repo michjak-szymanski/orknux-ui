@@ -12,6 +12,7 @@ import botIcon from '../assets/bot.svg';
 import { Markdown } from './Markdown';
 import { PAGES } from '../navigation';
 import styles from './QuickChat.module.css';
+import { t } from '../i18n';
 
 export interface QuickChatProps {
   /** The workspace it asks about, or undefined while none is known. */
@@ -186,7 +187,7 @@ export function QuickChat({ workspacePath }: QuickChatProps) {
         setToolOffers((held) => ({ ...held, [grown.length - 1]: { suggestion, inEditor: !unclaimed } }));
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'That could not be answered.');
+      setError(cause instanceof Error ? cause.message : t('That could not be answered.'));
     } finally {
       setAsking(false);
     }
@@ -244,10 +245,10 @@ export function QuickChat({ workspacePath }: QuickChatProps) {
   return (
     <>
       {open && (
-        <section className={styles.panel} aria-label="Quick chat">
+        <section className={styles.panel} aria-label={t('Quick chat')}>
           <header className={styles.header}>
-            <span className={styles.title}>Ask about this page</span>
-            <button type="button" className={styles.close} onClick={() => setOpen(false)} aria-label="Close">
+            <span className={styles.title}>{t('Ask about this page')}</span>
+            <button type="button" className={styles.close} onClick={() => setOpen(false)} aria-label={t('Close')}>
               ×
             </button>
           </header>
@@ -258,8 +259,8 @@ export function QuickChat({ workspacePath }: QuickChatProps) {
                 Ask about what is on screen, or about this workspace — its workflows, its runs and what they
                 did.{' '}
                 {mayWrite
-                  ? 'It can look those up, and change things here if you ask it to.'
-                  : 'It can look those up; it cannot change anything.'}
+                  ? t('It can look those up, and change things here if you ask it to.')
+                  : t('It can look those up; it cannot change anything.')}
               </p>
             )}
             {said.map((turn, index) =>
@@ -273,13 +274,17 @@ export function QuickChat({ workspacePath }: QuickChatProps) {
                   {/* Under the answer that offered it, where it was explained. */}
                   {offers[index] !== undefined &&
                     (offers[index].inEditor ? (
-                      <p className={styles.inEditor}>The change is shown in the editor, against the code it would change.</p>
+                      <p className={styles.inEditor}>
+                        {t('The change is shown in the editor, against the code it would change.')}
+                      </p>
                     ) : (
                       <CodeSuggestion suggestion={offers[index].suggestion} onSettled={(detail) => void send(detail)} />
                     ))}
                   {toolOffers[index] !== undefined &&
                     (toolOffers[index].inEditor ? (
-                      <p className={styles.inEditor}>The change is shown in the editor, against the code it would change.</p>
+                      <p className={styles.inEditor}>
+                        {t('The change is shown in the editor, against the code it would change.')}
+                      </p>
                     ) : (
                       <ToolSuggestion
                         suggestion={toolOffers[index].suggestion}
@@ -289,7 +294,7 @@ export function QuickChat({ workspacePath }: QuickChatProps) {
                 </div>
               ),
             )}
-            {asking && <p className={styles.thinking}>Looking…</p>}
+            {asking && <p className={styles.thinking}>{t('Looking…')}</p>}
             {error !== null && (
               <p className={styles.error} role="alert">
                 {error}
@@ -304,9 +309,9 @@ export function QuickChat({ workspacePath }: QuickChatProps) {
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               onKeyDown={onKeyDown}
-              placeholder="Ask about this page…"
+              placeholder={t('Ask about this page…')}
               rows={2}
-              aria-label="Ask about this page"
+              aria-label={t('Ask about this page')}
             />
             <button type="submit" className={styles.send} disabled={asking || draft.trim() === ''}>
               {asking ? '…' : 'Ask'}
@@ -320,8 +325,8 @@ export function QuickChat({ workspacePath }: QuickChatProps) {
         className={open ? `${styles.launcher} ${styles.launcherOpen}` : styles.launcher}
         onClick={() => setOpen((was) => !was)}
         aria-expanded={open}
-        aria-label={open ? 'Close the quick chat' : 'Ask about this page'}
-        title={open ? 'Close' : 'Ask about this page'}
+        aria-label={open ? t('Close the quick chat') : t('Ask about this page')}
+        title={open ? 'Close' : t('Ask about this page')}
       >
         <img src={botIcon} alt="" width={18} height={18} />
         <span className={styles.launcherLabel}>AI</span>

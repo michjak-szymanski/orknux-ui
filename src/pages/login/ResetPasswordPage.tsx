@@ -7,6 +7,7 @@ import eyeIcon from '../../assets/eye.svg';
 import orknuxMark from '../../assets/orknux-mark.svg';
 import { Attribution } from '../../components/Attribution';
 import styles from './LoginPage.module.css';
+import { t } from '../../i18n';
 
 export interface ResetPasswordPageProps {
   version?: string;
@@ -48,7 +49,7 @@ export function ResetPasswordPage({ version = `v${__APP_VERSION__}` }: ResetPass
       return;
     }
     if (password !== confirmation) {
-      setError('The two passwords are not the same.');
+      setError(t('The two passwords are not the same.'));
       return;
     }
 
@@ -57,7 +58,7 @@ export function ResetPasswordPage({ version = `v${__APP_VERSION__}` }: ResetPass
     try {
       setDone(await completePasswordReset(token, password));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not set the password.');
+      setError(cause instanceof Error ? cause.message : t('Could not set the password.'));
     } finally {
       setSubmitting(false);
     }
@@ -67,8 +68,8 @@ export function ResetPasswordPage({ version = `v${__APP_VERSION__}` }: ResetPass
     done !== null
       ? `The password for ${done} has changed. Anywhere it was signed in has been signed out.`
       : token === ''
-        ? 'This link is missing its token. Ask for a new one from the sign-in page.'
-        : 'Choose a new password. The link you followed works only this once.';
+        ? t('This link is missing its token. Ask for a new one from the sign-in page.')
+        : t('Choose a new password. The link you followed works only this once.');
 
   return (
     <main className={styles.page}>
@@ -83,7 +84,7 @@ export function ResetPasswordPage({ version = `v${__APP_VERSION__}` }: ResetPass
           </div>
 
           <div className={styles.headings}>
-            <h1 className={styles.title}>New password</h1>
+            <h1 className={styles.title}>{t('New password')}</h1>
             <p className={styles.subtitle}>{subtitle}</p>
           </div>
         </header>
@@ -93,9 +94,7 @@ export function ResetPasswordPage({ version = `v${__APP_VERSION__}` }: ResetPass
             <div className={styles.fields}>
               <div className={styles.field}>
                 <div className={styles.fieldHeader}>
-                  <label className={styles.label} htmlFor={passwordId}>
-                    Password
-                  </label>
+                  <label className={styles.label} htmlFor={passwordId}>{t('Password')}</label>
                 </div>
                 <div className={styles.inputContainer}>
                   <input
@@ -110,7 +109,7 @@ export function ResetPasswordPage({ version = `v${__APP_VERSION__}` }: ResetPass
                   <button
                     type="button"
                     className={styles.toggleVisibility}
-                    aria-label={passwordVisible ? 'Hide password' : 'Show password'}
+                    aria-label={passwordVisible ? t('Hide password') : t('Show password')}
                     aria-pressed={passwordVisible}
                     onClick={() => setPasswordVisible((visible) => !visible)}
                   >
@@ -121,9 +120,7 @@ export function ResetPasswordPage({ version = `v${__APP_VERSION__}` }: ResetPass
 
               <div className={styles.field}>
                 <div className={styles.fieldHeader}>
-                  <label className={styles.label} htmlFor={confirmId}>
-                    Again
-                  </label>
+                  <label className={styles.label} htmlFor={confirmId}>{t('Again')}</label>
                 </div>
                 <div className={styles.inputContainer}>
                   <input
@@ -146,7 +143,7 @@ export function ResetPasswordPage({ version = `v${__APP_VERSION__}` }: ResetPass
                 </p>
               )}
               <button type="submit" className={styles.submit} disabled={!canSubmit}>
-                {submitting ? 'Saving…' : 'Set password'}
+                {submitting ? t('Saving…') : t('Set password')}
               </button>
               {/* The rule, until something goes wrong; then the thing that went
                   wrong says it, and repeating it underneath reads as two
@@ -158,7 +155,7 @@ export function ResetPasswordPage({ version = `v${__APP_VERSION__}` }: ResetPass
 
         <div className={styles.actions}>
           <Link className={styles.resetLink} to="/login">
-            {done === null ? 'Back to sign in' : 'Sign in'}
+            {done === null ? t('Back to sign in') : t('Sign in')}
           </Link>
         </div>
 

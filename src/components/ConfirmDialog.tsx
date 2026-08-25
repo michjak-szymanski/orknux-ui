@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import alertTriangleIcon from '../assets/alert-triangle.svg';
 import trash2Icon from '../assets/trash-2.svg';
 import styles from './Dialog.module.css';
+import { t } from '../i18n';
 
 export type ConfirmKind = 'disable' | 'remove' | 'discard' | 'deleteChat';
 
@@ -51,7 +52,7 @@ export function ConfirmDialog({ subject, kind, onClose, onConfirm }: ConfirmDial
     try {
       await onConfirm();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not apply the change.');
+      setError(cause instanceof Error ? cause.message : t('Could not apply the change.'));
       setSubmitting(false);
     }
   }
@@ -59,7 +60,7 @@ export function ConfirmDialog({ subject, kind, onClose, onConfirm }: ConfirmDial
   const name = <strong>&quot;{subject}&quot;</strong>;
   const copy: Record<ConfirmKind, { title: string; message: ReactNode; button: string }> = {
     disable: {
-      title: 'Disable workflow',
+      title: t('Disable workflow'),
       message: (
         <>
           Are you sure you want to disable {name}? Runs already going will finish, and nothing will start it
@@ -67,35 +68,35 @@ export function ConfirmDialog({ subject, kind, onClose, onConfirm }: ConfirmDial
           be tried while you fix it.
         </>
       ),
-      button: submitting ? 'Disabling…' : 'Disable',
+      button: submitting ? t('Disabling…') : 'Disable',
     },
     remove: {
-      title: 'Remove workflow',
+      title: t('Remove workflow'),
       message: (
         <>
           Are you sure you want to remove {name} from this workspace? This will not delete the workflow definition.
         </>
       ),
-      button: submitting ? 'Removing…' : 'Remove',
+      button: submitting ? t('Removing…') : 'Remove',
     },
     deleteChat: {
-      title: 'Delete chat',
+      title: t('Delete chat'),
       message: (
         <>
           Delete {name}? Every message in it goes with it, and there is no way back from this one.
         </>
       ),
-      button: submitting ? 'Deleting…' : 'Delete',
+      button: submitting ? t('Deleting…') : 'Delete',
     },
     discard: {
-      title: 'Discard changes',
+      title: t('Discard changes'),
       message: (
         <>
           Put {name} back as it was last saved? Everything since — nodes, wiring, what each one passes — is
           lost, and there is no way back from this one.
         </>
       ),
-      button: submitting ? 'Discarding…' : 'Discard',
+      button: submitting ? t('Discarding…') : 'Discard',
     },
   };
 
@@ -123,7 +124,7 @@ export function ConfirmDialog({ subject, kind, onClose, onConfirm }: ConfirmDial
 
         <div className={styles.actions}>
           <button type="button" className={styles.ghost} onClick={onClose} disabled={submitting}>
-            Cancel
+            {t('Cancel')}
           </button>
           <button
             type="button"

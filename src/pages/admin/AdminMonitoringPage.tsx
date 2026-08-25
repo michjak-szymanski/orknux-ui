@@ -8,6 +8,7 @@ import { AppShell } from '../../components/AppShell';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { shellUser } from '../../session/user';
 import styles from './AdminMonitoringPage.module.css';
+import { t } from '../../i18n';
 
 export interface AdminMonitoringPageProps {
   session: SessionUser;
@@ -35,7 +36,7 @@ export function AdminMonitoringPage({ session, onSignOut }: AdminMonitoringPageP
       .catch((cause: unknown) => {
         // The service is what could not be read; the interface is plainly up.
         setComponents([uiComponent()]);
-        setError(cause instanceof Error ? cause.message : 'Could not read the component status.');
+        setError(cause instanceof Error ? cause.message : t('Could not read the component status.'));
       })
       .finally(() => setRefreshing(false));
   }, []);
@@ -51,12 +52,12 @@ export function AdminMonitoringPage({ session, onSignOut }: AdminMonitoringPageP
       <section className={styles.card}>
         <header className={styles.header}>
           <div className={styles.titleBlock}>
-            <h1 className={styles.title}>Monitoring</h1>
-            <p className={styles.subtitle}>System health and component status.</p>
+            <h1 className={styles.title}>{t('Monitoring')}</h1>
+            <p className={styles.subtitle}>{t('System health and component status.')}</p>
           </div>
           <button type="button" className={styles.refresh} onClick={load} disabled={refreshing}>
             <img src={refreshIcon} alt="" width={14} height={14} />
-            {refreshing ? 'Checking…' : 'Refresh Stats'}
+            {refreshing ? 'Checking…' : t('Refresh Stats')}
           </button>
         </header>
 
@@ -65,7 +66,7 @@ export function AdminMonitoringPage({ session, onSignOut }: AdminMonitoringPageP
             {error}
           </p>
         )}
-        {components === null && error === null && <p className={styles.notice}>Checking…</p>}
+        {components === null && error === null && <p className={styles.notice}>{t('Checking…')}</p>}
 
         <div className={styles.components}>
           {components?.map((component) => (
@@ -84,15 +85,15 @@ export function AdminMonitoringPage({ session, onSignOut }: AdminMonitoringPageP
 
               <dl className={styles.metrics}>
                 <div className={styles.metric}>
-                  <dt className={styles.metricLabel}>Version</dt>
+                  <dt className={styles.metricLabel}>{t('Version')}</dt>
                   <dd className={styles.metricValue}>{formatVersion(component.version)}</dd>
                 </div>
                 <div className={styles.metric}>
-                  <dt className={styles.metricLabel}>Last checked</dt>
+                  <dt className={styles.metricLabel}>{t('Last checked')}</dt>
                   <dd className={styles.metricMuted}>{formatRelative(component.lastCheckedAt)}</dd>
                 </div>
                 <div className={styles.metric}>
-                  <dt className={styles.metricLabel}>Detail</dt>
+                  <dt className={styles.metricLabel}>{t('Detail')}</dt>
                   <dd className={styles.metricMuted}>{component.detail}</dd>
                 </div>
               </dl>
@@ -115,9 +116,7 @@ export function AdminMonitoringPage({ session, onSignOut }: AdminMonitoringPageP
                           href={dependency.url}
                           target="_blank"
                           rel="noreferrer"
-                        >
-                          Open
-                        </a>
+                        >{t('Open')}</a>
                       )}
                     </li>
                   ))}

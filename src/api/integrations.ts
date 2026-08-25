@@ -1,6 +1,7 @@
 import type { MessageTarget } from './actions';
 import { graphql } from './client';
 import type { PageOf } from './client';
+import { t } from '../i18n';
 
 /**
  * What a connection points at.
@@ -590,11 +591,11 @@ export function statusLabel(status: ConnectionStatus): string {
     case 'CONNECTED':
       return 'Connected';
     case 'FAILED':
-      return 'Check failed';
+      return t('Check failed');
     case 'NOT_CHECKED':
-      return 'Not checked';
+      return t('Not checked');
     case 'NOT_CONFIGURED':
-      return 'Not configured';
+      return t('Not configured');
   }
 }
 
@@ -604,9 +605,9 @@ export function connectionTypeLabel(type: ConnectionType): string {
     case 'SLACK':
       return 'Slack';
     case 'SMTP':
-      return 'Email (SMTP)';
+      return t('Email (SMTP)');
     case 'HTTP':
-      return 'HTTP endpoint';
+      return t('HTTP endpoint');
   }
 }
 
@@ -622,9 +623,9 @@ export function authTypeLabel(authType: AuthType): string {
     case 'NONE':
       return 'None';
     case 'API_KEY':
-      return 'API Key';
+      return t('API Key');
     case 'BEARER_TOKEN':
-      return 'Bearer Token';
+      return t('Bearer Token');
     case 'BASIC':
       return 'Basic';
   }

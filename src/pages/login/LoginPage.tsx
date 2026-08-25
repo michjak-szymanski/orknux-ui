@@ -7,6 +7,7 @@ import eyeIcon from '../../assets/eye.svg';
 import orknuxMark from '../../assets/orknux-mark.svg';
 import { Attribution } from '../../components/Attribution';
 import styles from './LoginPage.module.css';
+import { t } from '../../i18n';
 
 export interface LoginPageProps {
   /** Called with the entered credentials once both fields are filled in. Rejects to show an error. */
@@ -59,7 +60,7 @@ export function LoginPage({ onSubmit, onResetPassword, version = `v${__APP_VERSI
     try {
       await onSubmit?.({ username: username.trim(), password });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Sign-in failed.');
+      setError(cause instanceof Error ? cause.message : t('Sign-in failed.'));
       setSubmitting(false);
     }
   }
@@ -77,11 +78,11 @@ export function LoginPage({ onSubmit, onResetPassword, version = `v${__APP_VERSI
           </div>
 
           <div className={styles.headings}>
-            <h1 className={styles.title}>Sign in</h1>
+            <h1 className={styles.title}>{t('Sign in')}</h1>
             <p className={styles.subtitle}>
               {signIn?.method === 'OIDC'
                 ? `This installation signs in with ${signIn.displayName}.`
-                : 'Enter your username and password.'}
+                : t('Enter your username and password.')}
             </p>
           </div>
         </header>
@@ -104,9 +105,7 @@ export function LoginPage({ onSubmit, onResetPassword, version = `v${__APP_VERSI
           <div className={styles.fields}>
             <div className={styles.field}>
               <div className={styles.fieldHeader}>
-                <label className={styles.label} htmlFor={usernameId}>
-                  Username
-                </label>
+                <label className={styles.label} htmlFor={usernameId}>{t('Username')}</label>
               </div>
               <div className={styles.inputContainer}>
                 <input
@@ -124,11 +123,9 @@ export function LoginPage({ onSubmit, onResetPassword, version = `v${__APP_VERSI
 
             <div className={styles.field}>
               <div className={styles.fieldHeader}>
-                <label className={styles.label} htmlFor={passwordId}>
-                  Password
-                </label>
+                <label className={styles.label} htmlFor={passwordId}>{t('Password')}</label>
                 <button type="button" className={styles.resetLink} onClick={onResetPassword}>
-                  Reset
+                  {t('Reset')}
                 </button>
               </div>
               <div className={styles.inputContainer}>
@@ -144,7 +141,7 @@ export function LoginPage({ onSubmit, onResetPassword, version = `v${__APP_VERSI
                 <button
                   type="button"
                   className={styles.toggleVisibility}
-                  aria-label={passwordVisible ? 'Hide password' : 'Show password'}
+                  aria-label={passwordVisible ? t('Hide password') : t('Show password')}
                   aria-pressed={passwordVisible}
                   onClick={() => setPasswordVisible((visible) => !visible)}
                 >
@@ -161,7 +158,7 @@ export function LoginPage({ onSubmit, onResetPassword, version = `v${__APP_VERSI
               </p>
             )}
             <button type="submit" className={styles.submit} disabled={!canSubmit}>
-              {submitting ? 'Signing in…' : 'Sign In'}
+              {submitting ? t('Signing in…') : t('Sign In')}
             </button>
             {/*
               What this card is allowed to claim. "Authenticating via LDAP" was
@@ -180,7 +177,7 @@ export function LoginPage({ onSubmit, onResetPassword, version = `v${__APP_VERSI
               {signIn?.notice ??
                 (signIn?.method === 'INTERNAL'
                   ? `Signing in with ${signIn.displayName}`
-                  : 'Authenticating via LDAP')}
+                  : t('Authenticating via LDAP'))}
             </p>
           </div>
         </form>

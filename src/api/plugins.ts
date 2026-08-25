@@ -1,5 +1,6 @@
 import { compile } from '../components/monaco';
 import { ApiError, graphql } from './client';
+import { t } from '../i18n';
 
 /**
  * The plugins loaded into the installation.
@@ -239,7 +240,7 @@ export async function fetchPluginSource(url: string): Promise<{ name: string; so
   try {
     address = new URL(url.trim());
   } catch {
-    throw new ApiError('That is not a URL.', 400);
+    throw new ApiError(t('That is not a URL.'), 400);
   }
 
   let answer: Response;

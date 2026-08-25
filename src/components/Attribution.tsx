@@ -1,4 +1,5 @@
 import styles from './Attribution.module.css';
+import { t } from '../i18n';
 
 /**
  * Who wrote this, under what licence, and where the source is.
@@ -47,11 +48,11 @@ export function Attribution({ compact = false }: AttributionProps) {
       <span>© 2026 Michał Szymański</span>
       <span className={styles.separator}>·</span>
       <a className={styles.link} href={LICENCE} target="_blank" rel="noreferrer noopener">
-        AGPL-3.0
+        {'AGPL-3.0'}
       </a>
       <span className={styles.separator}>·</span>
       <a className={styles.link} href={SOURCE} target="_blank" rel="noreferrer noopener">
-        Source
+        {t('Source')}
       </a>
     </p>
   );

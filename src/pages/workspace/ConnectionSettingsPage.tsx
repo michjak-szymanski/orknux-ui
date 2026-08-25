@@ -27,6 +27,7 @@ import type { SecretFieldHandle, SecretSource } from '../../components/SecretFie
 import { shellUser } from '../../session/user';
 import { useWorkspaceVariables } from './workspaceVariables';
 import styles from './IntegrationSettings.module.css';
+import { t } from '../../i18n';
 
 export interface ConnectionSettingsPageProps {
   session: SessionUser;
@@ -38,7 +39,7 @@ const AUTH_TYPES: AuthType[] = ['NONE', 'API_KEY', 'BEARER_TOKEN', 'BASIC'];
 /** How the session with a mail server is secured, and the port that goes with it. */
 const SECURITY: { value: MailSecurity; label: string; port: number }[] = [
   { value: 'STARTTLS', label: 'STARTTLS', port: 587 },
-  { value: 'TLS', label: 'TLS (implicit)', port: 465 },
+  { value: 'TLS', label: t('TLS (implicit)'), port: 465 },
   { value: 'NONE', label: 'None', port: 25 },
 ];
 
@@ -65,9 +66,9 @@ function secretLabel(kind: ConnectionType | null): string {
     case 'SMTP':
       return 'Password';
     case 'SLACK':
-      return 'Bot token';
+      return t('Bot token');
     default:
-      return 'API Token';
+      return t('API Token');
   }
 }
 
@@ -84,7 +85,7 @@ function secretHint(kind: ConnectionType | null) {
       return (
         <>
           The <strong>bot</strong> token, beginning <code>xoxb-</code>. In your Slack app under{' '}
-          <strong>OAuth &amp; Permissions</strong>, as the Bot User OAuth Token. Not the app-level
+          <strong>{t('OAuth & Permissions')}</strong>, as the Bot User OAuth Token. Not the app-level
           <code> xapp-</code> token, which has its own field below, and not the signing secret.
         </>
       );
@@ -147,7 +148,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
     fetchWorkspaceConnection(connectionId)
       .then((found) => {
         if (found === null) {
-          setLoadError('That connection does not exist, or you do not have access to it.');
+          setLoadError(t('That connection does not exist, or you do not have access to it.'));
           return;
         }
         setConnection(found);
@@ -162,7 +163,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
         appToken.reset({ stored: found.appTokenSet, variable: found.appTokenVariableId });
       })
       .catch((cause: unknown) => {
-        setLoadError(cause instanceof Error ? cause.message : 'Could not load the connection.');
+        setLoadError(cause instanceof Error ? cause.message : t('Could not load the connection.'));
       });
   }, [connectionId]);
 
@@ -194,7 +195,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
     try {
       appToken.show((await revealWorkspaceConnectionAppToken(connectionId)) ?? '');
     } catch (cause) {
-      setSaveError(cause instanceof Error ? cause.message : 'Could not reveal the app-level token.');
+      setSaveError(cause instanceof Error ? cause.message : t('Could not reveal the app-level token.'));
     }
   }
 
@@ -202,7 +203,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
     try {
       secret.show((await revealWorkspaceConnectionSecret(connectionId)) ?? '');
     } catch (cause) {
-      setSaveError(cause instanceof Error ? cause.message : 'Could not reveal the credentials.');
+      setSaveError(cause instanceof Error ? cause.message : t('Could not reveal the credentials.'));
     }
   }
 
@@ -270,7 +271,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
       setName(updated.name);
       setNamedSaved(true);
     } catch (cause) {
-      setNameError(cause instanceof Error ? cause.message : 'Could not rename the connection.');
+      setNameError(cause instanceof Error ? cause.message : t('Could not rename the connection.'));
     } finally {
       setSavingName(false);
     }
@@ -288,7 +289,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
       return;
     }
     if (slack && appToken.unchosen) {
-      setSaveError('Choose the workspace secret this connection reads its app-level token from.');
+      setSaveError(t('Choose the workspace secret this connection reads its app-level token from.'));
       setSaved(false);
       return;
     }
@@ -342,7 +343,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
       appToken.reset({ stored: updated.appTokenSet, variable: updated.appTokenVariableId });
       setSaved(true);
     } catch (cause) {
-      setSaveError(cause instanceof Error ? cause.message : 'Could not save the credentials.');
+      setSaveError(cause instanceof Error ? cause.message : t('Could not save the credentials.'));
     } finally {
       setSaving(false);
     }
@@ -356,7 +357,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
     try {
       setConnection(await testWorkspaceConnection(connectionId));
     } catch (cause) {
-      setSaveError(cause instanceof Error ? cause.message : 'Could not check the connection.');
+      setSaveError(cause instanceof Error ? cause.message : t('Could not check the connection.'));
     } finally {
       setTesting(false);
     }
@@ -380,14 +381,14 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
     >
       <header className={styles.contentHeader}>
         <p className={styles.breadcrumb}>
-          <BackLink to={`/workspace/${workspaceId}/integrations`} label="Integrations" />
+          <BackLink to={`/workspace/${workspaceId}/integrations`} label={t('Integrations')} />
           <Link className={styles.crumbLink} to={`/workspace/${workspaceId}/integrations`}>
-            Integrations
+            {t('Integrations')}
           </Link>
           <span className={styles.crumbSeparator}>/</span>
           <span className={styles.crumbCurrent}>{connection?.name ?? '…'}</span>
         </p>
-        <h1 className={styles.title}>Connection Settings</h1>
+        <h1 className={styles.title}>{t('Connection Settings')}</h1>
       </header>
 
       {loadError !== null ? (
@@ -404,11 +405,11 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
         <>
           <section className={styles.card}>
             <div className={styles.cardTitles}>
-              <h2 className={styles.cardTitle}>General</h2>
+              <h2 className={styles.cardTitle}>{t('General')}</h2>
               <p className={styles.cardSubtitle}>
                 {locked
-                  ? 'Connection settings inherited from admin defaults'
-                  : 'Connection settings for this workspace'}
+                  ? t('Connection settings inherited from admin defaults')
+                  : t('Connection settings for this workspace')}
               </p>
             </div>
 
@@ -418,11 +419,11 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
               the API has always accepted it; there was simply nowhere to type.
             */}
             {locked ? (
-              <ReadOnlyField label="Integration Name" value={connection?.name ?? ''} locked />
+              <ReadOnlyField label={t('Integration Name')} value={connection?.name ?? ''} locked />
             ) : (
               <div className={styles.field}>
                 <label className={styles.label} htmlFor="connection-name">
-                  Integration Name
+                  {t('Integration Name')}
                 </label>
                 <div className={styles.inputWrapper}>
                   <input
@@ -430,7 +431,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
                     className={styles.input}
                     value={name}
                     onChange={(event) => setName(event.target.value)}
-                    placeholder="Name this connection"
+                    placeholder={t('Name this connection')}
                   />
                 </div>
               </div>
@@ -446,15 +447,13 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
             */}
             {locked || connection === null ? (
               <ReadOnlyField
-                label="Type"
+                label={t('Type')}
                 value={connection === null ? '' : connectionTypeLabel(connection.type)}
                 locked={locked}
               />
             ) : (
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="connection-type">
-                  Type
-                </label>
+                <label className={styles.label} htmlFor="connection-type">{t('Type')}</label>
                 <div className={styles.inputWrapper}>
                   <select
                     id="connection-type"
@@ -473,14 +472,14 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
               </div>
             )}
             <ReadOnlyField
-              label={mail ? 'Mail Server' : 'Default API Host URL'}
+              label={mail ? t('Mail Server') : t('Default API Host URL')}
               value={connection?.url ?? ''}
               locked={locked}
             />
 
             {!locked && (
               <div className={styles.actionRow}>
-                {namedSaved && nameError === null && <p className={styles.savedNote}>Saved.</p>}
+                {namedSaved && nameError === null && <p className={styles.savedNote}>{t('Saved.')}</p>}
                 {nameError !== null && <p className={styles.savedNote}>{nameError}</p>}
                 <button
                   type="button"
@@ -488,14 +487,14 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
                   onClick={() => void handleSaveName()}
                   disabled={savingName || name.trim() === '' || name.trim() === connection?.name}
                 >
-                  {savingName ? 'Saving…' : 'Save Name'}
+                  {savingName ? t('Saving…') : t('Save Name')}
                 </button>
               </div>
             )}
           </section>
 
           <form className={styles.card} onSubmit={handleSave}>
-            <h2 className={styles.cardTitle}>Active Credentials</h2>
+            <h2 className={styles.cardTitle}>{t('Active Credentials')}</h2>
 
             {/*
               * Not for Slack, which authenticates one way. The server sets
@@ -504,9 +503,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
               */}
             {!slack && !mail && (
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="connection-auth">
-                Auth Type
-              </label>
+              <label className={styles.label} htmlFor="connection-auth">{t('Auth Type')}</label>
               <div className={styles.inputWrapper}>
                 <select
                   id="connection-auth"
@@ -531,11 +528,10 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
                 <div className={styles.field}>
                   <span className={styles.labelWithHint}>
                     <label className={styles.label} htmlFor="connection-smtp-from">
-                      From Address
+                      {t('From Address')}
                     </label>
-                    <FieldHint label="From Address">
-                      Every mail this connection sends is from this address, and a provider that has not
-                      authorised it refuses the message however good the password is.
+                    <FieldHint label={t('From Address')}>
+                      {t('Every mail this connection sends is from this address, and a provider that has not authorised it refuses the message however good the password is.')}
                     </FieldHint>
                   </span>
                   <div className={styles.inputWrapper}>
@@ -553,7 +549,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
 
                 <div className={styles.field}>
                   <label className={styles.label} htmlFor="connection-smtp-security">
-                    Security
+                    {t('Security')}
                   </label>
                   <div className={styles.inputWrapper}>
                     <select
@@ -574,9 +570,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
                 </div>
 
                 <div className={styles.field}>
-                  <label className={styles.label} htmlFor="connection-smtp-port">
-                    Port
-                  </label>
+                  <label className={styles.label} htmlFor="connection-smtp-port">{t('Port')}</label>
                   <div className={styles.inputWrapper}>
                     <input
                       id="connection-smtp-port"
@@ -593,7 +587,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
 
                 <div className={styles.field}>
                   <label className={styles.label} htmlFor="connection-smtp-username">
-                    Username
+                    {t('Username')}
                   </label>
                   <div className={styles.inputWrapper}>
                     <input
@@ -601,7 +595,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
                       name="smtpUsername"
                       className={styles.input}
                       type="text"
-                      placeholder="Leave empty to send without authenticating"
+                      placeholder={t('Leave empty to send without authenticating')}
                       value={smtpUsername}
                       onChange={(event) => setSmtpUsername(event.target.value)}
                     />
@@ -631,7 +625,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
                 connection?.secretVariableCatalog ?? null,
               )}
               variablesPath={`/workspace/${workspaceId}/variables`}
-              placeholder={mail ? 'Enter password...' : 'Enter token or key...'}
+              placeholder={mail ? t('Enter password...') : t('Enter token or key...')}
               hint={secretHint(kind)}
               onSource={(next) => chooseSource(secret, next)}
               onValue={touched}
@@ -647,7 +641,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
             {slack && (
               <SecretField
                 id="connection-app-token"
-                label="App-Level Token"
+                label={t('App-Level Token')}
                 field={appToken}
                 options={offered(
                   connection.appTokenVariableId,
@@ -669,7 +663,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
                 onReveal={() => void handleRevealAppToken()}
                 broken={
                   connection.appTokenVariableMissing
-                    ? 'The workspace secret this app-level token was read from is gone, so this connection cannot listen. Point this field at another secret, or give it a value of its own.'
+                    ? t('The workspace secret this app-level token was read from is gone, so this connection cannot listen. Point this field at another secret, or give it a value of its own.')
                     : null
                 }
               />
@@ -685,7 +679,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
             {!slack && !mail && (
             <div className={styles.field}>
               <label className={styles.label} htmlFor="connection-url-override">
-                URL Override
+                {t('URL Override')}
               </label>
               <div className={styles.inputWrapper}>
                 <input
@@ -719,29 +713,29 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
 
             {/* Checking and saving are the two things to do here, so they sit together. */}
             <div className={styles.actionRow}>
-              {saved && saveError === null && <p className={styles.savedNote}>Saved.</p>}
+              {saved && saveError === null && <p className={styles.savedNote}>{t('Saved.')}</p>}
               <button type="button" className={styles.testButton} onClick={handleTest} disabled={testing}>
-                {testing ? 'Checking…' : 'Test Connection'}
+                {testing ? 'Checking…' : t('Test Connection')}
               </button>
               <button type="submit" className={styles.save} disabled={saving}>
-                {saving ? 'Saving…' : 'Save Credentials'}
+                {saving ? t('Saving…') : t('Save Credentials')}
               </button>
             </div>
           </form>
 
           <section className={`${styles.card} ${styles.dangerCard}`}>
-            <h2 className={styles.dangerHeading}>Danger Zone</h2>
+            <h2 className={styles.dangerHeading}>{t('Danger Zone')}</h2>
             <div className={styles.dangerRow}>
               <div className={styles.dangerText}>
                 <p className={styles.dangerTitle}>Disconnect {connection?.name ?? ''}</p>
                 <p className={styles.dangerMessage}>
                   {locked
-                    ? 'Clear the credentials this workspace stored and reset to admin defaults.'
-                    : 'Permanently remove this custom integration connection from the workspace.'}
+                    ? t('Clear the credentials this workspace stored and reset to admin defaults.')
+                    : t('Permanently remove this custom integration connection from the workspace.')}
                 </p>
               </div>
               <button type="button" className={styles.dangerActionFilled} onClick={handleDisconnect}>
-                Disconnect
+                {t('Disconnect')}
               </button>
             </div>
           </section>
@@ -770,7 +764,7 @@ function ReadOnlyField({ label, value, locked }: { label: string; value: string;
       <p className={styles.label}>{label}</p>
       <div className={locked ? `${styles.inputWrapper} ${styles.inputWrapperLocked}` : styles.inputWrapper}>
         <span className={`${styles.input} ${styles.inputMono}`}>{value}</span>
-        {locked && <img src={lockIcon} alt="Managed by the admin" width={12} height={12} />}
+        {locked && <img src={lockIcon} alt={t("Managed by the admin")} width={12} height={12} />}
       </div>
     </div>
   );

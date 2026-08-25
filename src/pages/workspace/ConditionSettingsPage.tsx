@@ -13,6 +13,7 @@ import { UsedBy } from '../../components/UsedBy';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './ConditionSettingsPage.module.css';
+import { t } from '../../i18n';
 
 export interface ConditionSettingsPageProps {
   session: SessionUser;
@@ -110,11 +111,11 @@ export function ConditionSettingsPage({ session, onSignOut }: ConditionSettingsP
     fetchCondition(conditionId)
       .then((found) => {
         if (!current) return;
-        if (found === null) setLoadError('That condition no longer exists.');
+        if (found === null) setLoadError(t('That condition no longer exists.'));
         else setCondition(found);
       })
       .catch((cause: unknown) => {
-        if (current) setLoadError(cause instanceof Error ? cause.message : 'Could not load the condition.');
+        if (current) setLoadError(cause instanceof Error ? cause.message : t('Could not load the condition.'));
       });
 
     return () => {
@@ -130,16 +131,16 @@ export function ConditionSettingsPage({ session, onSignOut }: ConditionSettingsP
       await deleteCondition(condition.id);
       navigate(list);
     } catch (cause) {
-      setRemoveError(cause instanceof Error ? cause.message : 'Could not delete the condition.');
+      setRemoveError(cause instanceof Error ? cause.message : t('Could not delete the condition.'));
       setRemoving(false);
     }
   }
 
-  const called = adding ? 'Create Condition' : (condition?.name ?? '…');
+  const called = adding ? t('Create Condition') : (condition?.name ?? '…');
 
   return (
     <AppShell
-      title={adding ? 'New condition' : condition?.name}
+      title={adding ? t('New condition') : condition?.name}
       user={shellUser(session)}
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
@@ -148,17 +149,14 @@ export function ConditionSettingsPage({ session, onSignOut }: ConditionSettingsP
     >
       <header className={styles.headerBlock}>
         <p className={styles.breadcrumbs}>
-          <BackLink to={list} label="Conditions" />
-          <Link className={styles.crumbLink} to={list}>
-            Conditions
-          </Link>
+          <BackLink to={list} label={t('Conditions')} />
+          <Link className={styles.crumbLink} to={list}>{t('Conditions')}</Link>
           <span className={styles.crumbSeparator}>/</span>
           <span className={styles.crumbCurrent}>{called}</span>
         </p>
         <h1 className={styles.pageTitle}>{called}</h1>
         <p className={styles.subtitle}>
-          A reusable question, for workflow branching and action triggers. What it asks is read off
-          the definition below and shown wherever the condition is used.
+          {t('A reusable question, for workflow branching and action triggers. What it asks is read off the definition below and shown wherever the condition is used.')}
         </p>
       </header>
 
@@ -167,9 +165,7 @@ export function ConditionSettingsPage({ session, onSignOut }: ConditionSettingsP
           <p className={styles.loadError} role="alert">
             {loadError}
           </p>
-          <Link className={styles.crumbLink} to={list}>
-            Back to Conditions
-          </Link>
+          <Link className={styles.crumbLink} to={list}>{t('Back to Conditions')}</Link>
         </section>
       ) : !adding && condition === null ? (
         <section className={styles.card}>
@@ -211,14 +207,14 @@ export function ConditionSettingsPage({ session, onSignOut }: ConditionSettingsP
           */}
           {!adding && condition !== null && (
             <section className={`${styles.card} ${styles.dangerCard}`}>
-              <h2 className={styles.dangerHeading}>Danger Zone</h2>
+              <h2 className={styles.dangerHeading}>{t('Danger Zone')}</h2>
               <div className={styles.dangerRow}>
                 <div className={styles.dangerText}>
                   <p className={styles.dangerTitle}>Delete {condition.name}</p>
                   <p className={styles.dangerMessage}>
                     {confirmingDelete
                       ? `Delete ${condition.name}? A workflow node or trigger pointing at it is left pointing at nothing, and says so until it is pointed somewhere else.`
-                      : 'Remove this condition from the workspace'}
+                      : t('Remove this condition from the workspace')}
                   </p>
                   {removeError !== null && (
                     <p className={styles.error} role="alert">
@@ -233,16 +229,14 @@ export function ConditionSettingsPage({ session, onSignOut }: ConditionSettingsP
                       className={styles.ghost}
                       onClick={() => setConfirmingDelete(false)}
                       disabled={removing}
-                    >
-                      Keep
-                    </button>
+                    >{t('Keep')}</button>
                     <button
                       type="button"
                       className={styles.delete}
                       onClick={() => void handleDelete()}
                       disabled={removing}
                     >
-                      {removing ? 'Deleting…' : 'Delete Condition'}
+                      {removing ? t('Deleting…') : t('Delete Condition')}
                     </button>
                   </div>
                 ) : (
@@ -251,9 +245,7 @@ export function ConditionSettingsPage({ session, onSignOut }: ConditionSettingsP
                     className={styles.delete}
                     onClick={() => setConfirmingDelete(true)}
                     disabled={removing}
-                  >
-                    Delete Condition
-                  </button>
+                  >{t('Delete Condition')}</button>
                 )}
               </div>
             </section>

@@ -1,4 +1,5 @@
 import { ApiError, request } from './client';
+import { t } from '../i18n';
 
 export interface SessionUser {
   username: string;
@@ -13,6 +14,12 @@ export interface SessionUser {
    * installation with no mail server configured.
    */
   emailNotifications?: boolean;
+  /**
+   * The language they chose to read the product in, as a BCP-47 tag. Absent
+   * where they have never chosen, which is not the same as English: it is what
+   * lets the browser open in the language it is already set to.
+   */
+  language?: string | null;
   /**
    * Whether a chat prints what an answer cost beside how long it took. False
    * until somebody turns it on, on the Preferences page.
@@ -32,7 +39,7 @@ export async function login(credentials: Credentials): Promise<SessionUser> {
   });
 
   if (response.status === 401) {
-    throw new ApiError('Invalid username or password.', 401);
+    throw new ApiError(t('Invalid username or password.'), 401);
   }
   if (!response.ok) {
     throw new ApiError(`Sign-in failed with status ${response.status}`, response.status);

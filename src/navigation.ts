@@ -28,6 +28,7 @@ import settingsIcon from './assets/settings.svg';
 import slidersIcon from './assets/sliders-horizontal.svg';
 import terminalIcon from './assets/terminal.svg';
 import toolIcon from './assets/tool.svg';
+import { t } from './i18n';
 
 /**
  * Who may see a page.
@@ -68,6 +69,33 @@ export type Where = 'AI' | 'Flow' | 'Workspace' | 'Chat' | 'Docs' | 'Admin' | 'Y
 export const TOP_SECTIONS = ['AI', 'Flow', 'Workspace', 'Chat'] as const;
 
 export type TopSection = (typeof TOP_SECTIONS)[number];
+
+/**
+ * What the top bar calls a section, in the reader's language.
+ *
+ * A function rather than a record beside [TOP_SECTIONS], and written out rather
+ * than `t(name)`, for one reason each. A record would be built when this module
+ * loads and `t` would be read once; every list in this file is that already,
+ * which is why changing language reloads the page - but a function costs
+ * nothing and does not rely on it. And the four written out are four call sites
+ * `catalogue-check` can see, so a section renamed here is a catalogue entry
+ * that fails rather than a word that quietly falls back to English.
+ *
+ * The name is both the key and the English, which is the whole arrangement:
+ * everything that compares sections still compares `TopSection`.
+ */
+export function sectionLabel(name: TopSection): string {
+  switch (name) {
+    case 'AI':
+      return t('AI');
+    case 'Flow':
+      return t('Flow');
+    case 'Workspace':
+      return t('Workspace');
+    case 'Chat':
+      return t('Chat');
+  }
+}
 
 /** Where a page is listed in Quick actions, and what finds it. */
 export interface GoTo {
@@ -197,7 +225,7 @@ export const PAGES = [
     },
     // The page exists to start one, and starting one is a verb: nobody looks
     // for "Tasks" when what they want is for something to be done.
-    action: { label: 'Start a task', also: 'new ask an agent get it done' },
+    action: { label: t('Start a task'), also: 'new ask an agent get it done' },
   },
   {
     path: '/workspace/:workspaceId/sessions',
@@ -279,13 +307,13 @@ export const PAGES = [
     // The one issue #218 asked for. Somebody notices something while doing
     // something else, and the cost of writing it down is what decides whether
     // it gets written down at all.
-    action: { label: 'Create issue', also: 'new report file bug raise ticket' },
+    action: { label: t('Create issue'), also: 'new report file bug raise ticket' },
   },
   { path: '/workspace/:workspaceId/issues/:number', access: 'signed-in', goTo: false },
   {
     path: '/workspace/:workspaceId/audit',
     access: 'signed-in',
-    goTo: { label: 'Audit Log', where: 'Workspace', icon: clipboardListIcon, also: 'activity history' },
+    goTo: { label: t('Audit Log'), where: 'Workspace', icon: clipboardListIcon, also: 'activity history' },
   },
   {
     path: '/workspace/:workspaceId/integrations',
@@ -307,7 +335,7 @@ export const PAGES = [
     path: '/workspace/:workspaceId/functions/new',
     access: 'signed-in',
     goTo: false,
-    action: { label: 'Create function', also: 'new javascript typescript write code' },
+    action: { label: t('Create function'), also: 'new javascript typescript write code' },
   },
   { path: '/workspace/:workspaceId/functions/:functionId', access: 'signed-in', goTo: false },
   /* Before the one with an id in it: `new` is a page, not a condition called new. */
@@ -315,7 +343,7 @@ export const PAGES = [
     path: '/workspace/:workspaceId/conditions/new',
     access: 'signed-in',
     goTo: false,
-    action: { label: 'Create condition', also: 'new branch question if' },
+    action: { label: t('Create condition'), also: 'new branch question if' },
   },
   { path: '/workspace/:workspaceId/conditions/:conditionId', access: 'signed-in', goTo: false },
   { path: '/workspace/:workspaceId/triggers/:triggerId', access: 'signed-in', goTo: false },
@@ -356,7 +384,7 @@ export const PAGES = [
 
   // ---- The installation ----
   { path: '/admin', access: 'admin', goTo: { label: 'Workspaces', where: 'Admin', icon: commandIcon } },
-  { path: '/admin/audit', access: 'admin', goTo: { label: 'Audit Log', where: 'Admin', icon: fileTextIcon } },
+  { path: '/admin/audit', access: 'admin', goTo: { label: t('Audit Log'), where: 'Admin', icon: fileTextIcon } },
   { path: '/admin/users', access: 'admin', goTo: { label: 'Users', where: 'Admin', icon: userIcon } },
   { path: '/admin/users/new', access: 'admin', goTo: false },
   { path: '/admin/users/:userId', access: 'admin', goTo: false },

@@ -23,6 +23,7 @@ import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import { useWorkspaceVariables } from './workspaceVariables';
 import styles from './IntegrationSettings.module.css';
+import { t } from '../../i18n';
 
 export interface McpServerSettingsPageProps {
   session: SessionUser;
@@ -59,7 +60,7 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
     fetchMcpServer(serverId)
       .then((found) => {
         if (found === null) {
-          setLoadError('That MCP server does not exist, or you do not have access to it.');
+          setLoadError(t('That MCP server does not exist, or you do not have access to it.'));
           return;
         }
         setServer(found);
@@ -70,7 +71,7 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
         secret.reset({ stored: found.secretSet, variable: found.secretVariableId });
       })
       .catch((cause: unknown) => {
-        setLoadError(cause instanceof Error ? cause.message : 'Could not load the server.');
+        setLoadError(cause instanceof Error ? cause.message : t('Could not load the server.'));
       });
   }, [serverId]);
 
@@ -78,7 +79,7 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
     try {
       secret.show((await revealMcpServerSecret(serverId)) ?? '');
     } catch (cause) {
-      setSaveError(cause instanceof Error ? cause.message : 'Could not reveal the credentials.');
+      setSaveError(cause instanceof Error ? cause.message : t('Could not reveal the credentials.'));
     }
   }
 
@@ -124,7 +125,7 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
     if (name.trim() === '' || address.trim() === '' || saving) return;
 
     if (secret.unchosen) {
-      setSaveError('Choose the workspace secret this server reads its token from.');
+      setSaveError(t('Choose the workspace secret this server reads its token from.'));
       setSaved(false);
       return;
     }
@@ -156,7 +157,7 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
       secret.reset({ stored: updated.secretSet, variable: updated.secretVariableId });
       setSaved(true);
     } catch (cause) {
-      setSaveError(cause instanceof Error ? cause.message : 'Could not save the server.');
+      setSaveError(cause instanceof Error ? cause.message : t('Could not save the server.'));
     } finally {
       setSaving(false);
     }
@@ -178,9 +179,9 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
     >
       <header className={styles.contentHeader}>
         <p className={styles.breadcrumb}>
-          <BackLink to={`/workspace/${workspaceId}/integrations`} label="Integrations" />
+          <BackLink to={`/workspace/${workspaceId}/integrations`} label={t('Integrations')} />
           <Link className={styles.crumbLink} to={`/workspace/${workspaceId}/integrations`}>
-            Integrations
+            {t('Integrations')}
           </Link>
           <span className={styles.crumbSeparator}>/</span>
           <span className={styles.crumbCurrent}>{server?.name ?? '…'}</span>
@@ -204,12 +205,10 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
       ) : (
         <>
           <form className={styles.card} onSubmit={handleSave}>
-            <h2 className={styles.cardTitle}>General</h2>
+            <h2 className={styles.cardTitle}>{t('General')}</h2>
 
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="server-name">
-                Name
-              </label>
+              <label className={styles.label} htmlFor="server-name">{t('Name')}</label>
               <div className={styles.inputWrapper}>
                 <input
                   id="server-name"
@@ -224,9 +223,7 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
             </div>
 
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="server-address">
-                Address
-              </label>
+              <label className={styles.label} htmlFor="server-address">{t('Address')}</label>
               <div className={styles.inputWrapper}>
                 <input
                   id="server-address"
@@ -241,9 +238,7 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
             </div>
 
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="server-auth">
-                Auth Type
-              </label>
+              <label className={styles.label} htmlFor="server-auth">{t('Auth Type')}</label>
               <div className={styles.inputWrapper}>
                 <select
                   id="server-auth"
@@ -272,19 +267,19 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
               */
               <SecretField
                 id="server-secret"
-                label="Token / Key"
+                label={t('Token / Key')}
                 field={secret}
                 options={offered}
                 variablesPath={`/workspace/${workspaceId}/variables`}
-                placeholder="Enter token or key..."
-                hint="Whatever the server expects, sent the way the authentication method above says."
+                placeholder={t('Enter token or key...')}
+                hint={t("Whatever the server expects, sent the way the authentication method above says.")}
                 onSource={chooseSource}
                 onValue={touched}
                 onVariable={touched}
                 onReveal={() => void handleReveal()}
                 broken={
                   server.secretVariableMissing
-                    ? 'The workspace secret this token was read from is gone, so this server has nothing to authenticate with. Its address is fine. Point this field at another secret, or give it a value of its own.'
+                    ? t('The workspace secret this token was read from is gone, so this server has nothing to authenticate with. Its address is fine. Point this field at another secret, or give it a value of its own.')
                     : null
                 }
               />
@@ -301,28 +296,28 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
             )}
 
             <div className={styles.actionRow}>
-              {saved && saveError === null && <p className={styles.savedNote}>Saved.</p>}
+              {saved && saveError === null && <p className={styles.savedNote}>{t('Saved.')}</p>}
               <button
                 type="submit"
                 className={styles.save}
                 disabled={name.trim() === '' || address.trim() === '' || saving}
               >
-                {saving ? 'Saving…' : 'Save Changes'}
+                {saving ? t('Saving…') : t('Save Changes')}
               </button>
             </div>
           </form>
 
           <section className={`${styles.card} ${styles.dangerCard}`}>
-            <h2 className={styles.dangerHeading}>Danger Zone</h2>
+            <h2 className={styles.dangerHeading}>{t('Danger Zone')}</h2>
             <div className={styles.dangerRow}>
               <div className={styles.dangerText}>
-                <p className={styles.dangerTitle}>Remove MCP Server</p>
+                <p className={styles.dangerTitle}>{t('Remove MCP Server')}</p>
                 <p className={styles.dangerMessage}>
-                  Remove this server from the workspace. This will not delete the server configuration.
+                  {t('Remove this server from the workspace. This will not delete the server configuration.')}
                 </p>
               </div>
               <button type="button" className={styles.dangerAction} onClick={handleRemove}>
-                Remove
+                {t('Remove')}
               </button>
             </div>
           </section>

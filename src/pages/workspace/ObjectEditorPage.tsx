@@ -27,6 +27,7 @@ import { useLeaveGuard } from '../../components/leaveGuard';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './EditorPage.module.css';
+import { t } from '../../i18n';
 
 export interface ObjectEditorPageProps {
   session: SessionUser;
@@ -129,11 +130,11 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
     if (objectId === '') return;
     fetchObject(objectId)
       .then((loaded) => {
-        if (loaded === null) setLoadError('That object does not exist, or you do not have access to it.');
+        if (loaded === null) setLoadError(t('That object does not exist, or you do not have access to it.'));
         else apply(loaded);
       })
       .catch((cause: unknown) => {
-        setLoadError(cause instanceof Error ? cause.message : 'Could not load the object.');
+        setLoadError(cause instanceof Error ? cause.message : t('Could not load the object.'));
       });
   }, [objectId]);
 
@@ -183,7 +184,7 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
           : { ok: false, message: checked.message },
       );
     } catch (cause) {
-      setStatus({ ok: false, message: cause instanceof Error ? cause.message : 'Could not check the schema.', whole: true });
+      setStatus({ ok: false, message: cause instanceof Error ? cause.message : t('Could not check the schema.'), whole: true });
     }
   }
 
@@ -212,7 +213,7 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
       setStatus({ ok: true, message: "every property's type resolves" });
       return true;
     } catch (cause) {
-      setSaveError(cause instanceof Error ? cause.message : 'Could not save the object.');
+      setSaveError(cause instanceof Error ? cause.message : t('Could not save the object.'));
       return false;
     } finally {
       setSaving(false);
@@ -268,7 +269,7 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
     } catch (cause) {
       setRemoving(false);
       // Refused while something still points at it, and the reason says which.
-      setSaveError(cause instanceof Error ? cause.message : 'Could not delete the object.');
+      setSaveError(cause instanceof Error ? cause.message : t('Could not delete the object.'));
     }
   }
 
@@ -283,9 +284,9 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
     >
       <header className={styles.headerBlock}>
         <p className={styles.breadcrumbs}>
-          <BackLink to={`/workspace/${workspaceId}/objects`} label="Objects" />
+          <BackLink to={`/workspace/${workspaceId}/objects`} label={t('Objects')} />
           <Link className={styles.crumbLink} to={`/workspace/${workspaceId}/objects`}>
-            Objects
+            {t('Objects')}
           </Link>
           <span className={styles.crumbSeparator}>/</span>
           <span className={styles.crumbCurrent}>{held?.name ?? '…'}</span>
@@ -295,14 +296,14 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
             <h1 className={styles.pageTitle}>{held?.name ?? 'Object'}</h1>
           </div>
           <div className={styles.actions}>
-            {saved && saveError === null && <span className={styles.savedInline}>Saved.</span>}
+            {saved && saveError === null && <span className={styles.savedInline}>{t('Saved.')}</span>}
             {/*
               Beside the button it is about. It used to sit in the footer at the
               far end of a row from "+ Add Property", a control it has nothing
               to do with - see `ValidationStatus`.
             */}
             <ValidationStatus
-              subject="The properties"
+              subject={t("The properties")}
               status={status}
               explains={
                 <>
@@ -313,7 +314,7 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
               }
             />
             <button type="button" className={styles.secondaryButton} onClick={() => void handleValidate()}>
-              Validate
+              {t('Validate')}
             </button>
             <button
               type="button"
@@ -321,7 +322,7 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
               onClick={() => void handleSave()}
               disabled={saving || held === null}
             >
-              {saving ? 'Saving…' : 'Save Changes'}
+              {saving ? t('Saving…') : t('Save Changes')}
             </button>
           </div>
         </div>
@@ -346,7 +347,7 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
               <header className={styles.editorHeader}>
                 <span className={styles.editorTitle}>
                   <img src={fileTextIcon} alt="" width={16} height={16} />
-                  Object Schema Definition
+                  {t('Object Schema Definition')}
                 </span>
                 <span className={styles.editorBadge}>Typed Schema</span>
               </header>
@@ -366,7 +367,7 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
                     <div className={styles.propertyMain}>
                       <span className={`${styles.propertyField} ${styles.propertyNameCol}`}>
                         <label className={styles.propertyLabel} htmlFor={`property-name-${index}`}>
-                          Name
+                          {t('Name')}
                         </label>
                         <input
                           id={`property-name-${index}`}
@@ -379,15 +380,15 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
                       </span>
                       <span className={`${styles.propertyField} ${styles.propertyTypeCol}`}>
                         <label className={styles.propertyLabel} htmlFor={`property-type-${index}`}>
-                          Type
+                          {t('Type')}
                         </label>
                         <DefinitionPicker
                           id={`property-type-${index}`}
                           value={row.type}
                           options={typeOptions}
                           onChoose={(value) => edit(index, { type: value })}
-                          placeholder="Choose a type…"
-                          searchPlaceholder="Search types…"
+                          placeholder={t('Choose a type…')}
+                          searchPlaceholder={t("Search types…")}
                           ariaLabel={`Type of ${called}`}
                         />
                       </span>
@@ -399,7 +400,7 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
                       */}
                       <span className={`${styles.propertyField} ${styles.propertyHoldsCol}`}>
                         <span className={styles.propertyLabel} id={`property-values-${index}`}>
-                          Values
+                          {t('Values')}
                         </span>
                         <span className={styles.holds} role="group" aria-label={`Whether ${called} is a single value or a list`}>
                           <button
@@ -408,7 +409,7 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
                             className={row.many ? styles.holdsOption : styles.holdsOptionActive}
                             onClick={() => edit(index, { many: false })}
                           >
-                            Single
+                            {t('Single')}
                           </button>
                           <button
                             type="button"
@@ -416,7 +417,7 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
                             className={row.many ? styles.holdsOptionActive : styles.holdsOption}
                             onClick={() => edit(index, { many: true })}
                           >
-                            List
+                            {t('List')}
                           </button>
                         </span>
                       </span>
@@ -425,7 +426,7 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
                           type="button"
                           className={styles.propertyDelete}
                           aria-label={`Remove ${called}`}
-                          title="Remove this property"
+                          title={t('Remove this property')}
                           onClick={() => {
                             setRows((current) => current.filter((_, at) => at !== index));
                             setSaved(false);
@@ -447,14 +448,14 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
                     */}
                     <div className={`${styles.propertyField} ${styles.propertyDescriptionRow}`}>
                       <label className={styles.propertyLabel} htmlFor={`property-description-${index}`}>
-                        Description
+                        {t('Description')}
                       </label>
                       <input
                         id={`property-description-${index}`}
                         className={styles.propertyDescription}
                         value={row.description}
                         maxLength={FIELD_DESCRIPTION_LIMIT}
-                        placeholder="What this field means, for a reader and for a model"
+                        placeholder={t('What this field means, for a reader and for a model')}
                         onChange={(event) => edit(index, { description: event.target.value })}
                       />
                     </div>
@@ -475,7 +476,7 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
                     setStatus(null);
                   }}
                 >
-                  + Add Property
+                  {t('+ Add Property')}
                 </button>
               </footer>
             </section>
@@ -485,7 +486,7 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
                 <h2 className={styles.panelHeading}>Object Details</h2>
                 <div className={styles.field}>
                   <label className={styles.label} htmlFor="object-name">
-                    Name
+                    {t('Name')}
                   </label>
                   <input
                     id="object-name"
@@ -499,7 +500,7 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
                 </div>
                 <div className={styles.field}>
                   <label className={styles.label} htmlFor="object-description">
-                    Description
+                    {t('Description')}
                   </label>
                   <textarea
                     id="object-description"
@@ -509,7 +510,7 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
                       setDescription(event.target.value);
                       setSaved(false);
                     }}
-                    placeholder="What this shape is, for whoever points at it."
+                    placeholder={t('What this shape is, for whoever points at it.')}
                   />
                 </div>
               </div>
@@ -540,7 +541,7 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
                 onClick={() => void handleDelete()}
                 disabled={removing || held === null}
               >
-                {removing ? 'Deleting…' : 'Delete Object'}
+                {removing ? t('Deleting…') : t('Delete Object')}
               </button>
             </aside>
           </div>
@@ -553,7 +554,7 @@ export function ObjectEditorPage({ session, onSignOut }: ObjectEditorPageProps) 
         be showing behind it.
       */}
       <UnsavedWorkDialog
-        subject={guard.asking ? (held?.name ?? 'This object') : null}
+        subject={guard.asking ? (held?.name ?? t('This object')) : null}
         creating={false}
         onStay={guard.stay}
         onLeave={guard.leave}

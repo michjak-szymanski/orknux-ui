@@ -12,6 +12,7 @@ import type { DiscoveredModel, Model, ModelKind, ModelProvider } from '../api/mo
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
 import { FieldHint } from './FieldHint';
 import styles from './Dialog.module.css';
+import { t } from '../i18n';
 
 export interface ModelDialogProps {
   open: boolean;
@@ -137,7 +138,7 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
         if (current) setOffered(found);
       })
       .catch((cause: unknown) => {
-        if (current) setOfferError(cause instanceof Error ? cause.message : 'Could not ask the provider.');
+        if (current) setOfferError(cause instanceof Error ? cause.message : t('Could not ask the provider.'));
       })
       .finally(() => {
         if (current) setAsking(false);
@@ -237,7 +238,7 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
         }),
       );
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not add the model.');
+      setError(cause instanceof Error ? cause.message : t('Could not add the model.'));
       setSubmitting(false);
     }
   }
@@ -246,10 +247,12 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
     <dialog ref={dialogRef} className={`${styles.dialog} ${styles.dialogWide}`} onCancel={onClose} onClose={onClose}>
       <form className={styles.body} onSubmit={handleSubmit}>
         <header className={styles.header}>
-          <h2 className={styles.title}>Add Model</h2>
+          <h2 className={styles.title}>{t('Add Model')}</h2>
         </header>
 
-        <p className={styles.dialogMessage}>Add a model this workspace may reach through one of its providers</p>
+        <p className={styles.dialogMessage}>
+          {t('Add a model this workspace may reach through one of its providers')}
+        </p>
 
         <div className={styles.fields}>
           {/*
@@ -258,9 +261,7 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
             which existing provider it belongs to is the wrong first question.
           */}
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="model-kind">
-              Type
-            </label>
+            <label className={styles.label} htmlFor="model-kind">{t('Type')}</label>
             <div className={styles.inputWrapper}>
               <select
                 id="model-kind"
@@ -283,11 +284,9 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
             <>
               <div className={styles.field}>
                 <span className={styles.labelWithHint}>
-                  <label className={styles.label} htmlFor="model-api">
-                    Provider
-                  </label>
-                  <FieldHint label="Provider">
-                    The shape OpenAI and the servers that imitate it speak: a URL that answers
+                  <label className={styles.label} htmlFor="model-api">{t('Provider')}</label>
+                  <FieldHint label={t('Provider')}>
+                    {t('The shape OpenAI and the servers that imitate it speak: a URL that answers')}
                     <code>{kind === 'SPEECH' ? ' /audio/speech' : ' /audio/transcriptions'}</code>.
                   </FieldHint>
                 </span>
@@ -300,9 +299,7 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
               </div>
 
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="model-endpoint">
-                  Server URL
-                </label>
+                <label className={styles.label} htmlFor="model-endpoint">{t('Server URL')}</label>
                 <div className={styles.inputWrapper}>
                   <input
                     id="model-endpoint"
@@ -319,11 +316,9 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
 
               <div className={styles.field}>
                 <span className={styles.labelWithHint}>
-                  <label className={styles.label} htmlFor="model-key">
-                    API Key
-                  </label>
-                  <FieldHint label="API Key">
-                    Left empty for a server on your own network that asks for none.
+                  <label className={styles.label} htmlFor="model-key">{t('API Key')}</label>
+                  <FieldHint label={t('API Key')}>
+                    {t('Left empty for a server on your own network that asks for none.')}
                   </FieldHint>
                 </span>
                 <div className={styles.inputWrapper}>
@@ -333,7 +328,7 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
                     className={styles.input}
                     type="password"
                     autoComplete="off"
-                    placeholder="Optional"
+                    placeholder={t('Optional')}
                     value={apiKey}
                     onChange={(event) => setApiKey(event.target.value)}
                   />
@@ -342,9 +337,7 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
             </>
           ) : (
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="model-provider">
-                Provider
-              </label>
+              <label className={styles.label} htmlFor="model-provider">{t('Provider')}</label>
               <div className={styles.inputWrapper}>
                 <select
                   id="model-provider"
@@ -366,16 +359,14 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
           )}
 
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="model-name">
-              Name
-            </label>
+            <label className={styles.label} htmlFor="model-name">{t('Name')}</label>
             <div className={styles.inputWrapper}>
               <input
                 id="model-name"
                 name="modelName"
                 className={styles.input}
                 type="text"
-                placeholder="Claude 3.5 Sonnet"
+                placeholder={t("Claude 3.5 Sonnet")}
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 autoFocus
@@ -386,22 +377,20 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
 
           <div className={styles.field}>
             <span className={styles.labelWithHint}>
-              <label className={styles.label} htmlFor="model-id">
-                Model ID
-              </label>
+              <label className={styles.label} htmlFor="model-id">{t('Model ID')}</label>
               {/*
                 What to type, which differs by what is being added. It was two
                 paragraphs under the field; it is the same two sentences, behind
                 the control the rest of the product asks with.
               */}
               {kind === 'TRANSCRIPTION' && (
-                <FieldHint label="Model ID">
+                <FieldHint label={t('Model ID')}>
                   Whatever your server calls the model — <code>whisper-1</code> is accepted by most of
                   them, and faster-whisper takes names like <code>Systran/faster-whisper-small</code>.
                 </FieldHint>
               )}
               {kind === 'SPEECH' && (
-                <FieldHint label="Model ID">
+                <FieldHint label={t('Model ID')}>
                   Whatever your server calls the model — <code>tts-1</code> for OpenAI, and a local
                   reader usually takes the name of the voice pack it loaded.
                 </FieldHint>
@@ -426,10 +415,10 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
               rather than instead of it: a model the provider has not listed yet
               still has to be addable by hand.
             */}
-            {asking && <p className={styles.fieldNote}>Asking the provider what it offers…</p>}
+            {asking && <p className={styles.fieldNote}>{t('Asking the provider what it offers…')}</p>}
             {offerError !== null && <p className={styles.fieldNote}>{offerError}</p>}
             {offered !== null && offered.length === 0 && (
-              <p className={styles.fieldNote}>The provider listed no models.</p>
+              <p className={styles.fieldNote}>{t('The provider listed no models.')}</p>
             )}
             {offered !== null && offered.length > 0 && (
               <div className={styles.inputWrapper}>
@@ -438,7 +427,7 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
                   className={`${styles.input} ${styles.select}`}
                   value=""
                   onChange={(event) => choose(event.target.value)}
-                  aria-label="Models the provider offers"
+                  aria-label={t('Models the provider offers')}
                 >
                   <option value="">Choose from {offered.length} the provider offers…</option>
                   {offered.map((candidate) => (
@@ -462,10 +451,8 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
           {kind === 'SPEECH' && (
             <div className={styles.field}>
               <span className={styles.labelWithHint}>
-                <label className={styles.label} htmlFor="model-voice">
-                  Voice
-                </label>
-                <FieldHint label="Voice">
+                <label className={styles.label} htmlFor="model-voice">{t('Voice')}</label>
+                <FieldHint label={t('Voice')}>
                   Left empty sends no voice at all, which is what a server with a single built-in one
                   wants. OpenAI requires one — <code>alloy</code>, <code>nova</code> and the rest.
                 </FieldHint>
@@ -485,9 +472,7 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
           )}
 
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="model-context">
-              Context Window
-            </label>
+            <label className={styles.label} htmlFor="model-context">{t('Context Window')}</label>
             <div className={styles.inputWrapper}>
               <input
                 id="model-context"
@@ -503,9 +488,7 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="model-max-output">
-              Max Output
-            </label>
+            <label className={styles.label} htmlFor="model-max-output">{t('Max Output')}</label>
             <div className={styles.inputWrapper}>
               <input
                 id="model-max-output"
@@ -523,7 +506,7 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
           {/* What the provider charges, so a cost can be worked out rather than guessed. */}
           <div className={styles.field}>
             <label className={styles.label} htmlFor="model-input-cost">
-              Input $ / million tokens
+              {t('Input $ / million tokens')}
             </label>
             <div className={styles.inputWrapper}>
               <input
@@ -541,7 +524,7 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
 
           <div className={styles.field}>
             <label className={styles.label} htmlFor="model-output-cost">
-              Output $ / million tokens
+              {t('Output $ / million tokens')}
             </label>
             <div className={styles.inputWrapper}>
               <input
@@ -566,10 +549,10 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
 
         <div className={styles.actions}>
           <button type="button" className={styles.ghost} onClick={onClose} disabled={submitting}>
-            Cancel
+            {t('Cancel')}
           </button>
           <button type="submit" className={styles.filled} disabled={!complete || submitting}>
-            {submitting ? 'Adding…' : 'Add Model'}
+            {submitting ? t('Adding…') : t('Add Model')}
           </button>
         </div>
       </form>

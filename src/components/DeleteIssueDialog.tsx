@@ -4,6 +4,7 @@ import { deleteIssue } from '../api/issues';
 import type { Issue } from '../api/issues';
 import trashIcon from '../assets/trash-18.svg';
 import styles from './Dialog.module.css';
+import { t } from '../i18n';
 
 export interface DeleteIssueDialogProps {
   /** The issue to delete, or null when the dialog is closed. */
@@ -44,7 +45,7 @@ export function DeleteIssueDialog({ issue, onClose, onDeleted }: DeleteIssueDial
       await deleteIssue(issue.id);
       onDeleted();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not delete the issue.');
+      setError(cause instanceof Error ? cause.message : t('Could not delete the issue.'));
       setSubmitting(false);
     }
   }
@@ -53,7 +54,7 @@ export function DeleteIssueDialog({ issue, onClose, onDeleted }: DeleteIssueDial
     <dialog ref={dialogRef} className={styles.dialog} onCancel={onClose} onClose={onClose}>
       <div className={styles.body}>
         <header className={styles.header}>
-          <h2 className={styles.title}>Delete Issue</h2>
+          <h2 className={styles.title}>{t('Delete Issue')}</h2>
         </header>
 
         <div className={styles.warning}>
@@ -78,7 +79,7 @@ export function DeleteIssueDialog({ issue, onClose, onDeleted }: DeleteIssueDial
 
         <div className={styles.actions}>
           <button type="button" className={styles.ghost} onClick={onClose} disabled={submitting}>
-            Cancel
+            {t('Cancel')}
           </button>
           <button
             type="button"
@@ -87,7 +88,7 @@ export function DeleteIssueDialog({ issue, onClose, onDeleted }: DeleteIssueDial
             disabled={submitting}
             autoFocus
           >
-            {submitting ? 'Deleting…' : 'Delete Issue'}
+            {submitting ? t('Deleting…') : t('Delete Issue')}
           </button>
         </div>
       </div>

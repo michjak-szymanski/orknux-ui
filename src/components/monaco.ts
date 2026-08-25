@@ -11,6 +11,7 @@ import editorWorker from 'monaco-editor/editor/editor.worker.js?worker';
 import tsWorker from 'monaco-editor/language/typescript/ts.worker.js?worker';
 
 import { currentTheme } from '../session/theme';
+import { t } from '../i18n';
 
 /**
  * Monaco, set up once for the whole application.
@@ -383,7 +384,7 @@ export async function compile(source: string): Promise<Compiled> {
     const emitted = await client.getEmitOutput(name);
     const javascript = emitted.outputFiles.find((file) => file.name.endsWith('.js'))?.text;
     if (javascript === undefined) {
-      return { ok: false, reason: 'The compiler produced no JavaScript for this function.', line: null };
+      return { ok: false, reason: t('The compiler produced no JavaScript for this function.'), line: null };
     }
 
     return { ok: true, javascript };
@@ -411,7 +412,7 @@ async function typeScriptWorker() {
       await new Promise((settle) => setTimeout(settle, WORKER_WAIT_MS));
     }
   }
-  throw new Error('The TypeScript service did not start.');
+  throw new Error(t('The TypeScript service did not start.'));
 }
 
 /** Setting a language up takes a tick or two, not a second. */
@@ -422,7 +423,7 @@ const WORKER_WAIT_MS = 50;
 function flatten(message: string | { messageText?: unknown }): string {
   if (typeof message === 'string') return message;
   const text = message.messageText;
-  return typeof text === 'string' ? text : 'The TypeScript could not be read.';
+  return typeof text === 'string' ? text : t('The TypeScript could not be read.');
 }
 
 export { monaco };

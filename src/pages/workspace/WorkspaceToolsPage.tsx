@@ -23,6 +23,7 @@ import { FieldHint } from '../../components/FieldHint';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './CatalogueTable.module.css';
+import { t } from '../../i18n';
 
 export interface WorkspaceToolsPageProps {
   session: SessionUser;
@@ -47,7 +48,7 @@ export function WorkspaceToolsPage({ session, onSignOut }: WorkspaceToolsPagePro
       .then(setTools)
       .catch((cause: unknown) => {
         setTools(null);
-        setError(cause instanceof Error ? cause.message : 'Could not load the tools.');
+        setError(cause instanceof Error ? cause.message : t('Could not load the tools.'));
       });
   }, [workspaceId, page]);
 
@@ -58,7 +59,7 @@ export function WorkspaceToolsPage({ session, onSignOut }: WorkspaceToolsPagePro
       await setToolEnabled(tool.id, !tool.enabled);
       load();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not change the tool.');
+      setError(cause instanceof Error ? cause.message : t('Could not change the tool.'));
     }
   }
 
@@ -72,15 +73,15 @@ export function WorkspaceToolsPage({ session, onSignOut }: WorkspaceToolsPagePro
     >
       <header className={styles.header}>
         <div className={styles.titleGroup}>
-          <h1 className={styles.title}>Tools</h1>
-          <p className={styles.subtitle}>Custom JavaScript tools callable by agents during execution.</p>
+          <h1 className={styles.title}>{t('Tools')}</h1>
+          <p className={styles.subtitle}>
+            {t('Custom JavaScript tools callable by agents during execution.')}
+          </p>
         </div>
         <div className={transferStyles.headerActions}>
           <ImportComponentsButton workspaceId={workspaceId} onImported={load} />
           <UseTemplateButton workspaceId={workspaceId} kind="TOOL" onImported={load} />
-          <button type="button" className={styles.createButton} onClick={() => setCreating(true)}>
-            + Create Tool
-          </button>
+          <button type="button" className={styles.createButton} onClick={() => setCreating(true)}>{t('+ Create Tool')}</button>
         </div>
       </header>
 
@@ -92,20 +93,20 @@ export function WorkspaceToolsPage({ session, onSignOut }: WorkspaceToolsPagePro
 
       <section className={styles.card}>
         <div className={styles.tableHeader}>
-          <span className={styles.colName}>Name</span>
-          <span className={styles.colDescription}>Description</span>
-          <span className={styles.colStatus}>Status</span>
-          <span className={styles.colModified}>Last Modified</span>
-          <span className={styles.colActions}>Actions</span>
+          <span className={styles.colName}>{t('Name')}</span>
+          <span className={styles.colDescription}>{t('Description')}</span>
+          <span className={styles.colStatus}>{t('Status')}</span>
+          <span className={styles.colModified}>{t('Last Modified')}</span>
+          <span className={styles.colActions}>{t('Actions')}</span>
         </div>
 
         {tools === null && error === null && <p className={styles.notice}><Loader /></p>}
         {tools?.content.length === 0 && (
           <p className={styles.notice}>
             <span className={styles.labelWithHint}>
-              No tools yet.
-              <FieldHint label="No tools yet">
-                A tool is JavaScript an agent may call while it runs.
+              {t('No tools yet.')}
+              <FieldHint label={t('No tools yet')}>
+                {t('A tool is JavaScript an agent may call while it runs.')}
               </FieldHint>
             </span>
           </p>
@@ -119,7 +120,7 @@ export function WorkspaceToolsPage({ session, onSignOut }: WorkspaceToolsPagePro
             <span
               className={`${styles.colDescription} ${tool.description === null ? styles.noDescription : styles.description}`}
             >
-              {tool.description ?? 'No description'}
+              {tool.description ?? t('No description')}
             </span>
             <span className={styles.colStatus}>
               <button
@@ -169,12 +170,12 @@ export function WorkspaceToolsPage({ session, onSignOut }: WorkspaceToolsPagePro
 
       <NameDialog
         open={creating}
-        title="Create Tool"
-        message="A tool is JavaScript an agent may call while it runs."
+        title={t('Create Tool')}
+        message={t("A tool is JavaScript an agent may call while it runs.")}
         nameLabel="Name"
         namePlaceholder="httpRequest"
-        descriptionPlaceholder="Make HTTP requests to external APIs"
-        submitLabel="Create Tool"
+        descriptionPlaceholder={t("Make HTTP requests to external APIs")}
+        submitLabel={t("Create Tool")}
         onClose={() => setCreating(false)}
         onSubmit={async (name, description) => {
           const created = await createTool(workspaceId, { name, description: description || undefined });

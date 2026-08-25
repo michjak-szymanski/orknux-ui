@@ -13,6 +13,7 @@ import { UsedBy } from '../../components/UsedBy';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './AgentSettingsPage.module.css';
+import { t } from '../../i18n';
 
 export interface TriggerSettingsPageProps {
   session: SessionUser;
@@ -74,11 +75,11 @@ export function TriggerSettingsPage({ session, onSignOut }: TriggerSettingsPageP
     fetchTrigger(triggerId)
       .then((found) => {
         if (!current) return;
-        if (found === null) setLoadError('That trigger does not exist, or you do not have access to it.');
+        if (found === null) setLoadError(t('That trigger does not exist, or you do not have access to it.'));
         else setTrigger(found);
       })
       .catch((cause: unknown) => {
-        if (current) setLoadError(cause instanceof Error ? cause.message : 'Could not load the trigger.');
+        if (current) setLoadError(cause instanceof Error ? cause.message : t('Could not load the trigger.'));
       });
 
     return () => {
@@ -95,7 +96,7 @@ export function TriggerSettingsPage({ session, onSignOut }: TriggerSettingsPageP
       await deleteTrigger(triggerId);
       navigate(list);
     } catch (cause) {
-      setRemoveError(cause instanceof Error ? cause.message : 'Could not delete the trigger.');
+      setRemoveError(cause instanceof Error ? cause.message : t('Could not delete the trigger.'));
       setRemoving(false);
     }
   }
@@ -111,14 +112,12 @@ export function TriggerSettingsPage({ session, onSignOut }: TriggerSettingsPageP
     >
       <header className={styles.headerBlock}>
         <p className={styles.breadcrumbs}>
-          <BackLink to={list} label="Triggers" />
-          <Link className={styles.crumbLink} to={list}>
-            Triggers
-          </Link>
+          <BackLink to={list} label={t('Triggers')} />
+          <Link className={styles.crumbLink} to={list}>{t('Triggers')}</Link>
           <span className={styles.crumbSeparator}>/</span>
           <span className={styles.crumbCurrent}>{trigger?.name ?? '…'}</span>
         </p>
-        <h1 className={styles.pageTitle}>Trigger Settings</h1>
+        <h1 className={styles.pageTitle}>{t('Trigger Settings')}</h1>
       </header>
 
       {loadError !== null ? (
@@ -150,7 +149,7 @@ export function TriggerSettingsPage({ session, onSignOut }: TriggerSettingsPageP
               }}
             />
 
-            {saved && <p className={styles.savedNote}>Saved.</p>}
+            {saved && <p className={styles.savedNote}>{t('Saved.')}</p>}
 
             {/*
               Which workflows start from it. The draft graph alone is the
@@ -163,13 +162,12 @@ export function TriggerSettingsPage({ session, onSignOut }: TriggerSettingsPageP
             </section>
 
             <section className={`${styles.card} ${styles.dangerCard}`}>
-              <h2 className={styles.dangerHeading}>Danger Zone</h2>
+              <h2 className={styles.dangerHeading}>{t('Danger Zone')}</h2>
               <div className={styles.dangerRow}>
                 <div className={styles.dangerText}>
                   <p className={styles.dangerTitle}>Delete {trigger.name}</p>
                   <p className={styles.dangerMessage}>
-                    Nothing waits on this event any more. A workflow node pointing at it stops
-                    starting runs, and keeps saying so until it is pointed somewhere else.
+                    {t('Nothing waits on this event any more. A workflow node pointing at it stops starting runs, and keeps saying so until it is pointed somewhere else.')}
                   </p>
                   {removeError !== null && (
                     <p className={styles.error} role="alert">
@@ -183,7 +181,7 @@ export function TriggerSettingsPage({ session, onSignOut }: TriggerSettingsPageP
                   onClick={() => void handleDelete()}
                   disabled={removing}
                 >
-                  {removing ? 'Deleting…' : 'Delete'}
+                  {removing ? t('Deleting…') : 'Delete'}
                 </button>
               </div>
             </section>

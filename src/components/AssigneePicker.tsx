@@ -4,6 +4,7 @@ import { ASSIGNEE_KIND_LABEL, fetchAssignees } from '../api/issues';
 import type { Assignee, AssigneeKind } from '../api/issues';
 import { initialsOf } from '../api/users';
 import styles from './AssigneePicker.module.css';
+import { t } from '../i18n';
 
 export interface AssigneePickerProps {
   workspaceId: string;
@@ -58,7 +59,7 @@ export function AssigneePicker({
   chosen,
   onChoose,
   label = 'Assignee',
-  placeholder = 'No one',
+  placeholder = t('No one'),
   kinds,
   clearable = true,
 }: AssigneePickerProps) {
@@ -184,8 +185,8 @@ export function AssigneePicker({
             type="search"
             value={search}
             autoFocus
-            placeholder="Find a person, agent or model…"
-            aria-label="Search for someone to assign"
+            placeholder={t('Find a person, agent or model…')}
+            aria-label={t('Search for someone to assign')}
             onChange={(event) => setSearch(event.target.value)}
           />
 
@@ -201,12 +202,12 @@ export function AssigneePicker({
                 setOpen(false);
               }}
             >
-              <span className={styles.nobody}>No one</span>
+              <span className={styles.nobody}>{t('No one')}</span>
             </button>
           )}
 
-          {loading && <p className={styles.notice}>Looking…</p>}
-          {!loading && found.length === 0 && <p className={styles.notice}>Nobody by that name.</p>}
+          {loading && <p className={styles.notice}>{t('Looking…')}</p>}
+          {!loading && found.length === 0 && <p className={styles.notice}>{t('Nobody by that name.')}</p>}
 
           {found.map((candidate, index) => (
             <button

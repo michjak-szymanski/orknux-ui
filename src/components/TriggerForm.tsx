@@ -37,6 +37,7 @@ import { FieldHint } from './FieldHint';
 import { IconField } from './IconField';
 import { NameDialog } from './NameDialog';
 import own from './TriggerForm.module.css';
+import { t } from '../i18n';
 
 /**
  * The class names the form paints itself with.
@@ -102,12 +103,12 @@ const OBJECT_PAGE_SIZE = 100;
  * form that re-renders on every keystroke, would be a picker nobody can arrow
  * down through.
  */
-const NEW_FUNCTION_ROW = { value: NEW_FUNCTION, label: '+ New function' };
-const NEW_CONDITION_ROW = { value: NEW_CONDITION, label: '+ New condition' };
-const NEW_OBJECT_ROW = { value: NEW_OBJECT, label: '+ New object' };
+const NEW_FUNCTION_ROW = { value: NEW_FUNCTION, label: t('+ New function') };
+const NEW_CONDITION_ROW = { value: NEW_CONDITION, label: t('+ New condition') };
+const NEW_OBJECT_ROW = { value: NEW_OBJECT, label: t('+ New object') };
 
 /** Choosing nothing is a real answer here, so it is a row like any other. */
-const ANY_EVENT_ROW = { value: '', label: 'Fire on everything' };
+const ANY_EVENT_ROW = { value: '', label: t('Fire on everything') };
 
 /**
  * What a trigger waits for and what it hands on. The form changes with the type:
@@ -293,7 +294,7 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
             connectionId: held.id,
             name: held.name,
             outcome: 'UNCHECKED',
-            message: 'Not checked yet.',
+            message: t('Not checked yet.'),
             userId: null,
             handle: null,
             receives: null,
@@ -409,7 +410,7 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
       setSubmitting(false);
       onSaved(saved);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save the trigger.');
+      setError(cause instanceof Error ? cause.message : t('Could not save the trigger.'));
       setSubmitting(false);
     }
   }
@@ -419,9 +420,7 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
       <form className={styles.body} onSubmit={handleSubmit}>
         <div className={styles.fields}>
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="trigger-name">
-              Trigger Name
-            </label>
+            <label className={styles.label} htmlFor="trigger-name">{t('Trigger Name')}</label>
             <div className={styles.inputWrapper}>
               <input
                 id="trigger-name"
@@ -438,9 +437,7 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="trigger-type">
-              Type
-            </label>
+            <label className={styles.label} htmlFor="trigger-type">{t('Type')}</label>
             <div className={styles.inputWrapper}>
               <select
                 id="trigger-type"
@@ -451,9 +448,9 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                 // What a trigger waits for does not change; its settings do.
                 disabled={editing}
               >
-                <option value="INCOMING_CONNECTION">Connection</option>
-                <option value="SCHEDULED">Scheduled</option>
-                <option value="WEBHOOK">Webhook</option>
+                <option value="INCOMING_CONNECTION">{t('Connection')}</option>
+                <option value="SCHEDULED">{t('Scheduled')}</option>
+                <option value="WEBHOOK">{t('Webhook')}</option>
               </select>
               <img src={chevronDown12Icon} alt="" width={12} height={12} />
             </div>
@@ -468,12 +465,9 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
           <div className={styles.field}>
             <span className={styles.labelRow}>
               <span className={own.labelWithHint}>
-                <span className={styles.label} id="trigger-enabled-label">
-                  Enabled
-                </span>
-                <FieldHint label="Enabled">
-                  Switched off it stays in the catalogue and fires at nothing, and the workflows
-                  pointing at it stop being started.
+                <span className={styles.label} id="trigger-enabled-label">{t('Enabled')}</span>
+                <FieldHint label={t('Enabled')}>
+                  {t('Switched off it stays in the catalogue and fires at nothing, and the workflows pointing at it stop being started.')}
                 </FieldHint>
               </span>
               <button
@@ -501,10 +495,10 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
               <div className={styles.field}>
                 <span className={own.labelWithHint}>
                   <label className={styles.label} htmlFor="trigger-webhook-path">
-                    URL
+                    {t('URL')}
                   </label>
                   <FieldHint label="URL">
-                    Where this installation answers. One trigger per path, across every workspace.
+                    {t('Where this installation answers. One trigger per path, across every workspace.')}
                   </FieldHint>
                 </span>
                 <div className={styles.inputWrapper}>
@@ -533,11 +527,10 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                 <span className={styles.labelRow}>
                   <span className={own.labelWithHint}>
                     <label className={styles.label} htmlFor="trigger-object">
-                      Expected object
+                      {t('Expected object')}
                     </label>
-                    <FieldHint label="Expected object">
-                      What a request has to contain. Anything else is answered 404 &mdash; and what does
-                      match is what the workflow can rely on being handed.
+                    <FieldHint label={t('Expected object')}>
+                      {t('What a request has to contain. Anything else is answered 404 — and what does match is what the workflow can rely on being handed.')}
                     </FieldHint>
                   </span>
                   {objectId !== '' && (
@@ -546,8 +539,8 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                       to={`/workspace/${workspaceId}/objects/${objectId}`}
                       target="_blank"
                       rel="noreferrer"
-                      title="Opens the object's definition in a new tab"
-                      aria-label="Open the expected object's definition"
+                      title={t('Opens the object\'s definition in a new tab')}
+                      aria-label={t('Open the expected object\'s definition')}
                     >
                       <OpenDefinitionIcon />
                     </Link>
@@ -563,8 +556,8 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                     if (picked === NEW_OBJECT) setMakingObject(true);
                     else setObjectId(picked);
                   }}
-                  placeholder="Select object…"
-                  searchPlaceholder="Search objects…"
+                  placeholder={t('Select object…')}
+                  searchPlaceholder={t("Search objects…")}
                   create={NEW_OBJECT_ROW}
                 />
                 {/* Said out loud rather than behind the (?), because an object made
@@ -574,8 +567,7 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                     it is only there while that is what is chosen. */}
                 {objects.find((shape) => shape.id === objectId)?.propertyCount === 0 && (
                   <p className={styles.fieldHint}>
-                    This one has no fields yet, so any JSON matches it. Open it in Objects to say what a
-                    caller has to send.
+                    {t('This one has no fields yet, so any JSON matches it. Open it in Objects to say what a caller has to send.')}
                   </p>
                 )}
               </div>
@@ -583,16 +575,15 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
               <div className={styles.field}>
                 <span className={own.labelWithHint}>
                   <label className={styles.label} htmlFor="trigger-auth">
-                    Authentication
+                    {t('Authentication')}
                   </label>
                   {/*
                     Behind the (?), and the two options are not: what each one is
                     stays written into the rows themselves, where it is the only
                     thing telling them apart.
                   */}
-                  <FieldHint label="Authentication">
-                    A caller the function turns down is answered 401, and the refusal is written into
-                    this trigger&apos;s history.
+                  <FieldHint label={t('Authentication')}>
+                    {t('A caller the function turns down is answered 401, and the refusal is written into this trigger\'s history.')}
                   </FieldHint>
                 </span>
                 <div className={styles.inputWrapper}>
@@ -603,8 +594,10 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                     value={authType}
                     onChange={(event) => setAuthType(event.target.value as WebhookAuthType)}
                   >
-                    <option value="NONE">Open &mdash; the URL is the secret</option>
-                    <option value="FUNCTION">Function &mdash; ask one of this workspace&apos;s functions</option>
+                    <option value="NONE">{t('Open — the URL is the secret')}</option>
+                    <option value="FUNCTION">
+                      {t('Function — ask one of this workspace\'s functions')}
+                    </option>
                   </select>
                   <img src={chevronDown12Icon} alt="" width={12} height={12} />
                 </div>
@@ -616,9 +609,9 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                   <span className={styles.labelRow}>
                     <span className={own.labelWithHint}>
                       <label className={styles.label} htmlFor="trigger-auth-function">
-                        Function
+                        {t('Function')}
                       </label>
-                      <FieldHint label="Function">
+                      <FieldHint label={t('Function')}>
                         Handed the request by name &mdash; <code>body</code>, <code>rawBody</code>,{' '}
                         <code>headers</code>, <code>path</code> &mdash; then its own external parameters,
                         which is where a stored secret comes from.
@@ -632,8 +625,8 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                         to={`/workspace/${workspaceId}/functions/${authFunctionId}`}
                         target="_blank"
                         rel="noreferrer"
-                        title="Opens the function in a new tab"
-                        aria-label="Open the function's definition"
+                        title={t('Opens the function in a new tab')}
+                        aria-label={t('Open the function\'s definition')}
                       >
                         <OpenDefinitionIcon />
                       </Link>
@@ -647,8 +640,8 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                     value={authFunctionId}
                     options={functionOptions}
                     onChoose={setAuthFunctionId}
-                    placeholder="Select function…"
-                    searchPlaceholder="Search functions…"
+                    placeholder={t('Select function…')}
+                    searchPlaceholder={t("Search functions…")}
                     create={NEW_FUNCTION_ROW}
                   />
                   {authFunctionId === NEW_FUNCTION && (
@@ -658,7 +651,7 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                         name="newFunctionName"
                         className={`${styles.input} ${styles.inputMono}`}
                         type="text"
-                        aria-label="New function name"
+                        aria-label={t('New function name')}
                         placeholder={NEW_FUNCTION_NAME}
                         value={newFunctionName}
                         // Selected on focus, as the function editor does it: the box
@@ -677,13 +670,11 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                   */}
                   {authFunctionId === NEW_FUNCTION ? (
                     <p className={styles.fieldHint}>
-                      Created with this trigger, turning every caller away. Open it in Functions to say
-                      who may call.
+                      {t('Created with this trigger, turning every caller away. Open it in Functions to say who may call.')}
                     </p>
                   ) : functions.length === 0 ? (
                     <p className={styles.fieldHint}>
-                      No function here returns true or false yet; one that does can be chosen here, or
-                      made above.
+                      {t('No function here returns true or false yet; one that does can be chosen here, or made above.')}
                     </p>
                   ) : null}
                 </div>
@@ -696,9 +687,11 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
               <div className={styles.field}>
                 <span className={own.labelWithHint}>
                   <label className={styles.label} htmlFor="trigger-connection">
-                    Connection
+                    {t('Connection')}
                   </label>
-                  <FieldHint label="Connection">Select the connection that will trigger this event.</FieldHint>
+                  <FieldHint label={t('Connection')}>
+                    {t('Select the connection that will trigger this event.')}
+                  </FieldHint>
                 </span>
                 {/* Nothing to make from here: a connection is a URL, a token and a
                     handshake with the service, none of which can be got from a name
@@ -709,8 +702,8 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                   value={connectionId}
                   options={connectionOptions}
                   onChoose={setConnectionId}
-                  placeholder="Select connection…"
-                  searchPlaceholder="Search connections…"
+                  placeholder={t('Select connection…')}
+                  searchPlaceholder={t("Search connections…")}
                 />
                 {/*
                   The empty state stays where the missing contents would be. A
@@ -720,26 +713,23 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                 */}
                 {connections.length === 0 && (
                   <p className={styles.fieldHint}>
-                    None set up yet. Connections carry credentials, so they are added under the
-                    workspace&apos;s Integrations and chosen here afterwards.
+                    {t('None set up yet. Connections carry credentials, so they are added under the workspace\'s Integrations and chosen here afterwards.')}
                   </p>
                 )}
               </div>
 
               <div className={styles.field}>
                 <span className={own.labelWithHint}>
-                  <label className={styles.label} htmlFor="trigger-action">
-                    Action
-                  </label>
-                  <FieldHint label="Action">
-                    The specific event that activates this trigger.
+                  <label className={styles.label} htmlFor="trigger-action">{t('Action')}</label>
+                  <FieldHint label={t('Action')}>
+                    {t('The specific event that activates this trigger.')}
                     <br />
                     <br />
-                    <strong>Mention</strong> is somebody naming the bot: <code>@orknux deploy</code>. It
+                    <strong>{t('Mention')}</strong> is somebody naming the bot: <code>@orknux deploy</code>. It
                     arrives only when the bot is spoken to, which makes it the quietest of the three.
                     <br />
                     <br />
-                    <strong>Message</strong> is anything anybody types in any channel the bot is a member
+                    <strong>{t('Message')}</strong> is anything anybody types in any channel the bot is a member
                     of. That is a great deal more traffic than a mention: every remark in every one of
                     those channels reaches this installation and is measured against the workspace&apos;s
                     triggers. It needs the <code>channels:history</code> scope on the bot token, and{' '}
@@ -748,7 +738,7 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                     scopes say.
                     <br />
                     <br />
-                    <strong>Reply</strong> is a thread reply to a message one of the workspace&apos;s own
+                    <strong>{t('Reply')}</strong> is a thread reply to a message one of the workspace&apos;s own
                     bots wrote. Slack puts the author of a thread&apos;s parent message on every reply, and
                     a bot token is a Slack user, so choosing which bots to watch is choosing which user ids
                     a reply is measured against. Replies written by bots never fire it, or a workflow
@@ -779,7 +769,7 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                 */}
                 {action === 'MESSAGE' && (
                   <p className={styles.fieldHint} id="trigger-action-volume">
-                    Every message in every channel this bot is in will be measured against this trigger.
+                    {t('Every message in every channel this bot is in will be measured against this trigger.')}
                   </p>
                 )}
               </div>
@@ -788,9 +778,9 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                 <div className={styles.field}>
                   <span className={own.labelWithHint}>
                     <span className={styles.label} id="trigger-watched-label">
-                      Replies To
+                      {t('Replies To')}
                     </span>
-                    <FieldHint label="Replies To">
+                    <FieldHint label={t('Replies To')}>
                       Whose messages this watches for replies to, which is not the connection it listens
                       on.
                       <br />
@@ -836,8 +826,7 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                   </ul>
                   {slackBots.length === 0 && (
                     <p className={styles.fieldHint}>
-                      No Slack connections yet. A reply is matched against the bot a connection posts as,
-                      so one is added under the workspace&apos;s Integrations and chosen here afterwards.
+                      {t('No Slack connections yet. A reply is matched against the bot a connection posts as, so one is added under the workspace\'s Integrations and chosen here afterwards.')}
                     </p>
                   )}
                 </div>
@@ -847,11 +836,9 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
             <>
               <div className={styles.field}>
                 <span className={own.labelWithHint}>
-                  <label className={styles.label} htmlFor="trigger-cron">
-                    Schedule
-                  </label>
-                  <FieldHint label="Schedule">
-                    A cron expression defining when the trigger fires. Six fields, in this order:
+                  <label className={styles.label} htmlFor="trigger-cron">{t('Schedule')}</label>
+                  <FieldHint label={t('Schedule')}>
+                    {t('A cron expression defining when the trigger fires. Six fields, in this order:')}
                     <span className={own.cronLegend}>
                       {CRON_FIELDS.map((field) => (
                         <span key={field.position} className={own.cronLegendRow}>
@@ -907,10 +894,10 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
 
               <div className={styles.field}>
                 <span className={own.labelWithHint}>
-                  <label className={styles.label} htmlFor="trigger-timezone">
-                    Timezone
-                  </label>
-                  <FieldHint label="Timezone">The timezone used to resolve the cron schedule.</FieldHint>
+                  <label className={styles.label} htmlFor="trigger-timezone">{t('Timezone')}</label>
+                  <FieldHint label={t('Timezone')}>
+                    {t('The timezone used to resolve the cron schedule.')}
+                  </FieldHint>
                 </span>
                 <div className={styles.inputWrapper}>
                   <select
@@ -936,11 +923,9 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
             {/* A condition is a definition too, and reading it is how somebody decides. */}
             <span className={styles.labelRow}>
               <span className={own.labelWithHint}>
-                <label className={styles.label} htmlFor="trigger-condition">
-                  Condition
-                </label>
-                <FieldHint label="Condition">
-                  Asked before anything starts, so an event it turns down leaves no run behind.
+                <label className={styles.label} htmlFor="trigger-condition">{t('Condition')}</label>
+                <FieldHint label={t('Condition')}>
+                  {t('Asked before anything starts, so an event it turns down leaves no run behind.')}
                 </FieldHint>
               </span>
               {conditionId !== '' && (
@@ -949,8 +934,8 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                   to={`/workspace/${workspaceId}/conditions/${conditionId}`}
                   target="_blank"
                   rel="noreferrer"
-                  title="Opens the condition in a new tab"
-                  aria-label="Open the condition's definition"
+                  title={t('Opens the condition in a new tab')}
+                  aria-label={t('Open the condition\'s definition')}
                 >
                   <OpenDefinitionIcon />
                 </Link>
@@ -966,8 +951,8 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                 if (picked === NEW_CONDITION) setMakingCondition(true);
                 else setConditionId(picked);
               }}
-              placeholder="Fire on everything"
-              searchPlaceholder="Search conditions…"
+              placeholder={t('Fire on everything')}
+              searchPlaceholder={t("Search conditions…")}
               create={NEW_CONDITION_ROW}
             />
           </div>
@@ -975,20 +960,18 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
           <IconField
             value={icon}
             onChange={setIcon}
-            hint="Nodes drawn from this trigger start with it; each node can change its own."
+            hint={t("Nodes drawn from this trigger start with it; each node can change its own.")}
           />
 
           <div className={styles.field}>
             <span className={own.labelWithHint}>
-              <label className={styles.label} htmlFor="trigger-payload">
-                Payload
-              </label>
-              <FieldHint label="Payload">
+              <label className={styles.label} htmlFor="trigger-payload">{t('Payload')}</label>
+              <FieldHint label={t('Payload')}>
                 {incoming
-                  ? 'JSON added underneath the event, for values the event does not carry.'
+                  ? t('JSON added underneath the event, for values the event does not carry.')
                   : webhook
-                    ? 'JSON added underneath the request, for values the caller does not send.'
-                    : 'JSON handed to the run. The clock carries no data, so this is what the workflow works on.'}
+                    ? t('JSON added underneath the request, for values the caller does not send.')
+                    : t('JSON handed to the run. The clock carries no data, so this is what the workflow works on.')}
               </FieldHint>
             </span>
             <div className={`${styles.inputWrapper} ${styles.inputWrapperTall}`}>
@@ -1013,11 +996,11 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
         <div className={styles.actions}>
           {onCancel !== undefined && (
             <button type="button" className={styles.ghost} onClick={onCancel} disabled={submitting}>
-              Cancel
+              {t('Cancel')}
             </button>
           )}
           <button type="submit" className={styles.filled} disabled={!complete || submitting}>
-            {submitting ? 'Saving…' : editing ? 'Save Changes' : 'Create Trigger'}
+            {submitting ? t('Saving…') : editing ? t('Save Changes') : t('Create Trigger')}
           </button>
         </div>
       </form>
@@ -1048,12 +1031,12 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
       {makingObject && (
         <NameDialog
           open
-          title="Create Object"
-          message="Name the shape a caller has to send. Its fields are written in Objects."
-          nameLabel="Object Name"
+          title={t('Create Object')}
+          message={t("Name the shape a caller has to send. Its fields are written in Objects.")}
+          nameLabel={t("Object Name")}
           namePlaceholder="e.g. BuildFinished"
-          descriptionPlaceholder="What this describes"
-          submitLabel="Create Object"
+          descriptionPlaceholder={t("What this describes")}
+          submitLabel={t("Create Object")}
           onClose={() => setMakingObject(false)}
           onSubmit={async (called, description) => {
             const made = await createObject(workspaceId, { name: called, description });

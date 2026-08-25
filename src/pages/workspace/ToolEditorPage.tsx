@@ -51,6 +51,7 @@ import { objectTypes } from '../../components/objectTypes';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './EditorPage.module.css';
+import { t } from '../../i18n';
 
 /** The whole of a workspace's shapes fits the picker. */
 const OBJECT_PAGE_SIZE = 100;
@@ -145,13 +146,13 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
     fetchTool(toolId)
       .then((found) => {
         if (found === null) {
-          setLoadError('That tool does not exist, or you do not have access to it.');
+          setLoadError(t('That tool does not exist, or you do not have access to it.'));
           return;
         }
         apply(found);
       })
       .catch((cause: unknown) => {
-        setLoadError(cause instanceof Error ? cause.message : 'Could not load the tool.');
+        setLoadError(cause instanceof Error ? cause.message : t('Could not load the tool.'));
       });
   }, [toolId]);
 
@@ -506,12 +507,12 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
       setSaved(true);
       setStatus({
         ok: true,
-        message: moved ? 'The suggested change is saved, parameters and all.' : 'The suggested change is saved.',
+        message: moved ? t('The suggested change is saved, parameters and all.') : t('The suggested change is saved.'),
         whole: true,
       });
-      settleOffer('I accepted the change and it is saved.');
+      settleOffer(t('I accepted the change and it is saved.'));
     } catch (cause) {
-      const reason = cause instanceof Error ? cause.message : 'It could not be saved.';
+      const reason = cause instanceof Error ? cause.message : t('It could not be saved.');
       failOffer(
         `The save was refused — ${reason}`,
         `I tried to accept it and it could not be saved — ${reason}. It was not saved.`,
@@ -541,12 +542,12 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
               ok: false,
               message:
                 checked.line === null
-                  ? (checked.message ?? 'Could not be parsed')
+                  ? (checked.message ?? t('Could not be parsed'))
                   : `Line ${checked.line}: ${checked.message ?? 'could not be parsed'}`,
             },
       );
     } catch (cause) {
-      setStatus({ ok: false, message: cause instanceof Error ? cause.message : 'Could not validate.', whole: true });
+      setStatus({ ok: false, message: cause instanceof Error ? cause.message : t('Could not validate.'), whole: true });
     }
   }
 
@@ -591,7 +592,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
       setStatus({ ok: true, message: "the code compiles and the sandbox's parser accepts it" });
       return true;
     } catch (cause) {
-      setSaveError(cause instanceof Error ? cause.message : 'Could not save the tool.');
+      setSaveError(cause instanceof Error ? cause.message : t('Could not save the tool.'));
       return false;
     } finally {
       setSaving(false);
@@ -671,7 +672,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
       const { enabled, lastModifiedAt, lastModifiedBy } = await setToolEnabled(tool.id, !tool.enabled);
       setTool((current) => (current === null ? current : { ...current, enabled, lastModifiedAt, lastModifiedBy }));
     } catch (cause) {
-      setSaveError(cause instanceof Error ? cause.message : 'Could not change the tool.');
+      setSaveError(cause instanceof Error ? cause.message : t('Could not change the tool.'));
     }
   }
 
@@ -683,7 +684,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
       navigate(`/workspace/${workspaceId}/tools`);
     } catch (cause) {
       setRemoving(false);
-      setSaveError(cause instanceof Error ? cause.message : 'Could not delete the tool.');
+      setSaveError(cause instanceof Error ? cause.message : t('Could not delete the tool.'));
     }
   }
 
@@ -698,9 +699,9 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
     >
       <header className={styles.headerBlock}>
         <p className={styles.breadcrumbs}>
-          <BackLink to={`/workspace/${workspaceId}/tools`} label="Tools" />
+          <BackLink to={`/workspace/${workspaceId}/tools`} label={t('Tools')} />
           <Link className={styles.crumbLink} to={`/workspace/${workspaceId}/tools`}>
-            Tools
+            {t('Tools')}
           </Link>
           <span className={styles.crumbSeparator}>/</span>
           <span className={styles.crumbCurrent}>{tool?.name ?? '…'}</span>
@@ -713,7 +714,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                 type="button"
                 className={tool.enabled ? styles.activeBadge : styles.inactiveBadge}
                 onClick={() => void handleToggle()}
-                title={tool.enabled ? 'Disable this tool' : 'Enable this tool'}
+                title={tool.enabled ? t('Disable this tool') : t('Enable this tool')}
               >
                 {tool.enabled ? 'Active' : 'Inactive'}
               </button>
@@ -731,11 +732,11 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
               className={styles.wandButton}
               onClick={() =>
                 window.dispatchEvent(
-                  new CustomEvent('orknux:quick-chat', { detail: { opener: 'Can you help me with that?' } }),
+                  new CustomEvent('orknux:quick-chat', { detail: { opener: t('Can you help me with that?') } }),
                 )
               }
-              aria-label="Ask the assistant for help with this tool"
-              title="Ask the assistant for help"
+              aria-label={t('Ask the assistant for help with this tool')}
+              title={t('Ask the assistant for help')}
             >
               <img src={wandIcon} alt="" width={16} height={16} />
             </button>
@@ -744,7 +745,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
               used to sit - and in the button's own word. See `ValidationStatus`.
             */}
             <ValidationStatus
-              subject="The code"
+              subject={t("The code")}
               status={status}
               saved={saved}
               explains={
@@ -755,16 +756,14 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                 </>
               }
             />
-            <button type="button" className={styles.secondaryButton} onClick={() => void handleValidate()}>
-              Validate
-            </button>
+            <button type="button" className={styles.secondaryButton} onClick={() => void handleValidate()}>{t('Validate')}</button>
             <button
               type="button"
               className={styles.primaryButton}
               onClick={() => void handleSave()}
               disabled={saving || tool === null}
             >
-              {saving ? 'Saving…' : 'Save Changes'}
+              {saving ? t('Saving…') : t('Save Changes')}
             </button>
           </div>
         </div>
@@ -783,14 +782,14 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
               {saveError}
             </p>
           )}
-          {saved && saveError === null && <p className={styles.saved}>Saved.</p>}
+          {saved && saveError === null && <p className={styles.saved}>{t('Saved.')}</p>}
 
           <div className={styles.split}>
             <section className={styles.editorCard}>
               <header className={styles.editorHeader}>
                 <span className={styles.editorTitle}>
                   <img src={codeIcon} alt="" width={16} height={16} />
-                  Editor
+                  {t('Editor')}
                 </span>
                 <span className={styles.formatBadge}>TypeScript</span>
               </header>
@@ -807,7 +806,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                     {offerFailed ??
                       (offered.note !== null && offered.note !== ''
                         ? offered.note
-                        : 'The assistant suggests this change.')}
+                        : t('The assistant suggests this change.'))}
                   </span>
                   <button
                     type="button"
@@ -815,16 +814,14 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                     onClick={() => void acceptOffer()}
                     disabled={saving}
                   >
-                    {saving ? 'Saving…' : 'Accept'}
+                    {saving ? t('Saving…') : 'Accept'}
                   </button>
                   <button
                     type="button"
                     className={styles.secondaryButton}
-                    onClick={() => settleOffer('I rejected the change. The tool is unchanged.')}
+                    onClick={() => settleOffer(t('I rejected the change. The tool is unchanged.'))}
                     disabled={saving}
-                  >
-                    Reject
-                  </button>
+                  >{t('Reject')}</button>
                 </div>
               )}
               <div className={styles.codeArea}>
@@ -833,7 +830,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                     ref={editor}
                     value={source}
                     language="typescript"
-                    ariaLabel="Tool source"
+                    ariaLabel={t('Tool source')}
                     onChange={(next) => {
                       setSource(next);
                       setSaved(false);
@@ -844,7 +841,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                     onCaretChange={(line, column) => setCaret({ line, column })}
                   />
                 ) : (
-                  <CodeDiff original={source} modified={offered.code} ariaLabel="Suggested change" />
+                  <CodeDiff original={source} modified={offered.code} ariaLabel={t('Suggested change')} />
                 )}
               </div>
 
@@ -858,11 +855,9 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
 
             <aside className={styles.panel}>
               <div className={styles.panelSection}>
-                <h2 className={styles.panelHeading}>Tool Details</h2>
+                <h2 className={styles.panelHeading}>{t('Tool Details')}</h2>
                 <div className={styles.field}>
-                  <label className={styles.label} htmlFor="tool-name">
-                    Name
-                  </label>
+                  <label className={styles.label} htmlFor="tool-name">{t('Name')}</label>
                   <input
                     id="tool-name"
                     className={`${styles.input} ${styles.inputMono}`}
@@ -875,7 +870,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                 </div>
                 <div className={styles.field}>
                   <label className={styles.label} htmlFor="tool-description">
-                    Description
+                    {t('Description')}
                   </label>
                   <textarea
                     id="tool-description"
@@ -885,7 +880,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                       setDescription(event.target.value);
                       setSaved(false);
                     }}
-                    placeholder="What an agent reads to decide whether to call this."
+                    placeholder={t('What an agent reads to decide whether to call this.')}
                   />
                 </div>
               </div>
@@ -898,7 +893,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                 declaration in the code follows what is typed here.
               */}
               <div className={styles.panelSection}>
-                <h2 className={styles.panelHeading}>Parameters</h2>
+                <h2 className={styles.panelHeading}>{t('Parameters')}</h2>
                 <div className={styles.paramList}>
                   {params.map((param, index) => (
                     <Fragment key={index}>
@@ -906,7 +901,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                         <div className={styles.paramTopLine}>
                           <span className={`${styles.paramField} ${styles.paramFieldName}`}>
                             <label className={styles.paramLabel} htmlFor={`param-name-${index}`}>
-                              Name
+                              {t('Name')}
                             </label>
                             <input
                               id={`param-name-${index}`}
@@ -924,7 +919,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                           </span>
                           <span className={styles.paramField}>
                             <label className={styles.paramLabel} htmlFor={`param-type-${index}`}>
-                              Type
+                              {t('Type')}
                             </label>
                             <span className={styles.paramTypeSelect}>
                               <select
@@ -1019,7 +1014,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                                 to={`/workspace/${workspaceId}/objects/${param.objectId}`}
                                 target="_blank"
                                 rel="noreferrer"
-                                title="Opens the object's definition in a new tab"
+                                title={t('Opens the object\'s definition in a new tab')}
                                 aria-label={`Open definition of ${objectNameOf(param.objectId) ?? 'the object'} for ${param.name || `parameter ${index + 1}`}`}
                               >
                                 {/*
@@ -1049,11 +1044,11 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                     }}
                   >
                     <img src={plusIcon} alt="" width={12} height={12} />
-                    Add Parameter
+                    {t('Add Parameter')}
                   </button>
                 </div>
                 <p className={styles.paramHint}>
-                  An agent calling this tool fills these in by name. The declaration below takes them in this order.
+                  {t('An agent calling this tool fills these in by name. The declaration below takes them in this order.')}
                 </p>
               </div>
 
@@ -1070,8 +1065,8 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
               */}
               <div className={styles.panelSection}>
                 <span className={styles.headingWithHint}>
-                  <h2 className={styles.panelHeading}>Imports</h2>
-                  <FieldHint label="Imports">
+                  <h2 className={styles.panelHeading}>{t('Imports')}</h2>
+                  <FieldHint label={t('Imports')}>
                     The workspace’s functions this tool may call, as <code>imports.name(…)</code>. The name is this
                     code’s own word for it: renaming the function it points at changes nothing here. A plugin’s
                     function cannot be imported.
@@ -1155,8 +1150,8 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                     disabled={importable.length === 0}
                     title={
                       importable.length === 0
-                        ? 'This workspace has no functions to import'
-                        : 'Call one of the workspace’s functions from this tool'
+                        ? t('This workspace has no functions to import')
+                        : t('Call one of the workspace’s functions from this tool')
                     }
                     onClick={() => {
                       /*
@@ -1176,7 +1171,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                     }}
                   >
                     <img src={plusIcon} alt="" width={12} height={12} />
-                    Add Import
+                    {t('Add Import')}
                   </button>
                 </div>
               </div>
@@ -1194,8 +1189,8 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
               */}
               <div className={styles.panelSection}>
                 <span className={styles.headingWithHint}>
-                  <h2 className={styles.panelHeading}>Libraries</h2>
-                  <FieldHint label="Libraries">
+                  <h2 className={styles.panelHeading}>{t('Libraries')}</h2>
+                  <FieldHint label={t('Libraries')}>
                     The installation’s libraries this tool may use, reached as <code>imports.name</code>. The
                     name is this code’s own word for it and is seeded from the library’s key the first time a
                     row points at one. An administrator loads them, on Admin → Libraries.
@@ -1283,8 +1278,8 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                     disabled={loadable.length === 0}
                     title={
                       loadable.length === 0
-                        ? 'No libraries are loaded into this installation'
-                        : 'Use one of the installation’s libraries from this tool'
+                        ? t('No libraries are loaded into this installation')
+                        : t('Use one of the installation’s libraries from this tool')
                     }
                     onClick={() => {
                       /*
@@ -1303,7 +1298,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                     }}
                   >
                     <img src={plusIcon} alt="" width={12} height={12} />
-                    Add Library
+                    {t('Add Library')}
                   </button>
                 </div>
               </div>
@@ -1356,7 +1351,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                 onClick={() => void handleDelete()}
                 disabled={removing || tool === null}
               >
-                {removing ? 'Deleting…' : 'Delete'}
+                {removing ? t('Deleting…') : 'Delete'}
               </button>
             </aside>
           </div>
@@ -1369,7 +1364,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
         be showing behind it.
       */}
       <UnsavedWorkDialog
-        subject={guard.asking ? (tool?.name ?? 'This tool') : null}
+        subject={guard.asking ? (tool?.name ?? t('This tool')) : null}
         creating={false}
         onStay={guard.stay}
         onLeave={guard.leave}

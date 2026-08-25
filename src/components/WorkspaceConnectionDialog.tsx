@@ -10,6 +10,7 @@ import { HeaderRowsEditor } from './HeaderRowsEditor';
 import { SecretField, useSecretField } from './SecretField';
 import type { SecretFieldHandle, SecretSource } from './SecretField';
 import { useWorkspaceVariables } from '../pages/workspace/workspaceVariables';
+import { t } from '../i18n';
 
 export interface WorkspaceConnectionDialogProps {
   open: boolean;
@@ -23,8 +24,8 @@ const AUTH_TYPES: AuthType[] = ['NONE', 'API_KEY', 'BEARER_TOKEN', 'BASIC'];
 
 const TYPE_LABELS: Record<ConnectionType, string> = {
   SLACK: 'Slack',
-  SMTP: 'Email (SMTP)',
-  HTTP: 'HTTP endpoint',
+  SMTP: t('Email (SMTP)'),
+  HTTP: t('HTTP endpoint'),
 };
 
 /**
@@ -36,7 +37,7 @@ const TYPE_LABELS: Record<ConnectionType, string> = {
  */
 const SECURITY: { value: MailSecurity; label: string; port: number }[] = [
   { value: 'STARTTLS', label: 'STARTTLS', port: 587 },
-  { value: 'TLS', label: 'TLS (implicit)', port: 465 },
+  { value: 'TLS', label: t('TLS (implicit)'), port: 465 },
   { value: 'NONE', label: 'None', port: 25 },
 ];
 
@@ -201,7 +202,7 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
       });
       onCreated(created);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not add the connection.');
+      setError(cause instanceof Error ? cause.message : t('Could not add the connection.'));
       setSubmitting(false);
     }
   }
@@ -210,23 +211,21 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
     <dialog ref={dialogRef} className={`${styles.dialog} ${styles.dialogWide}`} onCancel={onClose} onClose={onClose}>
       <form className={styles.body} onSubmit={handleSubmit}>
         <header className={styles.header}>
-          <h2 className={styles.title}>Add Connection</h2>
+          <h2 className={styles.title}>{t('Add Connection')}</h2>
         </header>
 
-        <p className={styles.dialogMessage}>Add a new connection to this workspace</p>
+        <p className={styles.dialogMessage}>{t('Add a new connection to this workspace')}</p>
 
         <div className={styles.fields}>
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="workspace-connection-name">
-              Name
-            </label>
+            <label className={styles.label} htmlFor="workspace-connection-name">{t('Name')}</label>
             <div className={styles.inputWrapper}>
               <input
                 id="workspace-connection-name"
                 name="connectionName"
                 className={styles.input}
                 type="text"
-                placeholder="e.g. Slack"
+                placeholder={t('e.g. Slack')}
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 autoFocus
@@ -236,9 +235,7 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="workspace-connection-type">
-              Type
-            </label>
+            <label className={styles.label} htmlFor="workspace-connection-type">{t('Type')}</label>
             <div className={styles.inputWrapper}>
               <select
                 id="workspace-connection-type"
@@ -248,9 +245,7 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
                 onChange={(event) => setType(event.target.value as ConnectionType | '')}
                 required
               >
-                <option value="" disabled>
-                  Select type...
-                </option>
+                <option value="" disabled>{t('Select type...')}</option>
                 {TYPES.map((candidate) => (
                   <option key={candidate} value={candidate}>
                     {TYPE_LABELS[candidate]}
@@ -265,7 +260,7 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
           <div className={styles.field}>
             <label className={styles.label} htmlFor="workspace-connection-url">
               {/* A mail server is named, not addressed: there is no URL to type. */}
-              {mail ? 'SMTP Host' : 'URL'}
+              {mail ? t('SMTP Host') : 'URL'}
             </label>
             <div className={styles.inputWrapper}>
               <input
@@ -286,7 +281,7 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
             <>
               <div className={styles.field}>
                 <label className={styles.label} htmlFor="workspace-connection-security">
-                  Security
+                  {t('Security')}
                 </label>
                 <div className={styles.inputWrapper}>
                   <select
@@ -308,7 +303,7 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
 
               <div className={styles.field}>
                 <label className={styles.label} htmlFor="workspace-connection-port">
-                  Port
+                  {t('Port')}
                 </label>
                 <div className={styles.inputWrapper}>
                   <input
@@ -327,11 +322,10 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
               <div className={styles.field}>
                 <span className={styles.labelWithHint}>
                   <label className={styles.label} htmlFor="workspace-connection-from">
-                    From Address
+                    {t('From Address')}
                   </label>
-                  <FieldHint label="From Address">
-                    Every mail this connection sends is from this address, and a provider that has not
-                    authorised it refuses the message however good the password is.
+                  <FieldHint label={t('From Address')}>
+                    {t('Every mail this connection sends is from this address, and a provider that has not authorised it refuses the message however good the password is.')}
                   </FieldHint>
                 </span>
                 <div className={styles.inputWrapper}>
@@ -350,7 +344,7 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
 
               <div className={styles.field}>
                 <label className={styles.label} htmlFor="workspace-connection-username">
-                  Username
+                  {t('Username')}
                 </label>
                 <div className={styles.inputWrapper}>
                   <input
@@ -358,7 +352,7 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
                     name="smtpUsername"
                     className={styles.input}
                     type="text"
-                    placeholder="Leave empty to send without authenticating"
+                    placeholder={t('Leave empty to send without authenticating')}
                     value={smtpUsername}
                     onChange={(event) => setSmtpUsername(event.target.value)}
                   />
@@ -368,11 +362,11 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
               {smtpUsername.trim() !== '' && (
                 <SecretField
                   id="workspace-connection-password"
-                  label="Password"
+                  label={t('Password')}
                   field={secret}
                   options={secrets}
                   variablesPath={`/workspace/${workspaceId}/variables`}
-                  placeholder="Enter password..."
+                  placeholder={t('Enter password...')}
                   hint={
                     <>
                       Stored encrypted, and never shown again in the list. Many providers want an app
@@ -395,7 +389,7 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
                   meaning the app-level token. */}
               <SecretField
                 id="workspace-connection-bot-token"
-                label="Bot token"
+                label={t('Bot token')}
                 field={secret}
                 options={secrets}
                 variablesPath={`/workspace/${workspaceId}/variables`}
@@ -415,11 +409,11 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
 
               <SecretField
                 id="workspace-connection-app-token"
-                label="App-Level Token"
+                label={t('App-Level Token')}
                 field={appToken}
                 options={secrets}
                 variablesPath={`/workspace/${workspaceId}/variables`}
-                placeholder="xapp-... (optional)"
+                placeholder={t('xapp-... (optional)')}
                 hint={
                   <>
                     Optional, and beginning <code>xapp-</code>. From Basic Information, with
@@ -437,7 +431,7 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
           {!slack && !mail && (
           <div className={styles.field}>
             <label className={styles.label} htmlFor="workspace-connection-auth">
-              Auth Type
+              {t('Auth Type')}
             </label>
             <div className={styles.inputWrapper}>
               <select
@@ -461,12 +455,12 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
           {!slack && !mail && authType !== 'NONE' && (
             <SecretField
               id="workspace-connection-secret"
-              label="Token / Key"
+              label={t('Token / Key')}
               field={secret}
               options={secrets}
               variablesPath={`/workspace/${workspaceId}/variables`}
-              placeholder="Enter token or key..."
-              hint="Whatever the endpoint expects, sent the way the authentication method above says."
+              placeholder={t('Enter token or key...')}
+              hint={t("Whatever the endpoint expects, sent the way the authentication method above says.")}
               onSource={(next) => chooseSource(secret, next)}
               onValue={() => setError(null)}
               onVariable={() => setError(null)}
@@ -484,10 +478,10 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
 
         <div className={styles.actions}>
           <button type="button" className={styles.ghost} onClick={onClose} disabled={submitting}>
-            Cancel
+            {t('Cancel')}
           </button>
           <button type="submit" className={styles.filled} disabled={!complete || submitting}>
-            {submitting ? 'Adding…' : 'Add Connection'}
+            {submitting ? t('Adding…') : t('Add Connection')}
           </button>
         </div>
       </form>

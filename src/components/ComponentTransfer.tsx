@@ -34,6 +34,7 @@ import layersIcon from '../assets/layers.svg';
 import { FieldHint } from './FieldHint';
 import dialogStyles from './Dialog.module.css';
 import styles from './ComponentTransfer.module.css';
+import { t } from '../i18n';
 
 /**
  * Export and Import for a workspace's catalogue.
@@ -143,7 +144,7 @@ export function ExportComponentDialog({ open, workspaceId, kind, id, name, onClo
       saveJson(made.fileName, made.json);
       onClose();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not export it.');
+      setError(cause instanceof Error ? cause.message : t('Could not export it.'));
       setBusy(false);
     }
   }
@@ -154,11 +155,8 @@ export function ExportComponentDialog({ open, workspaceId, kind, id, name, onClo
         <header className={dialogStyles.header}>
           <span className={dialogStyles.titleRow}>
             <h2 className={dialogStyles.title}>Export {name}</h2>
-            <FieldHint label="Export">
-              A JSON file you can import into another workspace. Nothing secret travels: a variable this
-              is handed is named in the file, and the workspace it lands in supplies its own value. So is
-              a model, a connection or an MCP server it points at — each of those is kept beside a
-              credential, and the workspace it lands in says which of its own the name means.
+            <FieldHint label={t('Export')}>
+              {t('A JSON file you can import into another workspace. Nothing secret travels: a variable this is handed is named in the file, and the workspace it lands in supplies its own value. So is a model, a connection or an MCP server it points at — each of those is kept beside a credential, and the workspace it lands in says which of its own the name means.')}
             </FieldHint>
           </span>
         </header>
@@ -172,10 +170,9 @@ export function ExportComponentDialog({ open, workspaceId, kind, id, name, onClo
               onChange={() => setDepth('DEEP')}
             />
             <span className={styles.choiceText}>
-              <span className={styles.choiceTitle}>Everything it uses</span>
+              <span className={styles.choiceTitle}>{t('Everything it uses')}</span>
               <span className={styles.choiceNote}>
-                The objects it is typed against, the functions it calls, the actions and agents a workflow
-                runs — so it lands somewhere it can be opened.
+                {t('The objects it is typed against, the functions it calls, the actions and agents a workflow runs — so it lands somewhere it can be opened.')}
               </span>
             </span>
           </label>
@@ -187,10 +184,9 @@ export function ExportComponentDialog({ open, workspaceId, kind, id, name, onClo
               onChange={() => setDepth('SHALLOW')}
             />
             <span className={styles.choiceText}>
-              <span className={styles.choiceTitle}>This one only</span>
+              <span className={styles.choiceTitle}>{t('This one only')}</span>
               <span className={styles.choiceNote}>
-                For a workspace that already has what it points at. The import will match those by name and
-                refuse if it cannot.
+                {t('For a workspace that already has what it points at. The import will match those by name and refuse if it cannot.')}
               </span>
             </span>
           </label>
@@ -204,10 +200,10 @@ export function ExportComponentDialog({ open, workspaceId, kind, id, name, onClo
 
         <div className={dialogStyles.actions}>
           <button type="button" className={dialogStyles.ghost} onClick={onClose} disabled={busy}>
-            Cancel
+            {t('Cancel')}
           </button>
           <button type="button" className={dialogStyles.filled} onClick={() => void download()} disabled={busy}>
-            {busy ? 'Exporting…' : 'Download'}
+            {busy ? t('Exporting…') : 'Download'}
           </button>
         </div>
       </div>
@@ -373,7 +369,7 @@ function ImportDialog({
         if (current) setPlan(first);
       })
       .catch((cause: unknown) => {
-        if (current) setError(cause instanceof Error ? cause.message : 'Could not read that file.');
+        if (current) setError(cause instanceof Error ? cause.message : t('Could not read that file.'));
       })
       .finally(() => {
         if (current) setBusy(false);
@@ -423,7 +419,7 @@ function ImportDialog({
     try {
       setPlan(await planFor(withBindings, without));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not read that file.');
+      setError(cause instanceof Error ? cause.message : t('Could not read that file.'));
     }
     setBusy(false);
   }
@@ -436,7 +432,7 @@ function ImportDialog({
       await commit(bindings, exclude);
       onImported();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not import it.');
+      setError(cause instanceof Error ? cause.message : t('Could not import it.'));
       setImporting(false);
       setBusy(false);
     }
@@ -492,7 +488,7 @@ function ImportDialog({
           <h2 className={dialogStyles.title}>{title}</h2>
         </header>
 
-        {plan === null && error === null && <p className={dialogStyles.dialogMessage}>Reading the file…</p>}
+        {plan === null && error === null && <p className={dialogStyles.dialogMessage}>{t('Reading the file…')}</p>}
 
         {plan !== null && (
           <>
@@ -500,8 +496,8 @@ function ImportDialog({
               {plan.importable
                 ? `This will create ${creating} ${creating === 1 ? 'thing' : 'things'} in this workspace. Nothing that is already here is changed.`
                 : nothingLeft
-                  ? 'Everything this file carries has been left out, so there is nothing left to import. Keep at least one of them.'
-                  : 'This cannot be imported yet. What it points at has to exist here first.'}
+                  ? t('Everything this file carries has been left out, so there is nothing left to import. Keep at least one of them.')
+                  : t('This cannot be imported yet. What it points at has to exist here first.')}
             </p>
 
             {/*
@@ -516,7 +512,7 @@ function ImportDialog({
             */}
             {references && (
               <p className={styles.leaveOutLead}>
-                Leave out anything the file <em>carries</em> and it will not be created — what is kept then
+                Leave out anything the file <em>{t('carries')}</em> and it will not be created — what is kept then
                 points at this workspace's own of that name, where there is one. The rest of the list is what
                 the file points at and does not carry, so there is nothing there to take away: those have to
                 be here already, or be said to mean one of this workspace's own.
@@ -526,7 +522,7 @@ function ImportDialog({
             {alsoLeftOut > 0 && (
               <p className={styles.leaveOutCost} role="status">
                 {alsoLeftOut === 1
-                  ? 'One more was left out with it, because it cannot do without what you left out and this workspace has nothing to take its place.'
+                  ? t('One more was left out with it, because it cannot do without what you left out and this workspace has nothing to take its place.')
                   : `${alsoLeftOut} more were left out with it, because they cannot do without what you left out and this workspace has nothing to take their place.`}{' '}
                 Each says so on its own row. Keep what you left out to bring them back.
               </p>
@@ -572,7 +568,7 @@ function ImportDialog({
                           onClick={() => void leaveOut(entry, !out)}
                           aria-label={`${out ? 'Keep' : 'Leave out'} ${entry.name}`}
                         >
-                          {out ? 'Keep' : 'Leave out'}
+                          {out ? 'Keep' : t('Leave out')}
                         </button>
                       )}
                     </span>
@@ -584,10 +580,7 @@ function ImportDialog({
 
             {plan.entries.some((entry) => entry.kind === 'WORKFLOW' && entry.disposition !== 'EXCLUDE') && (
               <p className={styles.arrival}>
-                A workflow arrives as a draft: publishing takes a copy of the graph to run from, and that
-                first publish is yours to make once you have looked at what came. Its name belongs to the
-                whole installation rather than to this workspace, so a copy landing beside the original is
-                renamed rather than replacing it.
+                {t('A workflow arrives as a draft: publishing takes a copy of the graph to run from, and that first publish is yours to make once you have looked at what came. Its name belongs to the whole installation rather than to this workspace, so a copy landing beside the original is renamed rather than replacing it.')}
               </p>
             )}
 
@@ -606,7 +599,7 @@ function ImportDialog({
 
         <div className={dialogStyles.actions}>
           <button type="button" className={dialogStyles.ghost} onClick={onClose} disabled={busy}>
-            Cancel
+            {t('Cancel')}
           </button>
           <button
             type="button"
@@ -614,7 +607,7 @@ function ImportDialog({
             onClick={() => void go()}
             disabled={busy || plan === null || !plan.importable}
           >
-            {importing ? 'Importing…' : confirmLabel}
+            {importing ? t('Importing…') : confirmLabel}
           </button>
         </div>
       </div>
@@ -661,7 +654,7 @@ function BindingQuestions({ workspaceId, questions, bindings, busy, onAnswer }: 
         if (current) setChoices(Object.fromEntries(loaded));
       })
       .catch((cause: unknown) => {
-        if (current) setError(cause instanceof Error ? cause.message : 'Could not load what is here.');
+        if (current) setError(cause instanceof Error ? cause.message : t('Could not load what is here.'));
       });
     return () => {
       current = false;
@@ -671,8 +664,7 @@ function BindingQuestions({ workspaceId, questions, bindings, busy, onAnswer }: 
   return (
     <section className={styles.questions}>
       <p className={styles.questionsLead}>
-        Some of what this file points at is kept beside a credential, so no export could carry it — the
-        file has the name and nothing else. Say which of this workspace's own each name means.
+        {t('Some of what this file points at is kept beside a credential, so no export could carry it — the file has the name and nothing else. Say which of this workspace\'s own each name means.')}
       </p>
 
       {error !== null && (
@@ -703,8 +695,8 @@ function BindingQuestions({ workspaceId, questions, bindings, busy, onAnswer }: 
                     {offered === undefined
                       ? 'Loading…'
                       : offered.length === 0
-                        ? 'Nothing here to point it at — make one first'
-                        : 'Choose one…'}
+                        ? t('Nothing here to point it at — make one first')
+                        : t('Choose one…')}
                   </option>
                   {(offered ?? []).map((choice) => (
                     <option key={choice.id} value={choice.id}>
@@ -767,7 +759,7 @@ export interface UseTemplateButtonProps {
  * one sentence the picker exists to say: a template holds a copy taken when it
  * was published and does not follow what it was made from.
  */
-export function UseTemplateButton({ workspaceId, kind, onImported, label = 'Use template' }: UseTemplateButtonProps) {
+export function UseTemplateButton({ workspaceId, kind, onImported, label = t('Use template') }: UseTemplateButtonProps) {
   const [picking, setPicking] = useState(false);
   const [templates, setTemplates] = useState<ComponentTemplate[] | null>(null);
   const [chosen, setChosen] = useState<ComponentTemplate | null>(null);
@@ -780,7 +772,7 @@ export function UseTemplateButton({ workspaceId, kind, onImported, label = 'Use 
     fetchComponentTemplates(kind)
       .then(setTemplates)
       .catch((cause: unknown) =>
-        setError(cause instanceof Error ? cause.message : 'Could not load the templates.'),
+        setError(cause instanceof Error ? cause.message : t('Could not load the templates.')),
       );
   }
 
@@ -817,7 +809,7 @@ export function UseTemplateButton({ workspaceId, kind, onImported, label = 'Use 
         workspaceId={workspaceId}
         planFor={planFor}
         commit={commit}
-        confirmLabel="Use template"
+        confirmLabel={t("Use template")}
         onClose={() => setChosen(null)}
         onImported={() => {
           setChosen(null);
@@ -865,21 +857,18 @@ function TemplatePicker({ open, templates, error, onChoose, onClose }: TemplateP
       <div className={dialogStyles.body}>
         <header className={dialogStyles.header}>
           <span className={dialogStyles.titleRow}>
-            <h2 className={dialogStyles.title}>Use a template</h2>
-            <FieldHint label="Use a template">
-              Templates are published for the whole installation. Each holds a copy taken when it was
-              published — it does not follow whatever it was made from, so what arrives is what was there
-              that day. Nothing already here is changed: a name that is taken is renamed.
+            <h2 className={dialogStyles.title}>{t('Use a template')}</h2>
+            <FieldHint label={t('Use a template')}>
+              {t('Templates are published for the whole installation. Each holds a copy taken when it was published — it does not follow whatever it was made from, so what arrives is what was there that day. Nothing already here is changed: a name that is taken is renamed.')}
             </FieldHint>
           </span>
         </header>
 
-        {templates === null && error === null && <p className={dialogStyles.dialogMessage}>Loading…</p>}
+        {templates === null && error === null && <p className={dialogStyles.dialogMessage}>{t('Loading…')}</p>}
 
         {templates !== null && templates.length === 0 && (
           <p className={dialogStyles.dialogMessage}>
-            There are no templates holding one of these yet. An administrator publishes them on the
-            Templates page.
+            {t('There are no templates holding one of these yet. An administrator publishes them on the Templates page.')}
           </p>
         )}
 
@@ -914,7 +903,7 @@ function TemplatePicker({ open, templates, error, onChoose, onClose }: TemplateP
 
         <div className={dialogStyles.actions}>
           <button type="button" className={dialogStyles.ghost} onClick={onClose}>
-            Cancel
+            {t('Cancel')}
           </button>
         </div>
       </div>
@@ -1014,7 +1003,7 @@ function SaveAsTemplateDialog({ open, workspaceId, kind, id, name, onClose }: Sa
       });
       setDone(made.name);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not publish it.');
+      setError(cause instanceof Error ? cause.message : t('Could not publish it.'));
     }
     setBusy(false);
   }
@@ -1025,7 +1014,7 @@ function SaveAsTemplateDialog({ open, workspaceId, kind, id, name, onClose }: Sa
         <header className={dialogStyles.header}>
           <span className={dialogStyles.titleRow}>
             <h2 className={dialogStyles.title}>Save {name} as a template</h2>
-            <FieldHint label="Save as a template">
+            <FieldHint label={t('Save as a template')}>
               Every workspace on this installation is offered it. It stores a copy taken now: editing{' '}
               {name} afterwards does not change the template, and replacing its file on the Templates page
               is what brings it up to date.
@@ -1041,9 +1030,7 @@ function SaveAsTemplateDialog({ open, workspaceId, kind, id, name, onClose }: Sa
         ) : (
           <>
             <div className={dialogStyles.field}>
-              <label className={dialogStyles.label} htmlFor="template-name">
-                Name
-              </label>
+              <label className={dialogStyles.label} htmlFor="template-name">{t('Name')}</label>
               <input
                 id="template-name"
                 className={dialogStyles.input}
@@ -1054,7 +1041,7 @@ function SaveAsTemplateDialog({ open, workspaceId, kind, id, name, onClose }: Sa
             </div>
             <div className={dialogStyles.field}>
               <label className={dialogStyles.label} htmlFor="template-description">
-                Description
+                {t('Description')}
               </label>
               <textarea
                 id="template-description"
@@ -1063,7 +1050,7 @@ function SaveAsTemplateDialog({ open, workspaceId, kind, id, name, onClose }: Sa
                 onChange={(event) => setDescription(event.target.value)}
                 maxLength={1000}
                 rows={3}
-                placeholder="What it is for, and when somebody would reach for it"
+                placeholder={t('What it is for, and when somebody would reach for it')}
               />
             </div>
 
@@ -1076,9 +1063,9 @@ function SaveAsTemplateDialog({ open, workspaceId, kind, id, name, onClose }: Sa
                   onChange={() => setDepth('DEEP')}
                 />
                 <span className={styles.choiceText}>
-                  <span className={styles.choiceTitle}>Everything it uses</span>
+                  <span className={styles.choiceTitle}>{t('Everything it uses')}</span>
                   <span className={styles.choiceNote}>
-                    So it lands in a workspace that has none of this yet.
+                    {t('So it lands in a workspace that has none of this yet.')}
                   </span>
                 </span>
               </label>
@@ -1090,9 +1077,9 @@ function SaveAsTemplateDialog({ open, workspaceId, kind, id, name, onClose }: Sa
                   onChange={() => setDepth('SHALLOW')}
                 />
                 <span className={styles.choiceText}>
-                  <span className={styles.choiceTitle}>This one only</span>
+                  <span className={styles.choiceTitle}>{t('This one only')}</span>
                   <span className={styles.choiceNote}>
-                    For workspaces that already have what it points at; using it refuses where they do not.
+                    {t('For workspaces that already have what it points at; using it refuses where they do not.')}
                   </span>
                 </span>
               </label>
@@ -1117,7 +1104,7 @@ function SaveAsTemplateDialog({ open, workspaceId, kind, id, name, onClose }: Sa
               onClick={() => void publish()}
               disabled={busy || templateName.trim() === ''}
             >
-              {busy ? 'Publishing…' : 'Publish template'}
+              {busy ? t('Publishing…') : t('Publish template')}
             </button>
           )}
         </div>

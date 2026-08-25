@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
 import styles from './DefinitionPicker.module.css';
 import { segments } from './searchMatches';
+import { t } from '../i18n';
 
 /**
  * A row's text with the typed part picked out.
@@ -105,7 +106,7 @@ export function DefinitionPicker({
   options,
   onChoose,
   placeholder,
-  searchPlaceholder = 'Type to search…',
+  searchPlaceholder = t('Type to search…'),
   create = null,
   ariaLabel,
   disabled = false,
@@ -251,8 +252,8 @@ export function DefinitionPicker({
               {failure !== null
                 ? failure
                 : options.length === 0
-                  ? 'Nothing to choose here yet.'
-                  : 'Nothing by that name.'}
+                  ? t('Nothing to choose here yet.')
+                  : t('Nothing by that name.')}
             </p>
           )}
 

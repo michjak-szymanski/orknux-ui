@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 
 import { EDITOR_FONT_FAMILY, EDITOR_FONT_SIZE, editorTheme, monaco } from './monaco';
 import styles from './CodeDiff.module.css';
+import { t } from '../i18n';
 
 export interface CodeDiffProps {
   /** What the code says now. */
@@ -27,7 +28,7 @@ export interface CodeDiffProps {
  * the person wrote - and the editor is one Reject away for anybody who wants
  * to write it themselves.
  */
-export function CodeDiff({ original, modified, language = 'typescript', ariaLabel = 'Suggested change' }: CodeDiffProps) {
+export function CodeDiff({ original, modified, language = 'typescript', ariaLabel = t('Suggested change') }: CodeDiffProps) {
   const host = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

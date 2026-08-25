@@ -4,6 +4,7 @@ import type { ClipboardEvent as ReactClipboardEvent, KeyboardEvent as ReactKeybo
 import { fetchAssignees } from '../api/issues';
 import type { Assignee } from '../api/issues';
 import styles from './MarkdownEditor.module.css';
+import { t } from '../i18n';
 
 export interface MarkdownEditorProps {
   value: string;
@@ -26,7 +27,7 @@ const MARKS: { label: string; title: string; before: string; after: string; bloc
   { label: 'B', title: 'Bold', before: '**', after: '**' },
   { label: 'I', title: 'Italic', before: '_', after: '_' },
   { label: '</>', title: 'Code', before: '`', after: '`' },
-  { label: '{ }', title: 'Code block', before: '```\n', after: '\n```', block: true },
+  { label: '{ }', title: t('Code block'), before: '```\n', after: '\n```', block: true },
   { label: '"', title: 'Quote', before: '> ', after: '', block: true },
   { label: '•', title: 'List', before: '- ', after: '', block: true },
   { label: '🔗', title: 'Link', before: '[', after: '](https://)' },
@@ -303,7 +304,7 @@ export function MarkdownEditor({
 
   return (
     <div className={styles.editor}>
-      <div className={styles.toolbar} role="toolbar" aria-label="Formatting">
+      <div className={styles.toolbar} role="toolbar" aria-label={t('Formatting')}>
         {MARKS.map((entry) => (
           <button
             key={entry.title}
@@ -328,7 +329,7 @@ export function MarkdownEditor({
           explanation. A (?) here would hide the one hint that has to be seen
           without being asked for.
         */}
-        <span className={styles.hint}>Markdown · @ to mention</span>
+        <span className={styles.hint}>{t('Markdown · @ to mention')}</span>
       </div>
 
       <textarea
@@ -355,7 +356,7 @@ export function MarkdownEditor({
           id={`${rowId}-list`}
           className={styles.mentions}
           role="listbox"
-          aria-label="Mention someone"
+          aria-label={t('Mention someone')}
           style={spot === null ? undefined : { top: spot.top, left: spot.left }}
         >
           {candidates.map((candidate, index) => (

@@ -22,6 +22,7 @@ import { FieldHint } from '../../components/FieldHint';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './CatalogueTable.module.css';
+import { t } from '../../i18n';
 
 export interface WorkspaceObjectsPageProps {
   session: SessionUser;
@@ -53,7 +54,7 @@ export function WorkspaceObjectsPage({ session, onSignOut }: WorkspaceObjectsPag
       .then(setObjects)
       .catch((cause: unknown) => {
         setObjects(null);
-        setError(cause instanceof Error ? cause.message : 'Could not load the objects.');
+        setError(cause instanceof Error ? cause.message : t('Could not load the objects.'));
       });
   }, [workspaceId, page]);
 
@@ -69,15 +70,15 @@ export function WorkspaceObjectsPage({ session, onSignOut }: WorkspaceObjectsPag
     >
       <header className={styles.header}>
         <div className={styles.titleGroup}>
-          <h1 className={styles.title}>Objects</h1>
-          <p className={styles.subtitle}>Named data structures the workspace's workflows pass around.</p>
+          <h1 className={styles.title}>{t('Objects')}</h1>
+          <p className={styles.subtitle}>
+            {t('Named data structures the workspace\'s workflows pass around.')}
+          </p>
         </div>
         <div className={transferStyles.headerActions}>
           <ImportComponentsButton workspaceId={workspaceId} onImported={load} />
           <UseTemplateButton workspaceId={workspaceId} kind="OBJECT" onImported={load} />
-          <button type="button" className={styles.createButton} onClick={() => setCreating(true)}>
-            + Create Object
-          </button>
+          <button type="button" className={styles.createButton} onClick={() => setCreating(true)}>{t('+ Create Object')}</button>
         </div>
       </header>
 
@@ -89,11 +90,11 @@ export function WorkspaceObjectsPage({ session, onSignOut }: WorkspaceObjectsPag
 
       <section className={styles.card}>
         <div className={styles.tableHeader}>
-          <span className={styles.colName}>Name</span>
-          <span className={styles.colDescription}>Description</span>
-          <span className={styles.colStatus}>Properties</span>
-          <span className={styles.colModified}>Last Modified</span>
-          <span className={styles.colActions}>Actions</span>
+          <span className={styles.colName}>{t('Name')}</span>
+          <span className={styles.colDescription}>{t('Description')}</span>
+          <span className={styles.colStatus}>{t('Properties')}</span>
+          <span className={styles.colModified}>{t('Last Modified')}</span>
+          <span className={styles.colActions}>{t('Actions')}</span>
         </div>
 
         {objects === null && error === null && <p className={styles.notice}><Loader /></p>}
@@ -105,10 +106,9 @@ export function WorkspaceObjectsPage({ session, onSignOut }: WorkspaceObjectsPag
               not for the definition.
             */}
             <span className={styles.labelWithHint}>
-              No objects yet.
-              <FieldHint label="No objects yet">
-                An object names a shape — what a trigger emits, or what a function takes — so a
-                mapping can be offered instead of typed blind.
+              {t('No objects yet.')}
+              <FieldHint label={t('No objects yet')}>
+                {t('An object names a shape — what a trigger emits, or what a function takes — so a mapping can be offered instead of typed blind.')}
               </FieldHint>
             </span>
           </p>
@@ -122,7 +122,7 @@ export function WorkspaceObjectsPage({ session, onSignOut }: WorkspaceObjectsPag
             <span
               className={`${styles.colDescription} ${held.description === null ? styles.noDescription : styles.description}`}
             >
-              {held.description ?? 'No description'}
+              {held.description ?? t('No description')}
             </span>
             {/* Where Skills shows a switch: a count, because there is nothing to switch. */}
             <span className={`${styles.colStatus} ${styles.modified}`}>{held.propertyCount}</span>
@@ -161,12 +161,12 @@ export function WorkspaceObjectsPage({ session, onSignOut }: WorkspaceObjectsPag
 
       <NameDialog
         open={creating}
-        title="Create Object"
-        message="An object names a shape, so a mapping can be offered rather than typed blind."
+        title={t('Create Object')}
+        message={t("An object names a shape, so a mapping can be offered rather than typed blind.")}
         nameLabel="Name"
         namePlaceholder="SlackMessage"
-        descriptionPlaceholder="Represents an incoming Slack message with metadata"
-        submitLabel="Create Object"
+        descriptionPlaceholder={t("Represents an incoming Slack message with metadata")}
+        submitLabel={t("Create Object")}
         onClose={() => setCreating(false)}
         onSubmit={async (name, description) => {
           const created = await createObject(workspaceId, { name, description: description || undefined });

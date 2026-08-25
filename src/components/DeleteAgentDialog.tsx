@@ -4,6 +4,7 @@ import { deleteAgent } from '../api/agents';
 import type { Agent } from '../api/agents';
 import trashIcon from '../assets/trash-18.svg';
 import styles from './Dialog.module.css';
+import { t } from '../i18n';
 
 export interface DeleteAgentDialogProps {
   /** The agent to delete, or null when the dialog is closed. */
@@ -42,7 +43,7 @@ export function DeleteAgentDialog({ agent, onClose, onDeleted }: DeleteAgentDial
       await deleteAgent(agent.id);
       onDeleted();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not delete the agent.');
+      setError(cause instanceof Error ? cause.message : t('Could not delete the agent.'));
       setSubmitting(false);
     }
   }
@@ -51,7 +52,7 @@ export function DeleteAgentDialog({ agent, onClose, onDeleted }: DeleteAgentDial
     <dialog ref={dialogRef} className={styles.dialog} onCancel={onClose} onClose={onClose}>
       <div className={styles.body}>
         <header className={styles.header}>
-          <h2 className={styles.title}>Delete Agent</h2>
+          <h2 className={styles.title}>{t('Delete Agent')}</h2>
         </header>
 
         <div className={styles.warning}>
@@ -72,7 +73,7 @@ export function DeleteAgentDialog({ agent, onClose, onDeleted }: DeleteAgentDial
 
         <div className={styles.actions}>
           <button type="button" className={styles.ghost} onClick={onClose} disabled={submitting}>
-            Cancel
+            {t('Cancel')}
           </button>
           <button
             type="button"
@@ -81,7 +82,7 @@ export function DeleteAgentDialog({ agent, onClose, onDeleted }: DeleteAgentDial
             disabled={submitting}
             autoFocus
           >
-            {submitting ? 'Deleting…' : 'Delete Agent'}
+            {submitting ? t('Deleting…') : t('Delete Agent')}
           </button>
         </div>
       </div>

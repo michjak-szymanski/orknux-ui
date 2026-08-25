@@ -24,6 +24,7 @@ import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { shellUser } from '../../session/user';
 import styles from './AdminPluginsPage.module.css';
+import { t } from '../../i18n';
 
 export interface AdminPluginsPageProps {
   session: SessionUser;
@@ -80,7 +81,7 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
       })
       .catch((cause: unknown) => {
         setPlugins(null);
-        setError(cause instanceof Error ? cause.message : 'Could not load the plugins.');
+        setError(cause instanceof Error ? cause.message : t('Could not load the plugins.'));
         setLoading(false);
       });
   }, []);
@@ -121,7 +122,7 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
       if (cause instanceof PluginPermissionsRequired) {
         setAsking({ name, source, permissions: cause.permissions });
       } else {
-        setError(cause instanceof Error ? cause.message : 'Could not load that plugin.');
+        setError(cause instanceof Error ? cause.message : t('Could not load that plugin.'));
       }
     } finally {
       setBusy(false);
@@ -154,7 +155,7 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
       setUrl('');
       await loadSource(name, source);
     } catch (cause: unknown) {
-      setError(cause instanceof Error ? cause.message : 'Could not fetch that URL.');
+      setError(cause instanceof Error ? cause.message : t('Could not fetch that URL.'));
       setBusy(false);
     }
   }
@@ -180,7 +181,7 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
       URL.revokeObjectURL(saved);
       setNotice(`Saved ${filename}. Edit it and load it back.`);
     } catch (cause: unknown) {
-      setError(cause instanceof Error ? cause.message : 'Could not fetch the template.');
+      setError(cause instanceof Error ? cause.message : t('Could not fetch the template.'));
     } finally {
       setBusy(false);
     }
@@ -211,7 +212,7 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
       setConfirming(null);
       load();
     } catch (cause: unknown) {
-      setError(cause instanceof Error ? cause.message : 'Could not unload that plugin.');
+      setError(cause instanceof Error ? cause.message : t('Could not unload that plugin.'));
     } finally {
       setBusy(false);
     }
@@ -227,16 +228,13 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
         <div className={styles.titleBlock}>
           <h1 className={styles.title}>
             <span className={styles.titleWithHint}>
-              Plugins
+              {t('Plugins')}
               {/*
                 Was the footer under the list. The same words, behind the (?)
                 every other explanation in the product is behind.
               */}
-              <FieldHint label="Plugins">
-                A plugin&apos;s functions are available in every workspace, and run out of the
-                plugin&apos;s own text in its own sandbox. What a plugin needs to be told is set per
-                workspace, on that workspace&apos;s Plugins page. Loading a file with a name already
-                in the list replaces it.
+              <FieldHint label={t('Plugins')}>
+                {t('A plugin\'s functions are available in every workspace, and run out of the plugin\'s own text in its own sandbox. What a plugin needs to be told is set per workspace, on that workspace\'s Plugins page. Loading a file with a name already in the list replaces it.')}
               </FieldHint>
             </span>
           </h1>
@@ -255,10 +253,8 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
               href="https://github.com/michjak-szymanski/orknux-extension"
               target="_blank"
               rel="noreferrer noopener"
-            >
-              @orknux/plugin
-            </a>
-            , which bundles a project into the single file this page takes.
+            >@orknux/plugin</a>
+            {t(', which bundles a project into the single file this page takes.')}
           </p>
         </div>
         {/*
@@ -277,7 +273,7 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
           {/* A plugin that already answers both questions, so it loads unchanged. */}
           <button type="button" className={styles.template} disabled={busy} onClick={() => void onTemplate()}>
             <img src={fileCodeIcon} alt="" width={14} height={14} />
-            Get Template
+            {t('Get Template')}
           </button>
           <span className={styles.divider} aria-hidden="true" />
           <button
@@ -287,7 +283,7 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
             onClick={() => picker.current?.click()}
           >
             <img src={plusIcon} alt="" width={14} height={14} />
-            Load Plugin
+            {t('Load Plugin')}
           </button>
         </div>
       </header>
@@ -304,7 +300,7 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
             type="url"
             value={url}
             placeholder="https://raw.githubusercontent.com/…/plugin.ts"
-            aria-label="Plugin URL"
+            aria-label={t('Plugin URL')}
             onChange={(event) => setUrl(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === 'Enter') void onUrl();
@@ -315,9 +311,7 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
             className={styles.template}
             disabled={busy || url.trim() === ''}
             onClick={() => void onUrl()}
-          >
-            Load from URL
-          </button>
+          >{t('Load from URL')}</button>
         </div>
 
       {/*
@@ -333,12 +327,8 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
         <section className={styles.asking}>
           <p className={styles.askingLine}>
             <span className={styles.askingName}>{asking.name}</span> needs these to run.
-            <FieldHint label="Permissions">
-              The sandbox a plugin runs in switches these off for everything, because a plugin
-              is somebody else&apos;s code running on this installation. Accepting turns them on
-              for this plugin alone, and records who agreed and when. A plugin edited later to
-              need something more is refused again, with the new list, rather than arriving
-              under this answer.
+            <FieldHint label={t('Permissions')}>
+              {t('The sandbox a plugin runs in switches these off for everything, because a plugin is somebody else\'s code running on this installation. Accepting turns them on for this plugin alone, and records who agreed and when. A plugin edited later to need something more is refused again, with the new list, rather than arriving under this answer.')}
             </FieldHint>
           </p>
           {/*
@@ -364,9 +354,7 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
               className={styles.accept}
               disabled={busy}
               onClick={() => void onAccept(asking)}
-            >
-              Allow and Load
-            </button>
+            >{t('Allow and Load')}</button>
             <button
               type="button"
               className={styles.cancel}
@@ -375,20 +363,18 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
                 setNotice(`${asking.name} was not loaded.`);
                 setAsking(null);
               }}
-            >
-              Cancel
-            </button>
+            >{t('Cancel')}</button>
           </div>
         </section>
       )}
 
       <section className={styles.card}>
         <div className={styles.tableHeader}>
-          <span className={styles.colName}>Name</span>
+          <span className={styles.colName}>{t('Name')}</span>
           <span className={styles.colApi}>API</span>
-          <span className={styles.colSize}>Size</span>
-          <span className={styles.colWhen}>Loaded</span>
-          <span className={styles.colActions}>Actions</span>
+          <span className={styles.colSize}>{t('Size')}</span>
+          <span className={styles.colWhen}>{t('Loaded')}</span>
+          <span className={styles.colActions}>{t('Actions')}</span>
         </div>
 
         {loading && (
@@ -399,7 +385,7 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
         {error !== null && <p className={`${styles.notice} ${styles.noticeError}`}>{error}</p>}
         {notice !== null && error === null && <p className={styles.notice}>{notice}</p>}
         {!loading && error === null && plugins?.length === 0 && (
-          <p className={styles.notice}>No plugins loaded yet.</p>
+          <p className={styles.notice}>{t('No plugins loaded yet.')}</p>
         )}
 
         {plugins?.map((plugin) => (
@@ -487,12 +473,8 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
                     className={styles.confirm}
                     disabled={busy}
                     onClick={() => void onUnload(plugin)}
-                  >
-                    Unload
-                  </button>
-                  <button type="button" className={styles.cancel} onClick={() => setConfirming(null)}>
-                    Cancel
-                  </button>
+                  >{t('Unload')}</button>
+                  <button type="button" className={styles.cancel} onClick={() => setConfirming(null)}>{t('Cancel')}</button>
                 </>
               ) : (
                 <button

@@ -9,6 +9,7 @@ import { AppShell } from '../../components/AppShell';
 import { Loader } from '../../components/Loader';
 import { shellUser } from '../../session/user';
 import styles from './AdminDoctorPage.module.css';
+import { t } from '../../i18n';
 
 export interface AdminDoctorPageProps {
   session: SessionUser;
@@ -43,7 +44,7 @@ export function AdminDoctorPage({ session, onSignOut }: AdminDoctorPageProps) {
       })
       .catch((cause: unknown) => {
         setChecks(null);
-        setError(cause instanceof Error ? cause.message : 'Could not run the checks.');
+        setError(cause instanceof Error ? cause.message : t('Could not run the checks.'));
         setLoading(false);
       });
   }, []);
@@ -64,15 +65,14 @@ export function AdminDoctorPage({ session, onSignOut }: AdminDoctorPageProps) {
       <section className={styles.card}>
         <header className={styles.header}>
           <div className={styles.titleGroup}>
-            <h1 className={styles.title}>Doctor</h1>
+            <h1 className={styles.title}>{t('Doctor')}</h1>
             <p className={styles.subtitle}>
-              Whether this installation is configured correctly — which is not the same question as
-              whether it can reach things. Monitoring answers that one.
+              {t('Whether this installation is configured correctly — which is not the same question as whether it can reach things. Monitoring answers that one.')}
             </p>
           </div>
-          <button type="button" className={styles.refresh} onClick={load} title="Run the checks again">
+          <button type="button" className={styles.refresh} onClick={load} title={t('Run the checks again')}>
             <img src={refreshIcon} alt="" width={14} height={14} />
-            Run again
+            {t('Run again')}
           </button>
         </header>
 
@@ -92,7 +92,7 @@ export function AdminDoctorPage({ session, onSignOut }: AdminDoctorPageProps) {
               ? `${failing} thing${failing === 1 ? '' : 's'} will fail as configured.`
               : warning > 0
                 ? `Nothing is broken, but ${warning} setting${warning === 1 ? ' is' : 's are'} worth a look.`
-                : 'Everything checked is configured correctly.'}
+                : t('Everything checked is configured correctly.')}
           </p>
         )}
 

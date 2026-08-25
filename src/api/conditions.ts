@@ -1,5 +1,6 @@
 import { graphql } from './client';
 import type { PageOf } from './client';
+import { t } from '../i18n';
 
 /** What a condition asks about. */
 export type ConditionType = 'SLACK' | 'JIRA' | 'TIME' | 'FUNCTION' | 'ANY_OF' | 'ALL_OF';
@@ -142,8 +143,8 @@ export const CONDITION_TYPE_LABEL: Record<ConditionType, string> = {
   JIRA: 'Jira',
   TIME: 'Time',
   FUNCTION: 'Function',
-  ANY_OF: 'Any Of',
-  ALL_OF: 'All Of',
+  ANY_OF: t('Any Of'),
+  ALL_OF: t('All Of'),
 };
 
 /** Which properties each type can ask about; the server enforces the same. */
@@ -180,17 +181,17 @@ export const CHECKS_BY_PROPERTY: Record<ConditionProperty, ConditionCheck[]> = {
 };
 
 export const PROPERTY_LABEL: Record<ConditionProperty, string> = {
-  MESSAGE_AUTHOR: 'Message Author',
-  MESSAGE_CHANNEL: 'Message Channel',
-  MESSAGE_TEXT: 'Message Text',
-  ISSUE_PRIORITY: 'Issue Priority',
-  ISSUE_STATUS: 'Issue Status',
-  ISSUE_TYPE: 'Issue Type',
-  CURRENT_TIME: 'Current Time',
+  MESSAGE_AUTHOR: t('Message Author'),
+  MESSAGE_CHANNEL: t('Message Channel'),
+  MESSAGE_TEXT: t('Message Text'),
+  ISSUE_PRIORITY: t('Issue Priority'),
+  ISSUE_STATUS: t('Issue Status'),
+  ISSUE_TYPE: t('Issue Type'),
+  CURRENT_TIME: t('Current Time'),
 };
 
 export const CHECK_LABEL: Record<ConditionCheck, string> = {
-  IN_LIST: 'In List',
+  IN_LIST: t('In List'),
   EQUALS: 'Equals',
   CONTAINS: 'Contains',
   MATCHES: 'Matches',
@@ -203,14 +204,14 @@ export function valuesLabel(check: ConditionCheck | null): string | null {
   switch (check) {
     case 'IN_LIST':
     case 'WORKSPACEMATE':
-      return 'List Values';
+      return t('List Values');
     case 'EQUALS':
     case 'CONTAINS':
       return 'Value';
     case 'MATCHES':
       return 'Pattern';
     case 'BETWEEN':
-      return 'From and until, as HH:mm';
+      return t('From and until, as HH:mm');
     default:
       return null;
   }

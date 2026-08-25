@@ -13,6 +13,7 @@ import shieldIcon from '../assets/lock-keyhole.svg';
 import userIcon from '../assets/user.svg';
 import { SidebarNavItem } from './AppShell';
 import styles from './AdminSidebar.module.css';
+import { t } from '../i18n';
 
 export type AdminSection =
   | 'workspaces'
@@ -33,24 +34,24 @@ export type AdminSection =
 export function AdminSidebar({ active }: { active: AdminSection }) {
   return (
     <>
-      <SidebarNavItem label="Workspaces" icon={commandIcon} active={active === 'workspaces'} to="/admin" />
+      <SidebarNavItem label={t('Workspaces')} icon={commandIcon} active={active === 'workspaces'} to="/admin" />
       {/* Beside Workspaces, because what a role is for is which workspaces it opens. */}
-      <SidebarNavItem label="Users" icon={userIcon} active={active === 'users'} to="/admin/users" />
-      <SidebarNavItem label="Roles" icon={shieldIcon} active={active === 'roles'} to="/admin/roles" />
+      <SidebarNavItem label={t('Users')} icon={userIcon} active={active === 'users'} to="/admin/users" />
+      <SidebarNavItem label={t('Roles')} icon={shieldIcon} active={active === 'roles'} to="/admin/roles" />
       <SidebarNavItem
-        label="Audit Log"
+        label={t('Audit Log')}
         icon={fileTextIcon}
         active={active === 'audit'}
         to="/admin/audit"
       />
       <SidebarNavItem
-        label="Integrations"
+        label={t('Integrations')}
         icon={plugIcon}
         active={active === 'integrations'}
         to="/admin/integrations"
       />
       <SidebarNavItem
-        label="Plugins"
+        label={t('Plugins')}
         icon={puzzleIcon}
         active={active === 'plugins'}
         to="/admin/plugins"
@@ -61,7 +62,7 @@ export function AdminSidebar({ active }: { active: AdminSection }) {
         functions, and somebody's own function imports a library and calls it.
       */}
       <SidebarNavItem
-        label="Libraries"
+        label={t('Libraries')}
         icon={packageIcon}
         active={active === 'libraries'}
         to="/admin/libraries"
@@ -71,7 +72,7 @@ export function AdminSidebar({ active }: { active: AdminSection }) {
         workspace rather than things a workspace owns.
       */}
       <SidebarNavItem
-        label="Templates"
+        label={t('Templates')}
         icon={layersIcon}
         active={active === 'templates'}
         to="/admin/templates"
@@ -81,7 +82,7 @@ export function AdminSidebar({ active }: { active: AdminSection }) {
         installation is configured with, not something observed about it.
       */}
       <SidebarNavItem
-        label="Networking"
+        label={t('Networking')}
         icon={globeIcon}
         active={active === 'networking'}
         to="/admin/networking"
@@ -91,13 +92,13 @@ export function AdminSidebar({ active }: { active: AdminSection }) {
         something that is not it: one over HTTP and one over SSH.
       */}
       <SidebarNavItem
-        label="Shell"
+        label={t('Shell')}
         icon={terminalIcon}
         active={active === 'shell'}
         to="/admin/shell"
       />
       <SidebarNavItem
-        label="Monitoring"
+        label={t('Monitoring')}
         icon={chartLineIcon}
         active={active === 'monitoring'}
         to="/admin/monitoring"
@@ -107,14 +108,14 @@ export function AdminSidebar({ active }: { active: AdminSection }) {
         reached, the other whether this installation is configured to work at all.
       */}
       <SidebarNavItem
-        label="Doctor"
+        label={t('Doctor')}
         icon={stethoscopeIcon}
         active={active === 'doctor'}
         to="/admin/doctor"
       />
 
       <SidebarNavItem
-        label="Settings"
+        label={t('Settings')}
         icon={settingsIcon}
         active={active === 'settings'}
         to="/admin/settings"

@@ -20,6 +20,7 @@ import { ImageZoom } from './ImageZoom';
 import type { Picture } from './ImageZoom';
 import { rehypeIssueLinks } from './issueLinks';
 import { rehypeMarkMatches } from './searchMatches';
+import { t } from '../i18n';
 
 /**
  * The languages worth carrying, named one by one.
@@ -165,8 +166,8 @@ export function Markdown({ children, highlight, issuesIn, zoomImages = false }: 
                 type="button"
                 className={styles.zoom}
                 onClick={() => setZoomed(picture)}
-                aria-label={picture.alt === '' ? 'Open this picture' : `Open larger: ${picture.alt}`}
-                title="Click to open this picture larger"
+                aria-label={picture.alt === '' ? t('Open this picture') : `Open larger: ${picture.alt}`}
+                title={t('Click to open this picture larger')}
               >
                 {image}
               </button>

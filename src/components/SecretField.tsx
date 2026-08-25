@@ -7,6 +7,7 @@ import type { DefinitionOption } from './DefinitionPicker';
 import { FieldHint } from './FieldHint';
 import { RevealToggle } from './RevealToggle';
 import styles from './SecretField.module.css';
+import { t } from '../i18n';
 
 /** Stands in for a stored secret until somebody asks to see it. */
 export const MASK = '••••••••••••••••';
@@ -272,7 +273,7 @@ export function SecretField({
                 is needed, so a new value is in use immediately and rotating it is one edit rather
                 than one per place it is used. The variable is held by identity, so renaming it or
                 moving it to another catalog changes nothing here, and it cannot be deleted while
-                this reads it. Make one on the <Link to={variablesPath}>Variables</Link> page.
+                this reads it. Make one on the <Link to={variablesPath}>{t('Variables')}</Link> page.
               </>
             ) : (
               <> Kept here, encrypted, and belonging to this alone: changing it changes nothing else.</>
@@ -292,18 +293,14 @@ export function SecretField({
             aria-selected={!reading}
             className={reading ? styles.source : styles.sourceOn}
             onClick={() => onSource('OWN')}
-          >
-            Value
-          </button>
+          >{t('Value')}</button>
           <button
             type="button"
             role="tab"
             aria-selected={reading}
             className={reading ? styles.sourceOn : styles.source}
             onClick={() => onSource('VARIABLE')}
-          >
-            Reference
-          </button>
+          >{t('Reference')}</button>
         </div>
       </div>
 
@@ -322,8 +319,8 @@ export function SecretField({
             field.point(chosen);
             onVariable?.();
           }}
-          placeholder={options.length === 0 ? 'This workspace has no secrets yet' : 'Choose a secret…'}
-          searchPlaceholder="Search secrets…"
+          placeholder={options.length === 0 ? t('This workspace has no secrets yet') : t('Choose a secret…')}
+          searchPlaceholder={t("Search secrets…")}
           ariaLabel={`Search workspace secrets for the ${label}`}
         />
       ) : (

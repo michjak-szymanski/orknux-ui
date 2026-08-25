@@ -19,6 +19,7 @@ import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceConditionsPage.module.css';
+import { t } from '../../i18n';
 
 export interface WorkspaceConditionsPageProps {
   session: SessionUser;
@@ -54,7 +55,7 @@ export function WorkspaceConditionsPage({ session, onSignOut }: WorkspaceConditi
       })
       .catch((cause: unknown) => {
         setConditions(null);
-        setError(cause instanceof Error ? cause.message : 'Could not load the conditions.');
+        setError(cause instanceof Error ? cause.message : t('Could not load the conditions.'));
         setLoading(false);
       });
   }, [workspaceId, page]);
@@ -72,32 +73,32 @@ export function WorkspaceConditionsPage({ session, onSignOut }: WorkspaceConditi
       <section className={styles.card}>
         <header className={styles.header}>
           <div className={styles.titleGroup}>
-            <h1 className={styles.title}>Conditions</h1>
+            <h1 className={styles.title}>{t('Conditions')}</h1>
             <p className={styles.subtitle}>
-              Define reusable conditions for workflow branching and action triggers.
+              {t('Define reusable conditions for workflow branching and action triggers.')}
             </p>
           </div>
           <div className={transferStyles.headerActions}>
             <ImportComponentsButton workspaceId={workspaceId} onImported={load} />
             <UseTemplateButton workspaceId={workspaceId} kind="CONDITION" onImported={load} />
             <Link className={styles.createCondition} to={`/workspace/${workspaceId}/conditions/new`}>
-              + Create Condition
+              {t('+ Create Condition')}
             </Link>
           </div>
         </header>
 
         <div className={styles.table}>
           <div className={styles.tableHeader}>
-            <span className={styles.colName}>Name</span>
-            <span className={styles.colType}>Type</span>
-            <span className={styles.colDescription}>Description</span>
-            <span className={styles.colActions}>Actions</span>
+            <span className={styles.colName}>{t('Name')}</span>
+            <span className={styles.colType}>{t('Type')}</span>
+            <span className={styles.colDescription}>{t('Description')}</span>
+            <span className={styles.colActions}>{t('Actions')}</span>
           </div>
 
           {loading && <p className={styles.notice}><Loader /></p>}
           {error !== null && <p className={`${styles.notice} ${styles.noticeError}`}>{error}</p>}
           {!loading && error === null && conditions?.content.length === 0 && (
-            <p className={styles.notice}>No conditions yet.</p>
+            <p className={styles.notice}>{t('No conditions yet.')}</p>
           )}
 
           {conditions?.content.map((condition) => (

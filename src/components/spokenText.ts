@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 /**
  * What a message reads as, for something that is about to say it out loud.
  *
@@ -28,7 +29,7 @@
  */
 
 /** What a fenced block is read as, in place of the code in it. */
-export const CODE_BLOCK_SAID = 'Code block.';
+export const CODE_BLOCK_SAID = t('Code block.');
 
 /** Opens or closes a fence: three or more backticks or tildes, barely indented. */
 const FENCE = /^ {0,3}(`{3,}|~{3,})/;

@@ -7,6 +7,7 @@ import { Marked } from './DefinitionPicker';
 import { SlackTargetAnswer, TARGET_PAUSE } from './SlackTargetAnswer';
 import { SlackTargetKind } from './SlackTargetKind';
 import own from './SlackTargetField.module.css';
+import { t } from '../i18n';
 
 export interface SlackTargetFieldProps {
   /** The field's own id, which its label points at. */
@@ -384,7 +385,7 @@ export function SlackTargetField({
             {note !== '' && <p className={own.note}>{note}</p>}
 
             {rows.length > 0 && (
-              <div id={`${id}-listbox`} className={own.rows} role="listbox" aria-label="Suggestions">
+              <div id={`${id}-listbox`} className={own.rows} role="listbox" aria-label={t('Suggestions')}>
                 {rows.map((row, index) => (
                   <button
                     key={row.id}
