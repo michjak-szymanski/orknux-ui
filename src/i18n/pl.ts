@@ -15,6 +15,10 @@
  * of English on an otherwise Polish screen.
  */
 export const PL: Record<string, string> = {
+  'Nothing imports it.': 'Nic tego nie importuje.',
+  'Imported by': 'Importowane przez',
+  'Fetched once from': 'Pobrane raz z',
+  'Registry': 'Repozytorium',
   'Remove library': 'Usuń bibliotekę',
   // Double-quoted, like the bulk of this file: `catalogue-check` reads keys with
   // a regular expression that only sees a double-quoted key or a bare word, so a
@@ -1793,6 +1797,10 @@ export const PL: Record<string, string> = {
   "Each step is sent as it is recorded, so nothing here is waiting on a refresh. If the connection drops the page comes back and asks for whatever it missed by the last line it holds, which is why a task left open overnight catches up rather than redrawing. A finished task reads exactly the same, from the same record.": "Każdy krok wysyłany jest w chwili zapisania, więc nic tutaj nie czeka na odświeżenie. Jeśli połączenie padnie, strona wraca i prosi o to, co ją ominęło, podając ostatni wiersz, jaki ma — dlatego zadanie zostawione otwarte na noc nadrabia zaległości, zamiast rysować się od nowa. Zakończone zadanie czyta się dokładnie tak samo, z tego samego zapisu.",
   "Returned": "Zwróciło",
   "It came back with nothing.": "Wróciło z niczym.",
+
+  // --- what the model thought, and a lookup that could not be made ---------
+  "Thought for": "Myślało przez",
+  "Continuing an LLM session — what is said here is written into it": "Kontynuuje sesję LLM — to, co tu napisane, trafia do niej",
 
   // --- two notes the transform reached this time ---------------------------
   "A saved shape fixes which fields there are; this node decides what goes in them. Custom means the fields are this node's own.": "Zapisany kształt ustala, jakie są pola; ten węzeł decyduje, co się w nich znajdzie. „Własny” oznacza, że pola należą do tego węzła.",

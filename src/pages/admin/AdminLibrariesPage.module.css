@@ -85,6 +85,20 @@
 }
 
 /* Monospace, because what goes in it is typed exactly and read back exactly. */
+/*
+ * Which registry the box beside it fetches from. Set in the mono face the
+ * package name is typed in, because it is the same kind of word - a host, or
+ * `npm` - rather than prose about one.
+ */
+.specLabel {
+  align-self: center;
+  padding-right: var(--space-8);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
 .spec {
   width: 200px;
   padding: var(--space-10) var(--space-12);
@@ -320,4 +334,11 @@
 
 .noticeError {
   color: var(--color-danger);
+}
+
+/* What imports a library, inside the dialog that is about to remove it. */
+.confirmUses {
+  margin: var(--space-8) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
 }
