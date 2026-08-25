@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { argumentJson, runFunction, valueTypeLabel } from '../api/functions';
 import type { FunctionParam, FunctionRun } from '../api/functions';
+import type { VariableType } from '../api/variables';
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
 import { FieldHint } from './FieldHint';
 import styles from './Dialog.module.css';
@@ -22,6 +23,13 @@ export interface TestRunDialogProps {
   functionId: string;
   /** The parameters it declares, already filtered to the named ones. */
   params: FunctionParam[];
+  /**
+   * The workspace's variables it is handed, by name and type.
+   *
+   * Offered as fields, blank, each meaning "what the workspace holds". See the
+   * note on the window itself for why this reversed an earlier decision.
+   */
+  handed: { name: string; type: VariableType }[];
   /** Whether the column has moved on from what is stored. */
   unsaved: boolean;
   /** True on `/functions/new`: there is nothing stored to run yet. */
@@ -45,11 +53,21 @@ export interface TestRunDialogProps {
  * job. The shapes that have no spelling as a plain word - map, array, an object
  * - are the exception and are typed as JSON, because that is what they are.
  *
- * **The externals are not here and must not be.** A grant belongs to the
- * function; a field for one would let a test run be given a value the real run
- * would never see, and the run would prove nothing about the function it was
- * run on. What the run was handed is reported after the fact instead, by name
- * and never by value.
+ * **The externals are here, blank, and each one left blank is the workspace's
+ * own value.** This reverses what it said first, which was that a grant belongs
+ * to the function and a field for one would let a test be given a value the real
+ * run would never see. That is true and it was not the whole picture: the
+ * commonest thing anybody writes here is a check against a secret, the secret is
+ * one nobody may read back, and a window that could only ever run it against the
+ * stored value could not test the failing half at all - nor could it test
+ * anything on a workspace where the variable has not been set yet. The person
+ * doing it has the function's source open in the next column; withholding the
+ * input to it was protecting nothing.
+ *
+ * What that costs is answered where it lands rather than by refusing: nothing
+ * but this window can pass one - a node, a trigger and a workflow have no such
+ * field - and the workspace's audit names the ones given by hand, so a run that
+ * behaved differently from the real one cannot be read later as the real one.
  *
  * **It runs what is stored, not what is in the column.** The server is handed
  * an id and arguments and no source, so what runs is the saved function, in the
@@ -72,6 +90,7 @@ export function TestRunDialog({
   workspaceId,
   functionId,
   params,
+  handed,
   unsaved,
   creating,
 }: TestRunDialogProps) {
@@ -79,6 +98,14 @@ export function TestRunDialog({
 
   /** What each parameter is being handed, as typed. Keyed by the parameter's name. */
   const [values, setValues] = useState<Record<string, string>>({});
+  /**
+   * What a grant is being given instead, as typed. Keyed by the variable's name.
+   *
+   * Kept apart from [values] rather than in one map, because a parameter and a
+   * variable can share a name and the two go to the server as different fields.
+   * Blank means the workspace's own value and is not sent at all.
+   */
+  const [instead, setInstead] = useState<Record<string, string>>({});
   const [running, setRunning] = useState(false);
   const [ran, setRan] = useState<FunctionRun | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
@@ -129,6 +156,14 @@ export function TestRunDialog({
           name: param.name,
           json: argumentJson(param.type, values[param.name] ?? ''),
         })),
+        /*
+         * Only the ones somebody actually typed into. A blank field is not "give
+         * it nothing" - it is "give it what the workspace holds", which is what
+         * leaving the name out of this list means to the server.
+         */
+        externals: handed
+          .filter((one) => (instead[one.name] ?? '').trim() !== '')
+          .map((one) => ({ name: one.name, json: argumentJson(one.type, instead[one.name] ?? '') })),
       });
       setRan(answer);
     } catch (cause) {
@@ -164,13 +199,13 @@ export function TestRunDialog({
         ) : (
           <>
             {/*
-              A function that takes nothing says so.
-              
-              The window is a column of fields, and with no parameters to draw
-              it was a heading, a gap and two buttons - which reads as something
-              that failed to load rather than as a function that needs nothing.
+              A function that is handed nothing at all says so.
+
+              The window is a column of fields, and with nothing to draw it was
+              a heading, a gap and two buttons - which reads as something that
+              failed to load rather than as a function that needs nothing.
             */}
-            {params.length === 0 && (
+            {params.length === 0 && handed.length === 0 && (
               <p className={styles.dialogMessage}>{t('This function takes no parameters.')}</p>
             )}
             <div className={styles.fields}>
@@ -220,6 +255,57 @@ export function TestRunDialog({
                         aria-label={`Argument ${param.name}`}
                         onChange={(event) =>
                           setValues((current) => ({ ...current, [param.name]: event.target.value }))
+                        }
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {/*
+                And the grants, under the parameters and after them, which is
+                the order the sandbox receives them in.
+
+                Each is blank and each blank one means the workspace's value, so
+                the window opens ready to run the function exactly as a node
+                would - typing into one is a deliberate act, not the default.
+                The placeholder says which it is; the label says it is a grant
+                rather than a parameter, because on a function like
+                `checkJiraSignature` the difference decides what the test proves.
+              */}
+              {handed.map((one) => (
+                <div key={`external-${one.name}`} className={styles.field}>
+                  <label className={styles.label} htmlFor={`run-external-${one.name}`}>
+                    {one.name} · {valueTypeLabel(one.type)} · {t('from the workspace')}
+                  </label>
+                  {one.type === 'BOOLEAN' ? (
+                    <div className={styles.inputWrapper}>
+                      <select
+                        id={`run-external-${one.name}`}
+                        className={`${styles.select} ${styles.inputMono}`}
+                        value={instead[one.name] ?? ''}
+                        aria-label={`Instead of ${one.name}`}
+                        onChange={(event) =>
+                          setInstead((current) => ({ ...current, [one.name]: event.target.value }))
+                        }
+                      >
+                        <option value="">{t('the stored value')}</option>
+                        <option value="true">true</option>
+                        <option value="false">false</option>
+                      </select>
+                      <img src={chevronDown12Icon} alt="" width={12} height={12} />
+                    </div>
+                  ) : (
+                    <div className={styles.inputWrapper}>
+                      <input
+                        id={`run-external-${one.name}`}
+                        className={`${styles.input} ${styles.inputMono}`}
+                        type={one.type === 'NUMBER' ? 'number' : 'text'}
+                        value={instead[one.name] ?? ''}
+                        placeholder={t('the stored value')}
+                        aria-label={`Instead of ${one.name}`}
+                        onChange={(event) =>
+                          setInstead((current) => ({ ...current, [one.name]: event.target.value }))
                         }
                       />
                     </div>

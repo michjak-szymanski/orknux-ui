@@ -29,7 +29,8 @@ export type FiringOutcome =
   | 'CONDITION_DID_NOT_HOLD'
   | 'UNDECIDED'
   | 'FAILED'
-  | 'WORKFLOW_DISABLED';
+  | 'WORKFLOW_DISABLED'
+  | 'NOT_WATCHED';
 
 export interface TriggerFiring {
   id: string;
@@ -51,6 +52,7 @@ export const FIRING_OUTCOME_LABEL: Record<FiringOutcome, string> = {
   FAILED: 'Failed',
   UNAUTHENTICATED: t('Not authenticated'),
   WORKFLOW_DISABLED: t('Workflow switched off'),
+  NOT_WATCHED: t('Not a watched bot'),
 };
 
 export interface Trigger {

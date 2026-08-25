@@ -793,9 +793,13 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
    */
   const handed = useMemo(
     () =>
-      externals.map((variableId) => ({
-        name: variables.find((candidate) => candidate.id === variableId)?.name ?? 'external',
-      })),
+      externals.map((variableId) => {
+        const held = variables.find((candidate) => candidate.id === variableId);
+        // The type as well as the name, because the Test Run window offers a
+        // control per type the way it does for a parameter - a number is typed
+        // into a number field there too.
+        return { name: held?.name ?? 'external', type: held?.type ?? 'STRING' };
+      }),
     [externals, variables],
   );
 
@@ -2338,6 +2342,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
         workspaceId={workspaceId}
         functionId={creating ? '' : functionId}
         params={declared(params)}
+        handed={handed}
         unsaved={unsaved}
         creating={creating}
       />

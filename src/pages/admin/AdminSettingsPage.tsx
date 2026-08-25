@@ -6,6 +6,7 @@ import {
   setChatEnabled,
   setMetricsAnonymous,
   setRevisionRetentionDays,
+  setTaskMaxTurns,
 } from '../../api/installation';
 import type { InstallationSettings } from '../../api/installation';
 import type { SessionUser } from '../../api/session';
@@ -47,12 +48,15 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
    * one without saving an empty string on the way through.
    */
   const [retention, setRetention] = useState('');
+  /** What is typed in the turns box, as text, for the same reason the retention is. */
+  const [turns, setTurns] = useState('');
 
   useEffect(() => {
     fetchInstallationSettings()
       .then((held) => {
         setSettings(held);
         setRetention(String(held.revisionRetentionDays));
+        setTurns(String(held.taskMaxTurns));
       })
       .catch((cause: unknown) => {
         setError(cause instanceof Error ? cause.message : t('Could not read the settings.'));
@@ -70,6 +74,7 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
       const held = await change();
       setSettings(held);
       setRetention(String(held.revisionRetentionDays));
+      setTurns(String(held.taskMaxTurns));
       // The shell reads the same settings to decide whether to offer the Chat
       // tab, so it is told rather than left showing a link to a page that is off.
       forgetInstallation();
@@ -327,6 +332,48 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
                 <code>ORKNUX_REVISION_RETENTION_DAYS</code> in the environment says{' '}
                 {settings.revisionRetentionDaysConfigured} days, but an administrator stored{' '}
                 {settings.revisionRetentionDays} here, and the stored answer is the one in force.
+              </p>
+            )}
+
+            <h2 className={styles.sectionHeading}>{t('Tasks')}</h2>
+
+            <div className={styles.setting}>
+              <div className={styles.settingText}>
+                <span className={styles.labelWithHint}>
+                  <p className={styles.settingLabel}>{t('How many turns a task may take')}</p>
+                  <FieldHint label={t('How many turns a task may take')}>
+                    {t('One turn is one round of the agent’s own tool loop: it is asked, it may call its tools, and it answers. A task that has used them all is stopped and says so, which is the signal that it is going round in circles rather than working. The number is copied onto a task when it starts, so raising it gives the next task more and leaves the ones already running as they were. It is not the only ceiling — a task is also stopped after two hours of working time, which is what bounds a turn that sits waiting on a slow tool.')}
+                  </FieldHint>
+                </span>
+              </div>
+              <div className={styles.retention}>
+                <input
+                  id="task-max-turns"
+                  name="taskMaxTurns"
+                  className={styles.input}
+                  type="number"
+                  min={1}
+                  max={200}
+                  value={turns}
+                  onChange={(event) => setTurns(event.target.value)}
+                  disabled={busy}
+                  aria-label={t('How many turns a task may take')}
+                />
+                <span className={styles.retentionUnit}>{t('turns')}</span>
+                <button
+                  type="button"
+                  className={styles.primaryButton}
+                  onClick={() => void save(() => setTaskMaxTurns(Number(turns)))}
+                  disabled={busy || turns.trim() === '' || Number(turns) === settings.taskMaxTurns}
+                >{t('Save')}</button>
+              </div>
+            </div>
+
+            {settings.taskMaxTurns !== settings.taskMaxTurnsConfigured && (
+              <p className={styles.fieldNote}>
+                <code>ORKNUX_TASK_MAX_TURNS</code> in the environment says{' '}
+                {settings.taskMaxTurnsConfigured}, but an administrator stored{' '}
+                {settings.taskMaxTurns} here, and the stored answer is the one in force.
               </p>
             )}
 

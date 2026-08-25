@@ -835,14 +835,7 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                       {t('Replies To')}
                     </span>
                     <FieldHint label={t('Replies To')}>
-                      <p>
-                        {t('Which bots to watch for replies to — not the connection this listens on.')}
-                      </p>
-                      <p>
-                        {t(
-                          'A reply names whoever wrote the message it hangs under, and a bot token is a Slack user. Two connections sharing a token are one user, and the row says so.',
-                        )}
-                      </p>
+                      <p>{t('Which bots to watch for replies to.')}</p>
                     </FieldHint>
                   </span>
                   <ul className={own.watchList} aria-labelledby="trigger-watched-label">

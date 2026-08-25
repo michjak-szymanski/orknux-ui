@@ -737,6 +737,11 @@ export async function runFunction(input: {
   workspaceId: string;
   functionId: string;
   arguments: FunctionArgument[];
+  /**
+   * What to hand a granted variable instead of the workspace's own value, by
+   * the variable's name. Only sent for the ones somebody actually typed into.
+   */
+  externals?: FunctionArgument[];
 }): Promise<FunctionRun> {
   const data = await graphql<{ runFunction: FunctionRun }>(RUN_FUNCTION_MUTATION, { input });
   return data.runFunction;

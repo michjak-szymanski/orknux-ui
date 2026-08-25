@@ -16,6 +16,8 @@
  */
 export const PL: Record<string, string> = {
   "This function takes no parameters.": "Ta funkcja nie przyjmuje parametrów.",
+  "from the workspace": "z przestrzeni roboczej",
+  "the stored value": "wartość zapisana",
   'Nothing imports it.': 'Nic tego nie importuje.',
   'Imported by': 'Importowane przez',
   'Fetched once from': 'Pobrane raz z',
@@ -27,12 +29,10 @@ export const PL: Record<string, string> = {
   // something the interface says.
   "Remove comment": "Usuń komentarz",
   "Remove this comment": "Usuń ten komentarz",
+  "to work on this": "do pracy nad tym",
   "removed a comment by": "usunął komentarz, którego autorem jest",
   "removed a comment they wrote": "usunął własny komentarz",
-  'Which bots to watch for replies to — not the connection this listens on.':
-    'Które boty obserwować pod kątem odpowiedzi — nie połączenie, którego to nasłuchuje.',
-  'A reply names whoever wrote the message it hangs under, and a bot token is a Slack user. Two connections sharing a token are one user, and the row says so.':
-    'Odpowiedź wskazuje autora wiadomości, pod którą wisi, a token bota to użytkownik Slacka. Dwa połączenia z tym samym tokenem to jeden użytkownik i wiersz to mówi.',
+  'Which bots to watch for replies to.': 'Które boty obserwować pod kątem odpowiedzi.',
   // --- navigation and the shell ------------------------------------------
   "Sections": "Sekcje",
   "Primary": "Główna",
@@ -616,6 +616,9 @@ export const PL: Record<string, string> = {
   "default connections": "domyślnych połączeń",
   "workspaces": "przestrzeni roboczych",
   "days": "dni",
+  "turns": "tur",
+  "How many turns a task may take": "Ile tur może wykonać zadanie",
+  "One turn is one round of the agent’s own tool loop: it is asked, it may call its tools, and it answers. A task that has used them all is stopped and says so, which is the signal that it is going round in circles rather than working. The number is copied onto a task when it starts, so raising it gives the next task more and leaves the ones already running as they were. It is not the only ceiling — a task is also stopped after two hours of working time, which is what bounds a turn that sits waiting on a slow tool.": "Jedna tura to jeden obieg pętli narzędziowej agenta: pytanie, ewentualne wywołania narzędzi i odpowiedź. Zadanie, które zużyło wszystkie, zostaje zatrzymane i mówi o tym — to sygnał, że kręci się w kółko, zamiast pracować. Liczba jest kopiowana na zadanie przy starcie, więc podniesienie jej daje więcej następnemu zadaniu, a te już uruchomione zostają bez zmian. To nie jedyny limit — zadanie zatrzymuje się także po dwóch godzinach pracy, co ogranicza turę czekającą na powolne narzędzie.",
   "minutes": "minut",
   "seconds": "sekund",
 
@@ -1392,6 +1395,7 @@ export const PL: Record<string, string> = {
   "One attempt. A failure stops here.": "Jedna próba. Niepowodzenie kończy tu bieg.",
   "Ceiling, jitter and budget": "Górna granica, rozrzut i budżet",
   "Workflow switched off": "Przepływ pracy wyłączony",
+  "Not a watched bot": "Nie jest obserwowanym botem",
   "This workflow has been removed from the workspace. The run is kept; there is no workflow to open.": "Ten przepływ pracy usunięto z przestrzeni roboczej. Uruchomienie zostaje; nie ma czego otworzyć.",
   "JSON handed to the run. The clock carries no data, so this is what the workflow works on.": "JSON przekazywany uruchomieniu. Zegar nie niesie żadnych danych, więc to jest to, na czym pracuje przepływ.",
   "What this agent is told and answers is kept here, and read back on the next run. Its key is set on the session itself.": "To, co agentowi powiedziano i co odpowiedział, przechowywane jest tutaj i odczytywane przy następnym uruchomieniu. Klucz ustawia się na samej sesji.",

@@ -2138,6 +2138,20 @@ function said(event: IssueEvent) {
           {who} took off: this <span className={styles.historyChip}>{readRelation(event.was)}</span>
         </>
       );
+    case 'TASK_STARTED':
+      /*
+       * Who pressed it and which agent went to work, in one sentence.
+       *
+       * The status line beside this says an issue moved to in progress and
+       * reads identically to a person picking the work up themselves, so
+       * without this the thread's next entries are comments by an agent that
+       * nothing on the page ever announced.
+       */
+      return (
+        <>
+          {who} set <strong>{event.became}</strong> {t('to work on this')}
+        </>
+      );
     case 'COMMENT_REMOVED':
       /*
        * Whose it was, and never a word of it - the entry carries no text to
