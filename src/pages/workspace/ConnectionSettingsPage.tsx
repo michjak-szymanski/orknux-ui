@@ -15,6 +15,8 @@ import {
 } from '../../api/integrations';
 import type { AuthType, ConnectionStatus, ConnectionType, MailSecurity, WorkspaceConnection } from '../../api/integrations';
 import type { SessionUser } from '../../api/session';
+import { fetchSlackBotUsers } from '../../api/triggers';
+import type { SlackBotUser } from '../../api/triggers';
 import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import lockIcon from '../../assets/lock-keyhole.svg';
 import { AppShell } from '../../components/AppShell';
@@ -181,6 +183,35 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
    * only meant to send.
    */
   const slack = kind === 'SLACK';
+
+  /**
+   * What Slack said this token can do, where this connection is a Slack one.
+   *
+   * Asked of the workspace and read for one row, because that is the only shape
+   * the query has - and it costs nothing extra: the server keeps each
+   * connection's answer for ten minutes against the token's own fingerprint, so
+   * opening this page after the trigger list that sent somebody here asks Slack
+   * nothing at all.
+   *
+   * Only for a Slack connection. An SMTP server has no bot user and no scopes,
+   * and a page that asked anyway would be spending a round trip to be told so.
+   */
+  const [botUser, setBotUser] = useState<SlackBotUser | null>(null);
+
+  useEffect(() => {
+    if (!slack || workspaceId === '' || connectionId === '') return;
+    let current = true;
+    fetchSlackBotUsers(workspaceId)
+      .then((bots) => {
+        if (current) setBotUser(bots.find((held) => held.connectionId === connectionId) ?? null);
+      })
+      .catch(() => {
+        if (current) setBotUser(null);
+      });
+    return () => {
+      current = false;
+    };
+  }, [slack, workspaceId, connectionId]);
 
   /** Changing how the session is secured moves the port with it, until it is typed over. */
   function changeSecurity(next: MailSecurity) {
@@ -710,6 +741,25 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
                 <span className={styles.statusDetail}>{connection.lastCheckMessage}</span>
               )}
             </div>
+
+            {/*
+              What this token cannot do, beside what it is.
+
+              A connection can be green - the credential is real, Slack answered
+              it - and still be one no message will ever arrive on, because a
+              bot token set up only to post carries no history scope. That is a
+              fact about the token and belongs on the token's page, in the words
+              the server already uses for it.
+
+              `receives === false` and never `!receives`: null is Slack having
+              said nothing about scopes, and a page that warned on it would send
+              somebody to rebuild an installation that is fine.
+            */}
+            {botUser?.receives === false && botUser.message !== '' && (
+              <p className={styles.cannotReceive} id="connection-receives">
+                {botUser.message}
+              </p>
+            )}
 
             {/* Checking and saving are the two things to do here, so they sit together. */}
             <div className={styles.actionRow}>

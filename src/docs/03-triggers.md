@@ -19,6 +19,20 @@ workflow.
 - **Webhook** — an HTTP request to a path on this installation.
 - **Manual** — somebody presses Run.
 
+## What a Slack connection trigger needs
+
+A **Mention** arrives on any working bot token. A **Message** and a **Reply**
+do not: Slack delivers a `message` event only to a token carrying one of the
+history scopes — `channels:history` for public channels, and `groups:`, `im:`
+or `mpim:` for the other kinds of conversation. A bot token set up only to
+post carries none of them, and a trigger waiting on one will never fire.
+
+The product asks Slack which scopes a token holds and says so where it
+matters: the trigger's row in the list is marked **Will not fire**, its own
+settings page prints the reason under the Action picker, and the connection's
+page says what its token cannot do. Nothing is marked where Slack said nothing
+about scopes at all — an absence nobody reported is not an absence.
+
 ## Webhooks
 
 A webhook trigger takes two things:
