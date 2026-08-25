@@ -337,11 +337,6 @@ export const PAGES = [
     goTo: false,
     action: { label: t('Create function'), also: 'new javascript typescript write code' },
   },
-  /*
-   * Before the bare one, for the same reason `new` is: `settings` would
-   * otherwise be read as a function called settings.
-   */
-  { path: '/workspace/:workspaceId/functions/:functionId/settings', access: 'signed-in', goTo: false },
   { path: '/workspace/:workspaceId/functions/:functionId', access: 'signed-in', goTo: false },
   /* Before the one with an id in it: `new` is a page, not a condition called new. */
   {
