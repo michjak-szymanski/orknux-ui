@@ -89,8 +89,16 @@ async function stayed(what, sentence) {
 
 // ---- The action editor ----
 
+/*
+ * The action editor is a page now, not a modal - Create Action is a link to
+ * `/actions/new`. The sentences below are the same sentences and the (?)s are
+ * the same (?)s; the form is what moved, not the convention it follows. The
+ * note about the top layer under `moved` is about the four dialogs further
+ * down this file, which are still `showModal()`.
+ */
 await page.goto(`${BASE}/workspace/${WORKSPACE}/actions`, { waitUntil: 'domcontentloaded' });
-await page.locator('button', { hasText: /^\+ Create Action$/ }).click();
+await page.locator('a', { hasText: /^\+ Create Action$/ }).first().click();
+await page.waitForURL(/\/actions\/new$/, { timeout: 30_000 });
 await page.waitForSelector('#action-name', { timeout: 20_000 });
 await page.waitForTimeout(1000);
 

@@ -10,7 +10,7 @@
  *  - A row that reads a variable shows the variable's *name* and never what it
  *    holds. That is the whole point of the reference: a bearer token stays in
  *    the variables screen, and an action that names it is not a second place
- *    the token is legible. So this check reads the whole dialog, the whole
+ *    the token is legible. So this check reads the whole form, the whole
  *    page and the whole network answer, and the assertion is that the secret is
  *    in none of them.
  *
@@ -97,9 +97,17 @@ try {
   await page.goto(`${BASE}/workspace/${WORKSPACE}/actions`);
   if (!(await drawn(page, 'the actions page'))) await finish(browser);
 
-  await page.getByRole('button', { name: /create action/i }).first().click();
-  const dialog = page.locator('dialog[open]');
-  await dialog.waitFor({ state: 'visible', timeout: 10_000 });
+  /*
+   * Create Action is a link to `/actions/new` - an action is edited on a page of
+   * its own now - so what everything below is scoped to is that page's form
+   * rather than an open dialog. The claim the whole file is about is unchanged
+   * and is if anything stronger for it: the secret must be nowhere in the form,
+   * and it is already asserted a second time against every byte of the page.
+   */
+  await page.getByRole('link', { name: /create action/i }).first().click();
+  await page.waitForURL(/\/actions\/new$/, { timeout: 30_000 });
+  const form = page.locator('form');
+  await form.waitFor({ state: 'visible', timeout: 10_000 });
 
   /*
    * By id, not by label. The first draft of this asked for /^name$/i, and the
@@ -109,14 +117,14 @@ try {
    * the labels point at and do not move when the wording does; the rows, which
    * have no id of their own, are reached by the aria-label that numbers them.
    */
-  await dialog.locator('#action-name').fill(rowsName);
-  await dialog.locator('#action-subtype').selectOption('HTTP_REQUEST');
-  await dialog.locator('#action-url').fill('https://api.example.com/orders');
+  await form.locator('#action-name').fill(rowsName);
+  await form.locator('#action-subtype').selectOption('HTTP_REQUEST');
+  await form.locator('#action-url').fill('https://api.example.com/orders');
 
   // Add two rows, and take one away again. The count is read off the name
   // inputs rather than off the block, because a row is what has a name.
-  const names = dialog.getByRole('textbox', { name: /^Header \d+ name$/ });
-  const add = dialog.getByRole('button', { name: /^Add Header$/ });
+  const names = form.getByRole('textbox', { name: /^Header \d+ name$/ });
+  const add = form.getByRole('button', { name: /^Add Header$/ });
 
   const before = await names.count();
   await add.click();
@@ -124,15 +132,15 @@ try {
   await add.click();
   record((await names.count()) === before + 3, 'Add Header adds a row each time it is pressed');
 
-  await dialog.getByRole('button', { name: `Remove header ${before + 3}` }).click();
+  await form.getByRole('button', { name: `Remove header ${before + 3}` }).click();
   record((await names.count()) === before + 2, 'and the remove control takes one away');
 
   // A literal, and a reference beside it.
   await names.nth(before).fill('Accept');
-  await dialog.getByRole('textbox', { name: `Header ${before + 1} value` }).fill('application/json');
+  await form.getByRole('textbox', { name: `Header ${before + 1} value` }).fill('application/json');
 
   await names.nth(before + 1).fill('Authorization');
-  await dialog
+  await form
     .getByRole('group', { name: `Header ${before + 2} source` })
     .getByRole('button', { name: 'Reference' })
     .click();
@@ -140,22 +148,22 @@ try {
   // The picker's trigger is a button carrying the label, and each option is a
   // button naming the variable beside its type - so the option is matched on the
   // name rather than on the whole accessible string.
-  await dialog.getByRole('button', { name: `Header ${before + 2} variable` }).click();
-  await dialog.getByRole('button', { name: new RegExp(variableName) }).first().click();
+  await form.getByRole('button', { name: `Header ${before + 2} variable` }).click();
+  await form.getByRole('button', { name: new RegExp(variableName) }).first().click();
 
   record(
-    (await dialog.getByRole('button', { name: `Header ${before + 2} variable` }).innerText()).includes(variableName),
+    (await form.getByRole('button', { name: `Header ${before + 2} variable` }).innerText()).includes(variableName),
     'the picker closes on the variable it was pointed at',
   );
 
   record(
-    (await dialog.innerText()).includes(variableName),
+    (await form.innerText()).includes(variableName),
     'a referenced row names the variable it reads',
   );
 
-  // The assertion this whole issue is about, made against the drawn dialog and
+  // The assertion this whole issue is about, made against the drawn form and
   // then again against every byte the page holds.
-  record(!(await dialog.innerText()).includes(SECRET), 'and what that variable holds is not in the dialog');
+  record(!(await form.innerText()).includes(SECRET), 'and what that variable holds is not in the form');
   record(
     !(await page.evaluate(() => document.documentElement.outerHTML)).includes(SECRET),
     'nor anywhere in the page, in a value attribute or a hidden field',
@@ -163,10 +171,12 @@ try {
 
   await page.screenshot({ path: shot('action-headers-rows.png') });
 
-  const submit = dialog.getByRole('button', { name: /^(Create Action|Save Changes)$/ });
+  const submit = form.getByRole('button', { name: /^(Create Action|Save Changes)$/ });
   record(await submit.isEnabled(), 'the form is complete enough to save');
   await submit.click();
-  await dialog.waitFor({ state: 'hidden', timeout: 10_000 });
+  // Saving goes back to the list, which is what taking the form off the screen
+  // means now that it is a page rather than a dialog that closes.
+  await page.waitForURL(new RegExp(`/workspace/${WORKSPACE}/actions$`), { timeout: 30_000 });
 
   // ------------------------------------------- what was stored, and what was not
 
