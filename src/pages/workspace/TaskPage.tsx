@@ -35,13 +35,17 @@ export interface TaskPageProps {
  * How much of the session to draw before following it.
  *
  * The *newest* of it, which is the half that matters and was the other way
- * round: a task that ran overnight has thousands of lines and the first two
- * hundred of them are the part that stopped being interesting hours ago. It is
- * also what makes the cursor right — the stream is asked for everything after
- * the newest line drawn, so drawing the oldest ones would mean asking for the
- * whole night again.
+ * round: a task that ran overnight has thousands of lines and the first hundred
+ * of them are the part that stopped being interesting hours ago. It is also what
+ * makes the cursor right — the stream is asked for everything after the newest
+ * line drawn, so drawing the oldest ones would mean asking for the whole night
+ * again.
+ *
+ * A hundred because that is what the server will give: `llmSessionEvents` caps a
+ * page there, so the two hundred this used to ask for was a hundred that read
+ * like a decision.
  */
-const LOG_SIZE = 200;
+const LOG_SIZE = 100;
 
 /** What the page says it is doing, in one word. */
 const WATCHING_LABEL: Record<TaskWatchState, string> = {
