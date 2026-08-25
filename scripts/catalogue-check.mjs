@@ -72,10 +72,12 @@ function sources(from = join(ROOT, 'src')) {
  *
  * A quoted literal, either way round: the transform kept whichever quotes the
  * call site already had, so an attribute's double quotes survived beside a text
- * node's single ones. A call on a variable is not a string this catalogue could
- * ever hold, so it is not one to complain about either.
+ * node's single ones. `tf` counts as well as `t` - a sentence with values in it
+ * is keyed on its English the same way, and one left out of the catalogue is as
+ * untranslated as any other. A call on a variable is not a string this
+ * catalogue could ever hold, so it is not one to complain about either.
  */
-const CALL = /\bt\(\s*(['"])((?:[^'"\\]|\\.)*)\1/g;
+const CALL = /\btf?\(\s*(['"])((?:[^'"\\]|\\.)*)\1/g;
 
 const called = new Map();
 for (const path of sources()) {

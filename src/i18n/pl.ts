@@ -1828,4 +1828,7 @@ export const PL: Record<string, string> = {
 
   // --- an example of a name -------------------------------------------------------
   "e.g. BuildFinished": "np. BuildFinished",
+
+  "Showing {first}-{last} of {total}": "Pokazano {first}-{last} z {total}",
+  "Showing {first}-{last} of {total} {unit}": "Pokazano {first}-{last} z {total}",
 };

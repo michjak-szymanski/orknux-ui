@@ -218,7 +218,14 @@ try {
    * The manual is not translated, so its pages say so rather than quietly
    * appearing in English. This is the whole of what "coherent" means here: the
    * reader is never left to wonder whether an English page is a bug.
+   *
+   * On the manual's own page, which the check has to go to: the assertion used
+   * to ride on wherever the previous step had left the browser, and when that
+   * step moved it read an agents page and failed for the wrong reason.
    */
+  await page.goto(`${BASE}/docs`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('h1');
+  await page.waitForTimeout(500);
   const said = await page.evaluate(() => document.body.innerText);
   record(
     said.includes('Ta strona nie jest jeszcze przetłumaczona'),

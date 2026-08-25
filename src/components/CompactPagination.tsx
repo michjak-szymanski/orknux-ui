@@ -1,6 +1,6 @@
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
 import styles from './CompactPagination.module.css';
-import { t } from '../i18n';
+import { t, tf } from '../i18n';
 
 export interface CompactPaginationProps {
   /** 1-based page number. */
@@ -40,7 +40,12 @@ export function CompactPagination({
   return (
     <div className={styles.pagination}>
       <p className={styles.summary}>
-        Showing {firstItem}-{lastItem} of {totalItems} {unit}
+        {tf('Showing {first}-{last} of {total} {unit}', {
+          first: firstItem,
+          last: lastItem,
+          total: totalItems,
+          unit,
+        })}
         {pageSizes !== undefined && onPageSizeChange !== undefined && (
           <>
             {' · '}

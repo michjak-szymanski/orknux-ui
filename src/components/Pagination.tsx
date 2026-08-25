@@ -1,5 +1,5 @@
 import styles from './Pagination.module.css';
-import { t } from '../i18n';
+import { t, tf } from '../i18n';
 
 export interface PaginationProps {
   /** 1-based page number. */
@@ -20,7 +20,11 @@ export function Pagination({ page, pageSize, totalItems, onPageChange, label }: 
   return (
     <div className={styles.pagination}>
       <p className={styles.summary}>
-        Showing {firstItem}-{lastItem} of {totalItems}
+        {tf('Showing {first}-{last} of {total}', {
+          first: firstItem,
+          last: lastItem,
+          total: totalItems,
+        })}
       </p>
 
       <div className={styles.actions}>
