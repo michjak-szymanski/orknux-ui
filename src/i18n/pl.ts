@@ -15,6 +15,8 @@
  * of English on an otherwise Polish screen.
  */
 export const PL: Record<string, string> = {
+  'Fetched once from': 'Pobrane raz z',
+  'Registry': 'Repozytorium',
   'Remove library': 'Usuń bibliotekę',
   'Which bots to watch for replies to — not the connection this listens on.':
     'Które boty obserwować pod kątem odpowiedzi — nie połączenie, którego to nasłuchuje.',
@@ -1787,10 +1789,6 @@ export const PL: Record<string, string> = {
   "It came back with nothing.": "Wróciło z niczym.",
 
   // --- what the model thought, and a lookup that could not be made ---------
-  "Failed": "Nie powiodło się",
-  "Could not be run": "Nie udało się wywołać",
-  "Thinking": "Myśli",
-  "Thought": "Myślało",
   "Thought for": "Myślało przez",
   "Continuing an LLM session — what is said here is written into it": "Kontynuuje sesję LLM — to, co tu napisane, trafia do niej",
 

@@ -50,6 +50,24 @@ export interface AdminLibrariesPageProps {
  * drawn only where a registry is configured: an installation with no way out
  * should be shown the upload rather than a control that fails on being used.
  */
+/**
+ * What to call the place a package is fetched from.
+ *
+ * "npm" where the registry is npm's own, and the host otherwise - an
+ * installation pointed at a mirror is not fetching from npm and should not be
+ * told it is. The host alone rather than the whole URL: this is a label on a
+ * field, and `https://registry.npmjs.org/` spends a line saying what `npm` says
+ * in three letters.
+ */
+function registryName(url: string): string {
+  try {
+    const host = new URL(url).host;
+    return host === 'registry.npmjs.org' ? 'npm' : host;
+  } catch {
+    return t('Registry');
+  }
+}
+
 export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPageProps) {
   const [libraries, setLibraries] = useState<ScriptLibrary[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -227,13 +245,27 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
                 void onInstall();
               }}
             >
+              {/*
+                The registry is named on the control, not only in a tooltip.
+                
+                A box taking `random@4.1.0` beside a button reading Install says
+                where the file comes from to whoever already knows; to anybody
+                else it is a package manager they have to guess at, and this one
+                reaches the network on an administrator's press. It says npm
+                where npm is what is configured, and the host itself where an
+                installation points at a mirror of its own.
+              */}
+              <label className={styles.specLabel} htmlFor="library-spec">
+                {registryName(registry.url)}
+              </label>
               <input
+                id="library-spec"
                 className={styles.spec}
                 type="text"
                 value={spec}
                 placeholder={t('random@4.1.0')}
                 aria-label={t('Package and exact version')}
-                title={`Fetched once from ${registry.url}`}
+                title={`${t('Fetched once from')} ${registry.url}`}
                 disabled={busy}
                 onChange={(event) => setSpec(event.target.value)}
               />
