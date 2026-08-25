@@ -1996,7 +1996,17 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
               */}
               {message.role === CALL_ROLE ? (
                 <div className={styles.call}>
-                  <CallLine actor={message.actor} content={message.content} />
+                  {/*
+                    Folded, the same as one arriving live.
+                    
+                    These come back from the session the chat continues, and a
+                    call read out of history is no more the conversation than one
+                    watched being made - so it is one line here too, and opens on
+                    a press. The live site below passes the same thing; a call
+                    that folded while it happened and sprawled after a reload
+                    would be two different pages.
+                  */}
+                  <CallLine actor={message.actor} content={message.content} folded />
                 </div>
               ) : message.role === 'user' ? (
                 <div className={styles.userRow} data-find={findMark(index)}>
