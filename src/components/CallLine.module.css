@@ -65,6 +65,20 @@
   color: var(--color-cyan);
 }
 
+/*
+ * A call that could not be run at all, which is not the same as one that ran
+ * and gave back little. The answer above it was reached without whatever this
+ * was going to say, and that is the thing worth being able to see at a glance
+ * on a page somebody opened to work out why an answer is thin.
+ */
+.state[data-failed='true'] {
+  color: var(--color-danger);
+}
+
+.call[data-failed='true'] {
+  border-color: var(--color-danger-border);
+}
+
 /* A call that passed nothing still happened, and still says so. */
 .note {
   margin: 0;

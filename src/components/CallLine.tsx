@@ -17,6 +17,17 @@ export interface CallLineProps {
    * answered yet, which is a different fact and is shown as one.
    */
   result?: string | null;
+  /**
+   * Whether the tool could not be run at all, as against running and answering
+   * unhelpfully.
+   *
+   * A page that does not know says nothing, which is every page reading a
+   * transcript: what is recorded is what came back, and the record does not say
+   * whether the tool or this application produced it. The chat knows because it
+   * watched the round happen, and it is worth saying — a lookup that failed
+   * explains an answer that a lookup returning nothing does not.
+   */
+  failed?: boolean;
   /** Something to say about when it happened, drawn beside the name. */
   when?: string;
 }
@@ -53,7 +64,7 @@ const FOLD_OVER_CHARS = 600;
  * hides. The two are folded separately: a long argument and a long result are
  * two different things to want to open.
  */
-export function CallLine({ actor, content, result, when }: CallLineProps) {
+export function CallLine({ actor, content, result, failed = false, when }: CallLineProps) {
   const asked = useIndented(content);
   const got = useIndented(result ?? '');
 
@@ -61,13 +72,18 @@ export function CallLine({ actor, content, result, when }: CallLineProps) {
   const knowsResult = result !== undefined;
 
   return (
-    <article className={styles.call} data-testid="call-line" data-running={running}>
+    <article
+      className={styles.call}
+      data-testid="call-line"
+      data-running={running}
+      data-failed={knowsResult && !running && failed}
+    >
       <p className={styles.head}>
         <span className={styles.badge}>{t('Tool')}</span>
         <span className={styles.name}>{actor ?? 'a tool'}</span>
         {knowsResult && (
-          <span className={styles.state} data-running={running}>
-            {running ? 'Running' : 'Returned'}
+          <span className={styles.state} data-running={running} data-failed={!running && failed}>
+            {running ? 'Running' : failed ? t('Failed') : 'Returned'}
           </span>
         )}
         {when !== undefined && !knowsResult && <span className={styles.state}>{when}</span>}
@@ -81,7 +97,7 @@ export function CallLine({ actor, content, result, when }: CallLineProps) {
 
       {knowsResult && !running && (
         <>
-          <p className={styles.label}>{t('Returned')}</p>
+          <p className={styles.label}>{failed ? t('Could not be run') : t('Returned')}</p>
           {got.text.trim() === '' ? (
             <p className={styles.note}>{t('It came back with nothing.')}</p>
           ) : (

@@ -20,7 +20,7 @@ import {
   thinkingTime,
   tokenCount,
 } from '../../api/chat';
-import type { ChatMessage, ChatSession, ChatSpend } from '../../api/chat';
+import type { ChatCall, ChatMessage, ChatSession, ChatSpend, ChatStreamHandlers } from '../../api/chat';
 import { fetchInstallationSettings } from '../../api/installation';
 import {
   attachmentUrl,
@@ -32,6 +32,7 @@ import {
 import type { Attachment } from '../../api/attachments';
 import { AttachmentViewer } from '../../components/AttachmentViewer';
 import { CallLine } from '../../components/CallLine';
+import { Thinking } from '../../components/Thinking';
 import { answers, fetchModels } from '../../api/models';
 import { CHUNKING_DEFAULT, readAloud } from '../../components/readAloud';
 import type { Reading, SpeechChunking } from '../../components/readAloud';
@@ -93,6 +94,25 @@ const WORKSPACE_LOOKUP = 100;
  * Models so that what is answering now is the entry under the pointer.
  */
 type PickerTab = 'models' | 'agents';
+
+/**
+ * What the answer being written now has thought and looked up.
+ *
+ * One of these belongs to one turn. See the `working` state for why none of it
+ * is written down, and for the one part of it that is.
+ */
+interface Working {
+  /** What the model thought, joined as the pieces arrive. */
+  thinking: string;
+  /** The lookups it made, in the order it made them. */
+  calls: ChatCall[];
+}
+
+/** A turn that has done nothing yet, which is also what a new chat shows. */
+const NOTHING_YET: Working = { thinking: '', calls: [] };
+
+/** Whether there is anything of the working to draw. */
+const anyWorking = (working: Working) => working.thinking.trim() !== '' || working.calls.length > 0;
 
 /**
  * Chat.
@@ -215,6 +235,38 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
    * which is the honest answer rather than a gap to be filled with noughts.
    */
   const [lastSpend, setLastSpend] = useState<ChatSpend | null>(null);
+  /**
+   * What the answer being written now is thinking, and what it has looked up.
+   *
+   * The working of one turn, held beside the log rather than in it, for the same
+   * reason `lastSpend` is: none of it is in the chat history. The history is
+   * Spring AI's store and keeps a role, some text and an order — what a model
+   * thought is not something anybody said, and a lookup is not a turn.
+   *
+   * ## So it is not kept, and that is a decision
+   *
+   * Issue #227 reached this boundary with the cost of an answer and settled it
+   * the same way: the number is shown on the answer it belongs to and is gone on
+   * reload, because inventing a messages table to hold it is the one thing the
+   * architecture rules out. Thinking is a much larger version of the same
+   * question — kilobytes per answer rather than three integers — and the case
+   * for keeping it is weaker, not stronger: it is the model talking to itself,
+   * it is never sent back to the model, and nothing downstream reads it.
+   *
+   * The lookups are the exception that proves it. They *are* kept, because they
+   * were already being kept for another reason: an agent chat records its round
+   * into an LLM session, which is a transcript in its own right, and the log
+   * puts them back off that when the page loads. So a reload keeps the calls and
+   * loses the thinking, which is exactly what each of them is worth.
+   *
+   * ## Cleared at the start of a turn, not at the end of one
+   *
+   * It stays on screen once the answer lands: somebody reads the answer and then
+   * asks why it says that. The next send is what clears it, since by then it is
+   * working that belongs to a turn further up the log with no way to draw it
+   * there.
+   */
+  const [working, setWorking] = useState<Working>(NOTHING_YET);
   const [thoughtOpen, setThoughtOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<number | null>(null);
@@ -407,6 +459,9 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
     setMessages([]);
     setChatFiles([]);
     setLastSpend(null);
+    // Working belongs to the turn that produced it, and that turn is in the
+    // chat being left. Carried across it would sit under somebody else's answer.
+    setWorking(NOTHING_YET);
     setTakeAt({});
     if (currentId === null) return;
 
@@ -908,6 +963,7 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
       { role: 'assistant', content: '', actor: null, takes: [] },
     ]);
     setError(null);
+    setWorking(NOTHING_YET);
     setSending(true);
 
     let answer = '';
@@ -931,6 +987,7 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
             // already read.
             onProgress(answer);
           },
+          ...watchWorking(),
           onDone: (spend) => setLastSpend(spend),
           onError: (reason) => {
             failure = reason;
@@ -949,6 +1006,34 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
       setSending(false);
     }
     return answer;
+  }
+
+  /**
+   * The three handlers that follow a turn's working, written once.
+   *
+   * All three doors into the model — a typed send, a spoken one, and asking for
+   * the answer again — want exactly this and want it identically. Three copies
+   * would be three places for a call to stop being paired with its result, and
+   * the symptom of that is a lookup that says it is running for ever.
+   *
+   * A call arrives before its tool has run and is drawn straight away with a
+   * null result, which `CallLine` shows as running; the result lands on it by
+   * `at`. Matched rather than appended blind, because a round may make several
+   * calls and nothing promises the first one to answer is the first one made.
+   */
+  function watchWorking(): Pick<ChatStreamHandlers, 'onThinking' | 'onCall' | 'onCalled'> {
+    return {
+      onThinking: (piece) => setWorking((held) => ({ ...held, thinking: held.thinking + piece })),
+      onCall: (call) =>
+        setWorking((held) => ({ ...held, calls: [...held.calls, { ...call, result: null, failed: false }] })),
+      onCalled: (answer) =>
+        setWorking((held) => ({
+          ...held,
+          calls: held.calls.map((call) =>
+            call.at === answer.at ? { ...call, result: answer.result, failed: answer.failed } : call,
+          ),
+        })),
+    };
   }
 
   async function handleSend(event: FormEvent) {
@@ -1009,6 +1094,10 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
     // finish before drawing what was typed reads as a dropped message.
     setMessages((present) => [...present, { role: 'user', content: said, actor: null, takes: [] }]);
     setError(null);
+    // The last answer's working, cleared as this one starts. It stayed on
+    // screen after that answer landed on purpose; it belongs to that answer,
+    // and one turn further up the log there is nowhere to draw it.
+    setWorking(NOTHING_YET);
     // The answer grows in place as it arrives, so the empty assistant turn is
     // appended first and each piece lands on the end of it.
     setMessages((present) => [...present, { role: 'assistant', content: '', actor: null, takes: [] }]);
@@ -1025,6 +1114,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
               grown[last] = { ...grown[last], content: grown[last].content + piece };
               return grown;
             }),
+          ...watchWorking(),
           onDone: (spend) => setLastSpend(spend),
           onError: (reason) => {
             failure = reason;
@@ -1070,6 +1160,9 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
     setSending(true);
     setError(null);
     setLastSpend(null);
+    // A second answer does its own thinking and its own lookups, and the first
+    // one's would read as this one's.
+    setWorking(NOTHING_YET);
     setMessages((present) => {
       const grown = [...present];
       const last = grown.length - 1;
@@ -1092,6 +1185,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
             grown[last] = { ...grown[last], content: grown[last].content + piece };
             return grown;
           }),
+        ...watchWorking(),
         onDone: (spend) => setLastSpend(spend),
         onError: (reason) => {
           failure = reason;
@@ -1462,12 +1556,24 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                   const opening = !pickerOpen;
                   setPickerOpen(opening);
                   /*
-                    Agents first, unless this chat is on a bare model — then
-                    Models, so the entry that is already ticked is the one under
-                    the pointer rather than one tab away.
+                    Agents first, unless this chat is on a bare model it has
+                    actually been used on — then Models, so the entry that is
+                    already ticked is the one under the pointer rather than one
+                    tab away.
+
+                    "Used on" is what issue #273 added, and it restores #249
+                    rather than qualifying it. A brand-new chat gets a model
+                    nobody chose, and a chat nobody has spoken in was therefore
+                    always `agentId === null && modelId !== null` — so the test
+                    was true for every new chat and the picker opened on Models
+                    every time, which is precisely the case #249 was written
+                    about. `lastMessageAt` is what separates a chat somebody
+                    decided to hold on a bare model from one that has only ever
+                    held a default.
                   */
                   if (opening) {
-                    setPickerTab(current.agentId === null && current.modelId !== null ? 'models' : 'agents');
+                    const chose = current.agentId === null && current.modelId !== null;
+                    setPickerTab(chose && current.lastMessageAt !== null ? 'models' : 'agents');
                   }
                 }}
                 aria-expanded={pickerOpen}
@@ -1829,6 +1935,38 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                         )}
                       </p>
                     )}
+                    {/*
+                      What this answer thought and what it looked up, above the
+                      answer and outside it.
+
+                      Outside is the whole point. The copy control below copies
+                      `shownTake`, the speech model is handed `shownTake`, and
+                      the next turn sends the thread — none of which holds any
+                      of this, so none of them has to remember to leave it out.
+                      A reasoning model's thinking read aloud is the bug this
+                      replaces, not a risk it introduces.
+
+                      On the answer being written and the one just written, and
+                      nowhere else: nothing is recorded, so an answer further up
+                      the log has none and would draw an empty container
+                      claiming otherwise. The calls are the exception and they
+                      come back on their own, off the session, as `tool` lines
+                      in the log above.
+                    */}
+                    {index === messages.length - 1 && anyWorking(working) && (
+                      <div className={styles.working}>
+                        <Thinking text={working.thinking} live={sending} />
+                        {working.calls.map((call) => (
+                          <CallLine
+                            key={call.at}
+                            actor={call.tool}
+                            content={call.arguments}
+                            result={call.result}
+                            failed={call.failed}
+                          />
+                        ))}
+                      </div>
+                    )}
                     {/* Models write markdown; showing the source shows the asterisks. */}
                     <Markdown>{shownTake(index, message)}</Markdown>
                     {/*
@@ -1969,9 +2107,12 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
               Only until the model actually starts. The answer streams into an
               assistant turn that begins empty, so an empty last message is the
               wait itself — once a token lands there is something to read, and
-              saying "Waiting" over the top of it is just wrong.
+              saying "Waiting" over the top of it is just wrong. The same is now
+              true of an agent, which produces no token until the very end but
+              does produce lookups on the way: once one of those is drawn, the
+              wait has visibly stopped being a wait.
             */}
-            {sending && messages[messages.length - 1]?.content === '' && (
+            {sending && messages[messages.length - 1]?.content === '' && !anyWorking(working) && (
               <div className={styles.assistantRow}>
                 <span className={styles.assistantAvatar} aria-hidden="true">
                   <img src={cpuIcon} alt="" width={16} height={16} />

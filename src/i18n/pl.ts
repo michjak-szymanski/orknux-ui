@@ -1781,6 +1781,12 @@ export const PL: Record<string, string> = {
   "Returned": "Zwróciło",
   "It came back with nothing.": "Wróciło z niczym.",
 
+  // --- what the model thought, and a lookup that could not be made ---------
+  "Failed": "Nie powiodło się",
+  "Could not be run": "Nie udało się wywołać",
+  "Thinking": "Myśli",
+  "Thought": "Myślało",
+
   // --- two notes the transform reached this time ---------------------------
   "A saved shape fixes which fields there are; this node decides what goes in them. Custom means the fields are this node's own.": "Zapisany kształt ustala, jakie są pola; ten węzeł decyduje, co się w nich znajdzie. „Własny” oznacza, że pola należą do tego węzła.",
   "The workspace’s values, handed to this function after its own parameters. Their values are never shown here — which is why a variable that is set looks empty on this page: what is chosen is the name, and only the sandbox ever sees what is behind it.": "Wartości przestrzeni roboczej, przekazywane tej funkcji po jej własnych parametrach. Ich wartości nigdy nie są tu pokazywane — dlatego ustawiona zmienna wygląda na tej stronie na pustą: wybiera się nazwę, a to, co za nią stoi, widzi wyłącznie piaskownica.",

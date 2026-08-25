@@ -1,0 +1,69 @@
+/*
+ * The model's thinking, folded away beside its answer.
+ *
+ * Quieter than everything around it on purpose. It sits above an answer in the
+ * reading order and must not compete with it: what somebody came for is the
+ * paragraph underneath, and this is the footnote they open when the paragraph
+ * surprises them.
+ */
+.thinking {
+  margin: 0 0 var(--space-6) 0;
+}
+
+.head {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: 2px var(--space-6);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  font-family: inherit;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.head:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-secondary);
+}
+
+/* The triangle turns; nothing else about the row moves. */
+.mark {
+  font-size: var(--text-2xs);
+  line-height: 1;
+}
+
+.size {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+/*
+ * While it is still arriving. The same cyan a running tool call uses, because
+ * it is the same fact - something is happening that has not finished.
+ */
+.thinking[data-live='true'] .head {
+  color: var(--color-cyan);
+}
+
+/*
+ * Bounded rather than complete. Reasoning runs to thousands of words, and a
+ * block that pushed the answer off the screen when opened would be a fold that
+ * nobody dares use twice.
+ */
+.body {
+  max-height: 18rem;
+  margin: var(--space-6) 0 0 0;
+  padding: var(--space-8) var(--space-12);
+  overflow: auto;
+  border-left: 2px solid var(--color-border);
+  background: var(--color-surface);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}

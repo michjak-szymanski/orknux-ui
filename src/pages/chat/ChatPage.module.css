@@ -582,6 +582,26 @@
 }
 
 /*
+ * The working of the answer being read: what it thought, and what it looked up
+ * while it was thinking.
+ *
+ * Inside the assistant's body rather than beside the log, which is what
+ * separates it from `.call` above. A call carried in from a session was made in
+ * a different conversation and is drawn between the turns; this one was made by
+ * the answer directly underneath it, and drawing it in the same place would
+ * lose exactly that difference.
+ *
+ * No left margin of its own: the body is already indented past the avatar, so
+ * this lines up with the answer it belongs to.
+ */
+.working {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  margin-bottom: var(--space-4);
+}
+
+/*
  * The line between what was carried in and what has been said here. Ruled on
  * both sides because it is a boundary in the conversation rather than a heading
  * over the next part of it.

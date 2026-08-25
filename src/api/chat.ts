@@ -209,9 +209,42 @@ export async function sendChatMessage(id: string, text: string): Promise<ChatAns
   return data.sendChatMessage;
 }
 
+/**
+ * One lookup an agent made while answering, as it is watched.
+ *
+ * `at` is where the call came in the round, counted from nought across every
+ * round the answer took, and it is what pairs a result with the call it belongs
+ * to. Not the provider's own call id, which the model chooses and which more
+ * than one OpenAI-compatible server has sent as an empty string, and not the
+ * transcript line's id, which does not exist for a round nobody is recording.
+ */
+export interface ChatCall {
+  at: number;
+  tool: string;
+  arguments: string;
+  /** What came back. Null while the tool has not answered yet. */
+  result: string | null;
+  /** Whether the tool could not be run at all. Meaningless while running. */
+  failed: boolean;
+}
+
 /** What a streaming send reports as it goes. */
 export interface ChatStreamHandlers {
   onChunk: (text: string) => void;
+  /**
+   * A piece of what the model thought, where it is a model that thinks.
+   *
+   * Separate from `onChunk` all the way down rather than sorted out here: the
+   * server reads it out of a field of its own, or out of the `<think>` block a
+   * local server leaves in the content, and hands the two halves over already
+   * apart. A screen that had to split them would be a second place to get it
+   * wrong, and getting it wrong means the thinking is read aloud.
+   */
+  onThinking: (text: string) => void;
+  /** A lookup, the moment the agent makes it and before its tool has run. */
+  onCall: (call: { at: number; tool: string; arguments: string }) => void;
+  /** And what that lookup gave back. */
+  onCalled: (answer: { at: number; result: string; failed: boolean }) => void;
   onDone: (spend: ChatSpend) => void;
   onError: (reason: string) => void;
 }
@@ -265,15 +298,27 @@ export async function regenerateChatAnswer(id: string, handlers: ChatStreamHandl
  * The answer coming back, frame by frame.
  *
  * Shared by both doors because they differ only in what was sent: what comes
- * back is the same three events either way. The buffering underneath is
+ * back is the same six events either way. The buffering underneath is
  * `readEventStream`'s and is shared further still — the task page follows a
  * running agent through the same reader, and a second copy of that loop is a
  * second place for half a frame to be parsed as a whole one.
+ *
+ * The vocabulary is the chat's own and is not the task stream's, which says
+ * `step` about the same underlying facts. That is deliberate and is written out
+ * on the server's `ServerSentEvents`: a task's page follows a durable log it can
+ * rejoin at any point, and this follows one answer being composed inside one
+ * request. Folding the two sets of names together would mean a reader having to
+ * know which endpoint it was talking to in order to know what a frame meant.
  */
 async function read(response: Response, handlers: ChatStreamHandlers): Promise<void> {
   await readEventStream(response, (frame) => {
     const payload = payloadOf<{
       text?: string;
+      at?: number;
+      tool?: string;
+      arguments?: string;
+      result?: string;
+      failed?: boolean;
       millis?: number;
       inputTokens?: number;
       outputTokens?: number;
@@ -283,7 +328,20 @@ async function read(response: Response, handlers: ChatStreamHandlers): Promise<v
     if (payload === null) return;
 
     if (frame.event === 'chunk' && payload.text !== undefined) handlers.onChunk(payload.text);
-    else if (frame.event === 'done') {
+    else if (frame.event === 'thinking' && payload.text !== undefined) handlers.onThinking(payload.text);
+    else if (frame.event === 'call' && payload.at !== undefined) {
+      handlers.onCall({
+        at: payload.at,
+        tool: payload.tool ?? '',
+        arguments: payload.arguments ?? '',
+      });
+    } else if (frame.event === 'called' && payload.at !== undefined) {
+      handlers.onCalled({
+        at: payload.at,
+        result: payload.result ?? '',
+        failed: payload.failed === true,
+      });
+    } else if (frame.event === 'done') {
       handlers.onDone({
         millis: payload.millis ?? 0,
         inputTokens: payload.inputTokens ?? 0,
