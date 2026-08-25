@@ -15,7 +15,20 @@
  * of English on an otherwise Polish screen.
  */
 export const PL: Record<string, string> = {
+  "What the last answer read and wrote": "Ile ostatnia odpowiedź przeczytała i napisała",
+  'Nothing imports it.': 'Nic tego nie importuje.',
+  'Imported by': 'Importowane przez',
+  'Fetched once from': 'Pobrane raz z',
+  'Registry': 'Repozytorium',
   'Remove library': 'Usuń bibliotekę',
+  // Double-quoted, like the bulk of this file: `catalogue-check` reads keys with
+  // a regular expression that only sees a double-quoted key or a bare word, so a
+  // single-quoted entry is a translation nothing can check is still keyed on
+  // something the interface says.
+  "Remove comment": "Usuń komentarz",
+  "Remove this comment": "Usuń ten komentarz",
+  "removed a comment by": "usunął komentarz, którego autorem jest",
+  "removed a comment they wrote": "usunął własny komentarz",
   'Which bots to watch for replies to — not the connection this listens on.':
     'Które boty obserwować pod kątem odpowiedzi — nie połączenie, którego to nasłuchuje.',
   'A reply names whoever wrote the message it hangs under, and a bot token is a Slack user. Two connections sharing a token are one user, and the row says so.':
@@ -1767,6 +1780,7 @@ export const PL: Record<string, string> = {
   "Replies To": "Odpowiedzi do",
   "Every message in every channel this bot is in will be measured against this trigger.": "Każda wiadomość w każdym kanale, w którym jest ten bot, zostanie sprawdzona względem tego wyzwalacza.",
   "No Slack connections yet. A reply is matched against the bot a connection posts as, so one is added under the workspace's Integrations and chosen here afterwards.": "Jeszcze żadnych połączeń ze Slackiem. Odpowiedź dopasowuje się do bota, w którego imieniu publikuje połączenie, więc dodaje się je w Integracjach przestrzeni roboczej, a tutaj wybiera później.",
+  "Will not fire": "Nie zadziała",
 
   // --- recently opened ------------------------------------------------------------------
   "Recently opened": "Ostatnio otwarte",
@@ -1783,6 +1797,9 @@ export const PL: Record<string, string> = {
   "Each step is sent as it is recorded, so nothing here is waiting on a refresh. If the connection drops the page comes back and asks for whatever it missed by the last line it holds, which is why a task left open overnight catches up rather than redrawing. A finished task reads exactly the same, from the same record.": "Każdy krok wysyłany jest w chwili zapisania, więc nic tutaj nie czeka na odświeżenie. Jeśli połączenie padnie, strona wraca i prosi o to, co ją ominęło, podając ostatni wiersz, jaki ma — dlatego zadanie zostawione otwarte na noc nadrabia zaległości, zamiast rysować się od nowa. Zakończone zadanie czyta się dokładnie tak samo, z tego samego zapisu.",
   "Returned": "Zwróciło",
   "It came back with nothing.": "Wróciło z niczym.",
+
+  // --- what the model thought, and a lookup that could not be made ---------
+  "Continuing an LLM session — what is said here is written into it": "Kontynuuje sesję LLM — to, co tu napisane, trafia do niej",
 
   // --- two notes the transform reached this time ---------------------------
   "A saved shape fixes which fields there are; this node decides what goes in them. Custom means the fields are this node's own.": "Zapisany kształt ustala, jakie są pola; ten węzeł decyduje, co się w nich znajdzie. „Własny” oznacza, że pola należą do tego węzła.",

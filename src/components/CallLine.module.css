@@ -25,6 +25,42 @@
   min-width: 0;
 }
 
+/*
+ * The head as a control, for a page that draws a call folded.
+ *
+ * Only where the caller asked for one — see `CallLine`'s `folded` prop for why
+ * that is the caller's decision and not this component's. The row keeps the
+ * layout it has as a paragraph; what changes is that the whole of it is the
+ * target, because a triangle on its own is a small thing to ask somebody to
+ * hit.
+ */
+.headButton {
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.headButton:hover .name {
+  text-decoration: underline;
+}
+
+/*
+ * The triangle that turns. The same mark, the same size and the same place as
+ * the one on the thinking block above it: three foldables on one screen should
+ * be one gesture, learnt once.
+ */
+.mark {
+  flex-shrink: 0;
+  font-size: var(--text-2xs);
+  line-height: 1;
+  color: var(--color-text-muted);
+}
+
 .badge {
   flex-shrink: 0;
   padding: var(--space-2) var(--space-8);

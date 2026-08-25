@@ -30,6 +30,21 @@ export interface CallLineProps {
   failed?: boolean;
   /** Something to say about when it happened, drawn beside the name. */
   when?: string;
+  /**
+   * Whether to draw it as one line until somebody asks for more.
+   *
+   * **Passed by the caller rather than decided here, because the right answer
+   * differs by page.** A chat is a conversation, and a lookup in the middle of
+   * one is an aside: what somebody wants at a glance is that it happened and to
+   * what, with the arguments and the result a press away. A task's page is not
+   * that — watching the calls *is* the feature there, and folding them by
+   * default would hide the thing the page exists to show. The session
+   * transcript is the same: it is opened to read what happened in full.
+   *
+   * So the chat passes this and the other two do not, and the component holds
+   * no opinion about which page it is on.
+   */
+  folded?: boolean;
 }
 
 /**
@@ -64,12 +79,23 @@ const FOLD_OVER_CHARS = 600;
  * hides. The two are folded separately: a long argument and a long result are
  * two different things to want to open.
  */
-export function CallLine({ actor, content, result, failed = false, when }: CallLineProps) {
+export function CallLine({ actor, content, result, failed = false, when, folded = false }: CallLineProps) {
   const asked = useIndented(content);
   const got = useIndented(result ?? '');
 
   const running = result === null;
   const knowsResult = result !== undefined;
+
+  /*
+   * Shut until asked, where the caller asked for that.
+   *
+   * The same gesture as the thinking block above it and the `Show all …` fold
+   * below: a press on the row, a triangle that turns, and `aria-expanded`
+   * carrying the state. Three foldables on one screen behaving three ways is
+   * three things to learn about one page.
+   */
+  const [open, setOpen] = useState(!folded);
+  const showing = !folded || open;
 
   return (
     <article
@@ -78,24 +104,46 @@ export function CallLine({ actor, content, result, failed = false, when }: CallL
       data-running={running}
       data-failed={knowsResult && !running && failed}
     >
-      <p className={styles.head}>
-        <span className={styles.badge}>{t('Tool')}</span>
-        <span className={styles.name}>{actor ?? 'a tool'}</span>
-        {knowsResult && (
-          <span className={styles.state} data-running={running} data-failed={!running && failed}>
-            {running ? 'Running' : failed ? t('Failed') : 'Returned'}
-          </span>
-        )}
-        {when !== undefined && !knowsResult && <span className={styles.state}>{when}</span>}
-      </p>
+      {(() => {
+        const head = (
+          <>
+            {folded && (
+              <span className={styles.mark} aria-hidden="true">
+                {showing ? '▾' : '▸'}
+              </span>
+            )}
+            <span className={styles.badge}>{t('Tool')}</span>
+            <span className={styles.name}>{actor ?? 'a tool'}</span>
+            {knowsResult && (
+              <span className={styles.state} data-running={running} data-failed={!running && failed}>
+                {running ? 'Running' : failed ? t('Failed') : 'Returned'}
+              </span>
+            )}
+            {when !== undefined && !knowsResult && <span className={styles.state}>{when}</span>}
+          </>
+        );
+        return folded ? (
+          <button
+            type="button"
+            className={`${styles.head} ${styles.headButton}`}
+            onClick={() => setOpen((held) => !held)}
+            aria-expanded={showing}
+          >
+            {head}
+          </button>
+        ) : (
+          <p className={styles.head}>{head}</p>
+        );
+      })()}
 
-      {asked.text.trim() === '' ? (
+      {showing &&
+        (asked.text.trim() === '' ? (
         <p className={styles.note}>{t('Called with nothing.')}</p>
-      ) : (
-        <Folding text={asked.text} what="what it was asked" />
-      )}
+        ) : (
+          <Folding text={asked.text} what="what it was asked" />
+        ))}
 
-      {knowsResult && !running && (
+      {showing && knowsResult && !running && (
         <>
           <p className={styles.label}>{failed ? t('Could not be run') : t('Returned')}</p>
           {got.text.trim() === '' ? (

@@ -254,6 +254,37 @@ export const TESTS = [
      */
   },
   {
+    name: 'silent-trigger-check',
+    what: 'a trigger Slack can never deliver anything to, marked in the list, on its own page and on its connection',
+    needs: ['workspace'],
+    /*
+     * The aftermath of #269, reported as a bug and rightly: the product knew
+     * the bot token carried no `channels:history`, knew that means no `message`
+     * event will ever arrive, and drew that sentence in exactly one place - a
+     * Replies To row, under a checkbox, on a field only a reply opens. Every
+     * other surface said Enabled, a connection, an action.
+     *
+     * Two legs. The real one runs against the server with nothing intercepted
+     * and asserts the thing this change is one step away from getting wrong:
+     * `receives` is null when Slack's response carried no scope header, that is
+     * "nothing reported" rather than "missing", and a connection nothing was
+     * said about must not be marked. The forced one rewrites `slackBotUsers` so
+     * one connection reports `receives: false` - being unable to receive needs
+     * a Slack workspace to be unable to receive in - and reads the three
+     * surfaces, the colour the mark is painted, and the sentence behind its (?).
+     *
+     * The claim that earns it its place is the pair: a message trigger and a
+     * mention trigger on the *same* connection, one marked and one not. A check
+     * that only proved the mark appears would pass an interface that warned
+     * about every incoming trigger, which is a worse fault than the silence -
+     * it sends somebody to widen a credential that is right as it is.
+     *
+     * It counts the questions that reach the wire as well. `slackBotUsers` is a
+     * workspace query, so a list of any length asks it once; a row that asked
+     * for itself would be a Slack round trip per row.
+     */
+  },
+  {
     name: 'dialog-hint-check',
     what: 'every dialog sentence that moved behind a (?), and every one that did not',
     needs: ['workspace'],
@@ -1283,6 +1314,34 @@ export const TESTS = [
     name: 'delete-issue-check',
     what: 'the trash asks before it deletes, and the issue is really gone after',
     needs: ['workspace'],
+  },
+  {
+    name: 'remove-comment-check',
+    what: 'a comment comes off a thread, without the question quoting it back or the history losing it',
+    needs: ['workspace'],
+    /*
+     * Issue #276. Three of its assertions could not be made anywhere but in a
+     * browser, and the server suite already covers everything else.
+     *
+     * The dialog must not repeat what the comment said. That is a product
+     * decision invisible to any test of the mutation, and it is the one most
+     * likely to be undone by somebody making the question "clearer": the reason
+     * a comment is usually being removed is that those exact words should not be
+     * in front of anybody.
+     *
+     * The history entry must read as a removal. `said()` falls through to
+     * "commented" for a kind nobody wrote a sentence for, so an unhandled event
+     * renders as the opposite of what happened, perfectly, with no error
+     * anywhere. It is counted rather than matched - one comment is left, so one
+     * "commented" line - because the fallthrough produces a second one.
+     *
+     * And the words are asked for again over GraphQL after the fact, as the
+     * whole issue, so a tombstone the interface merely hides fails here while
+     * passing everything about the thread.
+     *
+     * Files and deletes an issue of its own, and sweeps what an earlier killed
+     * run left behind.
+     */
   },
   {
     name: 'new-issue-blank-check',

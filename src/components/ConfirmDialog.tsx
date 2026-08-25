@@ -6,12 +6,31 @@ import trash2Icon from '../assets/trash-2.svg';
 import styles from './Dialog.module.css';
 import { t } from '../i18n';
 
-export type ConfirmKind = 'disable' | 'remove' | 'discard' | 'deleteChat' | 'removeLibrary';
+export type ConfirmKind = 'disable' | 'remove' | 'discard' | 'deleteChat' | 'removeLibrary' | 'removeComment';
+
+/**
+ * Which kinds take something away rather than change its state.
+ *
+ * A set rather than the chain of comparisons this was: the trash icon and the
+ * red button were spelled out three times over the same two names, so a fourth
+ * kind that deletes something arrived wearing the amber warning of a kind that
+ * merely switches something off.
+ */
+const DESTRUCTIVE = new Set<ConfirmKind>(['remove', 'deleteChat', 'removeComment']);
 
 export interface ConfirmDialogProps {
   /** What is being acted on, named, or null when the dialog is closed. */
   subject: string | null;
   kind: ConfirmKind;
+  /**
+   * What the caller knows and the copy above cannot: the rows this is about to
+   * disturb, named.
+   *
+   * The general sentence says a function that imports this stops working; the
+   * page asking already holds the list of which ones. Drawn under the message
+   * rather than inside it, so the warning stays one shape whatever is passed.
+   */
+  detail?: ReactNode;
   onClose: () => void;
   onConfirm: () => Promise<void>;
 }
@@ -27,7 +46,7 @@ export interface ConfirmDialogProps {
  * doing one job is the drift this codebase keeps paying for, so it is one, and
  * what it confirms against is a `subject`.
  */
-export function ConfirmDialog({ subject, kind, onClose, onConfirm }: ConfirmDialogProps) {
+export function ConfirmDialog({ subject, kind, detail, onClose, onConfirm }: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,6 +108,17 @@ export function ConfirmDialog({ subject, kind, onClose, onConfirm }: ConfirmDial
       ),
       button: submitting ? t('Removing…') : t('Remove'),
     },
+    removeComment: {
+      title: t('Remove comment'),
+      message: (
+        <>
+          Remove the comment {name} wrote? It goes for good — the words, anything that came with it, and
+          the copy whoever was told about it was sent. The issue's history will say a comment was removed,
+          and never what it said.
+        </>
+      ),
+      button: submitting ? t('Removing…') : t('Remove'),
+    },
     deleteChat: {
       title: t('Delete chat'),
       message: (
@@ -120,10 +150,13 @@ export function ConfirmDialog({ subject, kind, onClose, onConfirm }: ConfirmDial
         </header>
 
         <div className={styles.warning}>
-          <span className={kind === 'remove' || kind === 'deleteChat' ? styles.warningBadge : styles.warningBadgeAmber}>
-            <img src={kind === 'remove' || kind === 'deleteChat' ? trash2Icon : alertTriangleIcon} alt="" width={18} height={18} />
+          <span className={DESTRUCTIVE.has(kind) ? styles.warningBadge : styles.warningBadgeAmber}>
+            <img src={DESTRUCTIVE.has(kind) ? trash2Icon : alertTriangleIcon} alt="" width={18} height={18} />
           </span>
-          <p className={styles.warningMessage}>{message}</p>
+          <div className={styles.warningMessage}>
+            <p className={styles.warningLine}>{message}</p>
+            {detail}
+          </div>
         </div>
 
         {error !== null && (
@@ -138,7 +171,7 @@ export function ConfirmDialog({ subject, kind, onClose, onConfirm }: ConfirmDial
           </button>
           <button
             type="button"
-            className={kind === 'remove' || kind === 'deleteChat' ? styles.destructive : styles.amber}
+            className={DESTRUCTIVE.has(kind) ? styles.destructive : styles.amber}
             onClick={handleConfirm}
             disabled={submitting}
             autoFocus

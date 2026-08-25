@@ -206,6 +206,8 @@ const PL: Record<string, string> = {
   IssueObserverInvalid: '{what} nie jest czymś w tej przestrzeni roboczej, co może obserwować zgłoszenie',
   IssueAttachmentNotYours: 'Załącznik może usunąć tylko ten, kto go dołączył',
   IssueCommentNotYours: 'Komentarz może edytować tylko ten, kto go napisał',
+  IssueCommentNotYoursToRemove:
+    'Komentarz może usunąć tylko ten, kto go napisał, lub administrator tej przestrzeni roboczej',
   IssueLinkNotYours: 'Odnośnik może usunąć tylko ten, kto go dodał',
   LlmSessionKeyMissing: 'Sesja potrzebuje klucza; sam prefiks jeszcze jej nie nazywa',
   LlmSessionKeyTooLong:

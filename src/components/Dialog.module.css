@@ -221,6 +221,15 @@
   color: var(--color-text-secondary);
 }
 
+/*
+ * The sentence itself, now that the block around it may also carry what the
+ * caller knows - a `<p>` inside a `<div>` rather than being the `<p>`, so a
+ * detail under it does not inherit a paragraph's spacing.
+ */
+.warningLine {
+  margin: 0;
+}
+
 .warningMessage strong {
   font-weight: 600;
   color: var(--color-text-primary);

@@ -153,20 +153,6 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
     [chatId, navigate],
   );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  /**
-   * How many turns at the top were carried in from the session, rather than
-   * said here.
-   *
-   * The count is where they stop: a turn with a name on it came out of the
-   * session, and the chat's own turns have none. A chat opened to work out what
-   * an agent did is read for the difference between the two, so the boundary is
-   * drawn rather than left to be inferred from the names.
-   */
-  const carried = useMemo(() => {
-    const own = messages.findIndex((message) => message.actor === null);
-    return own === -1 ? messages.length : own;
-  }, [messages]);
-
   const [search, setSearch] = useState('');
   /** Off by default: most searches are for a chat by name, not through everything said. */
   const [searchInMessages, setSearchInMessages] = useState(false);
@@ -269,6 +255,15 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
    * there.
    */
   const [working, setWorking] = useState<Working>(NOTHING_YET);
+  /**
+   * The thinking accumulated for the turn in flight, for `onDone` to read.
+   *
+   * A ref beside the state rather than instead of it: the state is what draws
+   * the block as the pieces land, and this is what the end of the stream reads
+   * to put the finished thinking on the message itself. Once it is there, live
+   * and reloaded draw from the same place.
+   */
+  const thinkingSoFar = useRef('');
   const [thoughtOpen, setThoughtOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<number | null>(null);
@@ -284,6 +279,16 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
   const [takeAt, setTakeAt] = useState<Record<number, number>>({});
 
   const logRef = useRef<HTMLDivElement>(null);
+  /*
+   * The same element, as state.
+   *
+   * A ref alone cannot say *when* it was attached, and this one is attached on a
+   * render that changes neither the turns nor which chat is open - so an effect
+   * keyed on those two ran three times with nothing to scroll and never again
+   * once there was. Holding it as state makes the attachment itself the thing
+   * the effect waits for.
+   */
+  const [logBox, setLogBox] = useState<HTMLDivElement | null>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   /** Set when the collapsed search icon was the thing that opened the column. */
@@ -464,6 +469,7 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
     // Working belongs to the turn that produced it, and that turn is in the
     // chat being left. Carried across it would sit under somebody else's answer.
     setWorking(NOTHING_YET);
+    thinkingSoFar.current = '';
     setTakeAt({});
     if (currentId === null) return;
 
@@ -508,10 +514,47 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
     };
   }, [pickerOpen]);
 
-  // A new message should be the thing you are looking at.
+  /*
+   * The newest turn is the thing you are looking at, on arrival as well as after.
+   *
+   * This used to depend on `messages` alone, and opening a chat never scrolled:
+   * the turns are fetched while the log is still behind its loading state, so
+   * the effect ran with `logRef.current` null, and nothing changed afterwards to
+   * run it again. A chat of six thousand pixels opened at the top of the first
+   * thing anybody had said.
+   *
+   * So it also watches which chat is open, and asks for the frame after the one
+   * it is on: a run of markdown is laid out by then, where at effect time the
+   * box can still be shorter than what is in it. An image arriving later moves
+   * the floor again, which is what the observer is for - it keeps the newest
+   * turn in view until somebody scrolls away from it themselves.
+   */
   useEffect(() => {
-    logRef.current?.scrollTo({ top: logRef.current.scrollHeight });
-  }, [messages]);
+    const log = logBox;
+    if (log === null) return;
+
+    let following = true;
+    const toBottom = () => {
+      if (following) log.scrollTo({ top: log.scrollHeight });
+    };
+
+    const frame = requestAnimationFrame(toBottom);
+    // Reading up is a decision; nothing below should undo it.
+    const onScroll = () => {
+      following = log.scrollHeight - log.clientHeight - log.scrollTop < 40;
+    };
+    log.addEventListener('scroll', onScroll, { passive: true });
+
+    const grew = new ResizeObserver(toBottom);
+    grew.observe(log);
+    for (const child of Array.from(log.children)) grew.observe(child);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      log.removeEventListener('scroll', onScroll);
+      grew.disconnect();
+    };
+  }, [messages, currentId, logBox]);
 
   /*
    * The box is as tall as what has been typed into it, up to the top of the
@@ -984,11 +1027,12 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
 
     setMessages((present) => [
       ...present,
-      { role: 'user', content: text, actor: null, takes: [] },
-      { role: 'assistant', content: '', actor: null, takes: [] },
+      { role: 'user', content: text, actor: null, takes: [], thinking: null, thinkingMillis: null },
+      { role: 'assistant', content: '', actor: null, takes: [], thinking: null, thinkingMillis: null },
     ]);
     setError(null);
     setWorking(NOTHING_YET);
+    thinkingSoFar.current = '';
     setSending(true);
 
     let answer = '';
@@ -1013,7 +1057,7 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
             onProgress(answer);
           },
           ...watchWorking(),
-          onDone: (spend) => setLastSpend(spend),
+          onDone: (spend) => keepThinkingOnAnswer(spend),
           onError: (reason) => {
             failure = reason;
           },
@@ -1048,7 +1092,13 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
    */
   function watchWorking(): Pick<ChatStreamHandlers, 'onThinking' | 'onCall' | 'onCalled'> {
     return {
-      onThinking: (piece) => setWorking((held) => ({ ...held, thinking: held.thinking + piece })),
+      onThinking: (piece) => {
+        // Mirrored into a ref as well as into state, because `onDone` has to
+        // read the whole of it to put it on the message and cannot see a state
+        // update made in the same run of handlers.
+        thinkingSoFar.current += piece;
+        setWorking((held) => ({ ...held, thinking: held.thinking + piece }));
+      },
       onCall: (call) =>
         setWorking((held) => ({ ...held, calls: [...held.calls, { ...call, result: null, failed: false }] })),
       onCalled: (answer) =>
@@ -1102,6 +1152,32 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
     } finally {
       setDrawing(false);
     }
+  }
+
+  /**
+   * The turn is over: what it cost goes on the screen, and what it thought goes
+   * on the message.
+   *
+   * Written onto the message rather than left in `working` so that the answer
+   * just given and an answer read back off the server are drawn from the same
+   * field. Otherwise the block would sit there live and then vanish on the next
+   * reload, which is the bug this whole change is about.
+   */
+  function keepThinkingOnAnswer(spend: ChatSpend) {
+    setLastSpend(spend);
+    const thought = thinkingSoFar.current;
+    if (thought.trim() === '') return;
+    setMessages((present) => {
+      const grown = [...present];
+      const last = grown.length - 1;
+      if (last < 0) return present;
+      grown[last] = {
+        ...grown[last],
+        thinking: thought,
+        thinkingMillis: spend.thinkingMillis && spend.thinkingMillis > 0 ? spend.thinkingMillis : null,
+      };
+      return grown;
+    });
   }
 
   async function handleSend(event: FormEvent) {
@@ -1172,15 +1248,16 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
     setAttached([]);
     // Shown straight away: the server has it, and waiting for the model to
     // finish before drawing what was typed reads as a dropped message.
-    setMessages((present) => [...present, { role: 'user', content: said, actor: null, takes: [] }]);
+    setMessages((present) => [...present, { role: 'user', content: said, actor: null, takes: [], thinking: null, thinkingMillis: null }]);
     setError(null);
     // The last answer's working, cleared as this one starts. It stayed on
     // screen after that answer landed on purpose; it belongs to that answer,
     // and one turn further up the log there is nowhere to draw it.
     setWorking(NOTHING_YET);
+    thinkingSoFar.current = '';
     // The answer grows in place as it arrives, so the empty assistant turn is
     // appended first and each piece lands on the end of it.
-    setMessages((present) => [...present, { role: 'assistant', content: '', actor: null, takes: [] }]);
+    setMessages((present) => [...present, { role: 'assistant', content: '', actor: null, takes: [], thinking: null, thinkingMillis: null }]);
     try {
       let failure: string | null = null;
       await streamChatMessage(
@@ -1195,7 +1272,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
               return grown;
             }),
           ...watchWorking(),
-          onDone: (spend) => setLastSpend(spend),
+          onDone: (spend) => keepThinkingOnAnswer(spend),
           onError: (reason) => {
             failure = reason;
           },
@@ -1243,6 +1320,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
     // A second answer does its own thinking and its own lookups, and the first
     // one's would read as this one's.
     setWorking(NOTHING_YET);
+    thinkingSoFar.current = '';
     setMessages((present) => {
       const grown = [...present];
       const last = grown.length - 1;
@@ -1266,7 +1344,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
             return grown;
           }),
         ...watchWorking(),
-        onDone: (spend) => setLastSpend(spend),
+        onDone: (spend) => keepThinkingOnAnswer(spend),
         onError: (reason) => {
           failure = reason;
         },
@@ -1605,6 +1683,24 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
         : costAmount(lastSpend.cost)
       : null;
 
+  /*
+   * What the last answer cost, under the corner of the composer.
+   *
+   * It used to ride on the disclosure beside "Thought for 9 seconds", where a
+   * bare number next to a duration is a second unlabelled figure on a control
+   * that is about something else. Down here it is one thing saying one thing,
+   * out of the way of the conversation and next to the box the next question is
+   * typed into - which is where somebody wondering what this is costing them is
+   * already looking.
+   *
+   * The same three silences as before: the switch off, a provider that reported
+   * no counts, and an answer read back out of the history.
+   */
+  const spent =
+    session.chatCostShown === true && lastSpend !== null && spendKnown(lastSpend) && !drawn
+      ? tokenCount(lastSpend.inputTokens + lastSpend.outputTokens)
+      : null;
+
   return (
     <AppShell
       user={shellUser(session)}
@@ -1819,6 +1915,35 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
               >
                 <img src={searchIcon} alt="" width={14} height={14} />
               </button>
+              {/*
+                A chat opened from a session, said as a mark rather than a
+                sentence across the page.
+
+                It used to be a strip above the log reading "Continuing an LLM
+                session — what is said here is written into it", with a link on
+                the end. A line of prose the full width of the conversation, on
+                every send, to say something that is true of the whole chat and
+                changes never. The words are not lost: they are what the title
+                and the label say, which is where the product puts an
+                explanation of a control.
+
+                `OpenDefinitionIcon` because that is already the mark for
+                "opens the thing this names, elsewhere" - the five ways out of
+                the node panel were converted to it, and a second mark invented
+                here would be a second thing to learn for the same idea.
+              */}
+              {current.llmSessionId !== null && (
+                <Link
+                  className={styles.iconButton}
+                  to={`/workspace/${current.workspaceId}/sessions/${current.llmSessionId}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={t('Continuing an LLM session — what is said here is written into it')}
+                  aria-label={t('Open the transcript')}
+                >
+                  <OpenDefinitionIcon />
+                </Link>
+              )}
               <button
                 type="button"
                 className={styles.iconButton}
@@ -1902,29 +2027,13 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
             </div>
           )}
 
-          {/*
-            A chat opened from a session says so.
-
-            The messages above it are that session's, copied in when this chat
-            opened, so without a line saying where they came from they read as a
-            conversation this person does not remember having. It also says what
-            the binding does — everything from here is written back — because
-            that is the part somebody would otherwise only discover by going and
-            looking.
-          */}
-          {current.llmSessionId !== null && (
-            <p className={styles.continuing}>
-              Continuing an LLM session — what is said here is written into it.{' '}
-              <Link
-                className={styles.continuingLink}
-                to={`/workspace/${current.workspaceId}/sessions/${current.llmSessionId}`}
-              >
-                {t('Open the transcript')}
-              </Link>
-            </p>
-          )}
-
-          <div className={styles.log} ref={logRef}>
+          <div
+            className={styles.log}
+            ref={(box) => {
+              logRef.current = box;
+              setLogBox(box);
+            }}
+          >
             {messages.length === 0 && (
               <p className={styles.logEmpty}>Nothing said yet. What is typed below starts the conversation.</p>
             )}
@@ -1944,7 +2053,17 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
               */}
               {message.role === CALL_ROLE ? (
                 <div className={styles.call}>
-                  <CallLine actor={message.actor} content={message.content} />
+                  {/*
+                    Folded, the same as one arriving live.
+                    
+                    These come back from the session the chat continues, and a
+                    call read out of history is no more the conversation than one
+                    watched being made - so it is one line here too, and opens on
+                    a press. The live site below passes the same thing; a call
+                    that folded while it happened and sprawled after a reload
+                    would be two different pages.
+                  */}
+                  <CallLine actor={message.actor} content={message.content} folded />
                 </div>
               ) : message.role === 'user' ? (
                 <div className={styles.userRow} data-find={findMark(index)}>
@@ -2003,7 +2122,6 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                         {/* A picture was not thought about; it was drawn. */}
                         {drawn ? 'Drew for ' : 'Thought for '}
                         {thinkingTime(lastSpend.millis)}
-                        {spend !== null && ` \u00b7 ${spend}`}
                         <img
                           className={thoughtOpen ? styles.thoughtChevronOpen : styles.thoughtChevron}
                           src={chevronDown12Icon}
@@ -2063,20 +2181,49 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                       come back on their own, off the session, as `tool` lines
                       in the log above.
                     */}
-                    {index === messages.length - 1 && anyWorking(working) && (
-                      <div className={styles.working}>
-                        <Thinking text={working.thinking} live={sending} />
-                        {working.calls.map((call) => (
-                          <CallLine
-                            key={call.at}
-                            actor={call.tool}
-                            content={call.arguments}
-                            result={call.result}
-                            failed={call.failed}
+                    {(() => {
+                      /*
+                        The thinking on this message, live or kept.
+
+                        Live for the answer being written now - the pieces
+                        arrive frame by frame and are drawn as they land, which
+                        is most of the point of showing thinking at all. Kept
+                        for every other message, read back off the server, so an
+                        answer three turns up still carries the reasoning that
+                        produced it. Reloading the page loses nothing, which is
+                        what it used to do.
+                      */
+                      const live = index === messages.length - 1 && sending;
+                      const thinking = live ? working.thinking : (message.thinking ?? '');
+                      const calls = index === messages.length - 1 ? working.calls : [];
+                      if (thinking.trim() === '' && calls.length === 0) return null;
+                      return (
+                        <div className={styles.working}>
+                          <Thinking
+                            text={thinking}
+                            live={live}
+                            millis={live ? null : message.thinkingMillis}
                           />
-                        ))}
-                      </div>
-                    )}
+                          {calls.map((call) => (
+                            <CallLine
+                              key={call.at}
+                              actor={call.tool}
+                              content={call.arguments}
+                              result={call.result}
+                              failed={call.failed}
+                              /*
+                                One line until asked, which is the chat's
+                                answer and not the component's. A lookup in the
+                                middle of a conversation is an aside; a task's
+                                page, where watching the calls is the feature,
+                                passes nothing and gets them open.
+                              */
+                              folded
+                            />
+                          ))}
+                        </div>
+                      );
+                    })()}
                     {/* Models write markdown; showing the source shows the asterisks. */}
                     <Markdown>{shownTake(index, message)}</Markdown>
                     {/*
@@ -2207,9 +2354,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                 different question - which of this was already there, and which
                 of it is theirs - and one line answers it at a glance.
               */}
-              {index === carried - 1 && (
-                <p className={styles.carriedEdge}>Everything above was carried over from the session</p>
-              )}
+
               </Fragment>
             ))}
 
@@ -2280,6 +2425,11 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
             </div>
           )}
 
+          {spent !== null && (
+            <p className={styles.spent} title={t('What the last answer read and wrote')}>
+              {spent} {t('tokens')}
+            </p>
+          )}
           <form className={styles.composer} onSubmit={handleSend}>
             {/* What is going with the message, above the box it is going from. */}
             {attached.length > 0 && (

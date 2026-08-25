@@ -173,3 +173,23 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
+/*
+ * The line saying Slack will never deliver this trigger anything.
+ *
+ * Amber rather than muted, because it is the one sentence on this form about
+ * something being wrong rather than about what a field means, and a warning
+ * painted the same grey as the readings around it is a warning nobody reads.
+ * Clipped for the reason `.watchNote` is: the server's sentence is one line,
+ * and a form that grew a line taller would move the button somebody is
+ * reaching for.
+ */
+.cannotFire {
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-amber);
+  font-size: var(--text-sm);
+  line-height: 18px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
