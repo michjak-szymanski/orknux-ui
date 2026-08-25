@@ -160,7 +160,21 @@ check(
 
 await page.goto(`${BASE}/workspace/${WORKSPACE}/tasks`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('h1:text("Tasks")', { timeout: 20_000 });
+/*
+ * Waited for, and not counted the moment the heading is up.
+ *
+ * The heading is page furniture and is drawn before anything is fetched; the
+ * rows arrive about a quarter of a second later, off a query of their own. So
+ * counting straight after `waitForSelector` counted an empty list and reported
+ * a task the product had put on it perfectly well as missing - which is a
+ * check failing and reading as a product failure, the most expensive kind.
+ *
+ * The wait swallows its own timeout on purpose: it is not the assertion. A task
+ * genuinely absent waits the full twenty seconds and then fails on the count
+ * below, with the sentence somebody can act on.
+ */
 const row = page.locator(`a[href$="/tasks/${taskId}"]`);
+await row.first().waitFor({ timeout: 20_000 }).catch(() => undefined);
 check(await row.count() > 0, 'the task is on the list', 'the task was not on the list it was started from');
 
 await page.screenshot({ path: shot('task-check.png'), fullPage: true });
