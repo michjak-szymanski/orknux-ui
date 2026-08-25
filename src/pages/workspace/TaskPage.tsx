@@ -77,6 +77,21 @@ const OVER: Task['status'][] = ['DONE', 'FAILED', 'STOPPED'];
  * over one log rather than two halves of one connection, and neither can be too
  * late for anything.
  */
+/**
+ * As much of a task's name as a tab can show.
+ *
+ * Long enough to tell two tasks apart and short enough that the product name
+ * after it survives - which is the half somebody with a dozen tabs open is
+ * reading. Cut on a word where there is one nearby, because a tab ending
+ * mid-syllable reads as a fault rather than as a cut.
+ */
+function excerpt(title: string): string {
+  const cut = title.trim();
+  if (cut.length <= 44) return cut;
+  const space = cut.lastIndexOf(' ', 44);
+  return `${cut.slice(0, space > 24 ? space : 44).trimEnd()}…`;
+}
+
 export function TaskPage({ session, onSignOut }: TaskPageProps) {
   const { workspaceId = '', taskId = '' } = useParams();
 
@@ -175,6 +190,19 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
       onSignOut={onSignOut}
+      /*
+        The tab says what kind of page this is and which one of them.
+        
+        The name alone was not enough: a task is named after the first line of
+        its prompt, so a tab reading "Write me a poem about the Lord of the
+        Rings" could as easily have been a chat, an issue or a note - the one
+        thing it did not say was that it was a task. An issue has `#12` doing
+        that work; a task has nothing of its own, so the word does it.
+
+        Cut, because a prompt is as long as somebody felt like typing and a tab
+        shows about thirty characters before the strip cuts it for us.
+      */
+      title={task === null ? undefined : `${t('Task')}: ${excerpt(task.title)}`}
       sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <header className={styles.titleHeader}>
