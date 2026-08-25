@@ -1767,34 +1767,54 @@ export const TESTS = [
   },
   {
     name: 'task-live-check',
-    what: 'a task watched while it runs, lines arriving on a page nobody reloaded, and the same account afterwards',
+    what: 'a task watched while it runs and thinks, lines arriving on a page nobody reloaded, and the same account afterwards',
     needs: ['workspace'],
+    ci: false,
     /*
-     * The live half of #229's page. `task-check` next door proves the machinery
-     * around a task; this one proves the *while*, which is the thing a check
-     * that only reads a finished log cannot say anything about.
+     * The live half of #229's page, and the thinking half that came after it.
+     * `task-check` next door proves the machinery around a task; this one
+     * proves the *while*, which is the thing a check that only reads a finished
+     * log cannot say anything about.
      *
-     * Three assertions carry it, and they are written to fail rather than to
-     * quietly stop meaning anything. It asserts there is no refresh control on
-     * the page, so growth cannot be a poll. It leaves a marker on `window`, so
-     * growth cannot be a reload. And it compares what the page held while the
-     * task was still going with what it held once it had ended, having touched
-     * neither the browser's address bar nor GraphQL in between.
+     * Four assertions carry it, and they are written to fail rather than to
+     * quietly stop meaning anything. There is no refresh control on the page,
+     * so growth cannot be a poll. A marker on `window` survives, so growth
+     * cannot be a reload. The line count and what the page says it is doing are
+     * read in one evaluate, so "a line was there while it said Working" is one
+     * moment rather than two readings a tenth of a second apart. And the count
+     * of how long the model has been thinking is read, waited on and read
+     * again - the shape `chat-working-check` was rebuilt around, because "the
+     * thinking is drawn" would pass just as well on a build that painted all of
+     * it in one go at the end.
      *
-     * 'workspace' and not 'model', for the reason `task-check` gives: the prompt
-     * is written into the task's log before the model is asked and a model that
-     * never answers is recorded as a note saying so, so the session gets lines
-     * either way and they arrive over the stream one at a time exactly as an
-     * agent's would. It makes its own model pointed at `.invalid` and removes
-     * it.
+     * **It used to say 'workspace' and mean it, and that was the bug.** The
+     * fixture was a model pointed at `.invalid`, on the reasoning `task-check`
+     * gives: the prompt is written into the log before the model is asked, so
+     * the session gets lines either way. True, and not enough. Measured, such a
+     * task is forty milliseconds end to end and writes three lines, so there is
+     * no "while" to catch - the page usually draws after it is already over,
+     * and where it does not, everything left arrives inside one frame. What
+     * used to be here was a retry loop that started up to four tasks hoping to
+     * catch one running; the first time this check was ever executed it lost
+     * that lottery four times out of four.
      *
-     * It retries one thing, and it is the fixture: a model that cannot resolve
-     * fails as fast as the machine can say so, which on a quick one is before
-     * the page has drawn - and a task that was already over is a task there was
-     * nothing live to see. It starts another, up to four times, and fails saying
-     * so if it never catches one running. The assertions themselves are made
-     * once each; a check that retried those would be one that passes on the
-     * third try, which is worse than one that fails.
+     * So the fixture is a model that takes its time, which is also the only
+     * kind that has any thinking to draw. `scripts/suite/reasoning-stub.py`
+     * emits `reasoning_content` over twelve seconds and then calls `task_done`.
+     * It cannot be stubbed in the browser, for the reason `image-model-check`
+     * gives about its own: the thinking is produced by the server calling a
+     * provider, written into the task's session and followed over a stream, so
+     * a stub in the page would be a check of the stub.
+     *
+     * That is what `ci: false` costs and buys. CI keeps `task-check`, which
+     * proves a task's machinery and needs nothing; what it gives up is a check
+     * that could only ever have passed by luck. Run this by hand:
+     *
+     *   python scripts/suite/reasoning-stub.py 8198
+     *   node scripts/suite/run.mjs --only task-live-check
+     *
+     * Where the stub is, as the server reaches it, goes in
+     * ORKNUX_REASONING_STUB.
      */
   },
   {

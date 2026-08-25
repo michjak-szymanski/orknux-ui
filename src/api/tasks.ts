@@ -315,6 +315,15 @@ export interface TaskStep {
   content: string | null;
   /** What a call gave back. Null while its tool has not answered. */
   result: string | null;
+  /**
+   * How long a THINKING line thought for, and null while it still is.
+   *
+   * The one field on a step that carries two facts, and on purpose: a page
+   * watching a task has to know both how long the model has been at it and
+   * whether it has stopped, and a second field for the second would be one that
+   * could disagree with this.
+   */
+  millis: number | null;
   at: string;
 }
 

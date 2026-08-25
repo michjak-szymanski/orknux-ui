@@ -24,6 +24,22 @@ export interface ThinkingProps {
    * measurement behind it, and the row read "Thought" and nothing else.
    */
   millis?: number | null;
+  /**
+   * Whether to draw it already open.
+   *
+   * Off everywhere by default, which is the chat, and the note below says why
+   * folded is the right default there. A task's page passes it on the block
+   * that is being written and on no other, and that difference is the whole of
+   * the argument: a task takes dozens of turns, so a page that drew every one
+   * of them open would have the work somebody came to watch scrolled off the
+   * bottom — but what they came to watch is the model thinking *now*, and that
+   * one block folded is the feature hidden behind a press.
+   *
+   * The initial state only. A block that opened because it was live stays open
+   * when it settles rather than folding itself away under somebody's eyes,
+   * which would read as the page losing what they were reading.
+   */
+  startOpen?: boolean;
 }
 
 /**
@@ -61,8 +77,8 @@ export interface ThinkingProps {
  * An empty container drawn under every answer would be this asserting that
  * there was thinking to see, which is a worse thing to draw than nothing.
  */
-export function Thinking({ text, live = false, millis = null }: ThinkingProps) {
-  const [open, setOpen] = useState(false);
+export function Thinking({ text, live = false, millis = null, startOpen = false }: ThinkingProps) {
+  const [open, setOpen] = useState(startOpen);
   /*
    * How long it has been thinking, while it still is.
    *

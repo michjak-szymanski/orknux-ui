@@ -28,7 +28,7 @@ export type LlmSessionOrder = 'KEY' | 'CREATED' | 'LAST_EVENT';
  * TOOL is the call and not what came back: the arguments the model sent, which
  * is why that one line is often JSON and often long.
  */
-export type LlmSessionEventKind = 'AGENT' | 'TOOL' | 'USER' | 'SYSTEM';
+export type LlmSessionEventKind = 'AGENT' | 'TOOL' | 'USER' | 'SYSTEM' | 'THINKING';
 
 /** What a transcript is ordered by. */
 export type LlmSessionEventOrder = 'AT' | 'KIND';
@@ -49,6 +49,14 @@ export interface LlmSessionEvent {
    * all.
    */
   result: string | null;
+  /**
+   * How long a THINKING line's reasoning went on for, in milliseconds.
+   *
+   * Null on every other kind, and null on a thinking line the model has not
+   * finished — the duration is what settles it, so "no duration yet" is how a
+   * page reads "still thinking".
+   */
+  millis: number | null;
   at: string;
 }
 
@@ -68,14 +76,15 @@ export const EVENT_KIND_LABEL: Record<LlmSessionEventKind, string> = {
   TOOL: 'Tool',
   USER: 'User',
   SYSTEM: 'System',
+  THINKING: 'Thinking',
 };
 
 /** In the order a turn takes: something is put to the agent, it calls, it answers. */
-export const EVENT_KINDS: LlmSessionEventKind[] = ['USER', 'AGENT', 'TOOL', 'SYSTEM'];
+export const EVENT_KINDS: LlmSessionEventKind[] = ['USER', 'AGENT', 'TOOL', 'THINKING', 'SYSTEM'];
 
 const SESSION_FIELDS = 'id workspaceId key keyPrefix eventCount createdAt lastEventAt';
 
-const EVENT_FIELDS = 'id kind actor content result at';
+const EVENT_FIELDS = 'id kind actor content result millis at';
 
 export async function fetchLlmSessions(
   workspaceId: string,

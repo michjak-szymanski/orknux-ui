@@ -23,6 +23,7 @@ import { CallLine } from '../../components/CallLine';
 import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { Markdown } from '../../components/Markdown';
+import { Thinking } from '../../components/Thinking';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './TaskPage.module.css';
@@ -414,6 +415,30 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
                     result={line.result}
                     when={timeAgo(line.at)}
                   />
+                ) : line.kind === 'THINKING' ? (
+                  /*
+                    The same block the chat draws, and the same component.
+
+                    Two differences, and both are about which page it is on.
+                    The one being written is drawn open, because seeing the
+                    model think *now* is what this page was asked for; every
+                    earlier turn's is folded, because a task takes dozens of
+                    turns and a page that drew all of them open would have the
+                    work scrolled off the bottom.
+
+                    And "still thinking" is the server's own answer — a line
+                    with no duration on it — narrowed by whether the task is
+                    over. A process that died mid-thought leaves a line that
+                    never settled, and a finished task whose page said the model
+                    was still thinking would be the one lie this screen must not
+                    tell.
+                  */
+                  <Thinking
+                    text={line.content ?? ''}
+                    live={!over && line.millis === null}
+                    millis={line.millis}
+                    startOpen={!over && line.millis === null}
+                  />
                 ) : (
                   <>
                     <span className={styles.lineHead}>
@@ -479,10 +504,11 @@ const SPEAKER: Record<string, string> = {
 /**
  * A line arriving, put where it belongs.
  *
- * Merged by id rather than appended, because the same id arrives twice by
- * design: a call is sent the moment it is made, with nothing back from it, and
- * again when its tool answers. Appending would draw the lookup twice — once
- * running for ever and once returned.
+ * Merged by id rather than appended, because the same id arrives more than once
+ * by design: a call is sent the moment it is made, with nothing back from it,
+ * and again when its tool answers, and a block of thinking is sent again every
+ * time it has grown. Appending would draw the lookup twice — once running for
+ * ever and once returned — and the reasoning once per frame that arrived.
  *
  * Sorted by id afterwards, and only by id. The clock cannot order these: a turn
  * writes its question, its calls and its answer inside the same millisecond, so
@@ -496,6 +522,7 @@ function merged(held: LlmSessionEvent[], step: TaskStep): LlmSessionEvent[] {
     actor: step.actor,
     content: step.content,
     result: step.result,
+    millis: step.millis,
     at: step.at,
   };
   const at = held.findIndex((seen) => seen.id === line.id);
