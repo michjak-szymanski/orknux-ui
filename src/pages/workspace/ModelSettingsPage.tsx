@@ -61,6 +61,7 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
    */
   const [contextWindow, setContextWindow] = useState('');
   const [maxOutput, setMaxOutput] = useState('');
+  const [imageCost, setImageCost] = useState('');
   const [windowError, setWindowError] = useState<string | null>(null);
   const [windowSaved, setWindowSaved] = useState(false);
   const [windowSaving, setWindowSaving] = useState(false);
@@ -98,6 +99,7 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
     setModel(found);
     setContextWindow(found.contextWindow === null ? '' : String(found.contextWindow));
     setMaxOutput(found.maxOutput === null ? '' : String(found.maxOutput));
+    setImageCost(found.imageCostPerImage === null ? '' : String(found.imageCostPerImage));
     setTokenLimit(found.tokenLimit === null ? '' : String(found.tokenLimit));
     setResetInterval(found.resetInterval);
     setRequestsPerMinute(found.requestsPerMinute === null ? '' : String(found.requestsPerMinute));
@@ -111,6 +113,16 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
       setSaveError(cause instanceof Error ? cause.message : t('Could not change the model.'));
     }
   }
+
+  /**
+   * An image model is billed per picture, so this card is about a price.
+   *
+   * Same form and same save: the two fields it swaps for are meaningless on one
+   * - a model that draws reads no context window and writes no tokens - and the
+   * per-picture price had nowhere else to be changed, which would have made a
+   * mistyped price permanent.
+   */
+  const draws = model?.kind === 'IMAGE';
 
   /**
    * The window and the reserved answer, saved.
@@ -139,6 +151,10 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
           inputCostPerMillion: model.inputCostPerMillion,
           outputCostPerMillion: model.outputCostPerMillion,
           voice: model.voice,
+          // Sent back whatever it was, for the reason above: this mutation
+          // replaces a model's details rather than patching them, so a field
+          // this card does not show is a field left out and therefore cleared.
+          imageCostPerImage: draws ? toNumber(imageCost) : model.imageCostPerImage,
         }),
       );
       setWindowSaved(true);
@@ -274,9 +290,28 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
             everything sizing a prompt reads.
           */}
           <form className={styles.card} onSubmit={handleSaveWindow}>
-            <h2 className={styles.sectionHeading}>{t('Context Window')}</h2>
+            <h2 className={styles.sectionHeading}>{draws ? t('Price') : t('Context Window')}</h2>
 
             <div className={styles.fieldRow}>
+              {draws ? (
+                <div className={styles.field}>
+                  <span className={styles.labelWithHint}>
+                    <label className={styles.label} htmlFor="image-cost">{t('$ / picture')}</label>
+                    <FieldHint label={t('$ / picture')}>
+                      {t('What the provider charges for one picture at the size this model draws. It is asked for here rather than as a price per million tokens because that is how these models are billed, and because an image call reports no tokens at all — costed the ordinary way, every picture would come out free. Empty means not recorded, and a drawing then reports no cost rather than nought.')}
+                    </FieldHint>
+                  </span>
+                  <input
+                    id="image-cost"
+                    className={`${styles.input} ${styles.inputMono}`}
+                    value={imageCost}
+                    onChange={(event) => setImageCost(event.target.value)}
+                    placeholder={t('Not recorded')}
+                    inputMode="decimal"
+                  />
+                </div>
+              ) : (
+                <>
               <div className={styles.field}>
                 <span className={styles.labelWithHint}>
                   <label className={styles.label} htmlFor="context-window">
@@ -311,6 +346,8 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
                   inputMode="numeric"
                 />
               </div>
+                </>
+              )}
             </div>
 
             <div className={styles.formFooter}>

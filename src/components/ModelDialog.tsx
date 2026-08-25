@@ -33,7 +33,7 @@ export interface ModelDialogProps {
  * checked and counted against a quota it would never spend. They stay in the type and
  * the labels for anything registered while they were on offer.
  */
-const MODEL_KINDS: ModelKind[] = ['CHAT', 'TRANSCRIPTION', 'SPEECH'];
+const MODEL_KINDS: ModelKind[] = ['CHAT', 'TRANSCRIPTION', 'SPEECH', 'IMAGE'];
 
 /**
  * A name worth showing, from an id that may not be one.
@@ -94,6 +94,7 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
   const [inputCost, setInputCost] = useState('');
   const [outputCost, setOutputCost] = useState('');
   const [voice, setVoice] = useState('');
+  const [imageCost, setImageCost] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -104,6 +105,17 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
    * has just started rather than a provider they set up earlier.
    */
   const audio = kind === 'TRANSCRIPTION' || kind === 'SPEECH';
+
+  /**
+   * An image model is picked against a provider like a chat model is.
+   *
+   * Not the audio flow above, deliberately. The two commonest places to draw are
+   * OpenAI - a provider this workspace already has - and a server added on the
+   * Providers page, and both of them list at `/models`, so there is a catalogue
+   * to ask and a provider to pick. What it does not have is a context window, a
+   * maximum output or a price per million tokens: it is billed per picture.
+   */
+  const draws = kind === 'IMAGE';
 
   // What the provider says it can run. Null until asked, so "none offered" and
   // "not asked yet" do not look the same.
@@ -171,6 +183,7 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
       setInputCost('');
       setOutputCost('');
       setVoice('');
+      setImageCost('');
       setError(null);
       setSubmitting(false);
       dialog.showModal();
@@ -230,11 +243,15 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
           kind,
           contextWindow: optionalNumber(contextWindow),
           maxOutput: optionalNumber(maxOutput),
-          inputCostPerMillion: optionalNumber(inputCost),
-          outputCostPerMillion: optionalNumber(outputCost),
+          // An image model is billed per picture and reports no tokens, so the
+          // two per-million prices are not offered for one and nothing is sent
+          // for them. Sent, they would cost every picture at nought.
+          inputCostPerMillion: draws ? null : optionalNumber(inputCost),
+          outputCostPerMillion: draws ? null : optionalNumber(outputCost),
           // Only meaningful on a speech model, and blank means "the provider's
           // own" rather than a name this would have to invent.
           voice: kind === 'SPEECH' ? (voice.trim() === '' ? null : voice.trim()) : null,
+          imageCostPerImage: draws ? optionalNumber(imageCost) : null,
         }),
       );
     } catch (cause) {
@@ -395,6 +412,13 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
                   reader usually takes the name of the voice pack it loaded.
                 </FieldHint>
               )}
+              {draws && (
+                <FieldHint label={t('Model ID')}>
+                  Whatever draws — <code>gpt-image-1</code> or <code>dall-e-3</code> at OpenAI, and
+                  whatever name a local image server answers <code>/images/generations</code> under.
+                  Anthropic and Ollama have no such endpoint and are refused with a sentence.
+                </FieldHint>
+              )}
             </span>
             <div className={styles.inputWrapper}>
               <input
@@ -403,7 +427,13 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
                 className={`${styles.input} ${styles.inputMono}`}
                 type="text"
                 placeholder={
-                  kind === 'SPEECH' ? 'tts-1' : kind === 'TRANSCRIPTION' ? 'whisper-1' : 'claude-3-5-sonnet-20241022'
+                  kind === 'SPEECH'
+                    ? 'tts-1'
+                    : kind === 'TRANSCRIPTION'
+                      ? 'whisper-1'
+                      : draws
+                        ? 'gpt-image-1'
+                        : 'claude-3-5-sonnet-20241022'
                 }
                 value={modelId}
                 onChange={(event) => setModelId(event.target.value)}
@@ -471,6 +501,40 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
             </div>
           )}
 
+          {/*
+            What one picture costs, in place of the three fields below.
+            An image model has no context window, no maximum output and no price
+            per million tokens - it reports no tokens at all - so offering the
+            token prices for one is offering a number that would report every
+            picture as free.
+          */}
+          {draws && (
+            <div className={styles.field}>
+              <span className={styles.labelWithHint}>
+                <label className={styles.label} htmlFor="model-image-cost">{t('$ / picture')}</label>
+                <FieldHint label={t('$ / picture')}>
+                  What the provider charges for one picture at the size it draws. Left empty, a
+                  drawing reports no cost at all rather than <code>$0.00</code> — nothing recorded is
+                  not nothing spent.
+                </FieldHint>
+              </span>
+              <div className={styles.inputWrapper}>
+                <input
+                  id="model-image-cost"
+                  name="imageCostPerImage"
+                  className={`${styles.input} ${styles.inputMono}`}
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0.04"
+                  value={imageCost}
+                  onChange={(event) => setImageCost(event.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          {!draws && (
+          <>
           <div className={styles.field}>
             <label className={styles.label} htmlFor="model-context">{t('Context Window')}</label>
             <div className={styles.inputWrapper}>
@@ -539,6 +603,8 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
               />
             </div>
           </div>
+          </>
+          )}
         </div>
 
         {error !== null && (

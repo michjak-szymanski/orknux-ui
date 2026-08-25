@@ -5,7 +5,7 @@ export type ProviderType = 'OPENAI' | 'ANTHROPIC' | 'AZURE_OPENAI' | 'OLLAMA' | 
 export type ProviderAuthMethod = 'API_KEY' | 'ENTRA_ID';
 /** CONNECTED only once a check reached the provider: a stored key is not a working one. */
 export type ProviderStatus = 'NOT_CONFIGURED' | 'NOT_CHECKED' | 'CONNECTED' | 'FAILED';
-export type ModelKind = 'CHAT' | 'EMBEDDING' | 'COMPLETION' | 'TRANSCRIPTION' | 'SPEECH';
+export type ModelKind = 'CHAT' | 'EMBEDDING' | 'COMPLETION' | 'TRANSCRIPTION' | 'SPEECH' | 'IMAGE';
 
 /**
  * The kinds that do not answer a prompt.
@@ -15,9 +15,17 @@ export type ModelKind = 'CHAT' | 'EMBEDDING' | 'COMPLETION' | 'TRANSCRIPTION' | 
  * makes a conversation that cannot reply. Listed once so a sixth kind does not
  * have to be remembered in five places.
  */
-export const VOICE_KINDS: ModelKind[] = ['TRANSCRIPTION', 'SPEECH'];
+export const VOICE_KINDS: ModelKind[] = ['TRANSCRIPTION', 'SPEECH', 'IMAGE'];
 
-/** Whether this model is one that answers, rather than one that hears or reads. */
+/**
+ * Whether this model is one that answers, rather than one that hears, reads or
+ * draws.
+ *
+ * An image model belongs here for the same reason the two audio ones do, and
+ * the mistake it prevents is the loudest of the three: picked as a chat model it
+ * would be sent the whole conversation as a prompt and would draw a picture of
+ * it.
+ */
 export function answers(model: { kind: ModelKind }): boolean {
   return !VOICE_KINDS.includes(model.kind);
 }
@@ -82,6 +90,14 @@ export interface Model {
   outputCostPerMillion: number | null;
   /** Which voice a SPEECH model reads in; null sends none and takes the provider's. */
   voice: string | null;
+  /**
+   * What one picture costs on an IMAGE model; null means nobody recorded it.
+   *
+   * Not the same as free, and its own field for the reason the server's column
+   * is: these models are billed per picture and report no tokens, so the two
+   * per-million prices beside it would cost every one of them at nothing.
+   */
+  imageCostPerImage: number | null;
 }
 
 /** A model the provider says it can run; `added` when the catalogue has it already. */
@@ -123,7 +139,8 @@ const PROVIDER_FIELDS =
   'secretVariableId secretVariableName secretVariableCatalog secretVariableMissing';
 const MODEL_FIELDS =
   'id providerId workspaceId providerName name modelId kind contextWindow maxOutput enabled ' +
-  'tokenLimit resetInterval requestsPerMinute inputCostPerMillion outputCostPerMillion voice';
+  'tokenLimit resetInterval requestsPerMinute inputCostPerMillion outputCostPerMillion voice ' +
+  'imageCostPerImage';
 const USAGE_FIELDS =
   'modelId days from to empty requests inputTokens outputTokens totalTokens averageLatencyMillis ' +
   'costEstimate requestsChange tokensChange latencyChange periodStart periodTokens ' +
@@ -263,6 +280,8 @@ export interface ModelDetailsInput {
   outputCostPerMillion?: number | null;
   /** Only asked for on a SPEECH model; null sends none and takes the provider's. */
   voice?: string | null;
+  /** Only asked for on an IMAGE model, which is billed per picture rather than per token. */
+  imageCostPerImage?: number | null;
 }
 
 export async function createModel(
@@ -362,6 +381,8 @@ export function modelKindLabel(kind: ModelKind): string {
       return 'Transcription';
     case 'SPEECH':
       return 'Speech';
+    case 'IMAGE':
+      return 'Image';
   }
 }
 

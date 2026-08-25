@@ -13,6 +13,7 @@ import {
   fetchWorkspace,
   updateWorkspace,
   setWorkspaceCompanionModel,
+  setWorkspaceImageModel,
   setWorkspaceDefaultMemoryShare,
   setWorkspaceQuickChatModel,
   setWorkspaceQuickChatWrites,
@@ -528,6 +529,20 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       // Empty takes the speaker away rather than falling back to a model that
       // would answer the text instead of reading it.
       setWorkspace(await setWorkspaceSpeechModel(workspaceId, modelId === '' ? null : modelId));
+      setSaved(true);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t('Could not save that.'));
+    }
+  }
+
+  async function draw(modelId: string) {
+    setAbout('chat');
+    setError(null);
+    setSaved(false);
+    try {
+      // Empty takes the picture button out of the composer rather than falling
+      // back to a model that would write about the picture instead of drawing it.
+      setWorkspace(await setWorkspaceImageModel(workspaceId, modelId === '' ? null : modelId));
       setSaved(true);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t('Could not save that.'));
@@ -1112,6 +1127,52 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             !models.some((model) => model.kind === 'SPEECH') && (
               <p className={styles.fieldNote}>
                 {t('No speech model has been added yet. Add one under Models, pointing at whatever reads text aloud.')}
+              </p>
+            )
+          ) : (
+            <CatalogueNote catalogue={modelCatalogue} className={styles.fieldNote} />
+          )}
+        </div>
+
+        {/*
+          What draws a picture in a chat. The third of the trio, and only image
+          models are offered for the reason the other two give: a chat model
+          handed a description writes about the picture rather than drawing one,
+          and there is no endpoint on it that would.
+        */}
+        <div className={styles.field}>
+          <span className={styles.labelWithHint}>
+            <label className={styles.label} htmlFor="image-model">
+              {t('Text-to-image Model')}
+            </label>
+            <FieldHint label={t('Text-to-image Model')}>
+              {t('A picture button appears in the chat composer, and what is typed there is drawn rather than answered. The picture is kept as an attachment on the chat, so it is still there when the chat is opened again. OpenAI, Azure OpenAI and any server speaking their image API can draw; Anthropic and Ollama have no image endpoint and are refused with a sentence rather than called.')}
+            </FieldHint>
+          </span>
+          <div className={styles.inputWrapper}>
+            <select
+              id="image-model"
+              className={`${styles.input} ${styles.select}`}
+              value={workspace?.imageModelId ?? ''}
+              onChange={(event) => void draw(event.target.value)}
+              disabled={workspace === null}
+            >
+              <option value="">{t('None — the picture button is not offered')}</option>
+              {models
+                .filter((model) => model.kind === 'IMAGE')
+                .map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.modelId}
+                  </option>
+                ))}
+            </select>
+            <img src={chevronDown12Icon} alt="" width={12} height={12} />
+          </div>
+          {modelCatalogue.failure === null ? (
+            !modelCatalogue.loading &&
+            !models.some((model) => model.kind === 'IMAGE') && (
+              <p className={styles.fieldNote}>
+                {t('No image model has been added yet. Add one under Models, pointing at whatever draws.')}
               </p>
             )
           ) : (

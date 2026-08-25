@@ -389,6 +389,12 @@ const IN_THE_OPEN = [
     why: 'the same, for the speech picker',
   },
   {
+    file: 'src/pages/workspace/WorkspaceSettingsPage.tsx',
+    says: 'No image model has been added yet.',
+    because: 'status',
+    why: 'the same, for the picker that chooses what draws',
+  },
+  {
     file: 'src/pages/admin/AdminSettingsPage.tsx',
     says: 'here, and the stored answer is the one in force.',
     because: 'status',
