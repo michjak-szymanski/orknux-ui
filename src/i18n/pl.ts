@@ -1800,6 +1800,8 @@ export const PL: Record<string, string> = {
   "Could not be run": "Nie udało się wywołać",
   "Thinking": "Myśli",
   "Thought": "Myślało",
+  "Thought for": "Myślało przez",
+  "Continuing an LLM session — what is said here is written into it": "Kontynuuje sesję LLM — to, co tu napisane, trafia do niej",
 
   // --- two notes the transform reached this time ---------------------------
   "A saved shape fixes which fields there are; this node decides what goes in them. Custom means the fields are this node's own.": "Zapisany kształt ustala, jakie są pola; ten węzeł decyduje, co się w nich znajdzie. „Własny” oznacza, że pola należą do tego węzła.",

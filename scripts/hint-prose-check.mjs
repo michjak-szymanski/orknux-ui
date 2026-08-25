@@ -219,12 +219,6 @@ const IN_THE_OPEN = [
     why: 'where the lines above this one came from, in this conversation',
   },
   {
-    file: 'src/pages/chat/ChatPage.tsx',
-    says: 'Continuing an LLM session',
-    because: 'status',
-    why: 'what this chat is attached to now, which changes what typing into it does',
-  },
-  {
     file: 'src/pages/workspace/ExecutionDetailPage.tsx',
     says: 'Carried over from the earlier run',
     because: 'status',
