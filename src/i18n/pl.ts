@@ -1835,6 +1835,9 @@ export const PL: Record<string, string> = {
   "Showing {first}-{last} of {total}": "Pokazano {first}-{last} z {total}",
   "Showing {first}-{last} of {total} {unit}": "Pokazano {first}-{last} z {total}",
 
+  "Running…": "Uruchamianie…",
+  "Save this function first — a run is of what is stored.": "Najpierw zapisz tę funkcję — uruchamiane jest to, co zapisano.",
+
   // --- a function's own settings page -----------------------------------------------
   "Function Settings": "Ustawienia funkcji",
   "Function settings": "Ustawienia funkcji",

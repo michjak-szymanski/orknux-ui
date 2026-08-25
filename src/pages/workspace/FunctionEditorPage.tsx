@@ -17,17 +17,16 @@ import {
   updateFunction,
   validateFunctionSource,
   valueTypeLabel,
-  argumentJson,
-  runFunction,
   withName,
   withParameters,
 } from '../../api/functions';
-import type { FunctionParam, FunctionRun, ScriptImport, WorkspaceFunction } from '../../api/functions';
+import type { FunctionParam, ScriptImport, WorkspaceFunction } from '../../api/functions';
 import { fetchWorkspaceLibraries } from '../../api/libraries';
 import type { ScriptLibrary, ScriptLibraryImport, ScriptLibraryImportInput } from '../../api/libraries';
 import type { SessionUser } from '../../api/session';
 import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import codeIcon from '../../assets/code.svg';
+import playIcon from '../../assets/play.svg';
 import settingsIcon from '../../assets/settings-14.svg';
 import plusIcon from '../../assets/plus.svg';
 import wandIcon from '../../assets/wand.svg';
@@ -47,6 +46,7 @@ import { objectTypes } from '../../components/objectTypes';
 import { fetchWorkspaceObjects } from '../../api/objects';
 import type { WorkflowObject } from '../../api/objects';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { TestRunDialog } from '../../components/TestRunDialog';
 import { UnsavedWorkDialog } from '../../components/UnsavedWorkDialog';
 import { ValidationStatus } from '../../components/ValidationStatus';
 import type { Validation } from '../../components/ValidationStatus';
@@ -212,22 +212,13 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
   const [returnObjectId, setReturnObjectId] = useState<string | null>(null);
 
   /*
-   * What a test run would pass, as typed, by parameter name.
+   * Whether the Test Run window is open.
    *
-   * As typed rather than as JSON: the panel offers a control per type, and what
-   * somebody has half-written in a number field is not a number yet. It becomes
-   * JSON in `handleRun`, at the one moment there is a type to read it against.
-   *
-   * Keyed by name rather than by position, because a parameter renamed in the
-   * panel above is a different parameter and should not keep a value that was
-   * typed for the old one.
+   * All this page keeps of it. What was typed into it, what came back and how
+   * long it took belong to the window, which is where they are read - see
+   * `TestRunDialog`.
    */
-  const [testValues, setTestValues] = useState<Record<string, string>>({});
-  const [running, setRunning] = useState(false);
-  /** What the last run came to, or null before there has been one. */
-  const [ran, setRan] = useState<FunctionRun | null>(null);
-  /** The run could not be asked for at all — the request failed, not the script. */
-  const [runFailed, setRunFailed] = useState<string | null>(null);
+  const [testing, setTesting] = useState(false);
 
   /*
    * What there is to choose from. Their values are not here and cannot be: an
@@ -1203,42 +1194,6 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
   }
 
   /**
-   * Runs the function, with what is in the Test Run fields, and shows the answer.
-   *
-   * The server is handed an id and arguments and nothing else — no source. So what
-   * runs is the *saved* function, in the sandbox a workflow runs it in, with the
-   * workspace's variables it is granted resolved the same way; the panel says so,
-   * and says so again when there is unsaved work in the column, because otherwise
-   * a run that disagreed with the code on screen would read as the run being wrong
-   * rather than as the code not having been saved.
-   *
-   * A failure is the interesting answer and is shown as one: the reason comes back
-   * on `error` with the function's name in front of it, worded exactly as a run of
-   * the workflow would have worded it in its history.
-   */
-  async function handleRun() {
-    if (running || creating) return;
-    setRunning(true);
-    setRan(null);
-    setRunFailed(null);
-    try {
-      const answer = await runFunction({
-        workspaceId,
-        functionId,
-        arguments: declared(params).map((param) => ({
-          name: param.name,
-          json: argumentJson(param.type, testValues[param.name] ?? ''),
-        })),
-      });
-      setRan(answer);
-    } catch (cause) {
-      setRunFailed(cause instanceof Error ? cause.message : t('It could not be run.'));
-    } finally {
-      setRunning(false);
-    }
-  }
-
-  /**
    * Saves both halves, from one compile of what is on screen.
    *
    * This is the whole of the guarantee that the two are the same function. The
@@ -1393,6 +1348,33 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                   first question, so one click goes from stuck to being helped -
                   a conversation already under way is joined, not talked over.
                 */}
+                {/*
+                  Running it, which is what Validate never could - issue #266,
+                  a second time.
+
+                  A mark in the corner where the page's other actions are,
+                  rather than a section in the column: it was the seventh of
+                  nine there, 1,364px into a thousand-pixel column, and moving
+                  it second only made it the second thing nobody was looking
+                  for. The fields and the answer are in the window it opens,
+                  which is the shape the workflow editor's Run already has -
+                  a picture on the bar, and what it did somewhere with room.
+
+                  Drawn from the first moment, including on a function nobody
+                  has saved. A control that appears only after the first save
+                  is one that somebody writing their first function never
+                  learns exists; the window says why it cannot run yet, which
+                  is a sentence a tooltip on a dead button could not carry.
+                */}
+                <button
+                  type="button"
+                  className={styles.runButton}
+                  onClick={() => setTesting(true)}
+                  aria-label={t('Test Run')}
+                  title={t('Test Run')}
+                >
+                  <img src={playIcon} alt="" width={16} height={16} />
+                </button>
                 <button
                   type="button"
                   className={styles.wandButton}
@@ -1650,130 +1632,6 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                   </Link>
                 </p>
               </section>
-
-              {/*
-                Running it, which is what Validate never could — issue #266.
-
-                Not offered while a function is being written: there is nothing to
-                run until there is a row, and the button takes an id.
-
-                Every field here is a parameter with a type, offered as that type,
-                rather than one JSON box: a number field is where somebody types a
-                number, and asking them to remember that a string needs quotes is
-                asking them to do the editor's job. The shapes that have no
-                spelling as a plain word — map, array, an object — are the
-                exception and are typed as JSON, because that is what they are.
-
-                The externals are not here and must not be. A grant belongs to the
-                function; a field for one would let a test run be given a value the
-                real run would never see, and the run would prove nothing about the
-                function it was run on.
-              */}
-              {!creating && (
-                <section className={styles.panelSection}>
-                  <span className={styles.headingWithHint}>
-                    <h2 className={styles.panelHeading}>Test Run</h2>
-                    <FieldHint label={t('Test Run')}>
-                      Runs the saved function the way an action node would: the same sandbox, the same imports
-                      and libraries, and the workspace’s variables resolved the same way. It runs what is stored
-                      rather than what is in the column, so save first to try a change — and every run is
-                      recorded in this workspace’s audit, because it leaves no run of its own behind it.
-                    </FieldHint>
-                  </span>
-
-                  <div className={styles.paramList}>
-                    {declared(params).map((param) => (
-                      <div key={param.name} className={styles.field}>
-                        <label className={styles.fieldLabel} htmlFor={`run-arg-${param.name}`}>
-                          {param.name} · {valueTypeLabel(param.type)}
-                        </label>
-                        {param.type === 'BOOLEAN' ? (
-                          <div className={styles.selectWrapper}>
-                            <select
-                              id={`run-arg-${param.name}`}
-                              className={`${styles.input} ${styles.inputMono}`}
-                              value={testValues[param.name] ?? ''}
-                              aria-label={`Argument ${param.name}`}
-                              onChange={(event) =>
-                                setTestValues((current) => ({ ...current, [param.name]: event.target.value }))
-                              }
-                            >
-                              {/* Blank is a real answer: it is the `null` an unmapped node passes. */}
-                              <option value="">nothing</option>
-                              <option value="true">true</option>
-                              <option value="false">false</option>
-                            </select>
-                            <img src={chevronDown12Icon} alt="" width={12} height={12} />
-                          </div>
-                        ) : param.type === 'STRING' || param.type === 'NUMBER' ? (
-                          <input
-                            id={`run-arg-${param.name}`}
-                            className={`${styles.input} ${styles.inputMono}`}
-                            type={param.type === 'NUMBER' ? 'number' : 'text'}
-                            value={testValues[param.name] ?? ''}
-                            aria-label={`Argument ${param.name}`}
-                            onChange={(event) =>
-                              setTestValues((current) => ({ ...current, [param.name]: event.target.value }))
-                            }
-                          />
-                        ) : (
-                          <textarea
-                            id={`run-arg-${param.name}`}
-                            className={`${styles.input} ${styles.textarea} ${styles.inputMono}`}
-                            value={testValues[param.name] ?? ''}
-                            placeholder={param.type === 'ARRAY' ? '[]' : '{}'}
-                            aria-label={`Argument ${param.name}`}
-                            onChange={(event) =>
-                              setTestValues((current) => ({ ...current, [param.name]: event.target.value }))
-                            }
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  <button
-                    type="button"
-                    className={styles.ghostButton}
-                    onClick={() => void handleRun()}
-                    disabled={running}
-                  >
-                    {running ? 'Running…' : 'Run'}
-                  </button>
-
-                  {/* One line, and only when it is true: the column has moved on. */}
-                  {unsaved && <p className={styles.paramHint}>This runs the saved function, not the column.</p>}
-
-                  {runFailed !== null && (
-                    <p className={styles.runFailed} role="alert">
-                      {runFailed}
-                    </p>
-                  )}
-
-                  {ran !== null && (
-                    <div className={styles.runResult}>
-                      <p className={ran.ok ? styles.runVerdict : styles.runVerdictBad} role="status">
-                        {ran.ok ? 'Returned' : 'Failed'} in {ran.durationMillis} ms
-                      </p>
-                      {/*
-                        What came back, whichever it was. A failure prints its
-                        reason here rather than in a toast, because it is the
-                        answer to the question the button asked - and it is
-                        worded exactly as the run history would have worded it.
-                      */}
-                      <pre className={styles.runAnswer}>
-                        {ran.ok ? (ran.returned ?? t('It returned nothing.')) : ran.error}
-                      </pre>
-                      {!ran.ok && !ran.settled && (
-                        <p className={styles.paramHint}>It was stopped rather than refused; running it again may answer.</p>
-                      )}
-                      {ran.grants.length > 0 && (
-                        <p className={styles.paramHint}>Handed {ran.grants.join(', ')} from the workspace.</p>
-                      )}
-                    </div>
-                  )}
-                </section>
-              )}
 
               <section className={styles.panelSection}>
                 <h2 className={styles.panelHeading}>Parameters</h2>
@@ -2118,6 +1976,22 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
         onStay={guard.stay}
         onLeave={guard.leave}
         onSaveAndLeave={guard.saveAndLeave}
+      />
+
+      {/*
+        Out here for the same reason, and handed the parameters as the panel has
+        them rather than as the last save had them: somebody adds an argument
+        and tries it, in that order, and a window offering the fields the server
+        last heard about would be a window missing the one they just made.
+      */}
+      <TestRunDialog
+        open={testing}
+        onClose={() => setTesting(false)}
+        workspaceId={workspaceId}
+        functionId={creating ? '' : functionId}
+        params={declared(params)}
+        unsaved={unsaved}
+        creating={creating}
       />
     </AppShell>
   );

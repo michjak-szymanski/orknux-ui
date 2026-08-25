@@ -243,13 +243,13 @@ const IN_THE_OPEN = [
     why: "how far back this issue's history goes, which is a fact about this issue",
   },
   {
-    file: 'src/pages/workspace/FunctionEditorPage.tsx',
+    file: 'src/components/TestRunDialog.tsx',
     says: 'This runs the saved function, not the column.',
     because: 'status',
-    why: 'drawn only while the column and the saved function disagree, which is the state the page is in. What Run does at all is behind the (?) on the heading',
+    why: 'drawn only while the column and the saved function disagree, which is the state the page is in. What Run does at all is behind the (?) on the heading. It moved file with the rest of Test Run, out of the editor panel and into the window the mark in the corner opens',
   },
   {
-    file: 'src/pages/workspace/FunctionEditorPage.tsx',
+    file: 'src/components/TestRunDialog.tsx',
     says: 'It was stopped rather than refused; running it again may answer.',
     because: 'status',
     why: 'what the run that just finished came to - a budget ran out rather than the code being wrong, so the next press may answer',

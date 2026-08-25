@@ -6,6 +6,12 @@
  * function does what they meant, and the only honest way to answer it is to run
  * the thing that actually runs.
  *
+ * It is a mark in the page's corner and a window now, rather than a section in
+ * the side column - the column was where nobody found it. Everything below is
+ * asserted exactly as it was; what moved is where it is read from, and one
+ * assertion is new: the mark is there before the first save, and says why it
+ * cannot run yet rather than being a button that will not press.
+ *
  * So the measurement here is not "a panel appeared". It is what came back:
  *
  *   the answer   - two typed fields, filled in as their types, and the JSON the
@@ -65,7 +71,7 @@ let functionId = null;
 let variableId = null;
 let catalogId = null;
 
-/** What the panel is showing as the answer, whichever way the run went. */
+/** What the window is showing as the answer, whichever way the run went. */
 const answerText = () => page.locator('[class*="runAnswer"]').innerText();
 
 /** The verdict line above it: "Returned in 3 ms", or "Failed in …". */
@@ -74,7 +80,10 @@ const verdictText = () =>
 
 async function openEditor(id) {
   await page.goto(`${BASE}/workspace/${WORKSPACE}/functions/${id}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('text=Test Run', { timeout: 30_000 });
+  // The code column, which is what says the editor arrived. It used to wait on
+  // the words "Test Run" in the panel; those are on a mark in the corner now,
+  // and a mark has no text to wait for.
+  await page.waitForSelector('.view-lines', { timeout: 30_000 });
   await page.waitForFunction(
     () =>
       (document.querySelector('.view-lines')?.textContent ?? '')
@@ -86,7 +95,20 @@ async function openEditor(id) {
   await page.waitForTimeout(1200);
 }
 
-/** Presses Run and waits for the panel to say what happened. */
+/**
+ * Opens the Test Run window from the mark in the corner.
+ *
+ * The mark carries no words, so it is found by the name it is given for a
+ * screen reader - which is the same string a person sees on hover, and is the
+ * only handle a picture has.
+ */
+async function openRunner() {
+  await page.getByRole('button', { name: 'Test Run', exact: true }).click();
+  await page.waitForSelector('dialog[data-check="test-run"][open]', { timeout: 20_000 });
+  await page.waitForTimeout(300);
+}
+
+/** Presses Run and waits for the window to say what happened. */
 async function run() {
   await page.getByRole('button', { name: 'Run', exact: true }).click();
   await page.waitForSelector('[class*="runVerdict"]', { timeout: 30_000 });
@@ -142,6 +164,7 @@ try {
   /* ------------------------------------------------------------ the answer */
 
   await openEditor(functionId);
+  await openRunner();
 
   // A field per parameter, as its own type: the string is typed as a string and
   // the number as a number, which is the whole of the difference between this
@@ -151,7 +174,7 @@ try {
   // And there is no field for the grant: it is not the caller's to supply.
   check(
     (await page.getByLabel(`Argument ${GRANT}`).count()) === 0,
-    'the panel offers no field for the workspace variable the function is granted',
+    'the window offers no field for the workspace variable the function is granted',
   );
 
   await run();
@@ -160,7 +183,7 @@ try {
   const answered = await answerText();
   console.log(`the panel said ${JSON.stringify(verdict)} and ${JSON.stringify(answered)}`);
 
-  check(/^Returned in \d+ ms$/.test(verdict.trim()), `the panel says it returned, and how long it took: ${verdict}`);
+  check(/^Returned in \d+ ms$/.test(verdict.trim()), `the window says it returned, and how long it took: ${verdict}`);
   check(
     JSON.parse(answered).said === 'hahaha',
     'and shows what the function returned, computed from the arguments that were typed',
@@ -175,10 +198,13 @@ try {
    * return it. What is being asserted is that the panel does not print a
    * variable's value of its own accord.
    */
-  const handed = await page.locator('aside p', { hasText: 'Handed ' }).first().innerText();
+  const handed = await page
+    .locator('dialog[data-check="test-run"] p', { hasText: 'Handed ' })
+    .first()
+    .innerText();
   check(
     handed.includes(GRANT) && !handed.includes(HELD),
-    `the panel names the grant it was handed and not its value: ${JSON.stringify(handed)}`,
+    `the window names the grant it was handed and not its value: ${JSON.stringify(handed)}`,
   );
 
   await page.screenshot({ path: shot('function-run.png'), fullPage: true });
@@ -191,6 +217,7 @@ try {
   });
 
   await openEditor(functionId);
+  await openRunner();
   await page.getByLabel(`Argument word`).fill('kettle');
   await page.getByLabel(`Argument times`).fill('1');
   await run();
@@ -202,7 +229,7 @@ try {
   check(/^Failed in \d+ ms$/.test(failedVerdict.trim()), `a thrown error is reported as a failure: ${failedVerdict}`);
   check(
     failedAnswer.includes('the kettle went wrong'),
-    'and the panel shows what the script actually said, not that something went wrong',
+    'and the window shows what the script actually said, not that something went wrong',
   );
   check(
     failedAnswer.startsWith(`${NAME} `),
@@ -210,6 +237,39 @@ try {
   );
 
   await page.screenshot({ path: shot('function-run-failed.png'), fullPage: true });
+
+  /* ------------------------------------------- before there is anything to run */
+
+  /*
+   * The mark is drawn on a function nobody has saved, and the window says why
+   * it cannot run rather than the mark refusing to press.
+   *
+   * Asserted because the alternative was to draw nothing until the first save,
+   * and a control that only appears afterwards is one somebody writing their
+   * first function never learns is there. What must not happen is the third
+   * thing: a mark that presses and does nothing.
+   */
+  await page.goto(`${BASE}/workspace/${WORKSPACE}/functions/new`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.view-lines', { timeout: 30_000 });
+  await page.waitForTimeout(800);
+
+  const markOnNew = page.getByRole('button', { name: 'Test Run', exact: true });
+  check((await markOnNew.count()) === 1, 'the run mark is there before the first save, rather than appearing later');
+  await markOnNew.click();
+  await page.waitForSelector('dialog[data-check="test-run"][open]', { timeout: 20_000 });
+  await page.waitForTimeout(300);
+  const unsavedSaid = (await page.locator('dialog[data-check="test-run"]').innerText()).replace(/\s+/g, ' ').trim();
+  check(
+    unsavedSaid.includes('Save this function first'),
+    `and pressing it says why it cannot run yet: ${JSON.stringify(unsavedSaid)}`,
+  );
+  check(
+    (await page.locator('dialog[data-check="test-run"]').getByRole('button', { name: 'Run', exact: true }).count()) ===
+      0,
+    'with no Run to press, so it is an explanation rather than a refusal',
+  );
+  await page.locator('dialog[data-check="test-run"]').getByRole('button', { name: 'Close' }).click();
+  await page.waitForTimeout(300);
 
   /* ------------------------------------------------------------ the record */
 
