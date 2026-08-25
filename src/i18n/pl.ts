@@ -1074,6 +1074,7 @@ export const PL: Record<string, string> = {
   "Could not create the agent.": "Nie udało się utworzyć agenta.",
   "Could not create the workflow.": "Nie udało się utworzyć przepływu pracy.",
   "Could not create the workspace.": "Nie udało się utworzyć przestrzeni roboczej.",
+  "Could not delete.": "Nie udało się usunąć.",
   "Could not delete the action.": "Nie udało się usunąć akcji.",
   "Could not delete the agent.": "Nie udało się usunąć agenta.",
   "Could not delete the condition.": "Nie udało się usunąć warunku.",
@@ -1535,6 +1536,7 @@ export const PL: Record<string, string> = {
   "The definition": "Definicja",
   "The properties": "Właściwości",
   "What this describes": "Co to opisuje",
+  "Not saved yet": "Jeszcze niezapisane",
   "Connection successful": "Połączenie udane",
 
   // --- looking for something -----------------------------------------------
@@ -1880,14 +1882,4 @@ export const PL: Record<string, string> = {
     "licząc od chwili, w której zapytało. Odpowiedź teraz kasuje ten termin.",
   "Running…": "Uruchamianie…",
   "Save this function first — a run is of what is stored.": "Najpierw zapisz tę funkcję — uruchamiane jest to, co zapisano.",
-
-  // --- a function's own settings page -----------------------------------------------
-  "Function Settings": "Ustawienia funkcji",
-  "Function settings": "Ustawienia funkcji",
-  "Delete Function": "Usuń funkcję",
-  "Back to Functions": "Powrót do funkcji",
-  "Remove this function from the workspace": "Usuń tę funkcję z przestrzeni roboczej",
-  "That function no longer exists.": "Ta funkcja już nie istnieje.",
-  "Could not save the function.": "Nie udało się zapisać funkcji.",
-  "Could not delete the function.": "Nie udało się usunąć funkcji.",
 };

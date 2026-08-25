@@ -122,15 +122,9 @@ async function settled() {
 
 // ------------------------------------------------- nothing uses it, said aloud
 
-/*
- * A function's panel is on its settings page now, not beside its code. The
- * panel moved off the editor's side column with the imports, the libraries and
- * the return type - what stayed there is what writes into the code - so this
- * follows it. Everything asserted below is what was asserted before.
- */
-const settings = `${BASE}/workspace/${WORKSPACE}/functions/${shared.id}/settings`;
-await page.goto(settings, { waitUntil: 'domcontentloaded' });
-if (!(await drawn(page, "the new function's settings"))) await done();
+const editor = `${BASE}/workspace/${WORKSPACE}/functions/${shared.id}`;
+await page.goto(editor, { waitUntil: 'domcontentloaded' });
+if (!(await drawn(page, "the new function's editor"))) await done();
 await settled();
 
 const panel = page.locator('[aria-label="Used by"]');
@@ -158,8 +152,8 @@ const { createTool: tool } = await graphql(
   },
 );
 
-await page.goto(settings, { waitUntil: 'domcontentloaded' });
-if (!(await drawn(page, "the function's settings, with an importer"))) await done();
+await page.goto(editor, { waitUntil: 'domcontentloaded' });
+if (!(await drawn(page, "the function's editor, with an importer"))) await done();
 await page.waitForSelector('[aria-label="Used by"] [data-dependants]', { timeout: 20_000 });
 
 const rows = page.locator('[aria-label="Used by"] [data-dependants] a');

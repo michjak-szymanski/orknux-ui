@@ -237,36 +237,15 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
                     />
                   </>
                 )}
-                {/*
-                  The cog opens the settings page, the way every other list's
-                  does - the name beside it opens the code. It used to open the
-                  editor too, because there was nowhere else for it to go.
-
-                  A plugin's function is the exception and keeps the old
-                  destination: there is nothing on that page it may change, so
-                  a cog leading to a form that refuses every save would be worse
-                  than one that opens the code and lets the note there explain.
-                */}
-                {fn.editable ? (
-                  <Link
-                    className={styles.rowAction}
-                    to={`/workspace/${workspaceId}/functions/${fn.id}/settings`}
-                    aria-label={`Settings for ${fn.name}`}
-                    title={`Settings for ${fn.name}`}
-                  >
-                    <img src={settingsIcon} alt="" width={14} height={14} />
-                  </Link>
-                ) : (
-                  <button
-                    type="button"
-                    className={styles.rowAction}
-                    onClick={() => navigate(`/workspace/${workspaceId}/functions/${fn.id}`)}
-                    aria-label={`Open ${fn.name}`}
-                    title={`Open ${fn.name}`}
-                  >
-                    <img src={settingsIcon} alt="" width={14} height={14} />
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className={styles.rowAction}
+                  onClick={() => navigate(`/workspace/${workspaceId}/functions/${fn.id}`)}
+                  aria-label={`Open ${fn.name}`}
+                  title={`Open ${fn.name}`}
+                >
+                  <img src={settingsIcon} alt="" width={14} height={14} />
+                </button>
               </span>
             </div>
           ))}

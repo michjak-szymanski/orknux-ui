@@ -30,7 +30,6 @@ import { DocsPage } from './pages/docs/DocsPage';
 import { ExecutionDetailPage } from './pages/workspace/ExecutionDetailPage';
 import { ExecutionsPage } from './pages/workspace/ExecutionsPage';
 import { FunctionEditorPage } from './pages/workspace/FunctionEditorPage';
-import { FunctionSettingsPage } from './pages/workspace/FunctionSettingsPage';
 import { McpServerSettingsPage } from './pages/workspace/McpServerSettingsPage';
 import { MemoryEditorPage } from './pages/workspace/MemoryEditorPage';
 import { ModelSettingsPage } from './pages/workspace/ModelSettingsPage';
@@ -106,7 +105,6 @@ export const PAGE_ELEMENTS: Record<PagePath, PageElement> = {
   '/workspace/:workspaceId/executions/:executionId': (session, onSignOut) => <ExecutionDetailPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/actions/:actionId': (session, onSignOut) => <WorkspaceActionsPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/functions/new': (session, onSignOut) => <FunctionEditorPage session={session} onSignOut={onSignOut} />,
-  '/workspace/:workspaceId/functions/:functionId/settings': (session, onSignOut) => <FunctionSettingsPage session={session} onSignOut={onSignOut} />,
   '/workspace/:workspaceId/functions/:functionId': (session, onSignOut) => <FunctionEditorPage session={session} onSignOut={onSignOut} />,
   /* Before the one with an id in it: `new` is a page, not a condition called new. */
   '/workspace/:workspaceId/conditions/new': (session, onSignOut) => <ConditionSettingsPage session={session} onSignOut={onSignOut} />,

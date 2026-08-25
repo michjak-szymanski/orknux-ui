@@ -171,10 +171,10 @@ const IN_THE_OPEN = [
     why: 'the state of the page being read - there is no Polish version of it, so the English one is shown. There is no control here to hang a (?) on, and a reader who is not told reads it as a bug',
   },
   {
-    file: 'src/pages/workspace/FunctionSettingsPage.tsx',
+    file: 'src/pages/workspace/FunctionEditorPage.tsx',
     says: 'There are no objects in this workspace yet, so define one first or use map.',
     because: 'status',
-    why: "the state of the workspace, on the field that would have offered one: there are no objects to point a return type at. It was invisible to this check until the interface was translated - it was written `{'…'}` rather than between the tags, and a bare expression broke the run. `t('…')` is unfolded now, so it is seen. The sentence itself is unchanged; it moved file when the return type left the editor's column for the function's own settings page",
+    why: "the state of the workspace, on the field that would have offered one: there are no objects to point a parameter at. It was invisible to this check until the interface was translated - it was written `{'…'}` rather than between the tags, and a bare expression broke the run. `t('…')` is unfolded now, so it is seen. The sentence itself is unchanged",
   },
   {
     file: 'src/pages/chat/ChatPage.tsx',
@@ -872,18 +872,7 @@ export function proseInSource() {
         continue;
       }
       const [after, selfClosing] = pastOpeningTag(src, at);
-      /*
-       * Any stylesheet's name, not `styles` alone.
-       *
-       * It read `styles\.` until a page imported two modules and had to call
-       * one of them something else - and every paragraph wearing a class from
-       * the second one went invisible, silently, which is the failure this file
-       * was written to stop. There are already several: `table` on the
-       * variables page, `transferStyles` beside the import buttons, `rows` on
-       * the function settings page. Widening it found nothing new to complain
-       * about, which is the answer that says it is safe as well as right.
-       */
-      const cls = /className=\{[^{}]*[A-Za-z_$][A-Za-z0-9_$]*\.([A-Za-z0-9_]+)/.exec(src.slice(at, after))?.[1] ?? null;
+      const cls = /className=\{[^{}]*styles\.([A-Za-z0-9_]+)/.exec(src.slice(at, after))?.[1] ?? null;
       if (cls === null || selfClosing || !muted.has(cls)) {
         i = at + 1;
         continue;
