@@ -49,10 +49,10 @@ const STALE_AFTER_MS = 30_000;
 
 /** Open first, because that is what somebody arriving is looking at. */
 const FILTERS: { label: string; status: IssueStatus | null }[] = [
-  { label: 'Open', status: 'OPEN' },
+  { label: t('Open'), status: 'OPEN' },
   { label: t('In progress'), status: 'IN_PROGRESS' },
-  { label: 'Closed', status: 'CLOSED' },
-  { label: 'All', status: null },
+  { label: t('Closed'), status: 'CLOSED' },
+  { label: t('All'), status: null },
 ];
 
 /**
@@ -71,11 +71,11 @@ const FILTERS: { label: string; status: IssueStatus | null }[] = [
  * see they asked for Number is not surprised by getting it.
  */
 const ORDERS: { label: string; order: IssueOrder }[] = [
-  { label: 'Number', order: 'NUMBER' },
-  { label: 'Title', order: 'TITLE' },
+  { label: t('Number'), order: 'NUMBER' },
+  { label: t('Title'), order: 'TITLE' },
   { label: t('Last change'), order: 'UPDATED' },
   { label: t('Last comment'), order: 'LAST_COMMENT' },
-  { label: 'Type', order: 'TYPE' },
+  { label: t('Type'), order: 'TYPE' },
 ];
 
 /**

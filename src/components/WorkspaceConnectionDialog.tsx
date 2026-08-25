@@ -38,7 +38,7 @@ const TYPE_LABELS: Record<ConnectionType, string> = {
 const SECURITY: { value: MailSecurity; label: string; port: number }[] = [
   { value: 'STARTTLS', label: 'STARTTLS', port: 587 },
   { value: 'TLS', label: t('TLS (implicit)'), port: 465 },
-  { value: 'NONE', label: 'None', port: 25 },
+  { value: 'NONE', label: t('None'), port: 25 },
 ];
 
 /**

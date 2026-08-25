@@ -226,7 +226,7 @@ export interface ImportComponentsButtonProps {
  * same text, and the import re-plans server-side, so what is confirmed is what
  * happens even if somebody left the dialog open while the workspace changed.
  */
-export function ImportComponentsButton({ workspaceId, onImported, label = 'Import' }: ImportComponentsButtonProps) {
+export function ImportComponentsButton({ workspaceId, onImported, label = t('Import') }: ImportComponentsButtonProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [envelope, setEnvelope] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string>('');

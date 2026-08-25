@@ -824,9 +824,9 @@ function NodeDetailsPanel({
   /** Where the step's catalogue entry lives, when it came from one. */
   const definition =
     step.conditionId != null
-      ? { label: 'Condition', to: `/workspace/${workspaceId}/conditions/${step.conditionId}` }
+      ? { label: t('Condition'), to: `/workspace/${workspaceId}/conditions/${step.conditionId}` }
       : step.actionId != null
-        ? { label: 'Action', to: `/workspace/${workspaceId}/actions/${step.actionId}` }
+        ? { label: t('Action'), to: `/workspace/${workspaceId}/actions/${step.actionId}` }
         : null;
 
   return (

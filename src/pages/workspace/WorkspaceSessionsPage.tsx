@@ -30,8 +30,8 @@ const SEARCH_PAUSE_MS = 300;
  */
 const ORDERS: { label: string; order: LlmSessionOrder }[] = [
   { label: t('Last spoken in'), order: 'LAST_EVENT' },
-  { label: 'Opened', order: 'CREATED' },
-  { label: 'Key', order: 'KEY' },
+  { label: t('Opened'), order: 'CREATED' },
+  { label: t('Key'), order: 'KEY' },
 ];
 
 /**

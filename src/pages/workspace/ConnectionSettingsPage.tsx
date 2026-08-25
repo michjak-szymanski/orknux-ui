@@ -40,7 +40,7 @@ const AUTH_TYPES: AuthType[] = ['NONE', 'API_KEY', 'BEARER_TOKEN', 'BASIC'];
 const SECURITY: { value: MailSecurity; label: string; port: number }[] = [
   { value: 'STARTTLS', label: 'STARTTLS', port: 587 },
   { value: 'TLS', label: t('TLS (implicit)'), port: 465 },
-  { value: 'NONE', label: 'None', port: 25 },
+  { value: 'NONE', label: t('None'), port: 25 },
 ];
 
 /**

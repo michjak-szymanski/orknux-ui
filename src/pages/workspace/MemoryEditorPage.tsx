@@ -41,13 +41,13 @@ type Mark =
   | { kind: 'line'; prefix: (index: number) => string };
 
 const MARKS: { key: string; label?: string; icon?: string; title: string; mark: Mark }[] = [
-  { key: 'bold', label: 'B', title: 'Bold', mark: { kind: 'wrap', before: '**', after: '**', placeholder: 'bold' } },
-  { key: 'italic', label: 'I', title: 'Italic', mark: { kind: 'wrap', before: '_', after: '_', placeholder: 'italic' } },
-  { key: 'code', icon: codeIcon, title: 'Code', mark: { kind: 'wrap', before: '`', after: '`', placeholder: 'code' } },
+  { key: 'bold', label: 'B', title: t('Bold'), mark: { kind: 'wrap', before: '**', after: '**', placeholder: 'bold' } },
+  { key: 'italic', label: 'I', title: t('Italic'), mark: { kind: 'wrap', before: '_', after: '_', placeholder: 'italic' } },
+  { key: 'code', icon: codeIcon, title: t('Code'), mark: { kind: 'wrap', before: '`', after: '`', placeholder: 'code' } },
   {
     key: 'link',
     icon: linkIcon,
-    title: 'Link',
+    title: t('Link'),
     mark: { kind: 'wrap', before: '[', after: '](https://)', placeholder: 'text' },
   },
   { key: 'list', icon: listIcon, title: t('Bulleted list'), mark: { kind: 'line', prefix: () => '- ' } },

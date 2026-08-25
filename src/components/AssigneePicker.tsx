@@ -58,7 +58,7 @@ export function AssigneePicker({
   workspaceId,
   chosen,
   onChoose,
-  label = 'Assignee',
+  label = t('Assignee'),
   placeholder = t('No one'),
   kinds,
   clearable = true,

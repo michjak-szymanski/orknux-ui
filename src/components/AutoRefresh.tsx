@@ -13,7 +13,7 @@ export interface AutoRefreshProps {
 
 /** Off, and the intervals worth offering. Seconds. */
 const CHOICES: { value: number; label: string }[] = [
-  { value: 0, label: 'Off' },
+  { value: 0, label: t('Off') },
   { value: 5, label: '5s' },
   { value: 15, label: '15s' },
   { value: 30, label: '30s' },

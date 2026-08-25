@@ -192,33 +192,33 @@ export const PAGES = [
   {
     path: '/workspace/:workspaceId/agents',
     access: 'signed-in',
-    goTo: { label: 'Agents', where: 'AI', icon: botIcon, also: 'llm' },
+    goTo: { label: t('Agents'), where: 'AI', icon: botIcon, also: 'llm' },
   },
   {
     path: '/workspace/:workspaceId/models',
     access: 'signed-in',
-    goTo: { label: 'Models', where: 'AI', icon: databaseIcon, also: 'providers usage' },
+    goTo: { label: t('Models'), where: 'AI', icon: databaseIcon, also: 'providers usage' },
   },
   {
     path: '/workspace/:workspaceId/tools',
     access: 'signed-in',
-    goTo: { label: 'Tools', where: 'AI', icon: toolIcon },
+    goTo: { label: t('Tools'), where: 'AI', icon: toolIcon },
   },
   {
     path: '/workspace/:workspaceId/skills',
     access: 'signed-in',
-    goTo: { label: 'Skills', where: 'AI', icon: bookIcon },
+    goTo: { label: t('Skills'), where: 'AI', icon: bookIcon },
   },
   {
     path: '/workspace/:workspaceId/memory',
     access: 'signed-in',
-    goTo: { label: 'Memory', where: 'AI', icon: memoryIcon },
+    goTo: { label: t('Memory'), where: 'AI', icon: memoryIcon },
   },
   {
     path: '/workspace/:workspaceId/tasks',
     access: 'signed-in',
     goTo: {
-      label: 'Tasks',
+      label: t('Tasks'),
       where: 'AI',
       icon: clipboardListIcon,
       also: 'agent job work on its own autonomous do this for me',
@@ -231,7 +231,7 @@ export const PAGES = [
     path: '/workspace/:workspaceId/sessions',
     access: 'signed-in',
     goTo: {
-      label: 'Sessions',
+      label: t('Sessions'),
       where: 'AI',
       icon: messageSquareIcon,
       also: 'llm transcript conversation history what the agent said',
@@ -242,7 +242,7 @@ export const PAGES = [
   {
     path: '/workspace/:workspaceId/executions',
     access: 'signed-in',
-    goTo: { label: 'Executions', where: 'Flow', icon: gitBranchIcon, also: 'runs history' },
+    goTo: { label: t('Executions'), where: 'Flow', icon: gitBranchIcon, also: 'runs history' },
   },
   {
     // The workspace's own front page, and the first thing anybody opens: the
@@ -251,45 +251,45 @@ export const PAGES = [
     // bookmark points at it.
     path: '/workspace/:workspaceId',
     access: 'signed-in',
-    goTo: { label: 'Workflows', where: 'Flow', icon: chartNetworkIcon, also: 'graph editor' },
+    goTo: { label: t('Workflows'), where: 'Flow', icon: chartNetworkIcon, also: 'graph editor' },
   },
   {
     path: '/workspace/:workspaceId/actions',
     access: 'signed-in',
-    goTo: { label: 'Actions', where: 'Flow', icon: activityIcon },
+    goTo: { label: t('Actions'), where: 'Flow', icon: activityIcon },
   },
   {
     path: '/workspace/:workspaceId/functions',
     access: 'signed-in',
-    goTo: { label: 'Functions', where: 'Flow', icon: codeIcon, also: 'javascript typescript' },
+    goTo: { label: t('Functions'), where: 'Flow', icon: codeIcon, also: 'javascript typescript' },
   },
   {
     path: '/workspace/:workspaceId/triggers',
     access: 'signed-in',
-    goTo: { label: 'Triggers', where: 'Flow', icon: bellIcon, also: 'events schedule webhook' },
+    goTo: { label: t('Triggers'), where: 'Flow', icon: bellIcon, also: 'events schedule webhook' },
   },
   {
     path: '/workspace/:workspaceId/conditions',
     access: 'signed-in',
-    goTo: { label: 'Conditions', where: 'Flow', icon: filterIcon },
+    goTo: { label: t('Conditions'), where: 'Flow', icon: filterIcon },
   },
   {
     path: '/workspace/:workspaceId/objects',
     access: 'signed-in',
-    goTo: { label: 'Objects', where: 'Flow', icon: boxIcon, also: 'shapes data' },
+    goTo: { label: t('Objects'), where: 'Flow', icon: boxIcon, also: 'shapes data' },
   },
 
   // ---- Workspace: what the whole of it is set up with ----
   {
     path: '/workspace/:workspaceId/variables',
     access: 'signed-in',
-    goTo: { label: 'Variables', where: 'Workspace', icon: lockKeyholeIcon, also: 'secrets catalogs values' },
+    goTo: { label: t('Variables'), where: 'Workspace', icon: lockKeyholeIcon, also: 'secrets catalogs values' },
   },
   {
     path: '/workspace/:workspaceId/plugins',
     access: 'signed-in',
     goTo: {
-      label: 'Plugins',
+      label: t('Plugins'),
       where: 'Workspace',
       icon: puzzleIcon,
       also: 'parameters extensions settings',
@@ -298,7 +298,7 @@ export const PAGES = [
   {
     path: '/workspace/:workspaceId/issues',
     access: 'signed-in',
-    goTo: { label: 'Issues', where: 'Workspace', icon: alertTriangleIcon },
+    goTo: { label: t('Issues'), where: 'Workspace', icon: alertTriangleIcon },
   },
   {
     path: '/workspace/:workspaceId/issues/new',
@@ -318,12 +318,12 @@ export const PAGES = [
   {
     path: '/workspace/:workspaceId/integrations',
     access: 'signed-in',
-    goTo: { label: 'Integrations', where: 'Workspace', icon: plugIcon, also: 'connections slack mcp' },
+    goTo: { label: t('Integrations'), where: 'Workspace', icon: plugIcon, also: 'connections slack mcp' },
   },
   {
     path: '/workspace/:workspaceId/settings',
     access: 'signed-in',
-    goTo: { label: 'Settings', where: 'Workspace', icon: settingsIcon },
+    goTo: { label: t('Settings'), where: 'Workspace', icon: settingsIcon },
   },
 
   // ---- One of something, opened from a list. There is no "go to" without saying
@@ -367,7 +367,7 @@ export const PAGES = [
   {
     path: '/chat',
     access: 'signed-in',
-    goTo: { label: 'Chat', where: 'Chat', icon: messageSquareIcon, also: 'ask agent' },
+    goTo: { label: t('Chat'), where: 'Chat', icon: messageSquareIcon, also: 'ask agent' },
     // A chat is about a workspace without naming one, so switching workspace is
     // a change of subject rather than a change of screen.
     followsWorkspace: true,
@@ -378,32 +378,32 @@ export const PAGES = [
     access: 'signed-in',
     // Named as the top bar names it; "documentation" is one of the words it is
     // also found by, so typing the long one still arrives.
-    goTo: { label: 'Docs', where: 'Docs', icon: bookIcon, also: 'documentation help manual guide' },
+    goTo: { label: t('Docs'), where: 'Docs', icon: bookIcon, also: 'documentation help manual guide' },
   },
   { path: '/docs/:page', access: 'signed-in', goTo: false },
 
   // ---- The installation ----
-  { path: '/admin', access: 'admin', goTo: { label: 'Workspaces', where: 'Admin', icon: commandIcon } },
+  { path: '/admin', access: 'admin', goTo: { label: t('Workspaces'), where: 'Admin', icon: commandIcon } },
   { path: '/admin/audit', access: 'admin', goTo: { label: t('Audit Log'), where: 'Admin', icon: fileTextIcon } },
-  { path: '/admin/users', access: 'admin', goTo: { label: 'Users', where: 'Admin', icon: userIcon } },
+  { path: '/admin/users', access: 'admin', goTo: { label: t('Users'), where: 'Admin', icon: userIcon } },
   { path: '/admin/users/new', access: 'admin', goTo: false },
   { path: '/admin/users/:userId', access: 'admin', goTo: false },
   {
     path: '/admin/integrations',
     access: 'admin',
-    goTo: { label: 'Integrations', where: 'Admin', icon: plugIcon, also: 'default connections' },
+    goTo: { label: t('Integrations'), where: 'Admin', icon: plugIcon, also: 'default connections' },
   },
   {
     path: '/admin/plugins',
     access: 'admin',
-    goTo: { label: 'Plugins', where: 'Admin', icon: puzzleIcon, also: 'extensions javascript' },
+    goTo: { label: t('Plugins'), where: 'Admin', icon: puzzleIcon, also: 'extensions javascript' },
   },
   /* Beside Plugins: both are code loaded once for every workspace to use. */
   {
     path: '/admin/libraries',
     access: 'admin',
     goTo: {
-      label: 'Libraries',
+      label: t('Libraries'),
       where: 'Admin',
       icon: packageIcon,
       also: 'javascript bundles imports npm dependencies',
@@ -413,7 +413,7 @@ export const PAGES = [
     path: '/admin/templates',
     access: 'admin',
     goTo: {
-      label: 'Templates',
+      label: t('Templates'),
       where: 'Admin',
       icon: templateIcon,
       also: 'components export import reuse share',
@@ -426,7 +426,7 @@ export const PAGES = [
     path: '/admin/networking',
     access: 'admin',
     goTo: {
-      label: 'Networking',
+      label: t('Networking'),
       where: 'Admin',
       icon: globeIcon,
       also: 'proxy rules egress outbound firewall',
@@ -436,7 +436,7 @@ export const PAGES = [
     path: '/admin/shell',
     access: 'admin',
     goTo: {
-      label: 'Shell',
+      label: t('Shell'),
       where: 'Admin',
       icon: terminalIcon,
       also: 'ssh machines hosts nodes commands remote',
@@ -448,18 +448,18 @@ export const PAGES = [
   {
     path: '/admin/roles',
     access: 'admin',
-    goTo: { label: 'Roles', where: 'Admin', icon: lockKeyholeIcon, also: 'permissions scopes access groups' },
+    goTo: { label: t('Roles'), where: 'Admin', icon: lockKeyholeIcon, also: 'permissions scopes access groups' },
   },
   {
     path: '/admin/monitoring',
     access: 'admin',
-    goTo: { label: 'Monitoring', where: 'Admin', icon: chartLineIcon, also: 'health temporal' },
+    goTo: { label: t('Monitoring'), where: 'Admin', icon: chartLineIcon, also: 'health temporal' },
   },
   {
     path: '/admin/doctor',
     access: 'admin',
     goTo: {
-      label: 'Doctor',
+      label: t('Doctor'),
       where: 'Admin',
       icon: activityIcon,
       also: 'configuration diagnostics checks secret key broken',
@@ -476,7 +476,7 @@ export const PAGES = [
      * offering the page at all was not.
      */
     access: 'admin',
-    goTo: { label: 'Settings', where: 'Admin', icon: settingsIcon, also: 'attachments chat installation' },
+    goTo: { label: t('Settings'), where: 'Admin', icon: settingsIcon, also: 'attachments chat installation' },
   },
   { path: '/admin/workspaces/:workspaceId/settings', access: 'admin', goTo: false },
 
@@ -484,7 +484,7 @@ export const PAGES = [
   {
     path: '/preferences',
     access: 'signed-in',
-    goTo: { label: 'Preferences', where: 'You', icon: slidersIcon, also: 'theme shortcut appearance' },
+    goTo: { label: t('Preferences'), where: 'You', icon: slidersIcon, also: 'theme shortcut appearance' },
   },
   {
     path: '/no-workspaces',

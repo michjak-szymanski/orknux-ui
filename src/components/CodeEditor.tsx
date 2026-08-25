@@ -3,6 +3,7 @@ import type { Ref } from 'react';
 
 import { EDITOR_FONT_FAMILY, EDITOR_FONT_SIZE, editorTheme, monaco, overflowWidgetsNode } from './monaco';
 import styles from './CodeEditor.module.css';
+import { t } from '../i18n';
 
 /** What the screen around an editor can ask it to do. */
 export interface CodeEditorHandle {
@@ -87,7 +88,7 @@ export function CodeEditor({
   onCaretChange,
   language = 'javascript',
   readOnly = false,
-  ariaLabel = 'Code',
+  ariaLabel = t('Code'),
 }: CodeEditorProps) {
   const host = useRef<HTMLDivElement>(null);
   const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);

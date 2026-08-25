@@ -39,8 +39,8 @@ const PAGE_SIZES = [20, 50, 100];
 const SEARCH_PAUSE_MS = 300;
 
 const ORDERS: { label: string; order: LlmSessionEventOrder }[] = [
-  { label: 'Time', order: 'AT' },
-  { label: 'Kind', order: 'KIND' },
+  { label: t('Time'), order: 'AT' },
+  { label: t('Kind'), order: 'KIND' },
 ];
 
 /**

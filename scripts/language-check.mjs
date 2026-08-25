@@ -27,10 +27,13 @@
  *      hyphenation read, and it is the one thing about a translated page that
  *      no amount of visible Polish makes true by itself.
  *
- *   4. A page nobody touched is Polish too, on a fresh visit and after a
- *      reload. That is the difference between a language switch and a page
- *      that happened to re-render: the sidebar's own words, on a different
- *      route, after the browser has thrown its memory away.
+ *   4. Every item of the menu is in Polish, paired with its English by the
+ *      address it points at, and the page it leads to is titled in Polish too.
+ *      This one is written the way it is because of what it missed: it used to
+ *      compare two flat lists and ask whether they differed at all, and the
+ *      four section words in the top bar satisfied that while all thirty-four
+ *      page labels under them stayed English. #196 was rejected on exactly
+ *      that, by somebody opening the product and looking at it.
  *
  *   5. The layout survives it. Polish is longer than English almost
  *      everywhere, and a screen that fitted is not thereby a screen that fits.
@@ -47,7 +50,7 @@
  * - a run that dies half way through must not leave alice reading Polish, or
  * every check after it fails looking for a button called Save.
  */
-import { BASE, open, record, finish } from './suite/harness.mjs';
+import { BASE, WORKSPACE, open, record, finish } from './suite/harness.mjs';
 
 const { browser, page, graphql } = await open();
 
@@ -60,10 +63,22 @@ async function recorded() {
   return held?.language ?? null;
 }
 
-/** The words in the left-hand navigation, whatever they are. */
-async function sidebar() {
+/**
+ * Every word the navigation draws, kept against the address it points at.
+ *
+ * By href rather than in order, so English and Polish pair up item for item and
+ * a reordering cannot read as a translation. This is what the check was missing:
+ * it used to compare two flat lists and ask whether they differed at all, which
+ * four translated section names satisfied while thirty-four page labels
+ * underneath them stayed in English.
+ */
+async function menu() {
   return page.evaluate(() =>
-    [...document.querySelectorAll('nav a')].map((one) => one.innerText.trim()).filter(Boolean),
+    Object.fromEntries(
+      [...document.querySelectorAll('nav a')]
+        .filter((one) => one.getAttribute('href') && one.innerText.trim())
+        .map((one) => [one.getAttribute('href'), one.innerText.trim()]),
+    ),
   );
 }
 
@@ -73,7 +88,26 @@ try {
   await page.waitForTimeout(400);
 
   const englishHeading = await page.locator('h1').first().innerText();
-  const englishNav = await sidebar();
+
+  /*
+   * The English menu is read on the page the Polish one will be read on, and
+   * not here. Preferences draws no sidebar - `hideSidebar` - so capturing it
+   * here gives the four top-bar sections and nothing else, and pairing by href
+   * afterwards drops every sidebar item for having no English counterpart.
+   * That is how the first attempt at this check passed against a build whose
+   * whole menu was in English.
+   */
+  await page.goto(`${BASE}/workspace/${WORKSPACE}/agents`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('h1');
+  await page.waitForTimeout(500);
+  const englishMenu = await menu();
+  record(
+    Object.keys(englishMenu).length >= 8,
+    `the menu on that page draws ${Object.keys(englishMenu).length} items in English`,
+  );
+  await page.goto(`${BASE}/preferences`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('h1');
+  await page.waitForTimeout(400);
   record(
     englishHeading.trim() === 'User Preferences',
     `somebody who has chosen nothing reads English: the heading is ${JSON.stringify(englishHeading.trim())}`,
@@ -127,21 +161,71 @@ try {
   // 3 - and the document says what language it is in.
   record((await page.getAttribute('html', 'lang')) === 'pl', '<html lang> follows the choice');
 
-  // 4 - a page nobody touched, on a fresh load.
-  await page.goto(`${BASE}/docs`, { waitUntil: 'domcontentloaded' });
+  /*
+   * 4 - the menu. Every item of it, not "the list changed somewhere".
+   *
+   * This is the assertion the product was rejected over. `navigation.ts` holds
+   * the page labels as bare single words - `label: 'Agents'` - and every
+   * transform pass refused a string with no space in it, so the sidebar stayed
+   * English while everything around it turned. The old check compared two flat
+   * lists for inequality, and the four section names in the top bar were enough
+   * to satisfy that. So: pair them by href, and name anything still English.
+   */
+  await page.goto(`${BASE}/workspace/${WORKSPACE}/agents`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('h1');
-  await page.waitForTimeout(400);
-  const polishNav = await sidebar();
+  await page.waitForTimeout(500);
+  const polishMenu = await menu();
+
   record(
-    polishNav.length > 0 && polishNav.join('|') !== englishNav.join('|'),
-    `a page nobody touched is Polish after a reload: ${polishNav.length} navigation items, and not the English ones`,
+    Object.keys(polishMenu).length === Object.keys(englishMenu).length,
+    `the same ${Object.keys(polishMenu).length} items are drawn in Polish`,
+  );
+
+  /*
+   * The words that are the same in both languages, and are meant to be. `AI` is
+   * the same initialism either way; the rest of this list is empty on purpose,
+   * so a label that stops being translated has to be added to it by somebody
+   * who has thought about it.
+   */
+  const ALIKE = ['AI'];
+  const stillEnglish = Object.entries(polishMenu).filter(
+    ([href, polish]) =>
+      englishMenu[href] !== undefined &&
+      englishMenu[href] === polish &&
+      !ALIKE.includes(polish),
+  );
+  record(
+    stillEnglish.length === 0,
+    stillEnglish.length === 0
+      ? `every one of the ${Object.keys(polishMenu).length} menu items is in Polish`
+      : `${stillEnglish.length} menu items are still English: ${stillEnglish
+          .map(([href, word]) => `${word} (${href})`)
+          .slice(0, 8)
+          .join(', ')}`,
+  );
+
+  /*
+   * And the page the menu just led to. A sidebar in Polish over a heading in
+   * English would be the same failure one level down.
+   */
+  const heading = (await page.locator('h1').first().innerText()).trim();
+  record(
+    heading !== '' && heading !== 'Agents',
+    `and the page it leads to is titled in Polish: ${JSON.stringify(heading)}`,
   );
 
   /*
    * The manual is not translated, so its pages say so rather than quietly
    * appearing in English. This is the whole of what "coherent" means here: the
    * reader is never left to wonder whether an English page is a bug.
+   *
+   * On the manual's own page, which the check has to go to: the assertion used
+   * to ride on wherever the previous step had left the browser, and when that
+   * step moved it read an agents page and failed for the wrong reason.
    */
+  await page.goto(`${BASE}/docs`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('h1');
+  await page.waitForTimeout(500);
   const said = await page.evaluate(() => document.body.innerText);
   record(
     said.includes('Ta strona nie jest jeszcze przetłumaczona'),

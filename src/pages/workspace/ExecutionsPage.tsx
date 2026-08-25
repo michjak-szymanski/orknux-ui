@@ -155,9 +155,9 @@ export function ExecutionsPage({ session, onSignOut }: ExecutionsPageProps) {
             onChange={(value) => setStatus(value as ExecutionStatus | '')}
             options={[
               { value: '', label: t('All Statuses') },
-              { value: 'RUNNING', label: 'Running' },
-              { value: 'COMPLETED', label: 'Completed' },
-              { value: 'FAILED', label: 'Failed' },
+              { value: 'RUNNING', label: t('Running') },
+              { value: 'COMPLETED', label: t('Completed') },
+              { value: 'FAILED', label: t('Failed') },
             ]}
           />
 
