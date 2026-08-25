@@ -227,6 +227,12 @@ export interface IssueComment {
   attachments: IssueAttachment[];
   /** Whether the person reading this wrote it, and so may change it. */
   mine: boolean;
+  /**
+   * Whether they may take it off: whoever wrote it, or an administrator of the
+   * workspace. Wider than `mine`, so it is the server's own answer rather than
+   * something this page works out - the button and the refusal have to agree.
+   */
+  mayRemove: boolean;
 }
 
 export interface Issue {
@@ -280,7 +286,14 @@ export type IssueEventKind =
   | 'ASSIGNEE'
   | 'OBSERVER'
   | 'LINK'
-  | 'COMMENT';
+  | 'COMMENT'
+  /**
+   * A comment was taken off, and this line is all that is left of it.
+   *
+   * `was` is who wrote it; what it said is deliberately nowhere. The one kind
+   * here written because a row went away rather than because something changed.
+   */
+  | 'COMMENT_REMOVED';
 
 export interface IssueEvent {
   /** Unique across all three sources: an event and a comment can both be row 5. */
@@ -360,7 +373,7 @@ const FULL_FIELDS = `
   links { ${LINK_FIELDS} }
   related { ${RELATION_FIELDS} }
   observers { ${OBSERVER_FIELDS} }
-  comments { id author content createdAt editedAt mine attachments { ${ATTACHMENT_FIELDS} } }
+  comments { id author content createdAt editedAt mine mayRemove attachments { ${ATTACHMENT_FIELDS} } }
   createdAt lastModifiedAt lastCommentAt lastModifiedBy
 `;
 
@@ -540,6 +553,23 @@ export async function editIssueComment(id: string, content: string): Promise<Iss
     { id, content },
   );
   return data.editIssueComment;
+}
+
+/**
+ * Takes a comment off an issue, for good.
+ *
+ * Whoever wrote it may, and so may an administrator of the workspace - which
+ * the server answers on the comment as `mayRemove` rather than leaving this
+ * page to guess. Nothing comes back but the issue without it: the row is gone,
+ * its files are gone, and what is left is a line in the history saying a
+ * comment was removed.
+ */
+export async function removeIssueComment(id: string): Promise<Issue> {
+  const data = await graphql<{ removeIssueComment: Issue }>(
+    `mutation ($id: ID!) { removeIssueComment(id: $id) { ${FULL_FIELDS} } }`,
+    { id },
+  );
+  return data.removeIssueComment;
 }
 
 export async function commentOnIssue(

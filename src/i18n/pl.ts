@@ -20,6 +20,14 @@ export const PL: Record<string, string> = {
   'Fetched once from': 'Pobrane raz z',
   'Registry': 'Repozytorium',
   'Remove library': 'Usuń bibliotekę',
+  // Double-quoted, like the bulk of this file: `catalogue-check` reads keys with
+  // a regular expression that only sees a double-quoted key or a bare word, so a
+  // single-quoted entry is a translation nothing can check is still keyed on
+  // something the interface says.
+  "Remove comment": "Usuń komentarz",
+  "Remove this comment": "Usuń ten komentarz",
+  "removed a comment by": "usunął komentarz, którego autorem jest",
+  "removed a comment they wrote": "usunął własny komentarz",
   'Which bots to watch for replies to — not the connection this listens on.':
     'Które boty obserwować pod kątem odpowiedzi — nie połączenie, którego to nasłuchuje.',
   'A reply names whoever wrote the message it hangs under, and a bot token is a Slack user. Two connections sharing a token are one user, and the row says so.':
