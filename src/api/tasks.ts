@@ -132,6 +132,27 @@ export function openRequest(task: Task): TaskRequest | null {
   return task.requests.find((one) => one.decision === null) ?? null;
 }
 
+/**
+ * A task's working time, in the largest unit that says something.
+ *
+ * `formatDuration` in `executions.ts` is the runs page's and stays there: it
+ * stops at minutes, because a workflow run that takes an hour is a workflow
+ * run that has gone wrong. A task is allowed two hours by default, so the same
+ * function would draw its budget as "120m 0s" - a number nobody reads as two
+ * hours.
+ *
+ * Seconds only below a minute, because a task measured in seconds is one that
+ * failed on its first turn and the seconds are the whole story.
+ */
+export function workedTime(seconds: number): string {
+  if (seconds < 60) return `${Math.max(0, Math.round(seconds))}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours}h` : `${hours}h ${rest}m`;
+}
+
 const REQUEST_FIELDS =
   'id kind capability subject asks askedAt decision answer decidedBy decidedAt';
 

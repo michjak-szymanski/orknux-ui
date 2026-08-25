@@ -14,6 +14,7 @@ import {
   stopTask,
   TASK_STATUS_LABEL,
   watchTask,
+  workedTime,
 } from '../../api/tasks';
 import type { Task, TaskStep, TaskWatchState } from '../../api/tasks';
 import { timeAgo } from '../../api/tools';
@@ -198,7 +199,38 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
             {' · '}
             {task.agentName ?? 'a model'}
             {' · '}
-            {task.turnsSpent}/{task.turnsAllowed} turns
+            {/*
+              The two budgets that can end a task, each with the (?) that says
+              where its ceiling came from.
+
+              A bare fraction says what the ceiling is and nothing about who
+              chose it — which is how "why 40 turns, is it configurable?" came
+              to be asked twice about a number that has been configurable all
+              along. The working-time budget was not drawn at all, which is
+              worse than bare: a task can stop for having spent it and the page
+              gave no sign the allowance existed.
+            */}
+            <span className={styles.labelWithHint}>
+              <span data-testid="task-turns">
+                {task.turnsSpent}/{task.turnsAllowed} turns
+              </span>
+              <FieldHint label={t('Turns')}>
+                {t('One turn is one exchange with the model — what it says back, and any tools it runs on the way. The ceiling is the installation’s, set by')}{' '}
+                <code>ORKNUX_TASK_MAX_TURNS</code>{' '}
+                {t('and copied onto the task when it starts, so changing it later cannot move the goalposts under a task already running.')}
+              </FieldHint>
+            </span>
+            {' · '}
+            <span className={styles.labelWithHint}>
+              <span data-testid="task-worked">
+                {workedTime(task.workedSeconds)} of {workedTime(task.secondsAllowed)}
+              </span>
+              <FieldHint label={t('Working time')}>
+                {t('Time the agent spent actually working. Time parked waiting for somebody to answer counts for none of it. The allowance is the installation’s, set by')}{' '}
+                <code>ORKNUX_TASK_WORKING_TIME</code>{' '}
+                {t('and copied onto the task when it starts, the same way the turn ceiling is.')}
+              </FieldHint>
+            </span>
             {task.startedAt !== null && ` · started ${timeAgo(task.startedAt)}`}
           </p>
         )}
@@ -264,6 +296,32 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
                 </span>
               </p>
               <p className={styles.asks}>{waiting.asks}</p>
+
+              {/*
+                How long it will stand here, which is the one thing a parked
+                task's page could not say. A task waiting for a person does
+                nothing at all until it is answered and is given up on in the
+                end — and a deadline nobody is shown is a task that vanishes
+                for a reason its own page never mentioned.
+
+                Two words and a date, deliberately: the sentence explaining the
+                deadline belongs behind the (?), not printed under it.
+              */}
+              {task.waitingUntil !== null && (
+                <p className={styles.patience} data-testid="task-patience">
+                  <span className={styles.labelWithHint}>
+                    <span>
+                      {t('Waits until')}{' '}
+                      {new Date(task.waitingUntil).toLocaleString()}
+                    </span>
+                    <FieldHint label={t('How long it waits')}>
+                      {t('A task that has stopped to ask does nothing at all until somebody answers, so it is not left standing for ever. How long it waits is the installation’s, set by')}{' '}
+                      <code>ORKNUX_TASK_PATIENCE</code>{' '}
+                      {t('and counted from when it asked. Answering it now clears the deadline.')}
+                    </FieldHint>
+                  </span>
+                </p>
+              )}
 
               {waiting.kind === 'PERMISSION' ? (
                 <div className={styles.askingRow}>

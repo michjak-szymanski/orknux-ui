@@ -1853,4 +1853,23 @@ export const PL: Record<string, string> = {
 
   "Showing {first}-{last} of {total}": "Pokazano {first}-{last} z {total}",
   "Showing {first}-{last} of {total} {unit}": "Pokazano {first}-{last} z {total}",
+
+  // --- what a task is allowed, and who allowed it -----------------------------------
+  // Each of the three explanations is split around the `ORKNUX_` name, which is
+  // the same in every language and is not wrapped at the call site.
+  "Working time": "Czas pracy",
+  "One turn is one exchange with the model — what it says back, and any tools it runs on the way. The ceiling is the installation’s, set by":
+    "Jedna tura to jedna wymiana z modelem — to, co odpowiada, i narzędzia, które po drodze uruchamia. Górna granica należy do instalacji i ustawia ją",
+  "and copied onto the task when it starts, so changing it later cannot move the goalposts under a task already running.":
+    "a jej wartość jest zapisywana na zadaniu przy starcie, więc późniejsza zmiana nie przesunie granicy pod już trwającym zadaniem.",
+  "Time the agent spent actually working. Time parked waiting for somebody to answer counts for none of it. The allowance is the installation’s, set by":
+    "Czas, który agent faktycznie przepracował. Czas postoju w oczekiwaniu na czyjąś odpowiedź nie liczy się do niego wcale. Limit należy do instalacji i ustawia go",
+  "and copied onto the task when it starts, the same way the turn ceiling is.":
+    "a jego wartość jest zapisywana na zadaniu przy starcie, tak samo jak granica tur.",
+  "Waits until": "Czeka do",
+  "How long it waits": "Jak długo czeka",
+  "A task that has stopped to ask does nothing at all until somebody answers, so it is not left standing for ever. How long it waits is the installation’s, set by":
+    "Zadanie, które zatrzymało się z pytaniem, nie robi nic, dopóki ktoś nie odpowie, więc nie zostaje tak na zawsze. Jak długo czeka, należy do instalacji i ustawia to",
+  "and counted from when it asked. Answering it now clears the deadline.":
+    "licząc od chwili, w której zapytało. Odpowiedź teraz kasuje ten termin.",
 };
