@@ -1495,6 +1495,15 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
    * counts, and for every answer that came back out of the history: three
    * different reasons to know nothing, and one honest way of showing it.
    */
+  /**
+   * Whether what was last paid for was a picture rather than an answer.
+   *
+   * No tokens and a price is only ever an image model: every chat provider that
+   * charges reports counts, and one that reports none carries no price either.
+   */
+  const drawn =
+    lastSpend !== null && lastSpend.inputTokens === 0 && lastSpend.outputTokens === 0 && lastSpend.cost !== null;
+
   const spend =
     session.chatCostShown === true && lastSpend !== null && spendKnown(lastSpend)
       ? lastSpend.cost === null
@@ -1885,7 +1894,9 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                         onClick={() => setThoughtOpen(!thoughtOpen)}
                         aria-expanded={thoughtOpen}
                       >
-                        Thought for {thinkingTime(lastSpend.millis)}
+                        {/* A picture was not thought about; it was drawn. */}
+                        {drawn ? 'Drew for ' : 'Thought for '}
+                        {thinkingTime(lastSpend.millis)}
                         {spend !== null && ` \u00b7 ${spend}`}
                         <img
                           className={thoughtOpen ? styles.thoughtChevronOpen : styles.thoughtChevron}
@@ -1902,6 +1913,17 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                           <>
                             The provider took {lastSpend.millis} ms to answer. Nothing else is
                             recorded: the history keeps what was said, not how it was arrived at.
+                          </>
+                        ) : drawn ? (
+                          /*
+                            A picture, which is not billed the way an answer is.
+                            Saying "charged for 0 tokens in and 0 out" would be
+                            true of the counts and false about the money.
+                          */
+                          <>
+                            The provider took {lastSpend.millis} ms to draw it, and charged for one
+                            picture rather than for tokens - which is why there are no counts here.{' '}
+                            {`At the price recorded for this model that is ${costAmount(lastSpend.cost ?? 0)}.`}
                           </>
                         ) : (
                           <>
@@ -2262,6 +2284,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
               */}
               {draws && (
                 <button
+                  id="chat-picture"
                   type="button"
                   className={
                     describing ? `${styles.micButton} ${styles.micRecording}` : styles.micButton

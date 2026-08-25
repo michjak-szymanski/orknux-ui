@@ -353,9 +353,14 @@ export function thinkingTime(millis: number): string {
  * left out instead, which is also what every message loaded from the history
  * gets: the counts belong to the answer as it was given and are not written
  * down.
+ *
+ * A price with no counts behind it is the exception, and it is a drawn picture.
+ * An image model reports no tokens and is billed per picture, so tokens alone
+ * left a drawing that cost four cents saying nothing at all about money - the
+ * same mistake as printing $0.00, made quietly.
  */
 export function spendKnown(spend: ChatSpend): boolean {
-  return spend.inputTokens > 0 || spend.outputTokens > 0;
+  return spend.inputTokens > 0 || spend.outputTokens > 0 || spend.cost !== null;
 }
 
 /** 1620 -> "1,620". Grouped, because these run to five figures on a long thread. */
