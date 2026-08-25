@@ -10,6 +10,7 @@ import {
   commentOnIssue,
   createIssue,
   editIssueComment,
+  removeIssueComment,
   fetchIssue,
   fetchIssueHistory,
   fetchIssueLabels,
@@ -39,6 +40,7 @@ import { AppShell } from '../../components/AppShell';
 import { AssigneePicker } from '../../components/AssigneePicker';
 import { AttachmentViewer } from '../../components/AttachmentViewer';
 import { BackLink } from '../../components/BackLink';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { DeleteIssueDialog } from '../../components/DeleteIssueDialog';
 import { FieldHint } from '../../components/FieldHint';
 import { IssueRelationList } from '../../components/IssueRelationList';
@@ -176,6 +178,14 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
   const [writing, setWriting] = useState(false);
   /** The comment being changed, and what it is being changed to. */
   const [editing, setEditing] = useState<{ id: string; content: string } | null>(null);
+  /**
+   * The comment being asked about before it is taken off.
+   *
+   * The author rather than the whole comment, because that is what the question
+   * names: quoting the words back at somebody who is removing them for being the
+   * wrong words is the one thing this dialog must not do.
+   */
+  const [removing, setRemoving] = useState<{ id: string; author: string } | null>(null);
   /*
    * Whether the comment being written is being read back instead.
    *
@@ -613,6 +623,21 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
     } finally {
       setSaving(false);
     }
+  }
+
+  /**
+   * Taking a comment off, once the dialog has been answered.
+   *
+   * The answer is the issue without it, so the thread redraws from the server
+   * rather than from a copy this page pruned itself - the history tab, the
+   * attachments and the last-comment mark all move with it.
+   */
+  async function removeComment(id: string) {
+    setIssue(await removeIssueComment(id));
+    // A comment being corrected that has just been removed is a form with
+    // nothing behind it.
+    if (editing?.id === id) setEditing(null);
+    setRemoving(null);
   }
 
   async function comment_() {
@@ -1261,6 +1286,22 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                               {t('Edit')}
                             </button>
                           )}
+                          {/*
+                            Wider than Edit: whoever wrote it, or an administrator
+                            of this workspace. The server says which on the comment
+                            rather than this page comparing names, so the button and
+                            the refusal cannot disagree.
+                          */}
+                          {said.mayRemove && (
+                            <button
+                              type="button"
+                              className={styles.textButton}
+                              aria-label={t('Remove this comment')}
+                              onClick={() => setRemoving({ id: said.id, author: said.author })}
+                            >
+                              {t('Remove')}
+                            </button>
+                          )}
                         </p>
 
                         {editing?.id === said.id ? (
@@ -1667,6 +1708,19 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
         Back to the list once it is gone: this page's address no longer names
         anything, so staying here would only show the not-found card.
       */}
+      {/*
+        Asked before it happens, like everything else here that cannot be
+        undone. Named by whoever wrote the comment rather than by what it said.
+      */}
+      <ConfirmDialog
+        subject={removing?.author ?? null}
+        kind="removeComment"
+        onClose={() => setRemoving(null)}
+        onConfirm={async () => {
+          if (removing !== null) await removeComment(removing.id);
+        }}
+      />
+
       <DeleteIssueDialog
         issue={deleting}
         onClose={() => setDeleting(null)}
@@ -2082,6 +2136,21 @@ function said(event: IssueEvent) {
       ) : (
         <>
           {who} took off: this <span className={styles.historyChip}>{readRelation(event.was)}</span>
+        </>
+      );
+    case 'COMMENT_REMOVED':
+      /*
+       * Whose it was, and never a word of it - the entry carries no text to
+       * draw, on purpose. A thread that quietly lost a message is the thing
+       * this line exists to stop, so it reads as plainly as the rest.
+       */
+      return event.was === event.actor ? (
+        <>
+          {who} {t('removed a comment they wrote')}
+        </>
+      ) : (
+        <>
+          {who} {t('removed a comment by')} <strong>{event.was}</strong>
         </>
       );
     default:
