@@ -420,16 +420,43 @@ function or tool may import. A plugin brings functions of its own for a workflow
 to call; a library brings code for a function to be written with — a date
 handler, a parser, something too large to paste into every script that needs it.
 
-An administrator loads one here, and it must be **a single self-contained
-module with a default export** — a `.js` or `.mjs` file, up to 4 MB. A
-TypeScript file is compiled in the browser before it is sent. The file is
-evaluated once as it arrives, in the same sandbox it will run in, and what its
-default export turned out to hold is what is stored: which names it offers and
-which of those can be called. That is all that is claimed about it, because
-nothing in a bundle says what its arguments are. A file that is not a module
-with a default export is refused there and then — *That file could not be loaded
-as a library: it has no default export to import* — rather than at the moment a
-workflow needed it.
+An administrator loads one here, and it must be **a single self-contained file**
+— a `.js` or `.mjs` file, up to 4 MB. A TypeScript file is compiled in the
+browser before it is sent. The file is evaluated once as it arrives, in the same
+sandbox it will run in, and what its default export turned out to hold is what
+is stored: which names it offers and which of those can be called. That is all
+that is claimed about it, because nothing in a bundle says what its arguments
+are. A file that exports nothing to import is refused there and then — *That
+file could not be loaded as a library: it has no default export to import* —
+rather than at the moment a workflow needed it.
+
+**Either spelling.** An ES module is run as it stands. A CommonJS file — one
+that writes to `module.exports` or `exports.something`, which is what most of
+npm still publishes — is given those two names as it runs, and what it leaves on
+them is what a script imports; a UMD bundle works for the same reason, taking
+its CommonJS branch. What is refused is a file that reaches for a *second* one:
+an `import` of anything at all, and a `require("…")` in a file being run as
+CommonJS. The message says which — *its index.js requires "buffer", and a
+library has to be one self-contained file. This installation does not bundle.*
+One caveat is worth knowing, because it is the only thing that cannot be
+reproduced: everything here runs in strict mode, so a CommonJS file relying on
+sloppy mode fails when it is evaluated — while somebody is looking at it, rather
+than in the middle of a run.
+
+**A package can be the way the file arrives.** Where the installation has a
+registry configured, the field beside the upload takes a package and an exact
+version — `base64-js@1.5.1`, never `latest`, because a version that resolves
+differently tomorrow is not an answer to what code is running here. It is
+fetched once, on the server, into this database; the file is what is stored and
+what runs, and nothing reaches a registry afterwards. Of a package's several
+builds an ES module is preferred and a CommonJS one taken where that is all
+there is, and the row records which package, which version, from where, which
+file inside it, and what the registry said that file hashed to — verified
+against what arrived. **The file is stored exactly as it was published**, so
+that hash stays a claim anybody holding the same package can check; a CommonJS
+one is marked as such on the row and wrapped when it runs, never on the way in.
+An installation with no registry configured draws no field at all and has the
+upload alone.
 
 A library's **key is its filename without the extension**, and it is its
 identity: loading a file with a key already in the list replaces it in place, so
