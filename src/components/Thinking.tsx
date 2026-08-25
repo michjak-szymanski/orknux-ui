@@ -121,7 +121,7 @@ export function Thinking({ text, live = false, millis = null }: ThinkingProps) {
           {open ? '▾' : '▸'}
         </span>
         {/*
-          "Thinking" while it is, "Thought" once it has stopped, with the
+          "Thinking" while it is, "Thought for" once it has stopped, with the
           duration beside it either way.
 
           Deliberately not "Thought for", which is the answer's own disclosure a
@@ -134,7 +134,7 @@ export function Thinking({ text, live = false, millis = null }: ThinkingProps) {
           This block carries no bookkeeping. The only number on it is how long
           somebody waited for the thinking, which is what the block is about.
         */}
-        {live ? t('Thinking') : t('Thought')}
+        {live ? t('Thinking') : t('Thought for')}
         {shown > 0 && (
           <span className={styles.size} data-testid="thinking-elapsed">
             {thinkingTime(shown)}
