@@ -151,9 +151,10 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
    * Fetches a named package, or shows why it was refused.
    *
    * Every refusal is the server's own sentence — a range instead of a version, a
-   * package that ships no ES module, one whose module imports something, a file
-   * that did not hash to what the registry claimed. They want different things
-   * done about them, so none is replaced here with a shorter one.
+   * package naming a file it never published, one whose entry imports or requires
+   * a second package, a file that did not hash to what the registry claimed. They
+   * want different things done about them, so none is replaced here with a
+   * shorter one.
    */
   async function onInstall() {
     const named = spec.trim();
