@@ -125,20 +125,59 @@ if (sawCall) {
 }
 record(filledIn, 'and fills in with what the tool returned');
 
-// The thinking, folded.
+/*
+ * The thinking, and it has to be on the screen *before the turn ends*.
+ *
+ * This is the assertion that tells streaming from not streaming, and it is
+ * modelled on `task-live-check`: read the block while the answer is still being
+ * written, then read it again at the end, and compare. A check that only looked
+ * at the finished block would pass just as well on a build that held every
+ * piece of reasoning back and painted it in one go at the end - which is
+ * exactly what this feature was rejected for the first time.
+ *
+ * The `live` mark is the component saying so itself: it is set while the turn
+ * is in flight and cleared when it is done.
+ */
 const thinking = page.locator('[data-testid="thinking"]').first();
 let sawThinking = false;
+let midRun = '';
 try {
   await thinking.waitFor({ state: 'visible', timeout: 60_000 });
   sawThinking = true;
+  midRun = await page.evaluate(() => {
+    const block = document.querySelector('[data-testid="thinking"]');
+    return JSON.stringify({
+      live: block?.getAttribute('data-live') ?? '',
+      // Opened here so there is something to measure. It is folded by default,
+      // which the assertion below re-checks on a fresh block.
+      said: block?.textContent ?? '',
+    });
+  });
 } catch {
   sawThinking = false;
 }
 record(sawThinking, 'what the model thought is drawn');
+record(
+  sawThinking && JSON.parse(midRun || '{}').live === 'true',
+  'and it is on the screen while the answer is still being written, not after',
+);
 
-// Wait for the turn to finish, so the answer below is the whole answer.
-await page.locator('[class*="_waiting"]').waitFor({ state: 'detached', timeout: 60_000 }).catch(() => undefined);
-await page.waitForTimeout(1500);
+/*
+ * Wait for the turn to actually finish, so everything read below is final.
+ *
+ * The thinking block's own `live` mark is the signal, and it is the only
+ * reliable one here. "Waiting for the model…" is not: it is deliberately
+ * suppressed the moment there is any working to show, so waiting for it to
+ * disappear returns at once and reads a half-written turn - which is what this
+ * check did on its first run, and it reported an empty answer and a block still
+ * saying "Thinking" for its trouble.
+ */
+await page
+  .locator('[data-testid="thinking"][data-live="false"]')
+  .first()
+  .waitFor({ timeout: 90_000 })
+  .catch(() => undefined);
+await page.waitForTimeout(500);
 
 const read = await page.evaluate(() => {
   const block = document.querySelector('[data-testid="thinking"]');
@@ -164,6 +203,35 @@ const read = await page.evaluate(() => {
 record(sawThinking && read.folded === true, 'and it is folded until somebody opens it');
 
 /*
+ * A tool call is one line until asked.
+ *
+ * Measured as the arguments not being in the document rather than as a class
+ * name: what "folded" has to mean for somebody reading the page is that the
+ * detail is not there yet.
+ */
+const callFolded = await page.evaluate(() => {
+  const line = document.querySelector('[data-testid="call-line"]');
+  const head = line?.querySelector('button[aria-expanded]');
+  return {
+    hasToggle: head !== null && head !== undefined,
+    shut: head?.getAttribute('aria-expanded') === 'false',
+    bodies: line?.querySelectorAll('pre').length ?? 0,
+  };
+});
+record(callFolded.hasToggle && callFolded.shut, 'a tool call is drawn folded, on a control that says so');
+record(callFolded.bodies === 0, 'and its arguments and result are not on the page until it is opened');
+
+/*
+ * Opening it is the same gesture as the thinking block: a press on the row.
+ */
+await page.locator('[data-testid="call-line"] button[aria-expanded]').first().click();
+await page.waitForTimeout(300);
+const callOpened = await page.evaluate(
+  () => document.querySelector('[data-testid="call-line"]')?.querySelectorAll('pre').length ?? 0,
+);
+record(callOpened > 0, 'and a press on the row opens it');
+
+/*
  * The assertion that is really about the bug.
  *
  * Nothing downstream has to remember to leave the thinking out, because the
@@ -176,6 +244,48 @@ record(
   read.said !== '' && !read.said.includes('<think>') && !read.said.includes('</think>'),
   `the answer carries no thinking tags (it reads ${JSON.stringify(read.said.slice(0, 60))})`,
 );
+
+/*
+ * Time rather than a bare number.
+ *
+ * A character count used to sit beside "Thought" and the first person to see it
+ * read it as tokens. What is wanted about a model that made somebody wait is
+ * how long it took, said the way the answer's own disclosure says it.
+ */
+const label = await page.evaluate(
+  () => document.querySelector('[data-testid="thinking"] button')?.textContent?.trim() ?? '',
+);
+record(
+  /second/i.test(label) || /sekund/i.test(label),
+  `the thinking says how long it took (the row reads ${JSON.stringify(label)})`,
+);
+
+/* --------------------------------------- and it is still there after a reload */
+
+/*
+ * The rejection, asserted directly.
+ *
+ * The first build showed thinking only on the turn in flight, so reloading the
+ * page lost it - which makes an answer one nobody can go back and check. This
+ * reloads and looks again, and it looks at *every* answer rather than the last
+ * one, because "only the latest message" was the other half of what was wrong.
+ */
+await page.reload({ waitUntil: 'domcontentloaded' });
+await drawn(page, 'the chat again');
+await page.locator('#chat-composer').waitFor({ state: 'visible', timeout: 20_000 });
+await page.waitForTimeout(1200);
+
+const afterReload = await page.evaluate(() => {
+  const blocks = [...document.querySelectorAll('[data-testid="thinking"]')];
+  return {
+    blocks: blocks.length,
+    folded: blocks.every((block) => block.querySelector('button')?.getAttribute('aria-expanded') === 'false'),
+    live: blocks.some((block) => block.getAttribute('data-live') === 'true'),
+  };
+});
+record(afterReload.blocks > 0, `the thinking is still there after a reload (${afterReload.blocks} drawn)`);
+record(afterReload.folded, 'and every block of it is folded again rather than opened');
+record(!afterReload.live, 'and none of it claims to still be arriving');
 
 /* ------------------------------------------------------------- issue #273 */
 

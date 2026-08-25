@@ -318,23 +318,6 @@
 /* ---- Model selector ---- */
 
 /*
- * The line under the title on a chat opened from a session. Quiet: it is a
- * note about where this conversation came from, not part of it.
- */
-.continuing {
-  margin: 0;
-  padding: var(--space-8) var(--space-24);
-  border-bottom: 1px solid var(--color-border);
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-}
-
-.continuingLink {
-  color: var(--color-text-primary);
-  text-decoration: underline;
-}
-
-/*
  * The right-hand group of the title bar: who answers next, then the controls
  * that act on the chat. One group so the two keep their order and their gap
  * whatever the title's length does.

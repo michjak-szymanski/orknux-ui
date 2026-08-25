@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import styles from './Thinking.module.css';
+import { thinkingTime } from '../api/chat';
 import { t } from '../i18n';
 
 export interface ThinkingProps {
@@ -8,6 +9,21 @@ export interface ThinkingProps {
   text: string;
   /** Whether it is still arriving, which is worth saying while it is. */
   live?: boolean;
+  /**
+   * How long the thinking went on for, or null where nobody measured it.
+   *
+   * A count of characters used to sit here instead, and it was read as a token
+   * count by the first person to see it - which is the trouble with a bare
+   * number beside a word: it is an answer to a question nobody asked and there
+   * is no way to tell which question. Time is what somebody wants to know about
+   * a model that made them wait.
+   *
+   * Null draws nothing rather than nought seconds, and it never borrows the
+   * turn's own time: that is already reported under the answer, and two numbers
+   * on one screen that look like one measurement and are not is worse than one
+   * number missing.
+   */
+  millis?: number | null;
 }
 
 /**
@@ -45,9 +61,16 @@ export interface ThinkingProps {
  * An empty container drawn under every answer would be this asserting that
  * there was thinking to see, which is a worse thing to draw than nothing.
  */
-export function Thinking({ text, live = false }: ThinkingProps) {
+export function Thinking({ text, live = false, millis = null }: ThinkingProps) {
   const [open, setOpen] = useState(false);
   if (text.trim() === '') return null;
+
+  /*
+   * Whether there is a duration to say. Not while it is still arriving: the
+   * thinking has not finished, so any number would be how long it has taken so
+   * far dressed up as how long it took.
+   */
+  const known = !live && millis !== null && millis !== undefined && millis > 0;
 
   return (
     <div className={styles.thinking} data-testid="thinking" data-live={live}>
@@ -60,14 +83,16 @@ export function Thinking({ text, live = false }: ThinkingProps) {
         <span className={styles.mark} aria-hidden="true">
           {open ? '▾' : '▸'}
         </span>
-        {live ? t('Thinking') : t('Thought')}
+        {live ? t('Thinking') : known ? t('Thought for') : t('Thought')}
         {/*
-          How much of it there is, which is what somebody deciding whether to
-          open it wants. An expression rather than a sentence, and the whole of
-          what this says about the content: reading it is what opening it is
-          for.
+          How long it went on for, drawn only where it was measured.
+
+          `thinkingTime` and not a second way of saying a duration: the answer's
+          own disclosure a few lines below reads "Thought for 2 seconds" out of
+          that same function, and two durations formatted two ways on one screen
+          read as two different kinds of thing.
         */}
-        <span className={styles.size}>{text.length.toLocaleString()}</span>
+        {known && <span className={styles.size}>{thinkingTime(millis)}</span>}
       </button>
       {open && <pre className={styles.body}>{text}</pre>}
     </div>

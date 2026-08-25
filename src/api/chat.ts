@@ -59,6 +59,28 @@ export interface ChatMessage {
    * answer somebody was about to keep.
    */
   takes: string[];
+  /**
+   * What the model thought on its way to this answer, or null where it thought
+   * nothing anybody kept.
+   *
+   * Null rather than empty, and the difference is drawn: a message with none
+   * gets no container at all, rather than an empty one asserting there was
+   * thinking to see.
+   *
+   * Never part of `content`. That is the whole arrangement rather than a
+   * detail - the copy control, the speech model and the next turn all read the
+   * content, and they are right because the string they read does not hold
+   * this, not because each of them remembers to strip it.
+   */
+  thinking: string | null;
+  /**
+   * How long that thinking went on for, or null where nobody measured it.
+   *
+   * Never the turn's own time standing in. The turn is already reported under
+   * the answer, and two numbers on one screen that look like the same
+   * measurement and are not is worse than one number missing.
+   */
+  thinkingMillis: number | null;
 }
 
 /** The role a call reads under, which is not a turn anybody took. */
@@ -74,6 +96,15 @@ export const CALL_ROLE = 'tool';
  * number.
  */
 export interface ChatSpend {
+  /**
+   * How long the model spent thinking, where it thinks and where it streamed.
+   *
+   * Beside `millis` rather than folded into it: `millis` is the whole turn and
+   * is what the answer's disclosure reports. This is the part of it the
+   * reasoning took, and the two are labelled as different things because they
+   * are.
+   */
+  thinkingMillis?: number;
   /** How long the model took, shown as what it thought for. */
   millis: number;
   /**
@@ -142,7 +173,7 @@ export async function fetchChatsMentioning(workspaceId: string, text: string): P
 
 export async function fetchChatMessages(id: string): Promise<ChatMessage[]> {
   const data = await graphql<{ chatMessages: ChatMessage[] }>(
-    'query ChatMessages($id: ID!) { chatMessages(id: $id) { role content actor takes } }',
+    'query ChatMessages($id: ID!) { chatMessages(id: $id) { role content actor takes thinking thinkingMillis } }',
     { id },
   );
   return data.chatMessages;
@@ -221,7 +252,7 @@ export async function sendChatMessage(id: string, text: string): Promise<ChatAns
     `mutation SendChatMessage($id: ID!, $text: String!) {
        sendChatMessage(id: $id, text: $text) {
          session { ${SESSION_FIELDS} }
-         answer { role content actor takes }
+         answer { role content actor takes thinking thinkingMillis }
          millis inputTokens outputTokens cost
        }
      }`,
@@ -361,6 +392,7 @@ async function read(response: Response, handlers: ChatStreamHandlers): Promise<v
       result?: string;
       failed?: boolean;
       millis?: number;
+      thinkingMillis?: number;
       inputTokens?: number;
       outputTokens?: number;
       cost?: number | null;
@@ -385,6 +417,7 @@ async function read(response: Response, handlers: ChatStreamHandlers): Promise<v
     } else if (frame.event === 'done') {
       handlers.onDone({
         millis: payload.millis ?? 0,
+        thinkingMillis: payload.thinkingMillis ?? 0,
         inputTokens: payload.inputTokens ?? 0,
         outputTokens: payload.outputTokens ?? 0,
         cost: payload.cost ?? null,
