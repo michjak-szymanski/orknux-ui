@@ -1229,6 +1229,32 @@ export const TESTS = [
      */
   },
   {
+    name: 'chat-total-check',
+    what: "a chat's own total growing across two turns and still being there after a reload",
+    needs: ['model'],
+    /*
+     * The half of the running total that no test on the server can reach.
+     * `ChatCostTest` pins the arithmetic - added up across turns, both takes of
+     * a regenerate counted, a refused turn adding nothing, an agent's rounds in
+     * - and every one of those assertions would pass just as well against a
+     * total held in the tab, which is precisely what this replaced.
+     *
+     * So the assertion that earns it a place is the reload: the page is loaded
+     * again from nothing and the same figure is read back off it, to the token.
+     * Beside it, that a second turn adds to the number rather than replacing it,
+     * which is the difference between a running total and what was there before
+     * - `lastSpend` drew the newest answer's cost on the same line, so the
+     * figure went up and down as the conversation went on while reading like a
+     * bill. And that a chat nobody has spoken in draws no line at all: nought
+     * means not recorded, and #227 got that right on the answer.
+     *
+     * `needs: ['model']` for the reason `chat-regenerate-check` gives - nothing
+     * in the API writes a turn into Spring AI's store, so an answer needs a
+     * model that answers, and CI has none. It makes its own two chats, deletes
+     * them, and puts alice's switch back off.
+     */
+  },
+  {
     name: 'loader-check',
     what: 'a slow load shows the mark, a finished one hides it, an empty list says so',
     needs: ['fixture'],

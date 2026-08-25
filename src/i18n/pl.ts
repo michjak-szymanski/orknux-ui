@@ -15,7 +15,6 @@
  * of English on an otherwise Polish screen.
  */
 export const PL: Record<string, string> = {
-  "What the last answer read and wrote": "Ile ostatnia odpowiedź przeczytała i napisała",
   'Nothing imports it.': 'Nic tego nie importuje.',
   'Imported by': 'Importowane przez',
   'Fetched once from': 'Pobrane raz z',
@@ -1764,6 +1763,13 @@ export const PL: Record<string, string> = {
   "Money needs prices, which are recorded on the model. A model carrying none shows the tokens and nothing else, because no price is not a price of nothing.": "Pieniądze wymagają cen, a te zapisane są przy modelu. Model, który ich nie ma, pokazuje same tokeny, bo brak ceny to nie to samo co cena zerowa.",
   "Nothing is shown where the provider reported no counts, or for any answer read back out of the history - what was said is kept, what it cost is not.": "Nic nie jest pokazywane tam, gdzie dostawca nie podał liczb, ani przy odpowiedzi odczytanej z historii — to, co powiedziano, jest przechowywane, a to, ile kosztowało, nie.",
   "This model carries no prices, so there is nothing to cost that at.": "Ten model nie ma zapisanych cen, więc nie ma na czym tego wycenić.",
+
+  // --- what a whole chat has spent ---------------------------------------------------
+  "What this chat has read and written, all of it": "Ile ta rozmowa w całości przeczytała i napisała",
+  "tokens": "tokenów",
+  "1 picture": "1 obraz",
+  "{count} pictures": "{count} obrazów",
+  "{tokens} and {pictures}": "{tokens} i {pictures}",
 
   // --- npm libraries ----------------------------------------------------------------
   "Install": "Zainstaluj",

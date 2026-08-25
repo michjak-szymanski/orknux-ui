@@ -33,17 +33,18 @@
  * It puts the switch back off at the end, because alice is a fixture and the
  * next check to read her preferences should find them as it left them.
  *
- * **What it deliberately does not assert, having been measured.** The line does
- * not come back for a conversation that is reopened: driven against a model
- * that answers, a live turn draws "Thought for 11 seconds - $0.0000" and a
- * reload of the same chat draws no line at all, while the answer itself is
- * still there. That is the boundary and not a gap. The figure arrives on the
- * stream's `onDone` and nowhere else, `ChatMessage` carries no spend for the
- * history to hand back, and the (?) says so in as many words - "None of it is
- * kept: the history holds what was said, not what it cost." Keeping it would
- * mean a per-turn record of our own, which is the messages table the chat
- * history convention rules out. Anybody reporting the missing line as a bug
- * should be pointed here first.
+ * **What it deliberately does not assert, and where that boundary now runs.**
+ * The per-answer figures are still not kept: they arrive on the stream's
+ * `onDone` and nowhere else, `ChatMessage` carries no spend for the history to
+ * hand back, and a reopened conversation shows no disclosure under an answer
+ * three turns up. That part is the boundary rather than a gap - keeping it
+ * would mean a per-turn record of our own, which is the messages table the chat
+ * history convention rules out.
+ *
+ * What did change is the other number. The chat's own running total is kept, on
+ * `chat_session`, and is under the corner of the composer whatever was said
+ * when; `chat-total-check` is what drives it. So a reopened chat draws a total
+ * and no per-answer line, and both of those are correct.
  */
 import { BASE, chromium, record, shot, signIn, finish } from './suite/harness.mjs';
 
