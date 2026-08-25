@@ -278,6 +278,15 @@ export const TESTS = [
      * claims: with one, the field is drawn beside the upload; without one, there
      * is no field at all, because a control that fails on being used is the one
      * thing an offline installation should never be shown.
+     *
+     * Since #274 it has a third half, and that one does need a package to come
+     * back: a CommonJS one installs now, and the only way to say so is to
+     * install one. It must not be npm's, so it is the arrangement
+     * `image-model-check.mjs` already uses for the thing it cannot stub in the
+     * browser - `scripts/suite/npm-stub.py`, a registry the *server* can reach,
+     * serving a real gzipped tarball. Set ORKNUX_LIBRARY_STUB=1 with the
+     * installation pointed at it; unset, the check says so and stops there, and
+     * the first two halves are exactly what they were.
      */
   },
   {

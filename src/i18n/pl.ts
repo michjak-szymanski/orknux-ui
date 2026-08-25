@@ -1764,6 +1764,7 @@ export const PL: Record<string, string> = {
   "Nothing uses this yet.": "Nic tego jeszcze nie używa.",
   "Could not read what uses this.": "Nie udało się odczytać, co tego używa.",
   "Still imported — open one of those and take the import off first.": "Wciąż importowane — otwórz jedno z nich i zdejmij najpierw import.",
+  "Stored as it was published; given its module and exports when it runs.": "Przechowywany tak, jak został opublikowany; przy uruchomieniu otrzymuje swoje module i exports.",
   "published workflow": "opublikowany przepływ pracy",
 
   // --- the Slack reply trigger ---------------------------------------------------------

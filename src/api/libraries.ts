@@ -35,6 +35,15 @@ export interface ScriptLibrary {
   sha256: string;
   /** Whether its export is itself something to call, rather than an object. */
   callable: boolean;
+  /**
+   * Which spelling the stored file is written in: `ESM` or `COMMONJS`.
+   *
+   * A statement about how the stored text is run and nothing about where it came
+   * from. A CommonJS file is given the `module` and `exports` its code expects on
+   * the way into the sandbox, every time; what is stored is the file as it
+   * arrived, so the hashes beside it stay claims about what was fetched.
+   */
+  format: string;
   /** What its default export turned out to hold, read once when it was loaded. */
   members: LibraryMember[];
   /**
@@ -131,7 +140,7 @@ export const SCRIPT_LIBRARY_IMPORT_FIELDS =
   'libraries { libraryId name library { key callable members { name callable } } }';
 
 const LIBRARY_FIELDS = `
-  id key name filename sizeBytes sha256 callable
+  id key name filename sizeBytes sha256 callable format
   members { name callable }
   usedBy { ${DEPENDANT_FIELDS} }
   uploadedAt uploadedBy
@@ -200,9 +209,10 @@ export async function fetchLibraryRegistry(): Promise<LibraryRegistryStatus> {
  * consulted again.
  *
  * Every refusal comes back as the server's own sentence — a range instead of a
- * version, a package that ships no ES module, one whose module imports something,
- * a file that did not hash to what the registry claimed — and each of those wants
- * a different thing done about it, so none is shortened on the way through.
+ * version, a package naming a file it never published, one whose entry imports or
+ * requires a second package, a file that did not hash to what the registry
+ * claimed — and each of those wants a different thing done about it, so none is
+ * shortened on the way through.
  */
 export async function installScriptLibrary(spec: string): Promise<ScriptLibrary> {
   const data = await graphql<{ installScriptLibrary: ScriptLibrary }>(

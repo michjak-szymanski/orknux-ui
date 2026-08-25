@@ -68,6 +68,42 @@ function registryName(url: string): string {
   }
 }
 
+/**
+ * Where the file came from, and what spelling it is in, on one line.
+ *
+ * Two facts and one line, because they answer the same question and a second
+ * grey line under a name is a row that has started to look like a paragraph. An
+ * uploaded ES module has neither and draws nothing at all: an uploaded file has
+ * no provenance this installation can vouch for, and a row of blanks would read
+ * as though it had.
+ */
+function origin(library: ScriptLibrary): string {
+  const parts: string[] = [];
+  if (library.registry !== null) {
+    parts.push(`npm  ·  ${library.registry.packageName}@${library.registry.version}  ·  ${library.registry.entry}`);
+  }
+  if (library.format === 'COMMONJS') parts.push('CommonJS');
+  return parts.join('  ·  ');
+}
+
+/**
+ * The same, at length, on the hover.
+ *
+ * The registry's hash is what makes a row checkable and is eighty characters
+ * nobody needs across a table. The CommonJS sentence is here rather than in the
+ * row for the reason the hash is: what it says is that the stored file is the
+ * one that was published and the wrapper goes round it when it runs, which
+ * matters exactly once — to whoever is comparing this row against a package.
+ */
+function provenance(library: ScriptLibrary): string {
+  const lines: string[] = [];
+  if (library.registry !== null) lines.push(library.registry.url, library.registry.integrity);
+  if (library.format === 'COMMONJS') {
+    lines.push(t('Stored as it was published; given its module and exports when it runs.'));
+  }
+  return lines.join('\n');
+}
+
 export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPageProps) {
   const [libraries, setLibraries] = useState<ScriptLibrary[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -210,9 +246,11 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
                 Installing a package fetches it once, here on the server, into this database — the file is
                 what is stored and what runs, and nothing reaches a registry afterwards. Name an exact
                 version, never <code>latest</code>: a version that resolves differently tomorrow is not an
-                answer to what code is running here. A package has to publish one self-contained ES module;
-                one that imports anything else is refused, because this installation does not bundle. Build a
-                bundle elsewhere and upload it.
+                answer to what code is running here. A package has to publish one self-contained file. An ES
+                module is taken as it is and a CommonJS one is given its <code>module</code> and{' '}
+                <code>exports</code> as it runs, so <code>main</code> and a UMD bundle both work; what is
+                refused is a file that imports or requires a second package, because this installation does
+                not bundle. Build a bundle elsewhere and upload it.
               </FieldHint>
             </span>
           </h1>
@@ -319,12 +357,9 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
                   the hover: it is what makes the row checkable, and it is eighty
                   characters nobody needs across a table.
                 */}
-                {library.registry !== null && (
-                  <span
-                    className={styles.from}
-                    title={`${library.registry.url}\n${library.registry.integrity}`}
-                  >
-                    {`npm  ·  ${library.registry.packageName}@${library.registry.version}  ·  ${library.registry.entry}`}
+                {(library.registry !== null || library.format === 'COMMONJS') && (
+                  <span className={styles.from} title={provenance(library)}>
+                    {origin(library)}
                   </span>
                 )}
                 {/*
