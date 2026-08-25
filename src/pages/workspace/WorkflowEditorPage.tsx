@@ -3939,7 +3939,7 @@ Change the keystroke in Preferences.`}
                 {draft.kind === 'AGENT' && (
                   <div className={styles.field}>
                     <span className={styles.labelWithHint}>
-                      <span className={styles.label}>Session</span>
+                      <span className={styles.label}>{t('Session')}</span>
                       <FieldHint label={t('Session')}>
                         {sessionChoices.length === 0
                           ? t('Add an LLM Session node to keep what this agent is told and what it answers.')
@@ -4062,8 +4062,7 @@ Change the keystroke in Preferences.`}
                           {t('Shape')}
                         </label>
                         <FieldHint label={t('Shape')}>
-                          A saved shape fixes which fields there are; this node decides what goes in them.
-                          Custom means the fields are this node&apos;s own.
+                          {t('A saved shape fixes which fields there are; this node decides what goes in them. Custom means the fields are this node\'s own.')}
                         </FieldHint>
                       </span>
                       <span className={styles.labelLinks}>
@@ -4117,7 +4116,7 @@ Change the keystroke in Preferences.`}
                                   <>
                                     {' '}
                                     This node still names its own session, which is how it was done before there
-                                    were session nodes. It keeps working; wire a <strong>LLM Session</strong> node
+                                    were session nodes. It keeps working; wire a <strong>{t('LLM Session')}</strong> node
                                     to this one and that takes over.
                                   </>
                                 )}
@@ -4140,7 +4139,7 @@ Change the keystroke in Preferences.`}
                             )}
                           </p>
                           <p>
-                            <strong>Value</strong> is used exactly as written. <strong>Reference</strong> reads a
+                            <strong>{t('Value')}</strong> is used exactly as written. <strong>{t('Reference')}</strong> reads a
                             field another node produces — a trigger&apos;s event, an agent&apos;s named answer —
                             and keeps reading it however far down the graph this node sits.
                           </p>

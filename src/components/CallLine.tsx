@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 
 import styles from './CallLine.module.css';
+import { t } from '../i18n';
 
 export interface CallLineProps {
   /** The tool's name, as the session recorded it. */
@@ -62,7 +63,7 @@ export function CallLine({ actor, content, result, when }: CallLineProps) {
   return (
     <article className={styles.call} data-testid="call-line" data-running={running}>
       <p className={styles.head}>
-        <span className={styles.badge}>Tool</span>
+        <span className={styles.badge}>{t('Tool')}</span>
         <span className={styles.name}>{actor ?? 'a tool'}</span>
         {knowsResult && (
           <span className={styles.state} data-running={running}>
@@ -73,16 +74,16 @@ export function CallLine({ actor, content, result, when }: CallLineProps) {
       </p>
 
       {asked.text.trim() === '' ? (
-        <p className={styles.note}>Called with nothing.</p>
+        <p className={styles.note}>{t('Called with nothing.')}</p>
       ) : (
         <Folding text={asked.text} what="what it was asked" />
       )}
 
       {knowsResult && !running && (
         <>
-          <p className={styles.label}>Returned</p>
+          <p className={styles.label}>{t('Returned')}</p>
           {got.text.trim() === '' ? (
-            <p className={styles.note}>It came back with nothing.</p>
+            <p className={styles.note}>{t('It came back with nothing.')}</p>
           ) : (
             <Folding text={got.text} what="what came back" />
           )}
@@ -107,7 +108,7 @@ function Folding({ text, what }: { text: string; what: string }) {
           onClick={() => setOpen((held) => !held)}
           aria-label={open ? `Show less of ${what}` : `Show all of ${what}`}
         >
-          {open ? 'Show less' : `Show all ${text.length.toLocaleString()} characters`}
+          {open ? t('Show less') : `Show all ${text.length.toLocaleString()} characters`}
         </button>
       )}
     </>

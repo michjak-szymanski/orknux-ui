@@ -25,6 +25,7 @@ import { Markdown } from '../../components/Markdown';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './TaskPage.module.css';
+import { t } from '../../i18n';
 
 export interface TaskPageProps {
   session: SessionUser;
@@ -103,7 +104,7 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
     try {
       const found = await fetchTask(taskId);
       setTask(found);
-      setError(found === null ? 'That task is not here.' : null);
+      setError(found === null ? t('That task is not here.') : null);
       if (found?.sessionId != null) {
         // Newest first and turned round, so what is drawn is the tail of the
         // session rather than its opening.
@@ -122,7 +123,7 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
         cursor.current = '0';
       }
     } catch (cause: unknown) {
-      setError(cause instanceof Error ? cause.message : 'Could not load the task.');
+      setError(cause instanceof Error ? cause.message : t('Could not load the task.'));
     } finally {
       setLoading(false);
     }
@@ -162,7 +163,7 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
       setTask(await what());
       setAnswer('');
     } catch (cause: unknown) {
-      setDecideError(cause instanceof Error ? cause.message : 'That could not be done.');
+      setDecideError(cause instanceof Error ? cause.message : t('That could not be done.'));
     } finally {
       setDeciding(false);
     }
@@ -177,9 +178,7 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
       sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <header className={styles.titleHeader}>
-        <Link className={styles.back} to={`/workspace/${workspaceId}/tasks`}>
-          ← Tasks
-        </Link>
+        <Link className={styles.back} to={`/workspace/${workspaceId}/tasks`}>{t('← Tasks')}</Link>
         <h1 className={styles.title}>{task?.title ?? 'Task'}</h1>
         {task !== null && (
           <p className={styles.subtitle}>
@@ -210,16 +209,14 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
         <>
           <section className={styles.card}>
             <div className={styles.cardHead}>
-              <span className={styles.label}>Prompt</span>
+              <span className={styles.label}>{t('Prompt')}</span>
               <span className={styles.headRight}>
                 {!over && (
                   <button
                     type="button"
                     className={styles.stop}
                     onClick={() => void decide(() => stopTask(task.id))}
-                  >
-                    Stop
-                  </button>
+                  >{t('Stop')}</button>
                 )}
               </span>
             </div>
@@ -237,11 +234,11 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
                 <span className={styles.labelWithHint}>
                   {waiting.kind === 'PERMISSION'
                     ? `It needs ${asked(waiting)} to go on.`
-                    : 'It has a question.'}
-                  <FieldHint label="What a task is waiting for">
+                    : t('It has a question.')}
+                  <FieldHint label={t('What a task is waiting for')}>
                     {waiting.kind === 'PERMISSION' ? (
                       <>
-                        Approving gives this <strong>one task</strong> the one thing it named, for as
+                        Approving gives this <strong>{t('one task')}</strong> the one thing it named, for as
                         long as the task runs. It does not change what the agent may do anywhere
                         else, and it is recorded against your name. Refusing lets the task carry on
                         without it, or stop and say what it could not do.
@@ -265,25 +262,21 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
                     className={styles.approve}
                     disabled={deciding}
                     onClick={() => void decide(() => approveTaskRequest(waiting.id))}
-                  >
-                    Approve
-                  </button>
+                  >{t('Approve')}</button>
                   <button
                     type="button"
                     className={styles.refuse}
                     disabled={deciding}
                     onClick={() => void decide(() => refuseTaskRequest(waiting.id))}
-                  >
-                    Refuse
-                  </button>
+                  >{t('Refuse')}</button>
                 </div>
               ) : (
                 <div className={styles.askingRow}>
                   <input
                     className={styles.answer}
                     type="text"
-                    placeholder="Answer it…"
-                    aria-label="Answer the task"
+                    placeholder={t('Answer it…')}
+                    aria-label={t('Answer the task')}
                     value={answer}
                     onChange={(event) => setAnswer(event.target.value)}
                   />
@@ -292,9 +285,7 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
                     className={styles.approve}
                     disabled={deciding || answer.trim() === ''}
                     onClick={() => void decide(() => answerTaskRequest(waiting.id, answer.trim()))}
-                  >
-                    Answer
-                  </button>
+                  >{t('Answer')}</button>
                 </div>
               )}
 
@@ -308,7 +299,7 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
 
           <section className={styles.card} data-testid="task-log">
             <div className={styles.cardHead}>
-              <span className={styles.label}>What it is doing</span>
+              <span className={styles.label}>{t('What it is doing')}</span>
               <span className={styles.headRight}>
                 <span
                   className={styles.watching}
@@ -317,11 +308,8 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
                 >
                   {over ? WATCHING_LABEL.ended : WATCHING_LABEL[watching]}
                 </span>
-                <FieldHint label="How this page keeps up">
-                  Each step is sent as it is recorded, so nothing here is waiting on a refresh. If
-                  the connection drops the page comes back and asks for whatever it missed by the
-                  last line it holds, which is why a task left open overnight catches up rather than
-                  redrawing. A finished task reads exactly the same, from the same record.
+                <FieldHint label={t('How this page keeps up')}>
+                  {t('Each step is sent as it is recorded, so nothing here is waiting on a refresh. If the connection drops the page comes back and asks for whatever it missed by the last line it holds, which is why a task left open overnight catches up rather than redrawing. A finished task reads exactly the same, from the same record.')}
                 </FieldHint>
                 <span className={styles.muted} data-testid="task-log-count">
                   {log.length} lines
@@ -329,7 +317,7 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
               </span>
             </div>
 
-            {log.length === 0 && <p className={styles.notice}>Nothing has happened yet.</p>}
+            {log.length === 0 && <p className={styles.notice}>{t('Nothing has happened yet.')}</p>}
 
             {log.map((line) => (
               <div key={line.id} className={styles.line} data-kind={line.kind} data-id={line.id}>
@@ -363,7 +351,7 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
           {(task.outcome !== null || task.endedBecause !== null) && (
             <section className={styles.card} data-testid="task-outcome">
               <div className={styles.cardHead}>
-                <span className={styles.label}>Outcome</span>
+                <span className={styles.label}>{t('Outcome')}</span>
                 <span className={styles.muted}>{task.endedBecause}</span>
               </div>
               {task.outcome !== null && (
@@ -377,7 +365,7 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
           {task.grants.length > 0 && (
             <section className={styles.card}>
               <div className={styles.cardHead}>
-                <span className={styles.label}>Granted for this task</span>
+                <span className={styles.label}>{t('Granted for this task')}</span>
               </div>
               {task.grants.map((grant) => (
                 <p key={grant.id} className={styles.grant}>

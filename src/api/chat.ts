@@ -1,5 +1,6 @@
 import { graphql } from './client';
 import { payloadOf, readEventStream } from './sse';
+import { t } from '../i18n';
 
 /**
  * One conversation.
@@ -290,7 +291,7 @@ async function read(response: Response, handlers: ChatStreamHandlers): Promise<v
         cost: payload.cost ?? null,
       });
     } else if (frame.event === 'error') {
-      handlers.onError(payload.reason ?? 'The model could not answer.');
+      handlers.onError(payload.reason ?? t('The model could not answer.'));
     }
   });
 }

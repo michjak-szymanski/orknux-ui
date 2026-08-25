@@ -1804,11 +1804,9 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
               */}
               <section className={styles.panelSection}>
                 <span className={styles.headingWithHint}>
-                  <h2 className={styles.panelHeading}>External Parameters</h2>
+                  <h2 className={styles.panelHeading}>{t('External Parameters')}</h2>
                   <FieldHint label={t('External Parameters')}>
-                    The workspace’s values, handed to this function after its own parameters. Their values are
-                    never shown here — which is why a variable that is set looks empty on this page: what is
-                    chosen is the name, and only the sandbox ever sees what is behind it.
+                    {t('The workspace’s values, handed to this function after its own parameters. Their values are never shown here — which is why a variable that is set looks empty on this page: what is chosen is the name, and only the sandbox ever sees what is behind it.')}
                   </FieldHint>
                 </span>
                 <div className={styles.paramList}>
@@ -1932,7 +1930,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
               */}
               <section className={styles.panelSection}>
                 <span className={styles.headingWithHint}>
-                  <h2 className={styles.panelHeading}>Imports</h2>
+                  <h2 className={styles.panelHeading}>{t('Imports')}</h2>
                   <FieldHint label={t('Imports')}>
                     The workspace’s other functions this one may call, as <code>imports.name(…)</code>. The name is
                     this code’s own word for it: renaming the function it points at changes nothing here. A
@@ -2054,7 +2052,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
               */}
               <section className={styles.panelSection}>
                 <span className={styles.headingWithHint}>
-                  <h2 className={styles.panelHeading}>Libraries</h2>
+                  <h2 className={styles.panelHeading}>{t('Libraries')}</h2>
                   <FieldHint label={t('Libraries')}>
                     The installation’s libraries this function may use, reached as <code>imports.name</code>.
                     The name is this code’s own word for it and is seeded from the library’s key the first

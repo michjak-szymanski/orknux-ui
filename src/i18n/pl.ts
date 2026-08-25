@@ -1698,7 +1698,6 @@ export const PL: Record<string, string> = {
   "Answer the task": "Odpowiedz zadaniu",
   "Answer it…": "Odpowiedz…",
   "Granted for this task": "Przyznane dla tego zadania",
-  "Event log": "Dziennik zdarzeń",
   "Nothing has happened yet.": "Jeszcze nic się nie wydarzyło.",
   "Nothing recorded here.": "Nic tu nie zapisano.",
   "Nothing written yet.": "Jeszcze nic nie napisano.",
@@ -1774,4 +1773,15 @@ export const PL: Record<string, string> = {
   // --- odds and ends ----------------------------------------------------------------------
   "· edited": "· edytowano",
   "not yet": "jeszcze nie",
+
+  // --- a task, watched as it happens ---------------------------------------
+  "What it is doing": "Co robi",
+  "How this page keeps up": "Jak ta strona nadąża",
+  "Each step is sent as it is recorded, so nothing here is waiting on a refresh. If the connection drops the page comes back and asks for whatever it missed by the last line it holds, which is why a task left open overnight catches up rather than redrawing. A finished task reads exactly the same, from the same record.": "Każdy krok wysyłany jest w chwili zapisania, więc nic tutaj nie czeka na odświeżenie. Jeśli połączenie padnie, strona wraca i prosi o to, co ją ominęło, podając ostatni wiersz, jaki ma — dlatego zadanie zostawione otwarte na noc nadrabia zaległości, zamiast rysować się od nowa. Zakończone zadanie czyta się dokładnie tak samo, z tego samego zapisu.",
+  "Returned": "Zwróciło",
+  "It came back with nothing.": "Wróciło z niczym.",
+
+  // --- two notes the transform reached this time ---------------------------
+  "A saved shape fixes which fields there are; this node decides what goes in them. Custom means the fields are this node's own.": "Zapisany kształt ustala, jakie są pola; ten węzeł decyduje, co się w nich znajdzie. „Własny” oznacza, że pola należą do tego węzła.",
+  "The workspace’s values, handed to this function after its own parameters. Their values are never shown here — which is why a variable that is set looks empty on this page: what is chosen is the name, and only the sandbox ever sees what is behind it.": "Wartości przestrzeni roboczej, przekazywane tej funkcji po jej własnych parametrach. Ich wartości nigdy nie są tu pokazywane — dlatego ustawiona zmienna wygląda na tej stronie na pustą: wybiera się nazwę, a to, co za nią stoi, widzi wyłącznie piaskownica.",
 };
