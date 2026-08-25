@@ -160,21 +160,21 @@ check(
 
 await page.goto(`${BASE}/workspace/${WORKSPACE}/tasks`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('h1:text("Tasks")', { timeout: 20_000 });
-
 /*
  * The heading is not the list.
  *
- * `h1:text("Tasks")` is in the markup before anything has been asked for, so
- * waiting on it and then counting rows counts them about half a second before
- * the query that fetches them comes back - which reported "the task was not on
- * the list" every time, about a page that draws it perfectly.
+ * `h1:text("Tasks")` is page furniture, drawn before anything has been asked
+ * for, so waiting on it and counting rows counts them a quarter of a second
+ * before the query that fetches them comes back. That reported "the task was
+ * not on the list" about a page that draws it perfectly well - a check failing
+ * and reading as a product failure, which is the expensive kind.
  *
- * So: wait for the row, and let the assertion below decide. The catch swallows
- * the timeout rather than the verdict - a row that never arrives is counted as
- * zero and fails there, with the sentence saying what happened.
+ * The wait swallows its own timeout on purpose: it is not the assertion. A task
+ * genuinely absent waits the full twenty seconds and fails on the count below,
+ * with a sentence somebody can act on.
  */
 const row = page.locator(`a[href$="/tasks/${taskId}"]`);
-await row.waitFor({ timeout: 20_000 }).catch(() => undefined);
+await row.first().waitFor({ timeout: 20_000 }).catch(() => undefined);
 check(await row.count() > 0, 'the task is on the list', 'the task was not on the list it was started from');
 
 await page.screenshot({ path: shot('task-check.png'), fullPage: true });

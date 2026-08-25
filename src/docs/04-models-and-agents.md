@@ -20,8 +20,8 @@ because the rest of the form depends on it:
 Transcription models never appear in the chat model dropdown. They are for
 hearing, not for answering.
 
-The model list shows each model's type, its provider, and what it has been used
-for. Usage over time is charted on the same page.
+The model list shows each model's type, its provider, and whether it is switched
+on. Usage over time is charted on the model's own page.
 
 ![A provider on its own page: where it is, how it authenticates, and what it
 said when it was last asked](/screens/model-provider.png)

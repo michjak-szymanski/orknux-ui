@@ -191,11 +191,19 @@ record(
  * Asserted because a panel that answered "used by the function it imports"
  * would be the arrow drawn backwards, and would look right on this screen.
  */
-await page.waitForSelector('[aria-label="Used by"]', { timeout: 20_000 });
+/*
+ * Settled, not merely present. This is the one assertion here written the
+ * negative way round, and a negative read off a panel still fetching its rows
+ * passes on an empty box - so the arrow could be drawn backwards and this would
+ * agree with it. `settled` is what the check already uses to wait for an
+ * answer; the reason it is needed is the same one, one screen over.
+ */
+await settled();
 const toolPanel = await page.locator('[aria-label="Used by"]').innerText();
 record(
-  !toolPanel.includes(shared.name),
-  "the tool's own panel does not name the function it imports - that arrow points the other way",
+  toolPanel.includes('Nothing uses this yet') && !toolPanel.includes(shared.name),
+  `the tool's own panel answered, and does not name the function it imports - that arrow points ` +
+    `the other way (${JSON.stringify(toolPanel.replace(/\s+/g, ' ').trim())})`,
 );
 
 // ------------------------------------------------ the same rows, one screen up
