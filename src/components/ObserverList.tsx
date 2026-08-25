@@ -5,6 +5,7 @@ import type { Assignee, AssigneeKind, Issue, IssueObserver } from '../api/issues
 import { initialsOf } from '../api/users';
 import { AssigneePicker } from './AssigneePicker';
 import styles from './ObserverList.module.css';
+import { t } from '../i18n';
 
 /**
  * What may observe, held out here rather than written inline.
@@ -66,7 +67,7 @@ export function ObserverList({ workspaceId, issueId, observers, admin, onChanged
     try {
       onChanged(await work);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'That could not be changed.');
+      setError(cause instanceof Error ? cause.message : t('That could not be changed.'));
     } finally {
       setBusy(false);
     }
@@ -79,9 +80,9 @@ export function ObserverList({ workspaceId, issueId, observers, admin, onChanged
 
   return (
     <div className={styles.observers}>
-      <span className={styles.label}>Observers</span>
+      <span className={styles.label}>{t('Observers')}</span>
 
-      {observers.length === 0 && <p className={styles.nobody}>Nobody but the reporter and the assignee.</p>}
+      {observers.length === 0 && <p className={styles.nobody}>{t('Nobody but the reporter and the assignee.')}</p>}
 
       <ul className={styles.list}>
         {observers.map((one) => (
@@ -105,8 +106,8 @@ export function ObserverList({ workspaceId, issueId, observers, admin, onChanged
               <button
                 type="button"
                 className={styles.remove}
-                title={one.mine ? 'Stop watching this issue' : `Take ${one.name} off the list`}
-                aria-label={one.mine ? 'Stop watching this issue' : `Take ${one.name} off the list`}
+                title={one.mine ? t('Stop watching this issue') : `Take ${one.name} off the list`}
+                aria-label={one.mine ? t('Stop watching this issue') : `Take ${one.name} off the list`}
                 disabled={busy}
                 onClick={() => void change(unobserveIssue(issueId, { kind: one.kind, id: one.id }))}
               >
@@ -129,7 +130,7 @@ export function ObserverList({ workspaceId, issueId, observers, admin, onChanged
           void change(watching ? unobserveIssue(issueId) : observeIssue(issueId))
         }
       >
-        {watching ? 'Stop watching' : 'Watch this issue'}
+        {watching ? t('Stop watching') : t('Watch this issue')}
       </button>
 
       {admin && (
@@ -137,8 +138,8 @@ export function ObserverList({ workspaceId, issueId, observers, admin, onChanged
           workspaceId={workspaceId}
           chosen={null}
           onChoose={add}
-          label="Add an observer"
-          placeholder="Someone else…"
+          label={t('Add an observer')}
+          placeholder={t('Someone else…')}
           kinds={CAN_OBSERVE}
           clearable={false}
         />

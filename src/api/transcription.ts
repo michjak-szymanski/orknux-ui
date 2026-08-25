@@ -1,4 +1,5 @@
 import { toWav } from './wav';
+import { t } from '../i18n';
 
 /**
  * Speech to text, for the microphone in a chat.
@@ -33,7 +34,7 @@ export async function transcribe(workspaceId: string, audio: Blob): Promise<stri
 
   const said = (await answer.json().catch(() => null)) as { text?: string; error?: string } | null;
   if (!answer.ok) {
-    throw new Error(said?.error ?? 'That could not be transcribed.');
+    throw new Error(said?.error ?? t('That could not be transcribed.'));
   }
   return said?.text ?? '';
 }

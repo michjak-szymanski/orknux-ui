@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 /**
  * The difference between two versions of a file, line by line.
  *
@@ -80,7 +81,7 @@ export function diffLines(before: string, after: string): DiffLine[] {
 export function diffSummary(lines: DiffLine[]): string {
   const added = lines.filter((line) => line.kind === 'added').length;
   const removed = lines.filter((line) => line.kind === 'removed').length;
-  if (added === 0 && removed === 0) return 'No change';
+  if (added === 0 && removed === 0) return t('No change');
   const parts = [];
   if (added > 0) parts.push(`${added} added`);
   if (removed > 0) parts.push(`${removed} removed`);

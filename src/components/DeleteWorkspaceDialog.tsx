@@ -5,6 +5,7 @@ import type { Workspace } from '../api/workspaces';
 import trashIcon from '../assets/trash-18.svg';
 import { forgetWorkspaces } from '../session/workspaces';
 import styles from './Dialog.module.css';
+import { t } from '../i18n';
 
 export interface DeleteWorkspaceDialogProps {
   /** The workspace to delete, or null when the dialog is closed. */
@@ -42,7 +43,7 @@ export function DeleteWorkspaceDialog({ workspace, onClose, onDeleted }: DeleteW
       forgetWorkspaces();
       onDeleted(workspace);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not delete the workspace.');
+      setError(cause instanceof Error ? cause.message : t('Could not delete the workspace.'));
       setSubmitting(false);
     }
   }
@@ -51,7 +52,7 @@ export function DeleteWorkspaceDialog({ workspace, onClose, onDeleted }: DeleteW
     <dialog ref={dialogRef} className={styles.dialog} onCancel={onClose} onClose={onClose}>
       <div className={styles.body}>
         <header className={styles.header}>
-          <h2 className={styles.title}>Delete Workspace</h2>
+          <h2 className={styles.title}>{t('Delete Workspace')}</h2>
         </header>
 
         <div className={styles.warning}>
@@ -72,7 +73,7 @@ export function DeleteWorkspaceDialog({ workspace, onClose, onDeleted }: DeleteW
 
         <div className={styles.actions}>
           <button type="button" className={styles.ghost} onClick={onClose} disabled={submitting}>
-            Cancel
+            {t('Cancel')}
           </button>
           <button
             type="button"
@@ -81,7 +82,7 @@ export function DeleteWorkspaceDialog({ workspace, onClose, onDeleted }: DeleteW
             disabled={submitting}
             autoFocus
           >
-            {submitting ? 'Deleting…' : 'Delete workspace'}
+            {submitting ? t('Deleting…') : t('Delete workspace')}
           </button>
         </div>
       </div>

@@ -165,6 +165,18 @@ const IN_THE_OPEN = [
     why: 'what the shell is doing about a connection it has lost',
   },
   {
+    file: 'src/pages/docs/DocsPage.tsx',
+    says: 'This page is not translated yet.',
+    because: 'status',
+    why: 'the state of the page being read - there is no Polish version of it, so the English one is shown. There is no control here to hang a (?) on, and a reader who is not told reads it as a bug',
+  },
+  {
+    file: 'src/pages/workspace/FunctionEditorPage.tsx',
+    says: 'There are no objects in this workspace yet, so define one first or use map.',
+    because: 'status',
+    why: "the state of the workspace, on the field that would have offered one: there are no objects to point a parameter at. It was invisible to this check until the interface was translated - it was written `{'…'}` rather than between the tags, and a bare expression broke the run. `t('…')` is unfolded now, so it is seen. The sentence itself is unchanged",
+  },
+  {
     file: 'src/components/CodeSuggestion.tsx',
     says: 'Reading what is there now…',
     because: 'status',
@@ -193,12 +205,6 @@ const IN_THE_OPEN = [
     says: '. The next one is ready.',
     because: 'status',
     why: 'the issue was filed and the form has been cleared for another',
-  },
-  {
-    file: 'src/pages/chat/ChatPage.tsx',
-    says: 'ms to answer. Nothing else is recorded: the history keeps what was said, not how it was ar',
-    because: 'status',
-    why: 'how long this particular answer took, and what was kept of it',
   },
   {
     file: 'src/pages/chat/ChatPage.tsx',
@@ -650,6 +656,27 @@ function pastElement(src, i) {
 }
 
 /**
+ * `{t('…')}`, unfolded to the sentence inside it.
+ *
+ * Since the interface was translated, prose is written `{t('English here')}`
+ * rather than bare between the tags. That is still hard-coded text - the
+ * English is in the source, in the diff, and on the screen for anybody reading
+ * English - and a check that treated it as an expression would have gone blind
+ * to every sentence in the product on the same day this one arrived.
+ *
+ * A single string literal and nothing else. `t(x)` or `t('a' + b)` is not a
+ * sentence somebody typed, and is left to break the run the way any other
+ * expression does.
+ */
+const TRANSLATED = /^\{\s*t\(\s*(['"])((?:[^'"\\]|\\.)*)\1\s*(?:,\s*(['"])(?:[^'"\\]|\\.)*\3\s*)?\)\s*\}/;
+
+function translated(src, i) {
+  const found = TRANSLATED.exec(src.slice(i));
+  if (found === null) return null;
+  return { says: found[2].replace(/\\(['"\\])/g, '$1'), end: i + found[0].length };
+}
+
+/**
  * The runs of hard-coded text an element writes itself.
  *
  * A child's text is not this element's: a `<div>` wrapping a paragraph would
@@ -664,6 +691,12 @@ function ownText(src, from, to) {
   while (i < to) {
     const c = src[i];
     if (c === '{') {
+      const said = translated(src, i);
+      if (said !== null) {
+        held += said.says;
+        i = said.end;
+        continue;
+      }
       runs.push(held);
       held = '';
       i = pastBraces(src, i);

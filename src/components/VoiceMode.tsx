@@ -5,6 +5,7 @@ import { CHUNKING_DEFAULT, readAloud } from './readAloud';
 import type { Reading, SpeechChunking } from './readAloud';
 import { transcribe } from '../api/transcription';
 import styles from './VoiceMode.module.css';
+import { t } from '../i18n';
 
 /**
  * Hands-free conversation: it listens, sends what it heard, and reads the
@@ -398,7 +399,7 @@ export function VoiceMode({
           say.push(answer, true);
         } catch (cause: unknown) {
           if (!live.current || mine !== turn.current) return;
-          setError(cause instanceof Error ? cause.message : 'That turn did not work.');
+          setError(cause instanceof Error ? cause.message : t('That turn did not work.'));
           say.stop();
           // A turn that failed is not a reason to stop listening — the next one
           // may be fine, and the alternative is a panel that sits there dead.
@@ -476,7 +477,7 @@ export function VoiceMode({
     try {
       opened = await navigator.mediaDevices.getUserMedia({ audio: HEARING });
     } catch {
-      setError('The microphone could not be opened. The browser may have refused it.');
+      setError(t('The microphone could not be opened. The browser may have refused it.'));
       return;
     }
     // Asked for by a panel that has since gone. Nobody is going to close this
@@ -593,7 +594,7 @@ export function VoiceMode({
         })
         .catch((cause: unknown) => {
           if (!live.current) return;
-          setError(cause instanceof Error ? cause.message : 'That could not be transcribed.');
+          setError(cause instanceof Error ? cause.message : t('That could not be transcribed.'));
         });
     };
 
@@ -668,11 +669,11 @@ export function VoiceMode({
     phase === 'listening' ? 'Listening' : phase === 'thinking' ? 'Thinking' : 'Speaking';
 
   return (
-    <aside className={styles.panel} aria-label="Voice mode">
+    <aside className={styles.panel} aria-label={t('Voice mode')}>
       <header className={styles.head}>
-        <h2 className={styles.title}>Voice</h2>
-        <button type="button" className={styles.close} onClick={onClose} aria-label="Leave voice mode">
-          Leave
+        <h2 className={styles.title}>{t('Voice')}</h2>
+        <button type="button" className={styles.close} onClick={onClose} aria-label={t('Leave voice mode')}>
+          {t('Leave')}
         </button>
       </header>
 
@@ -684,7 +685,7 @@ export function VoiceMode({
         style={{ ['--level' as string]: level.toFixed(3) }}
         onClick={interrupt}
         aria-label={
-          phase === 'listening' ? 'Finish speaking' : 'Stop this turn and listen'
+          phase === 'listening' ? t('Finish speaking') : t('Stop this turn and listen')
         }
       >
         <span className={styles.ring} aria-hidden="true" />
@@ -702,10 +703,10 @@ export function VoiceMode({
       */}
       <p className={styles.hint}>
         {phase === 'listening'
-          ? 'Speak — it answers when you stop.'
+          ? t('Speak — it answers when you stop.')
           : phase === 'speaking'
-            ? 'Tap the circle to cut in.'
-            : 'Working out what to say.'}
+            ? t('Tap the circle to cut in.')
+            : t('Working out what to say.')}
       </p>
 
       <div className={styles.said}>
@@ -715,7 +716,7 @@ export function VoiceMode({
         */}
         {waiting !== null && (
           <p className={styles.waiting} aria-live="polite">
-            <span className={styles.saidLabel}>Waiting</span>
+            <span className={styles.saidLabel}>{t('Waiting')}</span>
             {waiting}
           </p>
         )}

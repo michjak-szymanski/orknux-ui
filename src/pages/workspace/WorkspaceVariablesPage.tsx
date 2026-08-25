@@ -31,6 +31,7 @@ import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceMemoryPage.module.css';
 import table from './WorkspaceVariablesPage.module.css';
+import { t } from '../../i18n';
 
 export interface WorkspaceVariablesPageProps {
   session: SessionUser;
@@ -113,7 +114,7 @@ export function WorkspaceVariablesPage({ session, onSignOut }: WorkspaceVariable
     try {
       await work();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'That could not be done.');
+      setError(cause instanceof Error ? cause.message : t('That could not be done.'));
     }
   }
 
@@ -174,7 +175,7 @@ export function WorkspaceVariablesPage({ session, onSignOut }: WorkspaceVariable
   }, [loadVariables]);
 
   async function handleNewCatalog() {
-    const name = window.prompt('Name the catalog');
+    const name = window.prompt(t('Name the catalog'));
     if (name === null || name.trim() === '') return;
     await guard(async () => {
       const made = await createVariableCatalog(workspaceId, name.trim());
@@ -184,7 +185,7 @@ export function WorkspaceVariablesPage({ session, onSignOut }: WorkspaceVariable
 
   async function handleRenameCatalog() {
     if (current === null) return;
-    const name = window.prompt('Rename the catalog', current.name);
+    const name = window.prompt(t('Rename the catalog'), current.name);
     if (name === null || name.trim() === '') return;
     await guard(async () => {
       await renameVariableCatalog(current.id, name.trim());
@@ -250,8 +251,8 @@ export function WorkspaceVariablesPage({ session, onSignOut }: WorkspaceVariable
               type="button"
               className={styles.newCatalog}
               onClick={() => void handleNewCatalog()}
-              aria-label="New catalog"
-              title="New catalog"
+              aria-label={t('New catalog')}
+              title={t('New catalog')}
             >
               <img src={plusIcon} alt="" width={10} height={10} />
             </button>
@@ -265,7 +266,7 @@ export function WorkspaceVariablesPage({ session, onSignOut }: WorkspaceVariable
                 <Loader />
               </p>
             )}
-            {catalogs?.length === 0 && <p className={styles.sidebarNote}>No catalogs yet.</p>}
+            {catalogs?.length === 0 && <p className={styles.sidebarNote}>{t('No catalogs yet.')}</p>}
             {catalogs?.map((catalog) => {
               const open = catalog.id === selected;
               return (
@@ -295,8 +296,8 @@ export function WorkspaceVariablesPage({ session, onSignOut }: WorkspaceVariable
             className={foldedCatalogs ? `${styles.collapseCatalogs} ${styles.collapseCatalogsShut}` : styles.collapseCatalogs}
             onClick={() => setFoldedCatalogs((folded) => !folded)}
             aria-expanded={!foldedCatalogs}
-            aria-label={foldedCatalogs ? 'Show catalogs' : 'Hide catalogs'}
-            title={foldedCatalogs ? 'Show catalogs' : 'Hide catalogs'}
+            aria-label={foldedCatalogs ? t('Show catalogs') : t('Hide catalogs')}
+            title={foldedCatalogs ? t('Show catalogs') : t('Hide catalogs')}
           >
             <span
               className={
@@ -321,8 +322,8 @@ export function WorkspaceVariablesPage({ session, onSignOut }: WorkspaceVariable
           {current === null ? (
             <p className={styles.empty}>
               {catalogs?.length === 0
-                ? 'Add a catalog to start keeping values in it.'
-                : 'Choose a catalog to see what is in it.'}
+                ? t('Add a catalog to start keeping values in it.')
+                : t('Choose a catalog to see what is in it.')}
             </p>
           ) : (
             <>
@@ -334,7 +335,7 @@ export function WorkspaceVariablesPage({ session, onSignOut }: WorkspaceVariable
                     className={styles.iconButton}
                     onClick={() => void handleRenameCatalog()}
                     aria-label={`Rename ${current.name}`}
-                    title="Rename"
+                    title={t('Rename')}
                   >
                     <img src={penIcon} alt="" width={14} height={14} />
                   </button>
@@ -343,7 +344,7 @@ export function WorkspaceVariablesPage({ session, onSignOut }: WorkspaceVariable
                     className={styles.iconButton}
                     onClick={() => void handleDeleteCatalog()}
                     aria-label={`Delete ${current.name}`}
-                    title="Delete"
+                    title={t('Delete')}
                   >
                     <img src={trashIcon} alt="" width={14} height={14} />
                   </button>
@@ -357,10 +358,10 @@ export function WorkspaceVariablesPage({ session, onSignOut }: WorkspaceVariable
                   <input
                     className={styles.searchInput}
                     type="search"
-                    placeholder="Search variables..."
+                    placeholder={t('Search variables...')}
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
-                    aria-label="Search variables"
+                    aria-label={t('Search variables')}
                   />
                 </div>
               </div>
@@ -371,9 +372,9 @@ export function WorkspaceVariablesPage({ session, onSignOut }: WorkspaceVariable
                 Each table adds its own kind, so nothing has to ask which.
               */}
               <VariableTable
-                title="Values"
-                note="Read and edited here: configuration rather than credentials."
-                addLabel="+ Add Value"
+                title={t('Values')}
+                note={t("Read and edited here: configuration rather than credentials.")}
+                addLabel={t("+ Add Value")}
                 kind="VALUE"
                 workspaceId={workspaceId}
                 catalogId={current.id}
@@ -383,9 +384,9 @@ export function WorkspaceVariablesPage({ session, onSignOut }: WorkspaceVariable
               />
 
               <VariableTable
-                title="Secrets"
-                note="Kept out of sight. Show one to read it; the audit log records that you did."
-                addLabel="+ Add Secret"
+                title={t('Secrets')}
+                note={t("Kept out of sight. Show one to read it; the audit log records that you did.")}
+                addLabel={t("+ Add Secret")}
                 kind="SECRET"
                 workspaceId={workspaceId}
                 catalogId={current.id}
@@ -497,7 +498,7 @@ function VariableTable({
     try {
       await work();
     } catch (cause) {
-      onError(cause instanceof Error ? cause.message : 'That could not be saved.');
+      onError(cause instanceof Error ? cause.message : t('That could not be saved.'));
     } finally {
       setBusy(null);
     }
@@ -618,14 +619,14 @@ function VariableTable({
 
       <div className={table.table}>
         <div className={table.tableHeader}>
-          <span className={table.colName}>Name</span>
-          <span className={table.colValue}>Value</span>
-          <span className={table.colDescription}>Description</span>
-          <span className={table.colType}>Type</span>
-          <span className={table.colActions}>Actions</span>
+          <span className={table.colName}>{t('Name')}</span>
+          <span className={table.colValue}>{t('Value')}</span>
+          <span className={table.colDescription}>{t('Description')}</span>
+          <span className={table.colType}>{t('Type')}</span>
+          <span className={table.colActions}>{t('Actions')}</span>
         </div>
 
-        {variables.length === 0 && adding === null && <p className={table.empty}>Nothing here yet.</p>}
+        {variables.length === 0 && adding === null && <p className={table.empty}>{t('Nothing here yet.')}</p>}
 
         {variables.map((variable) => {
           const draft = draftFor(variable);
@@ -656,8 +657,8 @@ function VariableTable({
                   autoComplete="off"
                   value={draft.value}
                   readOnly={!readable}
-                  placeholder={variable.valueSet ? 'Hidden' : 'Not set'}
-                  title={readable ? undefined : 'Show it to edit'}
+                  placeholder={variable.valueSet ? 'Hidden' : t('Not set')}
+                  title={readable ? undefined : t('Show it to edit')}
                   aria-label={`Value of ${variable.name}`}
                   onChange={(event) => edit(variable, { value: event.target.value })}
                   onKeyDown={(event) => {
@@ -681,7 +682,7 @@ function VariableTable({
               <input
                 className={`${table.colDescription} ${table.cellInput}`}
                 value={draft.description}
-                placeholder="What it is for"
+                placeholder={t('What it is for')}
                 aria-label={`Description of ${variable.name}`}
                 onChange={(event) => edit(variable, { description: event.target.value })}
                 onKeyDown={(event) => {
@@ -718,7 +719,7 @@ function VariableTable({
                     disabled={busy === variable.id || draft.name.trim() === ''}
                     onClick={() => void save(variable)}
                     aria-label={`Save ${variable.name}`}
-                    title="Save"
+                    title={t('Save')}
                   >
                     <img src={checkIcon} alt="" width={14} height={14} />
                   </button>
@@ -728,7 +729,7 @@ function VariableTable({
                   className={styles.iconButton}
                   onClick={() => void remove(variable)}
                   aria-label={`Delete ${variable.name}`}
-                  title="Delete"
+                  title={t('Delete')}
                 >
                   <img src={trashIcon} alt="" width={14} height={14} />
                 </button>
@@ -758,8 +759,8 @@ function VariableTable({
                 type={kind === 'VALUE' || addingShown ? 'text' : 'password'}
                 autoComplete="off"
                 value={adding.value}
-                placeholder="Value"
-                aria-label="New value"
+                placeholder={t('Value')}
+                aria-label={t('New value')}
                 onChange={(event) => setAdding((held) => ({ ...(held ?? EMPTY), value: event.target.value }))}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') void add();
@@ -775,7 +776,7 @@ function VariableTable({
               {kind === 'SECRET' && (
                 <RevealToggle
                   shown={addingShown}
-                  label="the new secret"
+                  label={t('the new secret')}
                   onToggle={() => setAddingShown((held) => !held)}
                 />
               )}
@@ -783,8 +784,8 @@ function VariableTable({
             <input
               className={`${table.colDescription} ${table.cellInput}`}
               value={adding.description}
-              placeholder="What it is for"
-              aria-label="New description"
+              placeholder={t('What it is for')}
+              aria-label={t('New description')}
               onChange={(event) => setAdding((held) => ({ ...(held ?? EMPTY), description: event.target.value }))}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') void add();
@@ -795,7 +796,7 @@ function VariableTable({
               <select
                 className={`${table.cellInput} ${table.mono}`}
                 value={adding.type}
-                aria-label="New type"
+                aria-label={t('New type')}
                 onChange={(event) =>
                   setAdding((held) => ({ ...(held ?? EMPTY), type: event.target.value as VariableType }))
                 }
@@ -814,8 +815,8 @@ function VariableTable({
                 className={styles.iconButton}
                 disabled={busy === 'new' || adding.name.trim() === ''}
                 onClick={() => void add()}
-                aria-label="Add this one"
-                title="Add"
+                aria-label={t('Add this one')}
+                title={t('Add')}
               >
                 <img src={checkIcon} alt="" width={14} height={14} />
               </button>
@@ -823,8 +824,8 @@ function VariableTable({
                 type="button"
                 className={styles.iconButton}
                 onClick={() => setAdding(null)}
-                aria-label="Discard this row"
-                title="Discard"
+                aria-label={t('Discard this row')}
+                title={t('Discard')}
               >
                 <img src={trashIcon} alt="" width={14} height={14} />
               </button>

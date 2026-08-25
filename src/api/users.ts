@@ -27,6 +27,8 @@ export interface AppUser {
   emailChosen: boolean;
   /** Whether the news that rings their bell is posted to their address as well. */
   emailNotifications: boolean;
+  /** The language they read the product in. Null where they have not chosen. */
+  language: string | null;
   /** Whether their chats print what an answer cost as well as how long it took. */
   chatCostShown: boolean;
   type: UserType;
@@ -40,7 +42,7 @@ export interface AppUser {
 }
 
 const USER_FIELDS =
-  'id username displayName email emailChosen emailNotifications chatCostShown type roles { id name } ' +
+  'id username displayName email emailChosen emailNotifications chatCostShown language type roles { id name } ' +
   'editable hasPassword lastModifiedAt lastModifiedBy';
 
 /** A token, as it is listed: never its secret, which is shown once. */
@@ -144,6 +146,27 @@ export async function setChatCostShown(shown: boolean): Promise<AppUser> {
     { shown },
   );
   return data.setChatCostShown;
+}
+
+/**
+ * Records which language somebody reads the product in.
+ *
+ * Yours only - there is no id, deliberately. An address is something an
+ * administrator arranges for a person who has left; a language is not something
+ * anybody else is in a position to decide.
+ *
+ * Null puts them back to having chosen nothing, so their browser's locale
+ * decides again. Nothing here applies the choice: the picker does that, and
+ * only once this has answered - see PreferencesPage.
+ */
+export async function setMyLanguage(language: string | null): Promise<AppUser> {
+  const data = await graphql<{ setMyLanguage: AppUser }>(
+    `mutation ($language: String) {
+       setMyLanguage(language: $language) { ${USER_FIELDS} }
+     }`,
+    { language },
+  );
+  return data.setMyLanguage;
 }
 
 export async function changeMyPassword(currentPassword: string, newPassword: string): Promise<boolean> {

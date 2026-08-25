@@ -5,6 +5,7 @@ import { ConditionForm } from './ConditionForm';
 import type { ConditionFormStyles } from './ConditionForm';
 import { PanelClose, panelEscape } from './PanelClose';
 import styles from './Dialog.module.css';
+import { t } from '../i18n';
 
 export interface ConditionDialogProps {
   /**
@@ -110,11 +111,13 @@ export function ConditionDialog({
     >
       <div className={styles.body}>
         <header className={styles.header}>
-          <h2 className={styles.title}>{condition === null ? 'Create Condition' : 'Condition Settings'}</h2>
+          <h2 className={styles.title}>{condition === null ? t('Create Condition') : t('Condition Settings')}</h2>
           {placement === 'panel' && <PanelClose onClose={onClose} />}
         </header>
 
-        <p className={styles.dialogMessage}>Define a reusable condition for workflow branching.</p>
+        <p className={styles.dialogMessage}>
+          {t('Define a reusable condition for workflow branching.')}
+        </p>
 
         {open && (
           <ConditionForm

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 import styles from './ImageZoom.module.css';
+import { t } from '../i18n';
 
 export interface Picture {
   src: string;
@@ -66,7 +67,7 @@ export function ImageZoom({ picture, onClose }: ImageZoomProps) {
         <div className={styles.frame}>
           <header className={styles.bar}>
             <span className={styles.caption}>{picture.alt}</span>
-            <button type="button" className={styles.close} onClick={onClose} aria-label="Close" title="Close">
+            <button type="button" className={styles.close} onClick={onClose} aria-label={t('Close')} title={t('Close')}>
               ×
             </button>
           </header>

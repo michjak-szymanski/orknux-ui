@@ -29,6 +29,7 @@ import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import { UsageChart } from './UsageChart';
 import styles from './ModelSettingsPage.module.css';
+import { t } from '../../i18n';
 
 export interface ModelSettingsPageProps {
   session: SessionUser;
@@ -77,13 +78,13 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
     fetchModel(modelId)
       .then((found) => {
         if (found === null) {
-          setLoadError('That model does not exist, or you do not have access to it.');
+          setLoadError(t('That model does not exist, or you do not have access to it.'));
           return;
         }
         apply(found);
       })
       .catch((cause: unknown) => {
-        setLoadError(cause instanceof Error ? cause.message : 'Could not load the model.');
+        setLoadError(cause instanceof Error ? cause.message : t('Could not load the model.'));
       });
 
     // The metrics are their own request: the settings should still show if the
@@ -107,7 +108,7 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
     try {
       apply(await setModelEnabled(model.id, !model.enabled));
     } catch (cause) {
-      setSaveError(cause instanceof Error ? cause.message : 'Could not change the model.');
+      setSaveError(cause instanceof Error ? cause.message : t('Could not change the model.'));
     }
   }
 
@@ -142,7 +143,7 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
       );
       setWindowSaved(true);
     } catch (cause) {
-      setWindowError(cause instanceof Error ? cause.message : 'Could not save the context window.');
+      setWindowError(cause instanceof Error ? cause.message : t('Could not save the context window.'));
     } finally {
       setWindowSaving(false);
     }
@@ -165,7 +166,7 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
       );
       setSaved(true);
     } catch (cause) {
-      setSaveError(cause instanceof Error ? cause.message : 'Could not save the quotas.');
+      setSaveError(cause instanceof Error ? cause.message : t('Could not save the quotas.'));
     } finally {
       setSaving(false);
     }
@@ -179,7 +180,7 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
       navigate(`/workspace/${workspaceId}/models`);
     } catch (cause) {
       setRemoving(false);
-      setSaveError(cause instanceof Error ? cause.message : 'Could not remove the model.');
+      setSaveError(cause instanceof Error ? cause.message : t('Could not remove the model.'));
     }
   }
 
@@ -197,9 +198,9 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
     >
       <header className={styles.headerBlock}>
         <p className={styles.breadcrumbs}>
-          <BackLink to={`/workspace/${workspaceId}/models`} label="Models" />
+          <BackLink to={`/workspace/${workspaceId}/models`} label={t('Models')} />
           <Link className={styles.crumbLink} to={`/workspace/${workspaceId}/models`}>
-            Models
+            {t('Models')}
           </Link>
           <span className={styles.crumbSeparator}>/</span>
           <span className={styles.crumbCurrent}>{model?.name ?? '…'}</span>
@@ -220,24 +221,24 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
       ) : (
         <>
           <section className={styles.card}>
-            <h2 className={styles.sectionHeading}>Provider Details</h2>
+            <h2 className={styles.sectionHeading}>{t('Provider Details')}</h2>
             <div className={styles.detailGrid}>
               <div className={styles.detail}>
-                <span className={styles.detailLabel}>Provider</span>
+                <span className={styles.detailLabel}>{t('Provider')}</span>
                 <Link className={styles.detailLink} to={`/workspace/${workspaceId}/models/providers/${model.providerId}`}>
                   {model.providerName}
                 </Link>
               </div>
               <div className={styles.detail}>
-                <span className={styles.detailLabel}>Type</span>
+                <span className={styles.detailLabel}>{t('Type')}</span>
                 <span className={styles.detailValue}>{modelKindLabel(model.kind)}</span>
               </div>
               <div className={styles.detail}>
-                <span className={styles.detailLabel}>Model ID</span>
+                <span className={styles.detailLabel}>{t('Model ID')}</span>
                 <span className={styles.detailMono}>{model.modelId}</span>
               </div>
               <div className={styles.detail}>
-                <span className={styles.detailLabel}>Status</span>
+                <span className={styles.detailLabel}>{t('Status')}</span>
                 <span className={styles.statusRow}>
                   <button
                     type="button"
@@ -273,20 +274,16 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
             everything sizing a prompt reads.
           */}
           <form className={styles.card} onSubmit={handleSaveWindow}>
-            <h2 className={styles.sectionHeading}>Context Window</h2>
+            <h2 className={styles.sectionHeading}>{t('Context Window')}</h2>
 
             <div className={styles.fieldRow}>
               <div className={styles.field}>
                 <span className={styles.labelWithHint}>
                   <label className={styles.label} htmlFor="context-window">
-                    Context Window
+                    {t('Context Window')}
                   </label>
-                  <FieldHint label="Context Window">
-                    How many tokens this model reads at once, as its provider states it. Nothing here
-                    asks the model: it is what the workspace records, and it is what a share of a
-                    session&rsquo;s memory is worked out from — an agent given a share of a model with
-                    no window recorded falls back to a fixed built-in allowance. Empty means not
-                    recorded.
+                  <FieldHint label={t('Context Window')}>
+                    {t('How many tokens this model reads at once, as its provider states it. Nothing here asks the model: it is what the workspace records, and it is what a share of a session’s memory is worked out from — an agent given a share of a model with no window recorded falls back to a fixed built-in allowance. Empty means not recorded.')}
                   </FieldHint>
                 </span>
                 <input
@@ -294,19 +291,15 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
                   className={`${styles.input} ${styles.inputMono}`}
                   value={contextWindow}
                   onChange={(event) => setContextWindow(event.target.value)}
-                  placeholder="Not recorded"
+                  placeholder={t('Not recorded')}
                   inputMode="numeric"
                 />
               </div>
               <div className={styles.field}>
                 <span className={styles.labelWithHint}>
-                  <label className={styles.label} htmlFor="max-output">
-                    Max Output
-                  </label>
-                  <FieldHint label="Max Output">
-                    The most this model will write in one answer. It comes out of the window above, so
-                    it is the other half of what a session may be given: a model that reserves most of
-                    its window for its answer can carry very little conversation.
+                  <label className={styles.label} htmlFor="max-output">{t('Max Output')}</label>
+                  <FieldHint label={t('Max Output')}>
+                    {t('The most this model will write in one answer. It comes out of the window above, so it is the other half of what a session may be given: a model that reserves most of its window for its answer can carry very little conversation.')}
                   </FieldHint>
                 </span>
                 <input
@@ -314,7 +307,7 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
                   className={`${styles.input} ${styles.inputMono}`}
                   value={maxOutput}
                   onChange={(event) => setMaxOutput(event.target.value)}
-                  placeholder="Not recorded"
+                  placeholder={t('Not recorded')}
                   inputMode="numeric"
                 />
               </div>
@@ -326,15 +319,15 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
                   {windowError}
                 </p>
               )}
-              {windowSaved && windowError === null && <p className={styles.saved}>Saved.</p>}
+              {windowSaved && windowError === null && <p className={styles.saved}>{t('Saved.')}</p>}
               <button type="submit" className={styles.primaryButton} disabled={windowSaving}>
-                {windowSaving ? 'Saving…' : 'Save Changes'}
+                {windowSaving ? t('Saving…') : t('Save Changes')}
               </button>
             </div>
           </form>
 
           <section className={styles.card}>
-            <h2 className={styles.sectionHeading}>Usage Metrics</h2>
+            <h2 className={styles.sectionHeading}>{t('Usage Metrics')}</h2>
 
             {usage === null || usage.empty ? (
               /*
@@ -342,26 +335,25 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
                * grid of zeros would read as a result rather than as an absence.
                */
               <p className={styles.emptyMetrics}>
-                No usage has been recorded for this model yet. The figures here are summed from real
-                calls, so they stay empty until something makes one.
+                {t('No usage has been recorded for this model yet. The figures here are summed from real calls, so they stay empty until something makes one.')}
               </p>
             ) : (
               <>
                 <div className={styles.statsRow}>
                   <Stat
-                    label="Total Requests"
+                    label={t('Total Requests')}
                     value={formatCompact(usage.requests)}
                     change={formatChange(usage.requestsChange)}
                     good={(usage.requestsChange ?? 0) >= 0}
                   />
                   <Stat
-                    label="Tokens Used"
+                    label={t('Tokens Used')}
                     value={formatCompact(usage.totalTokens)}
                     change={formatChange(usage.tokensChange)}
                     good={(usage.tokensChange ?? 0) >= 0}
                   />
                   <Stat
-                    label="Avg Latency"
+                    label={t('Avg Latency')}
                     value={formatLatency(usage.averageLatencyMillis)}
                     change={formatChange(usage.latencyChange)}
                     /* Slower is worse, so the sign reads the other way round. */
@@ -381,11 +373,11 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
                 <div className={styles.breakdown}>
                   <p className={styles.breakdownTitle}>Token Breakdown (Last {usage.days} Days)</p>
                   <div className={styles.breakdownGrid}>
-                    <Figure label="Input Tokens" value={formatTokens(usage.inputTokens)} />
-                    <Figure label="Output Tokens" value={formatTokens(usage.outputTokens)} />
-                    <Figure label="Total Tokens" value={formatTokens(usage.totalTokens)} />
+                    <Figure label={t('Input Tokens')} value={formatTokens(usage.inputTokens)} />
+                    <Figure label={t('Output Tokens')} value={formatTokens(usage.outputTokens)} />
+                    <Figure label={t('Total Tokens')} value={formatTokens(usage.totalTokens)} />
                     <Figure
-                      label="Cost Estimate"
+                      label={t('Cost Estimate')}
                       value={usage.costEstimate === null ? '—' : `$${usage.costEstimate.toFixed(2)}`}
                       accent
                     />
@@ -396,25 +388,23 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
           </section>
 
           <form className={styles.card} onSubmit={handleSave}>
-            <h2 className={styles.sectionHeading}>Quotas &amp; Limits</h2>
+            <h2 className={styles.sectionHeading}>{t('Quotas & Limits')}</h2>
 
             <div className={styles.fieldRow}>
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="token-limit">
-                  Token Limit
-                </label>
+                <label className={styles.label} htmlFor="token-limit">{t('Token Limit')}</label>
                 <input
                   id="token-limit"
                   className={`${styles.input} ${styles.inputMono}`}
                   value={tokenLimit}
                   onChange={(event) => setTokenLimit(event.target.value)}
-                  placeholder="No limit"
+                  placeholder={t('No limit')}
                   inputMode="numeric"
                 />
               </div>
               <div className={styles.field}>
                 <label className={styles.label} htmlFor="reset-interval">
-                  Reset Interval
+                  {t('Reset Interval')}
                 </label>
                 <div className={styles.selectWrapper}>
                   <select
@@ -436,7 +426,7 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
 
             <div className={styles.usageBlock}>
               <div className={styles.usageHeader}>
-                <span className={styles.label}>Current Usage</span>
+                <span className={styles.label}>{t('Current Usage')}</span>
                 <span className={share !== null && share >= 0.8 ? styles.usageWarn : styles.usageValue}>
                   {limit === null
                     ? `${formatCompact(used)} tokens, no limit set`
@@ -455,14 +445,14 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
             <div className={styles.fieldRow}>
               <div className={styles.field}>
                 <label className={styles.label} htmlFor="rpm">
-                  Requests per Minute (RPM)
+                  {t('Requests per Minute (RPM)')}
                 </label>
                 <input
                   id="rpm"
                   className={`${styles.input} ${styles.inputMono}`}
                   value={requestsPerMinute}
                   onChange={(event) => setRequestsPerMinute(event.target.value)}
-                  placeholder="No limit"
+                  placeholder={t('No limit')}
                   inputMode="numeric"
                 />
               </div>
@@ -475,19 +465,21 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
                   {saveError}
                 </p>
               )}
-              {saved && saveError === null && <p className={styles.saved}>Saved.</p>}
+              {saved && saveError === null && <p className={styles.saved}>{t('Saved.')}</p>}
               <button type="submit" className={styles.primaryButton} disabled={saving}>
-                {saving ? 'Saving…' : 'Save Changes'}
+                {saving ? t('Saving…') : t('Save Changes')}
               </button>
             </div>
           </form>
 
           <section className={styles.dangerCard}>
-            <h2 className={styles.dangerHeading}>Danger Zone</h2>
+            <h2 className={styles.dangerHeading}>{t('Danger Zone')}</h2>
             <div className={styles.dangerRow}>
               <div className={styles.dangerText}>
-                <span className={styles.dangerTitle}>Remove Model</span>
-                <span className={styles.dangerNote}>Remove this model from your workspace configuration</span>
+                <span className={styles.dangerTitle}>{t('Remove Model')}</span>
+                <span className={styles.dangerNote}>
+                  {t('Remove this model from your workspace configuration')}
+                </span>
               </div>
               <button
                 type="button"
@@ -495,7 +487,7 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
                 onClick={() => void handleRemove()}
                 disabled={removing}
               >
-                {removing ? 'Removing…' : 'Remove Model'}
+                {removing ? t('Removing…') : t('Remove Model')}
               </button>
             </div>
           </section>

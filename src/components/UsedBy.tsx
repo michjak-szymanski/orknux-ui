@@ -7,6 +7,7 @@ import { FieldHint } from './FieldHint';
 import { Loader } from './Loader';
 import { OpenDefinitionIcon } from './OpenDefinitionIcon';
 import styles from './UsedBy.module.css';
+import { t } from '../i18n';
 
 export interface DependantListProps {
   /** The rows, already fetched. */
@@ -33,7 +34,7 @@ export interface DependantListProps {
  */
 export function DependantList({ entries, hidden, showWorkspace = false }: DependantListProps) {
   if (entries.length === 0 && hidden === 0) {
-    return <p className={styles.empty}>Nothing uses this yet.</p>;
+    return <p className={styles.empty}>{t('Nothing uses this yet.')}</p>;
   }
 
   return (
@@ -66,7 +67,7 @@ export function DependantList({ entries, hidden, showWorkspace = false }: Depend
       */}
       {hidden > 0 && (
         <p className={styles.empty} data-dependants-hidden={hidden}>
-          {hidden === 1 ? 'And one more in a workspace you cannot open.' : `And ${hidden} more in workspaces you cannot open.`}
+          {hidden === 1 ? t('And one more in a workspace you cannot open.') : `And ${hidden} more in workspaces you cannot open.`}
         </p>
       )}
     </>
@@ -172,20 +173,20 @@ export function UsedBy({ kind, componentId }: UsedByProps) {
       .catch((cause: unknown) => {
         setEntries([]);
         setHidden(0);
-        setError(cause instanceof Error ? cause.message : 'Could not read what uses this.');
+        setError(cause instanceof Error ? cause.message : t('Could not read what uses this.'));
       });
   }, [kind, componentId]);
 
   useEffect(load, [load]);
 
   return (
-    <section className={styles.usedBy} aria-label="Used by">
+    <section className={styles.usedBy} aria-label={t('Used by')}>
       <h2 className={styles.heading}>
         <span className={styles.headingWithHint}>
-          Used by
-          <FieldHint label="Used by">
+          {t('Used by')}
+          <FieldHint label={t('Used by')}>
             Everything that would break if this went away, and the same list the delete refuses on. A workflow
-            appears here when a node points at this - and as <em>published workflow</em> when the frozen copy a
+            appears here when a node points at this - and as <em>{t('published workflow')}</em> when the frozen copy a
             trigger runs does, which redrawing the canvas will not change. Nothing that merely ran it once is here;
             this is what points at it now.
           </FieldHint>

@@ -54,6 +54,7 @@ import { useLeaveGuard } from '../../components/leaveGuard';
 import { useInstallation } from '../../session/installation';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceIssuePage.module.css';
+import { t } from '../../i18n';
 
 /**
  * How many existing labels are offered at once.
@@ -298,7 +299,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
       .then((found) => {
         if (!current) return;
         if (found === null) {
-          setLoadError('That issue does not exist, or you do not have access to it.');
+          setLoadError(t('That issue does not exist, or you do not have access to it.'));
           return;
         }
         setIssue(found);
@@ -313,7 +314,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
         setStatus(found.status);
       })
       .catch((cause: unknown) => {
-        if (current) setLoadError(cause instanceof Error ? cause.message : 'Could not load the issue.');
+        if (current) setLoadError(cause instanceof Error ? cause.message : t('Could not load the issue.'));
       });
     return () => {
       current = false;
@@ -341,7 +342,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
       })
       .catch((cause: unknown) => {
         if (!current) return;
-        setHistoryError(cause instanceof Error ? cause.message : 'Could not load the history.');
+        setHistoryError(cause instanceof Error ? cause.message : t('Could not load the history.'));
       });
     return () => {
       current = false;
@@ -401,7 +402,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
     if (title.trim() === '') {
       // Unreachable from the button, which is disabled without one. Reachable
       // from Save & Leave, and that dialog promises the reason is on the page.
-      setError('An issue needs a title before it can be filed.');
+      setError(t('An issue needs a title before it can be filed.'));
       return false;
     }
     setSaving(true);
@@ -483,7 +484,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
       }
       return true;
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save the issue.');
+      setError(cause instanceof Error ? cause.message : t('Could not save the issue.'));
       return false;
     } finally {
       setSaving(false);
@@ -562,7 +563,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
       setIssue(held);
       setStatus(held.status);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not change the status.');
+      setError(cause instanceof Error ? cause.message : t('Could not change the status.'));
     } finally {
       setSaving(false);
     }
@@ -593,7 +594,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
       setStatus('IN_PROGRESS');
       setIssue({ ...issue, status: 'IN_PROGRESS' });
     } catch (cause) {
-      setStartError(cause instanceof Error ? cause.message : 'Could not start it.');
+      setStartError(cause instanceof Error ? cause.message : t('Could not start it.'));
     } finally {
       setStarting(false);
     }
@@ -608,7 +609,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
       setEditing(null);
       setReadingEdit(false);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not change the comment.');
+      setError(cause instanceof Error ? cause.message : t('Could not change the comment.'));
     } finally {
       setSaving(false);
     }
@@ -625,7 +626,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
       // The next comment starts as a box to type in, not as a preview of nothing.
       setReadingComment(false);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not add the comment.');
+      setError(cause instanceof Error ? cause.message : t('Could not add the comment.'));
     } finally {
       setSaving(false);
     }
@@ -663,7 +664,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
         setPending((current) => [...current, ...held]);
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Those files could not be uploaded.');
+      setError(cause instanceof Error ? cause.message : t('Those files could not be uploaded.'));
     } finally {
       setUploading(false);
     }
@@ -728,7 +729,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
         if (again !== null) setIssue(again);
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not remove the attachment.');
+      setError(cause instanceof Error ? cause.message : t('Could not remove the attachment.'));
     }
   }
 
@@ -769,7 +770,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
     } catch (cause) {
       // The boxes are left as they were: a refused address is usually one
       // keystroke from an accepted one.
-      setError(cause instanceof Error ? cause.message : 'That link could not be added.');
+      setError(cause instanceof Error ? cause.message : t('That link could not be added.'));
     } finally {
       setSaving(false);
     }
@@ -833,7 +834,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
       const again = await fetchIssue(workspaceId, Number(number));
       if (again !== null) setIssue(again);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not remove the link.');
+      setError(cause instanceof Error ? cause.message : t('Could not remove the link.'));
     }
   }
 
@@ -881,7 +882,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
 
   return (
     <AppShell
-      title={creating ? 'New issue' : issue === null ? undefined : `#${issue.number} ${issue.title}`}
+      title={creating ? t('New issue') : issue === null ? undefined : `#${issue.number} ${issue.title}`}
       user={shellUser(session)}
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
@@ -902,14 +903,14 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
         <section className={styles.card}>
           <header className={styles.header}>
             <div className={styles.titleRow}>
-              <BackLink to={`/workspace/${workspaceId}/issues`} label="Issues" />
+              <BackLink to={`/workspace/${workspaceId}/issues`} label={t('Issues')} />
               {!creating && <span className={styles.number}>#{issue?.number}</span>}
               <input
                 className={styles.titleInput}
                 type="text"
                 value={title}
-                placeholder="What is wrong?"
-                aria-label="Title"
+                placeholder={t('What is wrong?')}
+                aria-label={t('Title')}
                 onChange={(event) => setTitle(event.target.value)}
               />
             </div>
@@ -924,18 +925,16 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                 <button
                   type="button"
                   className={styles.ghost}
-                  title="Move this issue to another workspace"
+                  title={t('Move this issue to another workspace')}
                   onClick={() => setMoving(issue)}
-                >
-                  Move
-                </button>
+                >{t('Move')}</button>
               )}
               {!creating && (
                 <button
                   type="button"
                   className={styles.delete}
-                  aria-label="Delete this issue"
-                  title="Delete"
+                  aria-label={t('Delete this issue')}
+                  title={t('Delete')}
                   onClick={() => setDeleting(issue)}
                 >
                   <TrashIcon />
@@ -953,7 +952,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                     checked={fileAnother}
                     onChange={(event) => setFileAnother(event.target.checked)}
                   />
-                  File another
+                  {t('File another')}
                 </label>
               )}
               <button
@@ -962,7 +961,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                 onClick={() => void save()}
                 disabled={saving || title.trim() === ''}
               >
-                {saving ? 'Saving…' : creating ? 'File Issue' : 'Save'}
+                {saving ? t('Saving…') : creating ? t('File Issue') : 'Save'}
               </button>
             </div>
           </header>
@@ -987,7 +986,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
               <Link to={`/workspace/${workspaceId}/issues/${filed}`} className={styles.filedLink}>
                 #{filed}
               </Link>
-              . The next one is ready.
+              {t('. The next one is ready.')}
             </p>
           )}
 
@@ -999,25 +998,21 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
             a tab that teaches people not to press it.
           */}
           {!creating && (
-            <div className={styles.tabs} role="tablist" aria-label="Issue">
+            <div className={styles.tabs} role="tablist" aria-label={t('Issue')}>
               <button
                 type="button"
                 role="tab"
                 aria-selected={tab === 'issue'}
                 className={tab === 'issue' ? styles.tabActive : styles.tab}
                 onClick={() => setTab('issue')}
-              >
-                Issue
-              </button>
+              >{t('Issue')}</button>
               <button
                 type="button"
                 role="tab"
                 aria-selected={tab === 'history'}
                 className={tab === 'history' ? styles.tabActive : styles.tab}
                 onClick={() => setTab('history')}
-              >
-                History
-              </button>
+              >{t('History')}</button>
             </div>
           )}
 
@@ -1051,7 +1046,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
             ) : (
             <div className={styles.main}>
               <span className={styles.labelRow}>
-                <span className={styles.label}>Description</span>
+                <span className={styles.label}>{t('Description')}</span>
                 {/*
                   Offered while the issue is being filed too. A report is
                   written once and read by everybody after, so the moment
@@ -1068,8 +1063,8 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                   onChange={setDescription}
                   workspaceId={workspaceId}
                   rows={10}
-                  ariaLabel="Description"
-                  placeholder="What happens, and what should happen instead. Paste a screenshot to attach it."
+                  ariaLabel={t('Description')}
+                  placeholder={t('What happens, and what should happen instead. Paste a screenshot to attach it.')}
                   onPaste={(event) => void pasted(event, 'issue')}
                 />
               ) : (
@@ -1089,7 +1084,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
               {(attachmentsAllowed || issueFiles.length > 0) && (
                 <section className={styles.files}>
                   <span className={styles.labelRow}>
-                    <span className={styles.label}>Attachments</span>
+                    <span className={styles.label}>{t('Attachments')}</span>
                     {attachmentsAllowed && (
                       <button
                         type="button"
@@ -1097,7 +1092,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                         disabled={uploading}
                         onClick={() => issueFilesRef.current?.click()}
                       >
-                        {uploading ? 'Uploading…' : 'Attach files'}
+                        {uploading ? t('Uploading…') : t('Attach files')}
                       </button>
                     )}
                   </span>
@@ -1112,11 +1107,9 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                   {issueFiles.length === 0 ? (
                     <p className={styles.nothing}>
                       <span className={styles.labelWithHint}>
-                        Nothing attached yet.
-                        <FieldHint label="Nothing attached yet">
-                          A screenshot is worth a paragraph of description. Anything else that shows
-                          the thing rather than describes it belongs here too — a log, an export, the
-                          file that would not open.
+                        {t('Nothing attached yet.')}
+                        <FieldHint label={t('Nothing attached yet')}>
+                          {t('A screenshot is worth a paragraph of description. Anything else that shows the thing rather than describes it belongs here too — a log, an export, the file that would not open.')}
                         </FieldHint>
                       </span>
                     </p>
@@ -1146,7 +1139,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
               */}
               <section className={styles.files}>
                 <span className={styles.labelRow}>
-                  <span className={styles.label}>Links</span>
+                  <span className={styles.label}>{t('Links')}</span>
                   <button
                     type="button"
                     className={styles.textButton}
@@ -1156,7 +1149,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                       setLinkTitle('');
                     }}
                   >
-                    {addingLink ? 'Cancel' : 'Add a link'}
+                    {addingLink ? 'Cancel' : t('Add a link')}
                   </button>
                 </span>
                 {addingLink && (
@@ -1166,7 +1159,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                       type="url"
                       value={linkUrl}
                       placeholder="https://…"
-                      aria-label="Address"
+                      aria-label={t('Address')}
                       autoFocus
                       onChange={(event) => setLinkUrl(event.target.value)}
                       onKeyDown={(event) => {
@@ -1185,8 +1178,8 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                       className={styles.linkInput}
                       type="text"
                       value={linkTitle}
-                      placeholder="What to call it (optional)"
-                      aria-label="What to call it"
+                      placeholder={t('What to call it (optional)')}
+                      aria-label={t('What to call it')}
                       onChange={(event) => setLinkTitle(event.target.value)}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter') {
@@ -1200,14 +1193,12 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                       className={styles.textButton}
                       disabled={saving || linkUrl.trim() === ''}
                       onClick={() => void addLink()}
-                    >
-                      Add
-                    </button>
+                    >{t('Add')}</button>
                   </div>
                 )}
                 {issueLinks.length === 0 ? (
                   <p className={styles.nothing}>
-                    Nothing linked yet. The pull request, the dashboard, the page that will not load.
+                    {t('Nothing linked yet. The pull request, the dashboard, the page that will not load.')}
                   </p>
                 ) : (
                   <Links
@@ -1267,7 +1258,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                                 setReadingEdit(false);
                               }}
                             >
-                              Edit
+                              {t('Edit')}
                             </button>
                           )}
                         </p>
@@ -1297,7 +1288,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                                 onChange={(next) => setEditing({ id: said.id, content: next })}
                                 workspaceId={workspaceId}
                                 rows={4}
-                                ariaLabel="Edit this comment"
+                                ariaLabel={t('Edit this comment')}
                               />
                             )}
                             <div className={styles.composerActions}>
@@ -1309,7 +1300,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                                   setReadingEdit(false);
                                 }}
                               >
-                                Cancel
+                                {t('Cancel')}
                               </button>
                               <button
                                 type="button"
@@ -1317,7 +1308,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                                 onClick={() => void saveComment()}
                                 disabled={saving || editing.content.trim() === ''}
                               >
-                                Save
+                                {t('Save')}
                               </button>
                             </div>
                           </div>
@@ -1370,8 +1361,8 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                         onChange={setComment}
                         workspaceId={workspaceId}
                         rows={3}
-                        ariaLabel="Add a comment"
-                        placeholder="Say something… paste a screenshot to attach it."
+                        ariaLabel={t('Add a comment')}
+                        placeholder={t('Say something… paste a screenshot to attach it.')}
                         onPaste={(event) => void pasted(event, 'comment')}
                       />
                     )}
@@ -1383,7 +1374,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                           disabled={uploading}
                           onClick={() => commentFilesRef.current?.click()}
                         >
-                          {uploading ? 'Uploading…' : 'Attach files'}
+                          {uploading ? t('Uploading…') : t('Attach files')}
                         </button>
                       )}
                       <input
@@ -1402,7 +1393,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                         onClick={() => void setIssueStatus(status === 'CLOSED' ? 'OPEN' : 'CLOSED')}
                         disabled={saving}
                       >
-                        {status === 'CLOSED' ? 'Reopen issue' : 'Close issue'}
+                        {status === 'CLOSED' ? t('Reopen issue') : t('Close issue')}
                       </button>
                       <button
                         type="button"
@@ -1410,7 +1401,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                         onClick={() => void comment_()}
                         disabled={saving || comment.trim() === ''}
                       >
-                        Comment
+                        {t('Comment')}
                       </button>
                     </div>
                   </div>
@@ -1435,7 +1426,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                   disabled={creating || saving}
                   title={
                     creating
-                      ? 'A new issue opens when it is filed'
+                      ? t('A new issue opens when it is filed')
                       : `Press for ${ISSUE_STATUS_LABEL[nextStatus(status)].toLowerCase()}`
                   }
                 >
@@ -1453,7 +1444,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                 <span className={styles.label}>Type</span>
                 <select
                   className={styles.typeSelect}
-                  aria-label="Issue type"
+                  aria-label={t('Issue type')}
                   value={typeId}
                   onChange={(event) => setTypeId(event.target.value)}
                   disabled={saving}
@@ -1495,7 +1486,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                   <div className={styles.sideField} data-testid="issue-ai">
                     <span className={styles.labelWithHint}>
                       <span className={styles.label}>Start by AI</span>
-                      <FieldHint label="Start by AI">
+                      <FieldHint label={t('Start by AI')}>
                         Hands this issue to <strong>{issue.assignee.name}</strong> as a task: the number,
                         the title, the kind, the labels, the description and the conversation, in the
                         agent's own words no further than that. The issue moves to In progress and the
@@ -1511,7 +1502,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                         data-testid="issue-task-link"
                         to={`/workspace/${workspaceId}/tasks/${stillGoing(issueTasks)?.id}`}
                       >
-                        Working on it — open the task
+                        {t('Working on it — open the task')}
                       </Link>
                     ) : (
                       <button
@@ -1521,7 +1512,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                         disabled={starting}
                         onClick={() => void startByAI()}
                       >
-                        {starting ? 'Starting…' : 'Start by AI'}
+                        {starting ? 'Starting…' : t('Start by AI')}
                       </button>
                     )}
                     {stillGoing(issueTasks) === null && issueTasks.length > 0 && (
@@ -1549,7 +1540,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                       key={label}
                       type="button"
                       className={styles.label_}
-                      title="Remove this label"
+                      title={t('Remove this label')}
                       onClick={() => setLabels(labels.filter((held) => held !== label))}
                     >
                       {label} ×
@@ -1560,8 +1551,8 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
                   className={styles.labelInput}
                   type="text"
                   value={labelDraft}
-                  placeholder="Add a label…"
-                  aria-label="Add a label"
+                  placeholder={t('Add a label…')}
+                  aria-label={t('Add a label')}
                   onChange={(event) => setLabelDraft(event.target.value)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter') {
@@ -1694,7 +1685,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
         title box is described rather than quoted as an empty string.
       */}
       <UnsavedWorkDialog
-        subject={guard.asking ? (creating ? title.trim() || 'This issue' : (issue?.title ?? 'This issue')) : null}
+        subject={guard.asking ? (creating ? title.trim() || t('This issue') : (issue?.title ?? t('This issue'))) : null}
         creating={creating}
         onStay={guard.stay}
         onLeave={guard.leave}
@@ -1737,7 +1728,7 @@ function Written({ text, workspaceId, onWrite, short = false }: WrittenProps) {
       }}
     >
       {text.trim() === '' ? (
-        <p className={styles.nothing}>Nothing written yet.</p>
+        <p className={styles.nothing}>{t('Nothing written yet.')}</p>
       ) : (
         <Markdown issuesIn={workspaceId}>{text}</Markdown>
       )}
@@ -1811,7 +1802,7 @@ function Attachments({ files, onOpen, onRemove }: AttachmentsProps) {
               className={styles.attachmentRemove}
               onClick={() => onRemove(file.id)}
               aria-label={`Remove ${file.filename}`}
-              title="Remove"
+              title={t('Remove')}
             >
               ×
             </button>
@@ -1902,7 +1893,7 @@ function Links({ links, onRemove }: LinksProps) {
                 className={styles.attachmentRemove}
                 onClick={() => onRemove(link.id)}
                 aria-label={`Remove ${name}`}
-                title="Remove"
+                title={t('Remove')}
               >
                 ×
               </button>
@@ -1940,7 +1931,7 @@ function History({ history, error, onShowComment }: HistoryProps) {
     );
   }
   if (history === null) return <Loader />;
-  if (history.entries.length === 0) return <p className={styles.nothing}>Nothing recorded here.</p>;
+  if (history.entries.length === 0) return <p className={styles.nothing}>{t('Nothing recorded here.')}</p>;
 
   return (
     <section className={styles.history}>
@@ -1985,14 +1976,14 @@ function History({ history, error, onShowComment }: HistoryProps) {
                 >
                   {timeAgo(event.at)}
                 </time>
-                {event.edited && <span className={styles.edited}> · edited</span>}
+                {event.edited && <span className={styles.edited}>{t('· edited')}</span>}
               </p>
               {event.said !== null && (
                 <button
                   type="button"
                   className={styles.historySaid}
                   onClick={() => event.commentId !== null && onShowComment(event.commentId)}
-                  title="Read it in full"
+                  title={t('Read it in full')}
                 >
                   {event.said}
                 </button>

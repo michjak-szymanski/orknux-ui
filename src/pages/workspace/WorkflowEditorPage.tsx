@@ -111,6 +111,7 @@ import {
 } from '../../session/shortcut';
 import { shellUser } from '../../session/user';
 import styles from './WorkflowEditorPage.module.css';
+import { t } from '../../i18n';
 
 export interface WorkflowEditorPageProps {
   session: SessionUser;
@@ -663,10 +664,10 @@ function alongEdge(side: Position, at: string): { top?: string; left?: string } 
 }
 
 const FACING_LABEL: Record<NodeOrientation, string> = {
-  LEFT_TO_RIGHT: 'Left to right',
-  TOP_TO_BOTTOM: 'Top to bottom',
-  RIGHT_TO_LEFT: 'Right to left',
-  BOTTOM_TO_TOP: 'Bottom to top',
+  LEFT_TO_RIGHT: t('Left to right'),
+  TOP_TO_BOTTOM: t('Top to bottom'),
+  RIGHT_TO_LEFT: t('Right to left'),
+  BOTTOM_TO_TOP: t('Bottom to top'),
 };
 
 /**
@@ -860,8 +861,8 @@ function CarriedEdge({
 
   /** What a handle is called, which is which of the points it is. */
   const pointName = (at: number) => {
-    if (points.length === 0) return 'Bend this line';
-    return points.length === 1 ? 'Bend on this line' : `Bend ${at + 1} of ${points.length} on this line`;
+    if (points.length === 0) return t('Bend this line');
+    return points.length === 1 ? t('Bend on this line') : `Bend ${at + 1} of ${points.length} on this line`;
   };
 
   return (
@@ -879,7 +880,7 @@ function CarriedEdge({
        */}
       {setPoints !== undefined && (
         <path className={`${styles.edgeHit} nopan`} d={path} onDoubleClick={addWhereClicked}>
-          <title>Double-click to add a point to bend through</title>
+          <title>{t('Double-click to add a point to bend through')}</title>
         </path>
       )}
       {setPoints !== undefined && (
@@ -921,8 +922,8 @@ function CarriedEdge({
                 aria-label={pointName(at)}
                 title={
                   points.length === 0
-                    ? 'Drag to bend the line; double-click the line to add a point'
-                    : 'Drag to move this point; double-click or Delete to take it off; + adds another'
+                    ? t('Drag to bend the line; double-click the line to add a point')
+                    : t('Drag to move this point; double-click or Delete to take it off; + adds another')
                 }
                 onPointerDown={onPointerDown(at)}
                 onPointerMove={onPointerMove}
@@ -974,7 +975,7 @@ function CarriedEdge({
               removePoint(0);
             }}
             title={
-              setPoints === undefined ? undefined : 'Drag to move it and the line; double-click to put it back'
+              setPoints === undefined ? undefined : t('Drag to move it and the line; double-click to put it back')
             }
           >
             {shown.map((one) => (
@@ -1069,14 +1070,14 @@ function briefingFor(draft: NodeData, agents: Agent[]): string {
 /** What an empty box would fall back to, shown in grey. */
 function parameterPlaceholder(draft: NodeData, name: string): string | undefined {
   if (draft.kind === 'SESSION') {
-    return name === 'sessionKeyPrefix' ? 'No prefix' : name === 'sessionKey' ? 'Nothing is kept' : undefined;
+    return name === 'sessionKeyPrefix' ? t('No prefix') : name === 'sessionKey' ? t('Nothing is kept') : undefined;
   }
   if (draft.kind !== 'AGENT') return undefined;
 
   return name === 'prompt'
-    ? 'Everything that reached this node'
+    ? t('Everything that reached this node')
     : name === 'systemPrompt'
-      ? "The agent's own briefing"
+      ? t("The agent's own briefing")
       : undefined;
 }
 
@@ -1178,7 +1179,7 @@ const KIND_CLASS: Record<NodeKind, string> = {
  */
 const BRANCH_DEFAULTS: Record<'CONDITION' | 'FAILURE', { yes: string; no: string }> = {
   CONDITION: { yes: 'Yes', no: 'No' },
-  FAILURE: { yes: 'If works', no: 'If fails' },
+  FAILURE: { yes: t('If works'), no: t('If fails') },
 };
 
 /**
@@ -1805,7 +1806,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
         .map((node) => {
           const data = node.data as NodeData;
           const key = sessionKeyOf(data);
-          return { value: node.id, label: data.name, hint: key === '' ? 'No key yet' : key };
+          return { value: node.id, label: data.name, hint: key === '' ? t('No key yet') : key };
         }),
     [nodes],
   );
@@ -2230,7 +2231,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
         drawnFor.current = workflowId;
       })
       .catch((cause: unknown) => {
-        setLoadError(cause instanceof Error ? cause.message : 'Could not load the workflow.');
+        setLoadError(cause instanceof Error ? cause.message : t('Could not load the workflow.'));
       })
       // Either way there is nothing more to wait for: the graph is on the
       // canvas, or the message above says why it is not.
@@ -3102,7 +3103,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       setSaved(true);
       return true;
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save the workflow.');
+      setError(cause instanceof Error ? cause.message : t('Could not save the workflow.'));
       return false;
     } finally {
       setBusy(false);
@@ -3485,7 +3486,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       const started = await startExecution(workspaceId, workflowId);
       navigate(`/workspace/${workspaceId}/executions/${started.id}`);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not start the run.');
+      setError(cause instanceof Error ? cause.message : t('Could not start the run.'));
     } finally {
       setRunning(false);
     }
@@ -3503,7 +3504,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       applyGraphFeedback(graph);
       setSaved(true);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not publish the workflow.');
+      setError(cause instanceof Error ? cause.message : t('Could not publish the workflow.'));
     } finally {
       setBusy(false);
     }
@@ -3525,7 +3526,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
             to={`/workspace/${workspaceId}`}
             className={styles.backButton}
             onClick={leavingFor(`/workspace/${workspaceId}`)}
-            aria-label="Back to workflows"
+            aria-label={t('Back to workflows')}
           >
             <img src={arrowLeftIcon} alt="" width={14} height={14} />
           </Link>
@@ -3533,17 +3534,15 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
             to={`/workspace/${workspaceId}`}
             className={styles.crumbLink}
             onClick={leavingFor(`/workspace/${workspaceId}`)}
-          >
-            Workflows
-          </Link>
+          >{t('Workflows')}</Link>
           <span className={styles.crumbSeparator}>/</span>
           <span className={styles.workflowName}>{name}</span>
           <Link
             to={`/workspace/${workspaceId}/workflows/${workflowId}/settings`}
             className={styles.renameButton}
             onClick={leavingFor(`/workspace/${workspaceId}/workflows/${workflowId}/settings`)}
-            aria-label="Rename workflow"
-            title="Rename workflow"
+            aria-label={t('Rename workflow')}
+            title={t('Rename workflow')}
           >
             <img src={pencilIcon} alt="" width={14} height={14} />
           </Link>
@@ -3553,17 +3552,15 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           {!enabled && (
             <span
               className={`${styles.badge} ${styles.badgeOff}`}
-              title="No trigger, schedule or tool call will start this workflow while it is switched off. Run still will."
-            >
-              Switched off
-            </span>
+              title={t('No trigger, schedule or tool call will start this workflow while it is switched off. Run still will.')}
+            >{t('Switched off')}</span>
           )}
           {error !== null && (
             <span className={styles.error} role="alert">
               {error}
             </span>
           )}
-          {saved && error === null && <span className={styles.savedNote}>Saved.</span>}
+          {saved && error === null && <span className={styles.savedNote}>{t('Saved.')}</span>}
         </div>
 
         <div className={styles.toolbarRight}>
@@ -3621,9 +3618,9 @@ Change the keystroke in Preferences.`}
             obeys so a rebinding shows here too.
           */}
           <ToolButton
-            label="Duplicate"
+            label={t('Duplicate')}
             shortcut={selectedKey === null ? null : copyKey}
-            note={selectedKey === null ? 'Select a node to copy it.' : 'Change the keystroke in Preferences.'}
+            note={selectedKey === null ? t('Select a node to copy it.') : t('Change the keystroke in Preferences.')}
             onClick={() => duplicate()}
             disabled={selectedKey === null}
           >
@@ -3643,14 +3640,14 @@ Change the keystroke in Preferences.`}
             for the same boundary.
           */}
           <ToolButton
-            label="Export"
-            note="Downloads the workflow as a file, as it was last saved."
+            label={t('Export')}
+            note={t("Downloads the workflow as a file, as it was last saved.")}
             onClick={() => setExporting(true)}
           >
             <img src={downloadIcon} alt="" width={16} height={16} />
           </ToolButton>
           <ToolButton
-            label="Remove workflow from workspace"
+            label={t('Remove workflow from workspace')}
             className={styles.deleteButton}
             onClick={() => setRemoving(true)}
           >
@@ -3665,10 +3662,10 @@ Change the keystroke in Preferences.`}
             Grey while there is nowhere to go, which is also how somebody learns
             the editor has been remembering at all.
           */}
-          <ToolButton label="Undo" shortcut={undoKey} onClick={() => undo()} disabled={steps.back === 0}>
+          <ToolButton label={t('Undo')} shortcut={undoKey} onClick={() => undo()} disabled={steps.back === 0}>
             <img src={undoIcon} alt="" width={16} height={16} />
           </ToolButton>
-          <ToolButton label="Redo" shortcut={redoKey} onClick={() => redo()} disabled={steps.forward === 0}>
+          <ToolButton label={t('Redo')} shortcut={redoKey} onClick={() => redo()} disabled={steps.forward === 0}>
             <img src={redoIcon} alt="" width={16} height={16} />
           </ToolButton>
           {/*
@@ -3689,9 +3686,7 @@ Change the keystroke in Preferences.`}
             onClick={() => setDiscarding(true)}
             disabled={busy}
             data-tip={'Discard changes\nPuts the graph back as it was last saved.'}
-          >
-            Discard
-          </button>
+          >{t('Discard')}</button>
           {/*
             The keystroke is shown on the button that does the same thing,
             because that is the only way anybody finds out it exists without
@@ -3704,12 +3699,12 @@ Change the keystroke in Preferences.`}
             it lasts.
           */}
           {busy ? (
-            <span className={styles.working}>Working…</span>
+            <span className={styles.working}>{t('Working…')}</span>
           ) : (
             <ToolButton
-              label="Save"
+              label={t('Save')}
               shortcut={save}
-              note="Change the keystroke in Preferences."
+              note={t("Change the keystroke in Preferences.")}
               onClick={() => void handleSave()}
             >
               <img src={saveIcon} alt="" width={16} height={16} />
@@ -3722,11 +3717,11 @@ Change the keystroke in Preferences.`}
             thing somebody pressed Run to see.
           */}
           {running ? (
-            <span className={styles.working}>Starting…</span>
+            <span className={styles.working}>{t('Starting…')}</span>
           ) : (
             <ToolButton
-              label="Run"
-              note="Runs the workflow as it is on screen and opens the run."
+              label={t('Run')}
+              note={t("Runs the workflow as it is on screen and opens the run.")}
               onClick={() => void handleRun()}
               disabled={busy}
             >
@@ -3741,7 +3736,7 @@ Change the keystroke in Preferences.`}
             it the loud one.
           */}
           <ToolButton
-            label="Publish"
+            label={t('Publish')}
             /*
               The keystroke on the tooltip, for the reason Save's and
               Duplicate's are: nobody finds out a shortcut exists without being
@@ -3750,7 +3745,7 @@ Change the keystroke in Preferences.`}
               somebody who changed it in Preferences is shown what they chose.
             */
             shortcut={publishKey}
-            note="Change the keystroke in Preferences."
+            note={t("Change the keystroke in Preferences.")}
             className={unpublished ? styles.publishButton : styles.publishButtonQuiet}
             onClick={() => void handlePublish()}
             disabled={busy}
@@ -3871,7 +3866,7 @@ Change the keystroke in Preferences.`}
               <div className={styles.fields}>
                 <div className={styles.field}>
                   <label className={styles.label} htmlFor="node-name">
-                    Node Name
+                    {t('Node Name')}
                   </label>
                   <div className={`${styles.inputWrapper} ${styles.inputActive}`}>
                     <input
@@ -3889,10 +3884,10 @@ Change the keystroke in Preferences.`}
                     <span className={styles.labelRow}>
                       <span className={styles.labelWithHint}>
                         <label className={styles.label} htmlFor="node-agent">
-                          Agent
+                          {t('Agent')}
                         </label>
                         {/* The agent brings its own, so the node chooses no model. */}
-                        <FieldHint label="Agent">
+                        <FieldHint label={t('Agent')}>
                           The agent supplies the model it answers on, its instructions, and the catalogs it
                           was granted.
                         </FieldHint>
@@ -3903,7 +3898,7 @@ Change the keystroke in Preferences.`}
                           className={styles.definitionLink}
                           onClick={() => setBuilding({ kind: 'AGENT', id: null })}
                         >
-                          New
+                          {t('New')}
                         </button>
                         {draft.agentId !== null && (
                           <Link
@@ -3914,8 +3909,8 @@ Change the keystroke in Preferences.`}
                               draft.agentId,
                               `/workspace/${workspaceId}/agents/${draft.agentId}/settings`,
                             )}
-                            title="Opens the agent this node points at"
-                            aria-label="Open the agent's definition"
+                            title={t('Opens the agent this node points at')}
+                            aria-label={t('Open the agent\'s definition')}
                           >
                             <OpenDefinitionIcon />
                           </Link>
@@ -3927,8 +3922,8 @@ Change the keystroke in Preferences.`}
                       value={draft.agentId ?? ''}
                       options={agents.map((agent) => ({ value: agent.id, label: agent.name }))}
                       onChoose={(chosen) => setDraft({ ...draft, agentId: chosen || null })}
-                      placeholder="Choose an agent…"
-                      searchPlaceholder="Search agents…"
+                      placeholder={t('Choose an agent…')}
+                      searchPlaceholder={t("Search agents…")}
                     />
                   </div>
                 )}
@@ -3945,10 +3940,10 @@ Change the keystroke in Preferences.`}
                   <div className={styles.field}>
                     <span className={styles.labelWithHint}>
                       <span className={styles.label}>Session</span>
-                      <FieldHint label="Session">
+                      <FieldHint label={t('Session')}>
                         {sessionChoices.length === 0
-                          ? 'Add an LLM Session node to keep what this agent is told and what it answers.'
-                          : 'What this agent is told and answers is kept here, and read back on the next run. Its key is set on the session itself.'}
+                          ? t('Add an LLM Session node to keep what this agent is told and what it answers.')
+                          : t('What this agent is told and answers is kept here, and read back on the next run. Its key is set on the session itself.')}
                       </FieldHint>
                     </span>
                     {wiredSessions.length > 1 ? (
@@ -3962,8 +3957,8 @@ Change the keystroke in Preferences.`}
                         value={wiredSessions.length === 1 ? sessionNodeKey ?? '' : ''}
                         options={sessionChoices}
                         onChoose={(chosen) => selectedKey !== null && chooseSession(selectedKey, chosen)}
-                        placeholder={sessionChoices.length === 0 ? 'No sessions on this graph' : 'No session'}
-                        searchPlaceholder="Search sessions…"
+                        placeholder={sessionChoices.length === 0 ? t('No sessions on this graph') : t('No session')}
+                        searchPlaceholder={t("Search sessions…")}
                       />
                     )}
                   </div>
@@ -3973,7 +3968,7 @@ Change the keystroke in Preferences.`}
                   <div className={styles.field}>
                     <span className={styles.labelRow}>
                       <label className={styles.label} htmlFor="node-trigger">
-                        Trigger
+                        {t('Trigger')}
                       </label>
                       <span className={styles.labelLinks}>
                         <button
@@ -3981,7 +3976,7 @@ Change the keystroke in Preferences.`}
                           className={styles.definitionLink}
                           onClick={() => setBuilding({ kind: 'TRIGGER', id: null })}
                         >
-                          New
+                          {t('New')}
                         </button>
                         {/* Where the node points, so the definition is one click away. */}
                         {draft.triggerId !== null && (
@@ -3993,8 +3988,8 @@ Change the keystroke in Preferences.`}
                               draft.triggerId,
                               `/workspace/${workspaceId}/triggers/${draft.triggerId}`,
                             )}
-                            title="Opens the trigger this node points at"
-                            aria-label="Open the trigger's definition"
+                            title={t('Opens the trigger this node points at')}
+                            aria-label={t('Open the trigger\'s definition')}
                           >
                             <OpenDefinitionIcon />
                           </Link>
@@ -4006,8 +4001,8 @@ Change the keystroke in Preferences.`}
                       value={draft.triggerId ?? ''}
                       options={triggers.map((trigger) => ({ value: trigger.id, label: trigger.name }))}
                       onChoose={(chosen) => setDraft({ ...draft, triggerId: chosen || null })}
-                      placeholder="Choose a trigger…"
-                      searchPlaceholder="Search triggers…"
+                      placeholder={t('Choose a trigger…')}
+                      searchPlaceholder={t("Search triggers…")}
                     />
                   </div>
                 )}
@@ -4016,7 +4011,7 @@ Change the keystroke in Preferences.`}
                   <div className={styles.field}>
                     <span className={styles.labelRow}>
                       <label className={styles.label} htmlFor="node-action">
-                        Action
+                        {t('Action')}
                       </label>
                       <span className={styles.labelLinks}>
                         <button
@@ -4024,7 +4019,7 @@ Change the keystroke in Preferences.`}
                           className={styles.definitionLink}
                           onClick={() => setBuilding({ kind: 'ACTION', id: null })}
                         >
-                          New
+                          {t('New')}
                         </button>
                         {draft.actionId !== null && (
                           <Link
@@ -4035,8 +4030,8 @@ Change the keystroke in Preferences.`}
                               draft.actionId,
                               `/workspace/${workspaceId}/actions/${draft.actionId}`,
                             )}
-                            title="Opens the action this node points at"
-                            aria-label="Open the action's definition"
+                            title={t('Opens the action this node points at')}
+                            aria-label={t('Open the action\'s definition')}
                           >
                             <OpenDefinitionIcon />
                           </Link>
@@ -4048,8 +4043,8 @@ Change the keystroke in Preferences.`}
                       value={draft.actionId ?? ''}
                       options={actions.map((action) => ({ value: action.id, label: action.name }))}
                       onChoose={(chosen) => setDraft({ ...draft, actionId: chosen || null })}
-                      placeholder="Choose an action…"
-                      searchPlaceholder="Search actions…"
+                      placeholder={t('Choose an action…')}
+                      searchPlaceholder={t("Search actions…")}
                     />
                   </div>
                 )}
@@ -4064,9 +4059,9 @@ Change the keystroke in Preferences.`}
                     <span className={styles.labelRow}>
                       <span className={styles.labelWithHint}>
                         <label className={styles.label} htmlFor="node-object">
-                          Shape
+                          {t('Shape')}
                         </label>
-                        <FieldHint label="Shape">
+                        <FieldHint label={t('Shape')}>
                           A saved shape fixes which fields there are; this node decides what goes in them.
                           Custom means the fields are this node&apos;s own.
                         </FieldHint>
@@ -4077,15 +4072,15 @@ Change the keystroke in Preferences.`}
                           className={styles.definitionLink}
                           onClick={() => setBuilding({ kind: 'OBJECT', id: null })}
                         >
-                          New
+                          {t('New')}
                         </button>
                         {draft.objectId !== null && (
                           <Link
                             to={`/workspace/${workspaceId}/objects/${draft.objectId}`}
                             className={styles.definitionJump}
                             onClick={leavingFor(`/workspace/${workspaceId}/objects/${draft.objectId}`)}
-                            title="Opens the object this node points at"
-                            aria-label="Open the object's definition"
+                            title={t('Opens the object this node points at')}
+                            aria-label={t('Open the object\'s definition')}
                           >
                             <OpenDefinitionIcon />
                           </Link>
@@ -4097,8 +4092,8 @@ Change the keystroke in Preferences.`}
                       value={draft.objectId ?? ''}
                       options={objects.map((shape) => ({ value: shape.id, label: shape.name }))}
                       onChoose={(chosen) => setDraft({ ...draft, objectId: chosen || null })}
-                      placeholder="Choose a shape…"
-                      searchPlaceholder="Search objects…"
+                      placeholder={t('Choose a shape…')}
+                      searchPlaceholder={t("Search objects…")}
                     />
                   </div>
                 )}
@@ -4166,15 +4161,15 @@ Change the keystroke in Preferences.`}
                             })
                           }
                         >
-                          + Add field
+                          {t('+ Add field')}
                         </button>
                       )}
                     </span>
                     {draft.mappings.length === 0 ? (
                       <p className={styles.fieldNote}>
                         {draft.kind === 'OBJECT'
-                          ? 'No fields yet, so this node would make nothing.'
-                          : 'This action takes no parameters.'}
+                          ? t('No fields yet, so this node would make nothing.')
+                          : t('This action takes no parameters.')}
                       </p>
                     ) : (
                       <>
@@ -4230,9 +4225,7 @@ Change the keystroke in Preferences.`}
                                         mappings: draft.mappings.filter((_, at) => at !== index),
                                       })
                                     }
-                                  >
-                                    Remove
-                                  </button>
+                                  >{t('Remove')}</button>
                                 )}
                                 {(() => {
                                   // The node holds a copy on purpose, and a copy
@@ -4249,7 +4242,7 @@ Change the keystroke in Preferences.`}
                                     <button
                                       type="button"
                                       className={styles.parameterSync}
-                                      title="Replace this with the agent's own briefing as it is now"
+                                      title={t('Replace this with the agent\'s own briefing as it is now')}
                                       onClick={() =>
                                         setDraft({
                                           ...draft,
@@ -4258,9 +4251,7 @@ Change the keystroke in Preferences.`}
                                           ),
                                         })
                                       }
-                                    >
-                                      Sync
-                                    </button>
+                                    >{t('Sync')}</button>
                                   ) : null;
                                 })()}
                               </span>
@@ -4398,18 +4389,14 @@ Change the keystroke in Preferences.`}
                 {handlesFailure(draft.kind) && (
                   <div className={styles.field}>
                     <span className={styles.labelWithHint}>
-                      <span className={styles.label}>When it fails</span>
-                      <FieldHint label="When it fails">
+                      <span className={styles.label}>{t('When it fails')}</span>
+                      <FieldHint label={t('When it fails')}>
                         <p>
-                          Off, a failure stops the run where it happened. On, the node grows a second handle
-                          and the run carries on down whatever is wired to it — so the graph says what to
-                          do about a failure instead of the run simply ending.
+                          {t('Off, a failure stops the run where it happened. On, the node grows a second handle and the run carries on down whatever is wired to it — so the graph says what to do about a failure instead of the run simply ending.')}
                         </p>
                         {draft.fallbackEnabled === true && (
                           <p>
-                            The upper handle is the run going on as it always did, and the line already
-                            drawn from this node stays exactly as it is. The lower one is the failure, and
-                            its line is the red one.
+                            {t('The upper handle is the run going on as it always did, and the line already drawn from this node stays exactly as it is. The lower one is the failure, and its line is the red one.')}
                           </p>
                         )}
                       </FieldHint>
@@ -4438,7 +4425,7 @@ Change the keystroke in Preferences.`}
                           }
                         }}
                       />
-                      <span>Handle it here</span>
+                      <span>{t('Handle it here')}</span>
                     </label>
                     {/*
                       The same two names a condition has, for the same reason:
@@ -4454,14 +4441,14 @@ Change the keystroke in Preferences.`}
                             className={`${styles.input} ${styles.branchInput}`}
                             value={draft.yesLabel ?? ''}
                             placeholder={BRANCH_DEFAULTS.FAILURE.yes}
-                            aria-label="What the working path is called"
+                            aria-label={t('What the working path is called')}
                             onChange={(event) => setDraft({ ...draft, yesLabel: event.target.value || null })}
                           />
                           <input
                             className={`${styles.input} ${styles.branchInput}`}
                             value={draft.noLabel ?? ''}
                             placeholder={BRANCH_DEFAULTS.FAILURE.no}
-                            aria-label="What the failure path is called"
+                            aria-label={t('What the failure path is called')}
                             onChange={(event) => setDraft({ ...draft, noLabel: event.target.value || null })}
                           />
                         </div>
@@ -4473,10 +4460,9 @@ Change the keystroke in Preferences.`}
                 {draft.kind === 'CONDITION' && (
                   <div className={styles.field}>
                     <span className={styles.labelWithHint}>
-                      <span className={styles.label}>Ways out</span>
-                      <FieldHint label="Ways out">
-                        Two lines leave a condition: the upper handle for the answer that holds, the lower
-                        for the one that does not. Either may be left unconnected.
+                      <span className={styles.label}>{t('Ways out')}</span>
+                      <FieldHint label={t('Ways out')}>
+                        {t('Two lines leave a condition: the upper handle for the answer that holds, the lower for the one that does not. Either may be left unconnected.')}
                       </FieldHint>
                     </span>
                     {/*
@@ -4490,14 +4476,14 @@ Change the keystroke in Preferences.`}
                         className={`${styles.input} ${styles.branchInput}`}
                         value={draft.yesLabel ?? ''}
                         placeholder={BRANCH_DEFAULTS.CONDITION.yes}
-                        aria-label="What the yes branch is called"
+                        aria-label={t('What the yes branch is called')}
                         onChange={(event) => setDraft({ ...draft, yesLabel: event.target.value || null })}
                       />
                       <input
                         className={`${styles.input} ${styles.branchInput}`}
                         value={draft.noLabel ?? ''}
                         placeholder={BRANCH_DEFAULTS.CONDITION.no}
-                        aria-label="What the no branch is called"
+                        aria-label={t('What the no branch is called')}
                         onChange={(event) => setDraft({ ...draft, noLabel: event.target.value || null })}
                       />
                     </div>
@@ -4508,16 +4494,14 @@ Change the keystroke in Preferences.`}
                   <div className={styles.field}>
                     <span className={styles.labelRow}>
                       <label className={styles.label} htmlFor="node-condition">
-                        Condition
+                        {t('Condition')}
                       </label>
                       <span className={styles.labelLinks}>
                         <button
                           type="button"
                           className={styles.definitionLink}
                           onClick={() => setBuilding({ kind: 'CONDITION', id: null })}
-                        >
-                          New
-                        </button>
+                        >{t('New')}</button>
                         {draft.conditionId !== null && (
                           <Link
                             to={`/workspace/${workspaceId}/conditions/${draft.conditionId}`}
@@ -4527,8 +4511,8 @@ Change the keystroke in Preferences.`}
                               draft.conditionId,
                               `/workspace/${workspaceId}/conditions/${draft.conditionId}`,
                             )}
-                            title="Opens the condition this node points at"
-                            aria-label="Open the condition's definition"
+                            title={t('Opens the condition this node points at')}
+                            aria-label={t('Open the condition\'s definition')}
                           >
                             <OpenDefinitionIcon />
                           </Link>
@@ -4540,23 +4524,21 @@ Change the keystroke in Preferences.`}
                       value={draft.conditionId ?? ''}
                       options={conditions.map((condition) => ({ value: condition.id, label: condition.name }))}
                       onChoose={(chosen) => setDraft({ ...draft, conditionId: chosen || null })}
-                      placeholder="Choose a condition…"
-                      searchPlaceholder="Search conditions…"
+                      placeholder={t('Choose a condition…')}
+                      searchPlaceholder={t("Search conditions…")}
                     />
                   </div>
                 )}
 
                 <div className={styles.field}>
                   <span className={styles.labelRow}>
-                    <span className={styles.label}>Icon</span>
+                    <span className={styles.label}>{t('Icon')}</span>
                     {draft.icon !== null && (
                       <button
                         type="button"
                         className={styles.parameterSync}
                         onClick={() => setDraft({ ...draft, icon: null })}
-                      >
-                        Clear
-                      </button>
+                      >{t('Clear')}</button>
                     )}
                   </span>
                   <div className={styles.inputWrapper}>
@@ -4564,18 +4546,15 @@ Change the keystroke in Preferences.`}
                     <span className={draft.icon === null ? styles.iconNone : styles.iconName}>
                       {draft.icon ?? 'None'}
                     </span>
-                    <button type="button" className={styles.parameterSync} onClick={() => setBrowsingIcons(true)}>
-                      Browse…
-                    </button>
+                    <button type="button" className={styles.parameterSync} onClick={() => setBrowsingIcons(true)}>{t('Browse…')}</button>
                   </div>
                 </div>
 
                 <div className={styles.field}>
                   <span className={styles.labelWithHint}>
-                    <span className={styles.label}>Facing</span>
-                    <FieldHint label="Facing">
-                      Where the lines join it. Nothing about what runs; a long chain reads better down a
-                      screen than off the side of one.
+                    <span className={styles.label}>{t('Facing')}</span>
+                    <FieldHint label={t('Facing')}>
+                      {t('Where the lines join it. Nothing about what runs; a long chain reads better down a screen than off the side of one.')}
                     </FieldHint>
                   </span>
                   {/*
@@ -4591,10 +4570,8 @@ Change the keystroke in Preferences.`}
                       type="button"
                       className={styles.parameterSync}
                       onClick={turnSelected}
-                      title="Turn the node (R)"
-                    >
-                      Turn
-                    </button>
+                      title={t('Turn the node (R)')}
+                    >{t('Turn')}</button>
                   </div>
                 </div>
 
@@ -4602,9 +4579,9 @@ Change the keystroke in Preferences.`}
                   <div className={styles.field}>
                     <span className={styles.labelWithHint}>
                       <label className={styles.label} htmlFor="node-output-name">
-                        Output name
+                        {t('Output name')}
                       </label>
-                      <FieldHint label="Output name">
+                      <FieldHint label={t('Output name')}>
                         {draft.kind === 'AGENT' ? (
                           <>
                             An agent answers in prose, which has no fields to point at. Naming the answer is
@@ -4647,7 +4624,7 @@ Change the keystroke in Preferences.`}
 
                 <div className={styles.field}>
                   <label className={styles.label} htmlFor="node-description">
-                    Description
+                    {t('Description')}
                   </label>
                   <div className={`${styles.inputWrapper} ${styles.inputWrapperTall}`}>
                     <textarea
@@ -4661,7 +4638,7 @@ Change the keystroke in Preferences.`}
               </div>
 
               <div className={styles.ports}>
-                <p className={styles.portsHeading}>Needs</p>
+                <p className={styles.portsHeading}>{t('Needs')}</p>
                 <p className={styles.portsList}>
                   {(nodes.find((node) => node.id === selectedKey)?.data as NodeData | undefined) &&
                   (portsFor(selectedKey)?.inputs?.length ?? 0) > 0
@@ -4670,13 +4647,13 @@ Change the keystroke in Preferences.`}
                         .join(', ')
                     : 'Nothing'}
                 </p>
-                <p className={styles.portsHeading}>Hands on</p>
+                <p className={styles.portsHeading}>{t('Hands on')}</p>
                 <p className={styles.portsList}>
                   {(portsFor(selectedKey)?.outputs?.length ?? 0) > 0
                     ? portsFor(selectedKey)
                         ?.outputs?.map((port) => port.display)
                         .join(', ')
-                    : 'What it was given'}
+                    : t('What it was given')}
                 </p>
               </div>
 
@@ -4827,12 +4804,12 @@ Change the keystroke in Preferences.`}
       <NameDialog
         placement="panel"
         open={building?.kind === 'OBJECT'}
-        title="Create Object"
-        message="An object names a shape, so a mapping can be offered rather than typed blind."
+        title={t('Create Object')}
+        message={t("An object names a shape, so a mapping can be offered rather than typed blind.")}
         nameLabel="Name"
         namePlaceholder="SlackMessage"
-        descriptionPlaceholder="Represents an incoming Slack message with metadata"
-        submitLabel="Create Object"
+        descriptionPlaceholder={t("Represents an incoming Slack message with metadata")}
+        submitLabel={t("Create Object")}
         onClose={() => setBuilding(null)}
         onSubmit={async (name, description) => {
           const made = await createObject(workspaceId, { name, description: description || undefined });

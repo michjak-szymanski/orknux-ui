@@ -15,6 +15,7 @@ import { SortControl } from '../../components/SortControl';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceIssuesPage.module.css';
+import { t } from '../../i18n';
 
 export interface WorkspaceIssuesPageProps {
   session: SessionUser;
@@ -49,7 +50,7 @@ const STALE_AFTER_MS = 30_000;
 /** Open first, because that is what somebody arriving is looking at. */
 const FILTERS: { label: string; status: IssueStatus | null }[] = [
   { label: 'Open', status: 'OPEN' },
-  { label: 'In progress', status: 'IN_PROGRESS' },
+  { label: t('In progress'), status: 'IN_PROGRESS' },
   { label: 'Closed', status: 'CLOSED' },
   { label: 'All', status: null },
 ];
@@ -72,8 +73,8 @@ const FILTERS: { label: string; status: IssueStatus | null }[] = [
 const ORDERS: { label: string; order: IssueOrder }[] = [
   { label: 'Number', order: 'NUMBER' },
   { label: 'Title', order: 'TITLE' },
-  { label: 'Last change', order: 'UPDATED' },
-  { label: 'Last comment', order: 'LAST_COMMENT' },
+  { label: t('Last change'), order: 'UPDATED' },
+  { label: t('Last comment'), order: 'LAST_COMMENT' },
   { label: 'Type', order: 'TYPE' },
 ];
 
@@ -239,7 +240,7 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
         })
         .catch((cause: unknown) => {
           if (!current) return;
-          setError(cause instanceof Error ? cause.message : 'Could not load the issues.');
+          setError(cause instanceof Error ? cause.message : t('Could not load the issues.'));
           setLoading(false);
         });
     }, SEARCH_PAUSE_MS);
@@ -313,9 +314,9 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
       <section className={styles.card}>
         <header className={styles.header}>
           <div className={styles.titleGroup}>
-            <h1 className={styles.title}>Issues</h1>
+            <h1 className={styles.title}>{t('Issues')}</h1>
             <p className={styles.subtitle}>
-              What is wrong with this workspace's work, and who is looking at it.
+              {t('What is wrong with this workspace\'s work, and who is looking at it.')}
             </p>
           </div>
           <button
@@ -324,12 +325,12 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
             onClick={() => navigate(`/workspace/${workspaceId}/issues/new`)}
           >
             <img src={plusIcon} alt="" width={14} height={14} />
-            New Issue
+            {t('New Issue')}
           </button>
         </header>
 
         <div className={styles.filters}>
-          <div className={styles.tabs} role="group" aria-label="Filter by status">
+          <div className={styles.tabs} role="group" aria-label={t('Filter by status')}>
             {FILTERS.map((filter) => (
               <button
                 key={filter.label}
@@ -352,17 +353,17 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
           {types.length > 0 && (
             <select
               className={styles.typeFilter}
-              aria-label="Filter by type"
+              aria-label={t('Filter by type')}
               value={typeParam ?? ''}
               onChange={(event) => filterBy({ type: event.target.value === '' ? null : event.target.value })}
             >
-              <option value="">Any type</option>
+              <option value="">{t('Any type')}</option>
               {types.map((type) => (
                 <option key={type.id} value={type.id}>
                   {type.name}
                 </option>
               ))}
-              <option value="untyped">Untyped</option>
+              <option value="untyped">{t('Untyped')}</option>
             </select>
           )}
 
@@ -372,8 +373,8 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
               className={styles.search}
               type="search"
               value={typed}
-              placeholder="Search titles, descriptions and labels…"
-              aria-label="Search issues"
+              placeholder={t('Search titles, descriptions and labels…')}
+              aria-label={t('Search issues')}
               onChange={(event) => setTyped(event.target.value)}
             />
           </div>
@@ -430,8 +431,8 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
           {!loading && issues?.content.length === 0 && (
             <p className={styles.notice}>
               {search.trim() === '' && status === 'OPEN'
-                ? 'Nothing open. That is either good news or an empty tracker.'
-                : 'Nothing matches that.'}
+                ? t('Nothing open. That is either good news or an empty tracker.')
+                : t('Nothing matches that.')}
             </p>
           )}
 

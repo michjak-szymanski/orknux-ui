@@ -1,6 +1,7 @@
 import type { ComponentBinding, ComponentExclusion, ComponentKind, ExportDepth, ImportPlan } from './transfer';
 import { PLAN_FIELDS } from './transfer';
 import { graphql } from './client';
+import { t } from '../i18n';
 
 /**
  * The installation's component templates.
@@ -190,7 +191,7 @@ export async function deleteComponentTemplate(id: string): Promise<boolean> {
  * deciding whether to press Use.
  */
 export function contentsSummary(template: ComponentTemplate): string {
-  if (template.contents.length === 0) return 'Nothing this installation can read';
+  if (template.contents.length === 0) return t('Nothing this installation can read');
   const counted = new Map<ComponentKind, number>();
   template.contents.forEach((held) => counted.set(held.kind, (counted.get(held.kind) ?? 0) + 1));
   const parts = [...counted.entries()].map(([kind, count]) =>

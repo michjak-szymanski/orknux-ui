@@ -8,6 +8,8 @@ import searchIcon from '../../assets/search.svg';
 import { AppShell, SidebarNavItem } from '../../components/AppShell';
 import { Markdown } from '../../components/Markdown';
 import { segments } from '../../components/searchMatches';
+import { t } from '../../i18n';
+import { currentLanguage } from '../../session/language';
 import { shellUser } from '../../session/user';
 import styles from './DocsPage.module.css';
 
@@ -37,18 +39,49 @@ interface DocPage {
   /** The first heading in the file. */
   title: string;
   body: string;
+  /** True where this page is the English one shown to somebody reading Polish. */
+  untranslated: boolean;
 }
 
-function pages(): DocPage[] {
-  return Object.entries(SOURCES)
+/**
+ * The manual in the language somebody is reading, page by page.
+ *
+ * A page is translated by putting `02-workflows.pl.md` beside `02-workflows.md`,
+ * and nothing else: the file is picked up here, keeps the English page's slug so
+ * every link and every deep link still lands, and the English one is used where
+ * there is no Polish one.
+ *
+ * Per page rather than all or nothing, because the manual is twenty-seven
+ * thousand words and translating it is a different job from translating a
+ * label - one that arrives a chapter at a time. What must not happen is a
+ * reader who cannot tell which they are looking at, which is why an untranslated
+ * page says so above itself rather than simply appearing in English.
+ */
+function pages(language: string): DocPage[] {
+  const named = new Map<string, { path: string; body: string }>();
+  const translated = new Map<string, string>();
+
+  for (const [path, body] of Object.entries(SOURCES)) {
+    const file = path.split('/').pop()?.replace(/\.md$/, '') ?? '';
+    const tag = /\.([a-z]{2})$/.exec(file);
+    if (tag === null) {
+      named.set(file, { path, body });
+    } else if (tag[1] === language) {
+      translated.set(file.slice(0, -tag[0].length), body);
+    }
+  }
+
+  return [...named.entries()]
     .sort(([left], [right]) => left.localeCompare(right))
-    .map(([path, body]) => {
-      const name = path.split('/').pop()?.replace(/\.md$/, '') ?? '';
+    .map(([name, english]) => {
+      const polish = translated.get(name);
+      const body = polish ?? english.body;
       const heading = /^#\s+(.+)$/m.exec(body);
       return {
         slug: name.replace(/^\d+-/, ''),
         title: heading?.[1] ?? name,
         body,
+        untranslated: polish === undefined && language !== 'en',
       };
     });
 }
@@ -173,7 +206,8 @@ const READING_LINE = 120;
  */
 export function DocsPage({ session, onSignOut }: DocsPageProps) {
   const { page } = useParams();
-  const all = useMemo(pages, []);
+  const language = currentLanguage();
+  const all = useMemo(() => pages(language), [language]);
   const [query, setQuery] = useState('');
   const hits = useMemo(() => search(all, query), [all, query]);
   const searching = query.trim() !== '';
@@ -418,6 +452,9 @@ export function DocsPage({ session, onSignOut }: DocsPageProps) {
               else sections.current.set(one.slug, element);
             }}
           >
+            {one.untranslated && (
+              <p className={styles.notTranslated}>{t('This page is not translated yet.')}</p>
+            )}
             {/*
               The manual is where a picture is a picture of this application,
               taken at 1440 and drawn into a column half that: `zoomImages` is

@@ -6,6 +6,7 @@ import { requestPasswordReset } from '../../api/passwordReset';
 import orknuxMark from '../../assets/orknux-mark.svg';
 import { Attribution } from '../../components/Attribution';
 import styles from './LoginPage.module.css';
+import { t } from '../../i18n';
 
 export interface ForgotPasswordPageProps {
   version?: string;
@@ -42,7 +43,7 @@ export function ForgotPasswordPage({ version = `v${__APP_VERSION__}` }: ForgotPa
     try {
       setSent(await requestPasswordReset(email.trim()));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not ask for a link.');
+      setError(cause instanceof Error ? cause.message : t('Could not ask for a link.'));
     } finally {
       setSubmitting(false);
     }
@@ -61,10 +62,10 @@ export function ForgotPasswordPage({ version = `v${__APP_VERSION__}` }: ForgotPa
           </div>
 
           <div className={styles.headings}>
-            <h1 className={styles.title}>Reset password</h1>
+            <h1 className={styles.title}>{t('Reset password')}</h1>
             <p className={styles.subtitle}>
               {sent === null
-                ? 'Enter the address on your account and we will send a link to set a new password.'
+                ? t('Enter the address on your account and we will send a link to set a new password.')
                 : sent}
             </p>
           </div>
@@ -75,9 +76,7 @@ export function ForgotPasswordPage({ version = `v${__APP_VERSION__}` }: ForgotPa
             <div className={styles.fields}>
               <div className={styles.field}>
                 <div className={styles.fieldHeader}>
-                  <label className={styles.label} htmlFor={emailId}>
-                    Email
-                  </label>
+                  <label className={styles.label} htmlFor={emailId}>{t('Email')}</label>
                 </div>
                 <div className={styles.inputContainer}>
                   <input
@@ -101,20 +100,16 @@ export function ForgotPasswordPage({ version = `v${__APP_VERSION__}` }: ForgotPa
                 </p>
               )}
               <button type="submit" className={styles.submit} disabled={!canSubmit}>
-                {submitting ? 'Sending…' : 'Send link'}
+                {submitting ? t('Sending…') : t('Send link')}
               </button>
-              <Link className={styles.resetLink} to="/login">
-                Back to sign in
-              </Link>
+              <Link className={styles.resetLink} to="/login">{t('Back to sign in')}</Link>
             </div>
           </form>
         )}
 
         {sent !== null && (
           <div className={styles.actions}>
-            <Link className={styles.resetLink} to="/login">
-              Back to sign in
-            </Link>
+            <Link className={styles.resetLink} to="/login">{t('Back to sign in')}</Link>
           </div>
         )}
 

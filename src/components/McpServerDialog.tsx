@@ -8,6 +8,7 @@ import styles from './Dialog.module.css';
 import { HeaderRowsEditor } from './HeaderRowsEditor';
 import { SecretField, useSecretField } from './SecretField';
 import { useWorkspaceVariables } from '../pages/workspace/workspaceVariables';
+import { t } from '../i18n';
 
 export interface McpServerDialogProps {
   open: boolean;
@@ -94,7 +95,7 @@ export function McpServerDialog({ open, workspaceId, onClose, onCreated }: McpSe
       });
       onCreated(created);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not add the server.');
+      setError(cause instanceof Error ? cause.message : t('Could not add the server.'));
       setSubmitting(false);
     }
   }
@@ -103,16 +104,16 @@ export function McpServerDialog({ open, workspaceId, onClose, onCreated }: McpSe
     <dialog ref={dialogRef} className={`${styles.dialog} ${styles.dialogWide}`} onCancel={onClose} onClose={onClose}>
       <form className={styles.body} onSubmit={handleSubmit}>
         <header className={styles.header}>
-          <h2 className={styles.title}>Add MCP Server</h2>
+          <h2 className={styles.title}>{t('Add MCP Server')}</h2>
         </header>
 
-        <p className={styles.dialogMessage}>Add a server this workspace&rsquo;s agents may connect to</p>
+        <p className={styles.dialogMessage}>
+          {t('Add a server this workspace’s agents may connect to')}
+        </p>
 
         <div className={styles.fields}>
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="mcp-server-name">
-              Name
-            </label>
+            <label className={styles.label} htmlFor="mcp-server-name">{t('Name')}</label>
             <div className={styles.inputWrapper}>
               <input
                 id="mcp-server-name"
@@ -129,9 +130,7 @@ export function McpServerDialog({ open, workspaceId, onClose, onCreated }: McpSe
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="mcp-server-address">
-              Address
-            </label>
+            <label className={styles.label} htmlFor="mcp-server-address">{t('Address')}</label>
             <div className={styles.inputWrapper}>
               <input
                 id="mcp-server-address"
@@ -147,9 +146,7 @@ export function McpServerDialog({ open, workspaceId, onClose, onCreated }: McpSe
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="mcp-server-auth">
-              Auth Type
-            </label>
+            <label className={styles.label} htmlFor="mcp-server-auth">{t('Auth Type')}</label>
             <div className={styles.inputWrapper}>
               <select
                 id="mcp-server-auth"
@@ -174,12 +171,12 @@ export function McpServerDialog({ open, workspaceId, onClose, onCreated }: McpSe
                dialog-level switch would be a claim about every field in it. */
             <SecretField
               id="mcp-server-secret"
-              label="Token / Key"
+              label={t('Token / Key')}
               field={secret}
               options={secrets}
               variablesPath={`/workspace/${workspaceId}/variables`}
-              placeholder="Enter token or key..."
-              hint="Whatever the server expects, sent the way the authentication method above says."
+              placeholder={t('Enter token or key...')}
+              hint={t("Whatever the server expects, sent the way the authentication method above says.")}
               onSource={(next) => {
                 secret.choose(next);
                 if (next === 'VARIABLE') refreshVariables();
@@ -201,10 +198,10 @@ export function McpServerDialog({ open, workspaceId, onClose, onCreated }: McpSe
 
         <div className={styles.actions}>
           <button type="button" className={styles.ghost} onClick={onClose} disabled={submitting}>
-            Cancel
+            {t('Cancel')}
           </button>
           <button type="submit" className={styles.filled} disabled={!complete || submitting}>
-            {submitting ? 'Adding…' : 'Add Server'}
+            {submitting ? t('Adding…') : t('Add Server')}
           </button>
         </div>
       </form>

@@ -45,6 +45,7 @@ import { useCatalogue } from './Catalogue';
 import { DefinitionPicker } from './DefinitionPicker';
 import { FieldHint } from './FieldHint';
 import { IconField } from './IconField';
+import { t } from '../i18n';
 
 /**
  * The class names the form paints itself with.
@@ -132,8 +133,8 @@ const PAGE_SIZE = 100;
  * form that re-renders on every keystroke, would be a picker nobody can arrow
  * down through.
  */
-const NEW_FUNCTION_ROW = { value: NEW_FUNCTION, label: '+ New function' };
-const NEW_CONDITION_ROW = { value: NEW_CONDITION, label: '+ New condition' };
+const NEW_FUNCTION_ROW = { value: NEW_FUNCTION, label: t('+ New function') };
+const NEW_CONDITION_ROW = { value: NEW_CONDITION, label: t('+ New condition') };
 
 /**
  * What a condition asks, and how to change it.
@@ -301,7 +302,7 @@ export function ConditionForm({
   const blockers = useMemo(() => {
     const missing: string[] = [];
 
-    if (name.trim() === '') missing.push('Give the condition a name.');
+    if (name.trim() === '') missing.push(t('Give the condition a name.'));
 
     if (isComposite) {
       if (members.length < 2) {
@@ -310,9 +311,9 @@ export function ConditionForm({
         );
       }
     } else if (type === 'FUNCTION') {
-      if (functionId === '') missing.push('Choose the function to call.');
+      if (functionId === '') missing.push(t('Choose the function to call.'));
       else if (functionId === NEW_FUNCTION && !validFunctionName(newFunctionName)) {
-        missing.push('Name the new function as a script can call it: a letter, then letters or digits.');
+        missing.push(t('Name the new function as a script can call it: a letter, then letters or digits.'));
       }
     } else if (label !== null) {
       const needed = check === 'BETWEEN' ? 2 : 1;
@@ -391,7 +392,7 @@ export function ConditionForm({
         : await createCondition({ workspaceId, ...settings });
       onSaved(saved);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save the condition.');
+      setError(cause instanceof Error ? cause.message : t('Could not save the condition.'));
       setSubmitting(false);
     }
   }
@@ -403,7 +404,7 @@ export function ConditionForm({
       await deleteCondition(condition.id);
       onDeleted?.();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not delete the condition.');
+      setError(cause instanceof Error ? cause.message : t('Could not delete the condition.'));
       setSubmitting(false);
     }
   }
@@ -413,15 +414,13 @@ export function ConditionForm({
       <form className={styles.body} onSubmit={handleSubmit}>
         <div className={styles.fields}>
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="condition-name">
-              Condition Name
-            </label>
+            <label className={styles.label} htmlFor="condition-name">{t('Condition Name')}</label>
             <div className={styles.inputWrapper}>
               <input
                 id="condition-name"
                 className={styles.input}
                 type="text"
-                placeholder="e.g. Is Workspacemate Message"
+                placeholder={t('e.g. Is Workspacemate Message')}
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 autoFocus
@@ -433,13 +432,11 @@ export function ConditionForm({
           <IconField
             value={icon}
             onChange={setIcon}
-            hint="Nodes drawn from this condition start with it; each node can change its own."
+            hint={t("Nodes drawn from this condition start with it; each node can change its own.")}
           />
 
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="condition-type">
-              Type
-            </label>
+            <label className={styles.label} htmlFor="condition-type">{t('Type')}</label>
             <div className={styles.inputWrapper}>
               <select
                 id="condition-type"
@@ -463,9 +460,7 @@ export function ConditionForm({
           {!isComposite && type !== 'FUNCTION' && (
             <>
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="condition-property">
-                  Property
-                </label>
+                <label className={styles.label} htmlFor="condition-property">{t('Property')}</label>
                 <div className={styles.inputWrapper}>
                   <select
                     id="condition-property"
@@ -484,9 +479,7 @@ export function ConditionForm({
               </div>
 
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="condition-check">
-                  Check
-                </label>
+                <label className={styles.label} htmlFor="condition-check">{t('Check')}</label>
                 <div className={styles.inputWrapper}>
                   <select
                     id="condition-check"
@@ -529,11 +522,10 @@ export function ConditionForm({
               <span className={styles.labelRow}>
                 <span className={own.labelWithHint}>
                   <label className={styles.label} htmlFor="condition-function">
-                    Function
+                    {t('Function')}
                   </label>
-                  <FieldHint label="Function">
-                    Only functions that return a boolean can answer a condition. It is handed what the
-                    run is carrying.
+                  <FieldHint label={t('Function')}>
+                    {t('Only functions that return a boolean can answer a condition. It is handed what the run is carrying.')}
                   </FieldHint>
                 </span>
                 {functionId !== '' && functionId !== NEW_FUNCTION && (
@@ -542,8 +534,8 @@ export function ConditionForm({
                     to={`/workspace/${workspaceId}/functions/${functionId}`}
                     target="_blank"
                     rel="noreferrer"
-                    title="Opens the function in a new tab"
-                    aria-label="Open the function's definition"
+                    title={t('Opens the function in a new tab')}
+                    aria-label={t('Open the function\'s definition')}
                   >
                     <OpenDefinitionIcon />
                   </Link>
@@ -557,8 +549,8 @@ export function ConditionForm({
                 value={functionId}
                 options={functionOptions}
                 onChoose={setFunctionId}
-                placeholder="Select function…"
-                searchPlaceholder="Search functions…"
+                placeholder={t('Select function…')}
+                searchPlaceholder={t("Search functions…")}
                 create={NEW_FUNCTION_ROW}
                 failure={functionCatalogue.failure}
               />
@@ -569,7 +561,7 @@ export function ConditionForm({
                       id="condition-new-function"
                       className={`${styles.input} ${styles.inputMono}`}
                       type="text"
-                      aria-label="New function name"
+                      aria-label={t('New function name')}
                       placeholder={NEW_FUNCTION_NAME}
                       value={newFunctionName}
                       // Selected on focus, as the function editor does it: the box
@@ -585,8 +577,7 @@ export function ConditionForm({
                     that has already happened.
                   */}
                   <p className={styles.fieldHint}>
-                    Created with this condition, saying no to everything. Open it in Functions to write
-                    the question it should be asking.
+                    {t('Created with this condition, saying no to everything. Open it in Functions to write the question it should be asking.')}
                   </p>
                 </>
               )}
@@ -594,11 +585,9 @@ export function ConditionForm({
           )}
 
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="condition-negate">
-              Negate
-            </label>
+            <label className={styles.label} htmlFor="condition-negate">{t('Negate')}</label>
             <div className={styles.toggleRow}>
-              <span className={styles.toggleLabel}>Negate</span>
+              <span className={styles.toggleLabel}>{t('Negate')}</span>
               <button
                 type="button"
                 id="condition-negate"
@@ -631,13 +620,13 @@ export function ConditionForm({
                 ))}
                 {/* An empty state, not an explanation: it is what the list has
                     instead of contents, so it stays where the contents would be. */}
-                {values.length === 0 && <span className={styles.fieldHint}>Nothing yet.</span>}
+                {values.length === 0 && <span className={styles.fieldHint}>{t('Nothing yet.')}</span>}
               </div>
               <div className={styles.inputWrapper}>
                 <input
                   className={styles.input}
                   type="text"
-                  placeholder={check === 'BETWEEN' ? '09:00' : 'Add a value…'}
+                  placeholder={check === 'BETWEEN' ? '09:00' : t('Add a value…')}
                   value={draftValue}
                   onChange={(event) => setDraftValue(event.target.value)}
                   onKeyDown={(event) => {
@@ -649,14 +638,14 @@ export function ConditionForm({
                 />
               </div>
               <button type="button" className={styles.addValue} onClick={addValue}>
-                + Add Value
+                {t('+ Add Value')}
               </button>
             </div>
           )}
 
           {isComposite && (
             <div className={styles.field}>
-              <p className={styles.label}>Conditions</p>
+              <p className={styles.label}>{t('Conditions')}</p>
               <div className={styles.tags}>
                 {members.map((member) => (
                   <span key={member} className={styles.tag}>
@@ -664,7 +653,7 @@ export function ConditionForm({
                     <button
                       type="button"
                       className={styles.tagRemove}
-                      aria-label="Remove condition"
+                      aria-label={t('Remove condition')}
                       onClick={() => setMembers((current) => current.filter((id) => id !== member))}
                     >
                       ×
@@ -672,7 +661,7 @@ export function ConditionForm({
                   </span>
                 ))}
                 {/* The same empty state, for the same reason. */}
-                {members.length === 0 && <span className={styles.fieldHint}>Nothing yet.</span>}
+                {members.length === 0 && <span className={styles.fieldHint}>{t('Nothing yet.')}</span>}
               </div>
               {/*
                 Held at nothing on purpose: this picks a member and hands it to
@@ -687,9 +676,9 @@ export function ConditionForm({
                   if (picked === NEW_CONDITION) setMakingMember(true);
                   else setMembers((current) => [...current, picked]);
                 }}
-                placeholder="+ Add Condition"
-                searchPlaceholder="Search conditions…"
-                ariaLabel="Add a condition"
+                placeholder={t('+ Add Condition')}
+                searchPlaceholder={t("Search conditions…")}
+                ariaLabel={t('Add a condition')}
                 create={NEW_CONDITION_ROW}
                 failure={otherCatalogue.failure}
               />
@@ -713,16 +702,16 @@ export function ConditionForm({
         <div className={styles.actions}>
           {editing && onDeleted !== undefined && (
             <button type="button" className={styles.danger} onClick={handleDelete} disabled={submitting}>
-              Delete
+              {t('Delete')}
             </button>
           )}
           {onCancel !== undefined && (
             <button type="button" className={styles.ghost} onClick={onCancel} disabled={submitting}>
-              Cancel
+              {t('Cancel')}
             </button>
           )}
           <button type="submit" className={styles.filled} disabled={!complete || submitting}>
-            {submitting ? 'Saving…' : editing ? 'Save Changes' : 'Create Condition'}
+            {submitting ? t('Saving…') : editing ? t('Save Changes') : t('Create Condition')}
           </button>
         </div>
       </form>

@@ -25,6 +25,7 @@ import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import { useWorkspaceVariables } from './workspaceVariables';
 import styles from './ProviderSettingsPage.module.css';
+import { t } from '../../i18n';
 
 export interface ProviderSettingsPageProps {
   session: SessionUser;
@@ -116,13 +117,13 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
     fetchProvider(providerId)
       .then((found) => {
         if (found === null) {
-          setLoadError('That provider does not exist, or you do not have access to it.');
+          setLoadError(t('That provider does not exist, or you do not have access to it.'));
           return;
         }
         apply(found);
       })
       .catch((cause: unknown) => {
-        setLoadError(cause instanceof Error ? cause.message : 'Could not load the provider.');
+        setLoadError(cause instanceof Error ? cause.message : t('Could not load the provider.'));
       });
   }, [providerId]);
 
@@ -193,7 +194,7 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
    * called this minute, so the label goes to the field and the field names the
    * control - rather than a card-level word standing in for both.
    */
-  const secretLabel = entra ? 'Client Secret' : 'API Key';
+  const secretLabel = entra ? t('Client Secret') : t('API Key');
 
   /**
    * The secrets this workspace keeps, and only those.
@@ -300,7 +301,7 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
       apply(await updateProvider(providerId, values()));
       setSaved(true);
     } catch (cause) {
-      setSaveError(cause instanceof Error ? cause.message : 'Could not save the provider.');
+      setSaveError(cause instanceof Error ? cause.message : t('Could not save the provider.'));
     } finally {
       setSaving(false);
     }
@@ -333,7 +334,7 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
       // a half-finished create into an edit, and the button into Save Changes.
       if (adding) setCreatedId(checked.id);
     } catch (cause) {
-      setSaveError(cause instanceof Error ? cause.message : 'Could not check the provider.');
+      setSaveError(cause instanceof Error ? cause.message : t('Could not check the provider.'));
     } finally {
       setTesting(false);
     }
@@ -344,7 +345,7 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
     try {
       key.show((await revealProviderSecret(providerId)) ?? '');
     } catch (cause) {
-      setSaveError(cause instanceof Error ? cause.message : 'Could not reveal the credentials.');
+      setSaveError(cause instanceof Error ? cause.message : t('Could not reveal the credentials.'));
     }
   }
 
@@ -360,14 +361,14 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
       await removeProvider(remove);
       navigate(`/workspace/${workspaceId}/models`);
     } catch (cause) {
-      setSaveError(cause instanceof Error ? cause.message : 'Could not remove the provider.');
+      setSaveError(cause instanceof Error ? cause.message : t('Could not remove the provider.'));
     }
   }
 
 
   return (
     <AppShell
-      title={adding ? 'New provider' : provider?.name}
+      title={adding ? t('New provider') : provider?.name}
       user={shellUser(session)}
       workspacePath={`/workspace/${workspaceId}`}
       showAdmin={session.admin}
@@ -376,15 +377,15 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
     >
       <header className={styles.headerBlock}>
         <p className={styles.breadcrumbs}>
-          <BackLink to={`/workspace/${workspaceId}/models`} label="Models" />
+          <BackLink to={`/workspace/${workspaceId}/models`} label={t('Models')} />
           <Link className={styles.crumbLink} to={`/workspace/${workspaceId}/models`}>
-            Models
+            {t('Models')}
           </Link>
           <span className={styles.crumbSeparator}>/</span>
-          <span className={styles.crumbCurrent}>{adding ? 'Add Provider' : (provider?.name ?? '…')}</span>
+          <span className={styles.crumbCurrent}>{adding ? t('Add Provider') : (provider?.name ?? '…')}</span>
         </p>
-        <h1 className={styles.pageTitle}>{adding ? 'Add Provider' : (provider?.name ?? 'Provider')}</h1>
-        <p className={styles.subtitle}>Configure a new LLM provider for your workspace</p>
+        <h1 className={styles.pageTitle}>{adding ? t('Add Provider') : (provider?.name ?? 'Provider')}</h1>
+        <p className={styles.subtitle}>{t('Configure a new LLM provider for your workspace')}</p>
       </header>
 
       {loadError !== null ? (
@@ -400,7 +401,7 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
       ) : (
         <form className={styles.form} onSubmit={handleSubmit}>
           <section className={styles.card}>
-            <h2 className={styles.cardTitle}>Provider</h2>
+            <h2 className={styles.cardTitle}>{t('Provider')}</h2>
             <div className={styles.divider} />
             <div className={styles.fieldRow}>
               <div className={styles.field}>
@@ -432,7 +433,7 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
                   className={styles.input}
                   value={name}
                   onChange={(event) => setName(event.target.value)}
-                  placeholder="Azure OpenAI Production"
+                  placeholder={t("Azure OpenAI Production")}
                   required
                 />
               </div>
@@ -440,12 +441,12 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
           </section>
 
           <section className={styles.card}>
-            <h2 className={styles.cardTitle}>{azure ? 'Azure Configuration' : 'Endpoint'}</h2>
+            <h2 className={styles.cardTitle}>{azure ? t('Azure Configuration') : 'Endpoint'}</h2>
             <div className={styles.divider} />
             <div className={styles.fieldRow}>
               <div className={styles.field}>
                 <label className={styles.label} htmlFor="provider-endpoint">
-                  {azure ? 'Azure Endpoint' : 'API Endpoint'} <span className={styles.required}>*</span>
+                  {azure ? t('Azure Endpoint') : t('API Endpoint')} <span className={styles.required}>*</span>
                 </label>
                 <input
                   id="provider-endpoint"
@@ -503,7 +504,7 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
                     className={styles.input}
                     value={region}
                     onChange={(event) => setRegion(event.target.value)}
-                    placeholder="East US"
+                    placeholder={t("East US")}
                   />
                 </div>
               </div>
@@ -511,44 +512,40 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
           </section>
 
           <section className={styles.card}>
-            <h2 className={styles.cardTitle}>Authentication</h2>
+            <h2 className={styles.cardTitle}>{t('Authentication')}</h2>
             <div className={styles.divider} />
 
             {/* Only Azure OpenAI has a second way in, so only it offers a choice. */}
             {azure && (
               <div className={styles.field}>
                 <span className={styles.labelWithHint}>
-                  <span className={styles.label}>Authentication Method</span>
+                  <span className={styles.label}>{t('Authentication Method')}</span>
                   {/*
                     What the method chosen actually does, said about whichever
                     is chosen - the field is a pair of tabs, so the answer to
                     "what is this" changes with the tab and the (?) follows it.
                   */}
-                  <FieldHint label="Authentication Method">
+                  <FieldHint label={t('Authentication Method')}>
                     {entra
-                      ? 'Signs in as an Entra ID service principal: the app registration and its secret are exchanged for a token on each call. No key is stored against the resource.'
-                      : 'Sends one of the keys from the Azure OpenAI resource on every request.'}
+                      ? t('Signs in as an Entra ID service principal: the app registration and its secret are exchanged for a token on each call. No key is stored against the resource.')
+                      : t('Sends one of the keys from the Azure OpenAI resource on every request.')}
                   </FieldHint>
                 </span>
-                <div className={styles.segmented} role="tablist" aria-label="Authentication method">
+                <div className={styles.segmented} role="tablist" aria-label={t('Authentication method')}>
                   <button
                     type="button"
                     role="tab"
                     aria-selected={authMethod === 'API_KEY'}
                     className={authMethod === 'API_KEY' ? styles.segmentActive : styles.segment}
                     onClick={() => setAuthMethod('API_KEY')}
-                  >
-                    API Key
-                  </button>
+                  >{t('API Key')}</button>
                   <button
                     type="button"
                     role="tab"
                     aria-selected={authMethod === 'ENTRA_ID'}
                     className={authMethod === 'ENTRA_ID' ? styles.segmentActive : styles.segment}
                     onClick={() => setAuthMethod('ENTRA_ID')}
-                  >
-                    Service Principal
-                  </button>
+                  >Service Principal</button>
                 </div>
               </div>
             )}
@@ -557,7 +554,7 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
               <div className={styles.fieldRow}>
                 <div className={styles.field}>
                   <label className={styles.label} htmlFor="tenant-id">
-                    Directory (tenant) ID
+                    {t('Directory (tenant) ID')}
                   </label>
                   <input
                     id="tenant-id"
@@ -569,7 +566,7 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
                 </div>
                 <div className={styles.field}>
                   <label className={styles.label} htmlFor="client-id">
-                    Application (client) ID
+                    {t('Application (client) ID')}
                   </label>
                   <input
                     id="client-id"
@@ -600,13 +597,13 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
               field={key}
               options={offered}
               variablesPath={`/workspace/${workspaceId}/variables`}
-              placeholder={entra ? 'Client secret' : 'sk-…'}
+              placeholder={entra ? t('Client secret') : 'sk-…'}
               hint={
                 entra
-                  ? 'Register an app in Azure AD → App registrations → Certificates & secrets.'
+                  ? t('Register an app in Azure AD → App registrations → Certificates & secrets.')
                   : azure
-                    ? 'Found in Azure Portal → Resource → Keys and Endpoint.'
-                    : 'The key the provider issued for this workspace.'
+                    ? t('Found in Azure Portal → Resource → Keys and Endpoint.')
+                    : t('The key the provider issued for this workspace.')
               }
               onSource={chooseSource}
               onValue={() => {
@@ -638,9 +635,7 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
 
             {entra && (
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="scope">
-                  Scope
-                </label>
+                <label className={styles.label} htmlFor="scope">{t('Scope')}</label>
                 <input
                   id="scope"
                   className={`${styles.input} ${styles.inputMono}`}
@@ -684,12 +679,12 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
                         answer of 415 gets reported as a working provider. */}
                     {provider.lastCheckMessage ??
                       (provider.status === 'CONNECTED'
-                        ? 'Connection successful'
+                        ? t('Connection successful')
                         : providerStatusLabel(provider.status))}
                   </span>
                 </>
               ) : (
-                saved && <span className={styles.statusConnected}>Saved.</span>
+                saved && <span className={styles.statusConnected}>{t('Saved.')}</span>
               )}
             </div>
             <div className={styles.buttons}>
@@ -699,10 +694,10 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
                 onClick={() => void handleTest()}
                 disabled={testing || name.trim() === '' || endpoint.trim() === ''}
               >
-                {testing ? 'Checking…' : 'Test Connection'}
+                {testing ? 'Checking…' : t('Test Connection')}
               </button>
               <button type="submit" className={styles.primaryButton} disabled={saving}>
-                {saving ? 'Saving…' : adding ? 'Create' : 'Save Changes'}
+                {saving ? t('Saving…') : adding ? 'Create' : t('Save Changes')}
               </button>
             </div>
           </div>
@@ -710,19 +705,19 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
       )}
 
       <section className={styles.dangerCard}>
-        <h2 className={styles.dangerHeading}>Danger Zone</h2>
+        <h2 className={styles.dangerHeading}>{t('Danger Zone')}</h2>
         <div className={styles.divider} />
         <div className={styles.dangerRow}>
           <div className={styles.dangerText}>
-            <span className={styles.dangerTitle}>{adding ? 'Discard Changes' : 'Remove Provider'}</span>
+            <span className={styles.dangerTitle}>{adding ? t('Discard Changes') : t('Remove Provider')}</span>
             <span className={styles.dangerNote}>
               {adding
-                ? 'Cancel provider setup and return to Models'
-                : 'Remove this provider, and every model reached through it'}
+                ? t('Cancel provider setup and return to Models')
+                : t('Remove this provider, and every model reached through it')}
             </span>
           </div>
           <button type="button" className={styles.dangerButton} onClick={() => void handleDiscard()}>
-            {adding ? 'Discard' : 'Remove Provider'}
+            {adding ? 'Discard' : t('Remove Provider')}
           </button>
         </div>
       </section>

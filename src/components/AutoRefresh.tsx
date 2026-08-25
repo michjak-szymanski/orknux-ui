@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 
 import { setRefreshSeconds, useRefreshSeconds } from '../session/refresh';
 import { SelectField } from './SelectField';
+import { t } from '../i18n';
 
 export interface AutoRefreshProps {
   /** Called on every tick. Should be stable — a `useCallback` load function. */
@@ -47,10 +48,10 @@ export function AutoRefresh({ onRefresh, busy = false }: AutoRefreshProps) {
 
   return (
     <SelectField
-      label="Auto"
+      label={t('Auto')}
       value={String(seconds)}
       onChange={(value) => setRefreshSeconds(Number(value))}
-      ariaLabel="Refresh automatically"
+      ariaLabel={t('Refresh automatically')}
       options={CHOICES.map((choice) => ({ value: String(choice.value), label: choice.label }))}
     />
   );

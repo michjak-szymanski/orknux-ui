@@ -32,6 +32,7 @@ import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceTriggersPage.module.css';
+import { t } from '../../i18n';
 
 export interface WorkspaceTriggersPageProps {
   session: SessionUser;
@@ -90,7 +91,7 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
       })
       .catch((cause: unknown) => {
         setTriggers(null);
-        setError(cause instanceof Error ? cause.message : 'Could not load triggers.');
+        setError(cause instanceof Error ? cause.message : t('Could not load triggers.'));
         setLoading(false);
       });
   }, [workspaceId, page]);
@@ -109,7 +110,7 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
       .then(setHistory)
       .catch((cause: unknown) => {
         setHistory(null);
-        setHistoryError(cause instanceof Error ? cause.message : 'Could not load the history.');
+        setHistoryError(cause instanceof Error ? cause.message : t('Could not load the history.'));
       });
   }, [workspaceId, historyPage]);
 
@@ -129,7 +130,7 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
         if (current) setFirings(page.content);
       })
       .catch((cause: unknown) => {
-        if (current) setFiringsError(cause instanceof Error ? cause.message : 'Could not load the log.');
+        if (current) setFiringsError(cause instanceof Error ? cause.message : t('Could not load the log.'));
       });
     return () => {
       current = false;
@@ -158,33 +159,31 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
       <section className={styles.card}>
         <header className={styles.header}>
           <div className={styles.titleGroup}>
-            <h1 className={styles.title}>Triggers</h1>
-            <p className={styles.subtitle}>Define events that start workflow executions.</p>
+            <h1 className={styles.title}>{t('Triggers')}</h1>
+            <p className={styles.subtitle}>{t('Define events that start workflow executions.')}</p>
           </div>
           <div className={transferStyles.headerActions}>
             <ImportComponentsButton workspaceId={workspaceId} onImported={load} />
             <UseTemplateButton workspaceId={workspaceId} kind="TRIGGER" onImported={load} />
-            <button type="button" className={styles.createTrigger} onClick={() => setCreating(true)}>
-              + Create Trigger
-            </button>
+            <button type="button" className={styles.createTrigger} onClick={() => setCreating(true)}>{t('+ Create Trigger')}</button>
           </div>
         </header>
 
         <div className={styles.table}>
           <div className={styles.tableHeader}>
-            <span className={styles.colName}>Name</span>
-            <span className={styles.colType}>Type</span>
-            <span className={styles.colSource}>Source</span>
-            <span className={styles.colAction}>Action</span>
-            <span className={styles.colFired}>Last fired</span>
-            <span className={styles.colStatus}>Status</span>
-            <span className={styles.colActions}>Actions</span>
+            <span className={styles.colName}>{t('Name')}</span>
+            <span className={styles.colType}>{t('Type')}</span>
+            <span className={styles.colSource}>{t('Source')}</span>
+            <span className={styles.colAction}>{t('Action')}</span>
+            <span className={styles.colFired}>{t('Last fired')}</span>
+            <span className={styles.colStatus}>{t('Status')}</span>
+            <span className={styles.colActions}>{t('Actions')}</span>
           </div>
 
           {loading && <p className={styles.notice}><Loader /></p>}
           {error !== null && <p className={`${styles.notice} ${styles.noticeError}`}>{error}</p>}
           {!loading && error === null && triggers?.content.length === 0 && (
-            <p className={styles.notice}>No triggers yet.</p>
+            <p className={styles.notice}>{t('No triggers yet.')}</p>
           )}
 
           {triggers?.content.map((trigger) => (
@@ -211,12 +210,12 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
                 aria-expanded={showing === trigger.id}
                 title={
                   trigger.lastFiring === null
-                    ? 'This trigger has not been asked to do anything yet'
+                    ? t('This trigger has not been asked to do anything yet')
                     : (trigger.lastFiring.detail ?? FIRING_OUTCOME_LABEL[trigger.lastFiring.outcome])
                 }
               >
                 {trigger.lastFiring === null ? (
-                  <span className={styles.never}>Never</span>
+                  <span className={styles.never}>{t('Never')}</span>
                 ) : (
                   <>
                     <span
@@ -288,11 +287,9 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
                 {firingsError === null && firings.length === 0 && (
                   <p className={styles.logEmpty}>
                     <span className={styles.labelWithHint}>
-                      Nothing yet.
-                      <FieldHint label="Nothing yet">
-                        This trigger has not been asked to do anything — for a Slack trigger that
-                        means no matching event has arrived. An empty log is what a trigger nobody
-                        has reached looks like, not a sign that anything is wrong with it.
+                      {t('Nothing yet.')}
+                      <FieldHint label={t('Nothing yet')}>
+                        {t('This trigger has not been asked to do anything — for a Slack trigger that means no matching event has arrived. An empty log is what a trigger nobody has reached looks like, not a sign that anything is wrong with it.')}
                       </FieldHint>
                     </span>
                   </p>
@@ -329,10 +326,9 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
       <section className={styles.card}>
         <div className={styles.header}>
           <div className={styles.titleGroup}>
-            <h2 className={styles.title}>History</h2>
+            <h2 className={styles.title}>{t('History')}</h2>
             <p className={styles.subtitle}>
-              What every trigger here has done, newest first &mdash; including the firings no run came
-              of, which appear nowhere else.
+              {t('What every trigger here has done, newest first — including the firings no run came of, which appear nowhere else.')}
             </p>
           </div>
           {/*
@@ -346,8 +342,8 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
               type="button"
               className={styles.refresh}
               onClick={loadHistory}
-              aria-label="Refresh the history"
-              title="Refresh the history"
+              aria-label={t('Refresh the history')}
+              title={t('Refresh the history')}
             >
               <img src={refreshIcon} alt="" width={14} height={14} />
             </button>
@@ -356,11 +352,11 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
         </div>
 
         <div className={styles.historyHeader}>
-          <span className={styles.colWhen}>When</span>
-          <span className={styles.colTrigger}>Trigger</span>
-          <span className={styles.colOutcome}>Outcome</span>
-          <span className={styles.colRuns}>Runs</span>
-          <span className={styles.colDetail}>Detail</span>
+          <span className={styles.colWhen}>{t('When')}</span>
+          <span className={styles.colTrigger}>{t('Trigger')}</span>
+          <span className={styles.colOutcome}>{t('Outcome')}</span>
+          <span className={styles.colRuns}>{t('Runs')}</span>
+          <span className={styles.colDetail}>{t('Detail')}</span>
         </div>
 
         <div className={styles.historyBody}>
@@ -369,11 +365,9 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
           {historyError === null && history !== null && history.content.length === 0 && (
             <p className={styles.logEmpty}>
               <span className={styles.labelWithHint}>
-                Nothing has fired here yet.
-                <FieldHint label="Nothing has fired here yet">
-                  A trigger that has never been asked to do anything leaves no entry, so an empty
-                  log here means nothing has reached any trigger in this workspace rather than that
-                  something failed.
+                {t('Nothing has fired here yet.')}
+                <FieldHint label={t('Nothing has fired here yet')}>
+                  {t('A trigger that has never been asked to do anything leaves no entry, so an empty log here means nothing has reached any trigger in this workspace rather than that something failed.')}
                 </FieldHint>
               </span>
             </p>

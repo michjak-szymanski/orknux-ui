@@ -59,6 +59,7 @@ import { matches, useFormatShortcut, useSaveShortcut } from '../../session/short
 import { shellUser } from '../../session/user';
 import { useWorkspaceVariables } from './workspaceVariables';
 import styles from './FunctionEditorPage.module.css';
+import { t } from '../../i18n';
 
 export interface FunctionEditorPageProps {
   session: SessionUser;
@@ -361,7 +362,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
     objects.find((held) => held.id === objectId)?.name ?? null;
 
   /** What to call it at the top: its name, or what it is going to be. */
-  const called = creating ? (name.trim() === '' ? 'New function' : name.trim()) : (fn?.name ?? '…');
+  const called = creating ? (name.trim() === '' ? t('New function') : name.trim()) : (fn?.name ?? '…');
 
   const [caret, setCaret] = useState({ line: 1, column: 1 });
 /*
@@ -594,7 +595,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
     fetchFunction(functionId)
       .then((found) => {
         if (found === null) {
-          setLoadError('That function does not exist, or you do not have access to it.');
+          setLoadError(t('That function does not exist, or you do not have access to it.'));
           return;
         }
         setFn(found);
@@ -615,7 +616,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
         setLibraries(found.libraries);
       })
       .catch((cause: unknown) => {
-        setLoadError(cause instanceof Error ? cause.message : 'Could not load the function.');
+        setLoadError(cause instanceof Error ? cause.message : t('Could not load the function.'));
       });
   }, [functionId]);
 
@@ -715,16 +716,16 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
       setSaved(true);
       setStatus({
         ok: true,
-        message: moved ? 'The suggested change is saved, parameters and all.' : 'The suggested change is saved.',
+        message: moved ? t('The suggested change is saved, parameters and all.') : t('The suggested change is saved.'),
         whole: true,
       });
       settleOffer(
         moved
           ? `I accepted the change and it is saved. The function now takes ${stored.signature}.`
-          : 'I accepted the change and it is saved.',
+          : t('I accepted the change and it is saved.'),
       );
     } catch (cause) {
-      const reason = cause instanceof Error ? cause.message : 'It could not be saved.';
+      const reason = cause instanceof Error ? cause.message : t('It could not be saved.');
       failOffer(
         `The save was refused — ${reason}`,
         `I tried to accept it and it could not be saved — ${reason}. It was not saved.`,
@@ -762,7 +763,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
           setImports(found.imports);
         setLibraries(found.libraries);
           setSaved(false);
-          setStatus({ ok: true, message: 'Reloaded — the change was accepted.', whole: true });
+          setStatus({ ok: true, message: t('Reloaded — the change was accepted.'), whole: true });
         })
         .catch(() => undefined);
     }
@@ -1161,7 +1162,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
     const handed = externals.map((variableId) => {
       const held = variables.find((candidate) => candidate.id === variableId);
       return held === undefined
-        ? '…: external'
+        ? t('…: external')
         : `${held.name}: ${held.type.toLowerCase()} (external)`;
     });
     return `(${[...declared, ...handed].join(', ')})`;
@@ -1196,12 +1197,12 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
               ok: false,
               message:
                 checked.line === null
-                  ? (checked.message ?? 'Could not be parsed')
+                  ? (checked.message ?? t('Could not be parsed'))
                   : `Line ${checked.line}: ${checked.message ?? 'could not be parsed'}`,
             },
       );
     } catch (cause) {
-      setStatus({ ok: false, message: cause instanceof Error ? cause.message : 'Could not validate.', whole: true });
+      setStatus({ ok: false, message: cause instanceof Error ? cause.message : t('Could not validate.'), whole: true });
     }
   }
 
@@ -1235,7 +1236,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
       });
       setRan(answer);
     } catch (cause) {
-      setRunFailed(cause instanceof Error ? cause.message : 'It could not be run.');
+      setRunFailed(cause instanceof Error ? cause.message : t('It could not be run.'));
     } finally {
       setRunning(false);
     }
@@ -1299,7 +1300,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
       }
       return true;
     } catch (cause) {
-      setStatus({ ok: false, message: cause instanceof Error ? cause.message : 'Could not save.', whole: true });
+      setStatus({ ok: false, message: cause instanceof Error ? cause.message : t('Could not save.'), whole: true });
       return false;
     } finally {
       setSaving(false);
@@ -1311,7 +1312,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
       await deleteFunction(functionId);
       navigate(`/workspace/${workspaceId}/functions`);
     } catch (cause) {
-      setStatus({ ok: false, message: cause instanceof Error ? cause.message : 'Could not delete.', whole: true });
+      setStatus({ ok: false, message: cause instanceof Error ? cause.message : t('Could not delete.'), whole: true });
     }
   }
 
@@ -1337,11 +1338,9 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
         <>
           <header className={styles.pageHeader}>
             <p className={styles.breadcrumb}>
-              <BackLink to={backTo} label="Functions" />
+              <BackLink to={backTo} label={t('Functions')} />
               {/* The same place as the arrow beside it, including which row. */}
-              <Link className={styles.crumbLink} to={backTo}>
-                Functions
-              </Link>
+              <Link className={styles.crumbLink} to={backTo}>{t('Functions')}</Link>
               <span className={styles.crumbSeparator}>/</span>
               <span className={styles.crumbCurrent}>{called}</span>
             </p>
@@ -1349,7 +1348,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
               <div className={styles.titleGroup}>
                 <h1 className={styles.title}>{called}</h1>
                 {/* Nothing is active until it has been saved once. */}
-                {!creating && <span className={styles.activeBadge}>Active</span>}
+                {!creating && <span className={styles.activeBadge}>{t('Active')}</span>}
               </div>
               <div className={styles.headerActions}>
                 {!creating && (
@@ -1376,11 +1375,11 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                   className={styles.wandButton}
                   onClick={() =>
                     window.dispatchEvent(
-                      new CustomEvent('orknux:quick-chat', { detail: { opener: 'Can you help me with that?' } }),
+                      new CustomEvent('orknux:quick-chat', { detail: { opener: t('Can you help me with that?') } }),
                     )
                   }
-                  aria-label="Ask the assistant for help with this function"
-                  title="Ask the assistant for help"
+                  aria-label={t('Ask the assistant for help with this function')}
+                  title={t('Ask the assistant for help')}
                 >
                   <img src={wandIcon} alt="" width={16} height={16} />
                 </button>
@@ -1389,9 +1388,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                     type="button"
                     className={styles.ghostButton}
                     onClick={() => navigate(`/workspace/${workspaceId}/conditions/new?function=${functionId}`)}
-                  >
-                    Wrap in Condition
-                  </button>
+                  >{t('Wrap in Condition')}</button>
                 )}
                 {/*
                   Beside the button it is about, not down in the footer where it
@@ -1399,7 +1396,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                   `ValidationStatus`.
                 */}
                 <ValidationStatus
-                  subject="The code"
+                  subject={t("The code")}
                   status={status}
                   saved={saved}
                   explains={
@@ -1411,7 +1408,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                   }
                 />
                 <button type="button" className={styles.ghostButton} onClick={handleValidate}>
-                  Validate
+                  {t('Validate')}
                 </button>
                 <button
                   type="button"
@@ -1420,7 +1417,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                   // A function has to be called something before it can be made.
                   disabled={saving || (creating && name.trim() === '')}
                 >
-                  {saving ? 'Saving…' : creating ? 'Create Function' : 'Save Changes'}
+                  {saving ? t('Saving…') : creating ? t('Create Function') : t('Save Changes')}
                 </button>
               </div>
             </div>
@@ -1442,14 +1439,14 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
               <header className={styles.editorHeader}>
                 <span className={styles.editorTitle}>
                   <img src={codeIcon} alt="" width={16} height={16} />
-                  Editor
+                  {t('Editor')}
                 </span>
                 {/*
                   What this function takes, as it stands. Follows the panel rather
                   than the last save, so adding a parameter or an external shows up
                   here immediately — which is the point of having it.
                 */}
-                <span className={styles.signature} title="What this function is handed, in order">
+                <span className={styles.signature} title={t('What this function is handed, in order')}>
                   {creating ? identifier(name) : (fn?.name ?? 'function')}
                   {signature}
                 </span>
@@ -1468,9 +1465,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                   className={styles.editorAction}
                   onClick={() => editor.current?.format()}
                   title={`Lay the code out again (${format})`}
-                >
-                  Format
-                </button>
+                >{t('Format')}</button>
                 <span className={styles.languageBadge}>TypeScript</span>
               </header>
 
@@ -1496,7 +1491,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                     {offerFailed ??
                       (offered.note !== null && offered.note !== ''
                         ? offered.note
-                        : 'The assistant suggests this change.')}
+                        : t('The assistant suggests this change.'))}
                   </span>
                   <button
                     type="button"
@@ -1504,16 +1499,14 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                     onClick={() => void acceptOffer()}
                     disabled={saving}
                   >
-                    {saving ? 'Saving…' : 'Accept'}
+                    {saving ? t('Saving…') : 'Accept'}
                   </button>
                   <button
                     type="button"
                     className={styles.ghostButton}
-                    onClick={() => settleOffer('I rejected the change. The function is unchanged.')}
+                    onClick={() => settleOffer(t('I rejected the change. The function is unchanged.'))}
                     disabled={saving}
-                  >
-                    Reject
-                  </button>
+                  >{t('Reject')}</button>
                 </div>
               )}
               <div className={styles.codeArea}>
@@ -1522,7 +1515,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                     ref={editor}
                     value={source}
                     language="typescript"
-                    ariaLabel="Function source"
+                    ariaLabel={t('Function source')}
                     onChange={(next) => {
                       setSource(next);
                       setSaved(false);
@@ -1533,7 +1526,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                     onCaretChange={(line, column) => setCaret({ line, column })}
                   />
                 ) : (
-                  <CodeDiff original={source} modified={offered.code} ariaLabel="Suggested change" />
+                  <CodeDiff original={source} modified={offered.code} ariaLabel={t('Suggested change')} />
                 )}
               </div>
 
@@ -1565,14 +1558,14 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
               role="separator"
               tabIndex={0}
               aria-orientation="vertical"
-              aria-label="Width of the code editor"
+              aria-label={t('Width of the code editor')}
               aria-controls="function-code-column"
               aria-valuenow={editorShare(panelWidth)}
               // The extremes are the minimums, seen from the editor's side: the
               // panel at its widest is the editor at its narrowest.
               aria-valuemin={editorShare(widest)}
               aria-valuemax={editorShare(MIN_PANEL)}
-              title="Drag to change the split; double-click to put it back"
+              title={t('Drag to change the split; double-click to put it back')}
               onPointerDown={startSplitDrag}
               onPointerMove={moveSplitDrag}
               onPointerUp={endSplitDrag}
@@ -1586,7 +1579,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                 <h2 className={styles.panelHeading}>Function Details</h2>
                 <div className={styles.field}>
                   <label className={styles.fieldLabel} htmlFor="function-name">
-                    Name
+                    {t('Name')}
                   </label>
                   <input
                     id="function-name"
@@ -1608,7 +1601,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                 </div>
                 <div className={styles.field}>
                   <label className={styles.fieldLabel} htmlFor="function-description">
-                    Description
+                    {t('Description')}
                   </label>
                   <textarea
                     id="function-description"
@@ -1630,7 +1623,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                   <kbd className={styles.shortcutKey}>{save}</kbd> saves,{' '}
                   <kbd className={styles.shortcutKey}>{format}</kbd> formats.{' '}
                   <Link className={styles.shortcutLink} to="/preferences">
-                    Change them
+                    {t('Change them')}
                   </Link>
                 </p>
               </section>
@@ -1643,7 +1636,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                       <div className={styles.paramTopLine}>
                       <span className={`${styles.paramField} ${styles.paramFieldName}`}>
                         <label className={styles.paramLabel} htmlFor={`param-name-${index}`}>
-                          Name
+                          {t('Name')}
                         </label>
                       <input
                         id={`param-name-${index}`}
@@ -1663,7 +1656,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                       </span>
                       <span className={styles.paramField}>
                         <label className={styles.paramLabel} htmlFor={`param-type-${index}`}>
-                          Type
+                          {t('Type')}
                         </label>
                       <span className={styles.typeSelect}>
                         <select
@@ -1775,7 +1768,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                             to={`/workspace/${workspaceId}/objects/${param.objectId}`}
                             target="_blank"
                             rel="noreferrer"
-                            title="Opens the object's definition in a new tab"
+                            title={t('Opens the object\'s definition in a new tab')}
                             aria-label={`Open definition of ${objectNameOf(param.objectId) ?? 'the object'} for ${param.name || `parameter ${index + 1}`}`}
                           >
                             {/*
@@ -1799,7 +1792,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                     onClick={() => setParams((current) => [...current, { name: '', type: 'STRING' }])}
                   >
                     <img src={plusIcon} alt="" width={14} height={14} />
-                    Add Parameter
+                    {t('Add Parameter')}
                   </button>
                 </div>
               </section>
@@ -1812,7 +1805,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
               <section className={styles.panelSection}>
                 <span className={styles.headingWithHint}>
                   <h2 className={styles.panelHeading}>External Parameters</h2>
-                  <FieldHint label="External Parameters">
+                  <FieldHint label={t('External Parameters')}>
                     The workspace’s values, handed to this function after its own parameters. Their values are
                     never shown here — which is why a variable that is set looks empty on this page: what is
                     chosen is the name, and only the sandbox ever sees what is behind it.
@@ -1870,7 +1863,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                     disabled={variables.length === 0}
                     title={
                       variables.length === 0
-                        ? 'This workspace has no variables yet'
+                        ? t('This workspace has no variables yet')
                         : 'Hand this function one of the workspace\u2019s variables'
                     }
                     onClick={() => {
@@ -1881,7 +1874,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                     }}
                   >
                     <img src={plusIcon} alt="" width={14} height={14} />
-                    Add External
+                    {t('Add External')}
                   </button>
                   {/*
                     A way out to where these are defined, which the sentence
@@ -1918,7 +1911,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                       target="_blank"
                       rel="noreferrer noopener"
                     >
-                      Open Variables
+                      {t('Open Variables')}
                     </a>
                   </p>
                 </div>
@@ -1940,7 +1933,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
               <section className={styles.panelSection}>
                 <span className={styles.headingWithHint}>
                   <h2 className={styles.panelHeading}>Imports</h2>
-                  <FieldHint label="Imports">
+                  <FieldHint label={t('Imports')}>
                     The workspace’s other functions this one may call, as <code>imports.name(…)</code>. The name is
                     this code’s own word for it: renaming the function it points at changes nothing here. A
                     plugin’s function cannot be imported, and neither can a loop back to this one.
@@ -2022,8 +2015,8 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                     disabled={importable.length === 0}
                     title={
                       importable.length === 0
-                        ? 'This workspace has no other functions to import'
-                        : 'Call one of the workspace’s other functions from this one'
+                        ? t('This workspace has no other functions to import')
+                        : t('Call one of the workspace’s other functions from this one')
                     }
                     onClick={() => {
                       /*
@@ -2043,7 +2036,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                     }}
                   >
                     <img src={plusIcon} alt="" width={14} height={14} />
-                    Add Import
+                    {t('Add Import')}
                   </button>
                 </div>
               </section>
@@ -2062,7 +2055,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
               <section className={styles.panelSection}>
                 <span className={styles.headingWithHint}>
                   <h2 className={styles.panelHeading}>Libraries</h2>
-                  <FieldHint label="Libraries">
+                  <FieldHint label={t('Libraries')}>
                     The installation’s libraries this function may use, reached as <code>imports.name</code>.
                     The name is this code’s own word for it and is seeded from the library’s key the first
                     time a row points at one. An administrator loads them, on Admin → Libraries.
@@ -2148,8 +2141,8 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                     disabled={loadable.length === 0}
                     title={
                       loadable.length === 0
-                        ? 'No libraries are loaded into this installation'
-                        : 'Use one of the installation’s libraries from this function'
+                        ? t('No libraries are loaded into this installation')
+                        : t('Use one of the installation’s libraries from this function')
                     }
                     onClick={() => {
                       /*
@@ -2169,7 +2162,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                     }}
                   >
                     <img src={plusIcon} alt="" width={14} height={14} />
-                    Add Library
+                    {t('Add Library')}
                   </button>
                 </div>
               </section>
@@ -2177,7 +2170,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
               <section className={styles.panelSection}>
                 <span className={styles.headingWithHint}>
                   <h2 className={styles.panelHeading}>Return Type</h2>
-                  <FieldHint label="Return Type">
+                  <FieldHint label={t('Return Type')}>
                     An object names a shape this workspace defines, and the editor checks the code against it. Map
                     is for a structure with no defined shape.
                   </FieldHint>
@@ -2186,7 +2179,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                   <select
                     className={`${styles.input} ${styles.inputMono}`}
                     value={returnType}
-                    aria-label="Return type"
+                    aria-label={t('Return type')}
                     onChange={(event) => {
                       const type = event.target.value as ValueType;
                       setReturnType(type);
@@ -2212,7 +2205,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                       <select
                         className={`${styles.input} ${styles.inputMono}`}
                         value={returnObjectId ?? ''}
-                        aria-label="Returned object"
+                        aria-label={t('Returned object')}
                         onChange={(event) => {
                           setReturnObjectId(event.target.value);
                           setSaved(false);
@@ -2232,7 +2225,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                         to={`/workspace/${workspaceId}/objects/${returnObjectId}`}
                         target="_blank"
                         rel="noreferrer"
-                        title="Opens the object's definition in a new tab"
+                        title={t('Opens the object\'s definition in a new tab')}
                         aria-label={`Open definition of ${objectNameOf(returnObjectId) ?? 'the returned object'}`}
                       >
                         <OpenDefinitionIcon />
@@ -2257,14 +2250,14 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                 */}
                 {objects.length === 0 && (
                   <p className={styles.paramHint}>
-                    {'There are no objects in this workspace yet, so define one first or use map.'}{' '}
+                    {t('There are no objects in this workspace yet, so define one first or use map.')}{' '}
                     <Link
                       className={styles.shortcutLink}
                       to={`/workspace/${workspaceId}/objects`}
                       target="_blank"
                       rel="noreferrer"
                     >
-                      Open Objects
+                      {t('Open Objects')}
                     </Link>
                   </p>
                 )}
@@ -2292,7 +2285,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                 <section className={styles.panelSection}>
                   <span className={styles.headingWithHint}>
                     <h2 className={styles.panelHeading}>Test Run</h2>
-                    <FieldHint label="Test Run">
+                    <FieldHint label={t('Test Run')}>
                       Runs the saved function the way an action node would: the same sandbox, the same imports
                       and libraries, and the workspace’s variables resolved the same way. It runs what is stored
                       rather than what is in the column, so save first to try a change — and every run is
@@ -2381,7 +2374,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                         worded exactly as the run history would have worded it.
                       */}
                       <pre className={styles.runAnswer}>
-                        {ran.ok ? (ran.returned ?? 'It returned nothing.') : ran.error}
+                        {ran.ok ? (ran.returned ?? t('It returned nothing.')) : ran.error}
                       </pre>
                       {!ran.ok && !ran.settled && (
                         <p className={styles.paramHint}>It was stopped rather than refused; running it again may answer.</p>
@@ -2397,10 +2390,10 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
               <hr className={styles.divider} />
 
               <div className={styles.metadata}>
-                <p className={styles.metadataLabel}>Last modified</p>
+                <p className={styles.metadataLabel}>{t('Last modified')}</p>
                 <p className={styles.metadataValue}>
                   {creating || fn === null ? (
-                    'Not saved yet'
+                    t('Not saved yet')
                   ) : (
                     <>
                       {timeAgo(fn.lastModifiedAt)} by <strong>{fn.lastModifiedBy}</strong>

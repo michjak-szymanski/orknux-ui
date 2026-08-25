@@ -27,6 +27,7 @@ import { CompactPagination } from '../../components/CompactPagination';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './ExecutionsPage.module.css';
+import { t } from '../../i18n';
 
 export interface ExecutionsPageProps {
   session: SessionUser;
@@ -38,7 +39,7 @@ const WORKFLOW_LIST_SIZE = 100;
 const SEARCH_DEBOUNCE_MS = 300;
 
 /** Said in one place, because the row and its tooltip are the only warning. */
-const REMOVED_NOTE = 'This workflow has been removed from the workspace. The run is kept; there is no workflow to open.';
+const REMOVED_NOTE = t('This workflow has been removed from the workspace. The run is kept; there is no workflow to open.');
 
 const TRIGGER_ICON: Record<string, string> = {
   WEBHOOK: terminalIcon,
@@ -106,7 +107,7 @@ export function ExecutionsPage({ session, onSignOut }: ExecutionsPageProps) {
       })
       .catch((cause: unknown) => {
         setRuns(null);
-        setError(cause instanceof Error ? cause.message : 'Could not load executions.');
+        setError(cause instanceof Error ? cause.message : t('Could not load executions.'));
         setLoading(false);
       });
   }, [workspaceId, page, status, workflowId, days, debouncedSearch]);
@@ -130,8 +131,8 @@ export function ExecutionsPage({ session, onSignOut }: ExecutionsPageProps) {
     >
       <header className={styles.contentHeader}>
         <div className={styles.headerText}>
-          <h1 className={styles.title}>Executions</h1>
-          <p className={styles.subtitle}>View and monitor workflow execution runs</p>
+          <h1 className={styles.title}>{t('Executions')}</h1>
+          <p className={styles.subtitle}>{t('View and monitor workflow execution runs')}</p>
         </div>
         {/* Runs arrive while the page is open — a trigger fires, a step finishes —
             and nothing here polls, so this is how the list catches up. */}
@@ -141,7 +142,7 @@ export function ExecutionsPage({ session, onSignOut }: ExecutionsPageProps) {
               under auto-refresh is movement, not information. */}
           <button type="button" className={styles.refresh} onClick={load} disabled={loading}>
             <img src={refreshIcon} alt="" width={14} height={14} />
-            Refresh
+            {t('Refresh')}
           </button>
         </div>
       </header>
@@ -149,11 +150,11 @@ export function ExecutionsPage({ session, onSignOut }: ExecutionsPageProps) {
       <div className={styles.filtersBar}>
         <div className={styles.filtersLeft}>
           <SelectField
-            label="Status:"
+            label={t('Status:')}
             value={status}
             onChange={(value) => setStatus(value as ExecutionStatus | '')}
             options={[
-              { value: '', label: 'All Statuses' },
+              { value: '', label: t('All Statuses') },
               { value: 'RUNNING', label: 'Running' },
               { value: 'COMPLETED', label: 'Completed' },
               { value: 'FAILED', label: 'Failed' },
@@ -167,11 +168,11 @@ export function ExecutionsPage({ session, onSignOut }: ExecutionsPageProps) {
             is not going to be found on the workflows screen.
           */}
           <SelectField
-            label="Workflow:"
+            label={t('Workflow:')}
             value={workflowId}
             onChange={setWorkflowId}
             options={[
-              { value: '', label: 'All Workflows' },
+              { value: '', label: t('All Workflows') },
               ...workflows.map((workflow) => ({ value: workflow.workflowId, label: workflow.name })),
               ...removedWorkflows.map((workflow) => ({
                 value: workflow.workflowId,
@@ -183,12 +184,12 @@ export function ExecutionsPage({ session, onSignOut }: ExecutionsPageProps) {
           <SelectField
             value={days === '' ? '' : String(days)}
             onChange={(value) => setDays(value === '' ? '' : Number(value))}
-            ariaLabel="Date range"
+            ariaLabel={t('Date range')}
             options={[
-              { value: '1', label: 'Last 24 Hours' },
-              { value: '7', label: 'Last 7 Days' },
-              { value: '30', label: 'Last 30 Days' },
-              { value: '', label: 'All Time' },
+              { value: '1', label: t('Last 24 Hours') },
+              { value: '7', label: t('Last 7 Days') },
+              { value: '30', label: t('Last 30 Days') },
+              { value: '', label: t('All Time') },
             ]}
           />
         </div>
@@ -198,22 +199,22 @@ export function ExecutionsPage({ session, onSignOut }: ExecutionsPageProps) {
           <input
             className={styles.searchField}
             type="search"
-            placeholder="Search executions..."
+            placeholder={t('Search executions...')}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            aria-label="Search executions"
+            aria-label={t('Search executions')}
           />
         </div>
       </div>
 
       <section className={styles.card}>
         <div className={styles.tableHeader}>
-          <span className={styles.colRun}>Run</span>
-          <span className={styles.colWorkflow}>Workflow</span>
-          <span className={styles.colStatus}>Status</span>
-          <span className={styles.colStarted}>Started</span>
-          <span className={styles.colDuration}>Duration</span>
-          <span className={styles.colTrigger}>Triggered by</span>
+          <span className={styles.colRun}>{t('Run')}</span>
+          <span className={styles.colWorkflow}>{t('Workflow')}</span>
+          <span className={styles.colStatus}>{t('Status')}</span>
+          <span className={styles.colStarted}>{t('Started')}</span>
+          <span className={styles.colDuration}>{t('Duration')}</span>
+          <span className={styles.colTrigger}>{t('Triggered by')}</span>
         </div>
 
         {/*
@@ -224,7 +225,7 @@ export function ExecutionsPage({ session, onSignOut }: ExecutionsPageProps) {
         {loading && runs === null && <p className={styles.notice}><Loader /></p>}
         {error !== null && <p className={`${styles.notice} ${styles.noticeError}`}>{error}</p>}
         {!loading && error === null && runs?.content.length === 0 && (
-          <p className={styles.notice}>No runs match those filters.</p>
+          <p className={styles.notice}>{t('No runs match those filters.')}</p>
         )}
 
         {runs?.content.map((run) => (
@@ -257,9 +258,7 @@ export function ExecutionsPage({ session, onSignOut }: ExecutionsPageProps) {
             ) : (
               <span className={`${styles.colWorkflow} ${styles.workflowGone}`}>
                 <span className={styles.workflowGoneName}>{run.workflowName}</span>
-                <span className={styles.removedTag} title={REMOVED_NOTE}>
-                  removed
-                </span>
+                <span className={styles.removedTag} title={REMOVED_NOTE}>{t('removed')}</span>
               </span>
             )}
             <span className={styles.colStatus}>

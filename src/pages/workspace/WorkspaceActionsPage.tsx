@@ -20,6 +20,7 @@ import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceActionsPage.module.css';
+import { t } from '../../i18n';
 
 export interface WorkspaceActionsPageProps {
   session: SessionUser;
@@ -51,7 +52,7 @@ export function WorkspaceActionsPage({ session, onSignOut }: WorkspaceActionsPag
       })
       .catch((cause: unknown) => {
         setActions(null);
-        setError(cause instanceof Error ? cause.message : 'Could not load the actions.');
+        setError(cause instanceof Error ? cause.message : t('Could not load the actions.'));
         setLoading(false);
       });
   }, [workspaceId, page]);
@@ -65,11 +66,11 @@ export function WorkspaceActionsPage({ session, onSignOut }: WorkspaceActionsPag
     fetchAction(actionId)
       .then((action) => {
         if (!current) return;
-        if (action === null) setError('That action does not exist, or you do not have access to it.');
+        if (action === null) setError(t('That action does not exist, or you do not have access to it.'));
         else setEditing(action);
       })
       .catch((cause: unknown) => {
-        if (current) setError(cause instanceof Error ? cause.message : 'Could not open the action.');
+        if (current) setError(cause instanceof Error ? cause.message : t('Could not open the action.'));
       });
     return () => {
       current = false;
@@ -93,32 +94,30 @@ export function WorkspaceActionsPage({ session, onSignOut }: WorkspaceActionsPag
       <section className={styles.card}>
         <header className={styles.header}>
           <div className={styles.titleGroup}>
-            <h1 className={styles.title}>Actions</h1>
-            <p className={styles.subtitle}>Reusable action blocks used inside workflows.</p>
+            <h1 className={styles.title}>{t('Actions')}</h1>
+            <p className={styles.subtitle}>{t('Reusable action blocks used inside workflows.')}</p>
           </div>
           <div className={transferStyles.headerActions}>
             <ImportComponentsButton workspaceId={workspaceId} onImported={load} />
             <UseTemplateButton workspaceId={workspaceId} kind="ACTION" onImported={load} />
-            <button type="button" className={styles.createAction} onClick={() => setCreating(true)}>
-              + Create Action
-            </button>
+            <button type="button" className={styles.createAction} onClick={() => setCreating(true)}>{t('+ Create Action')}</button>
           </div>
         </header>
 
         <div className={styles.table}>
           <div className={styles.tableHeader}>
-            <span className={styles.colName}>Name</span>
-            <span className={styles.colType}>Type</span>
-            <span className={styles.colSubtype}>Subtype</span>
-            <span className={styles.colInput}>Input Params</span>
-            <span className={styles.colOutput}>Output Params</span>
-            <span className={styles.colActions}>Actions</span>
+            <span className={styles.colName}>{t('Name')}</span>
+            <span className={styles.colType}>{t('Type')}</span>
+            <span className={styles.colSubtype}>{t('Subtype')}</span>
+            <span className={styles.colInput}>{t('Input Params')}</span>
+            <span className={styles.colOutput}>{t('Output Params')}</span>
+            <span className={styles.colActions}>{t('Actions')}</span>
           </div>
 
           {loading && <p className={styles.notice}><Loader /></p>}
           {error !== null && <p className={`${styles.notice} ${styles.noticeError}`}>{error}</p>}
           {!loading && error === null && actions?.content.length === 0 && (
-            <p className={styles.notice}>No actions yet.</p>
+            <p className={styles.notice}>{t('No actions yet.')}</p>
           )}
 
           {actions?.content.map((action) => (

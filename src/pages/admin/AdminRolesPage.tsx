@@ -14,6 +14,7 @@ import { Loader } from '../../components/Loader';
 import { TrashIcon } from '../../components/TrashIcon';
 import { shellUser } from '../../session/user';
 import styles from './AdminRolesPage.module.css';
+import { t } from '../../i18n';
 
 export interface AdminRolesPageProps {
   session: SessionUser;
@@ -62,7 +63,7 @@ export function AdminRolesPage({ session, onSignOut }: AdminRolesPageProps) {
       })
       .catch((cause: unknown) => {
         setRoles(null);
-        setError(cause instanceof Error ? cause.message : 'Could not load the roles.');
+        setError(cause instanceof Error ? cause.message : t('Could not load the roles.'));
         setLoading(false);
       });
   }, []);
@@ -85,7 +86,7 @@ export function AdminRolesPage({ session, onSignOut }: AdminRolesPageProps) {
       setDraft(null);
       load();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save the role.');
+      setError(cause instanceof Error ? cause.message : t('Could not save the role.'));
     } finally {
       setSaving(false);
     }
@@ -108,7 +109,7 @@ export function AdminRolesPage({ session, onSignOut }: AdminRolesPageProps) {
       setConfirming(null);
       load();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not remove the role.');
+      setError(cause instanceof Error ? cause.message : t('Could not remove the role.'));
     }
   }
 
@@ -125,20 +126,19 @@ export function AdminRolesPage({ session, onSignOut }: AdminRolesPageProps) {
           <div className={styles.titleGroup}>
             <h1 className={styles.title}>
               <span className={styles.titleWithHint}>
-                Roles
+                {t('Roles')}
                 {/*
                   Where a role comes from is a thing somebody asks once and then
                   knows, so it is behind the (?) rather than printed under the
                   title on every visit.
                 */}
-                <FieldHint label="Roles">
-                  Which of the identity provider&apos;s groups or claims grants a role is set in the
-                  server&apos;s configuration, not here.
+                <FieldHint label={t('Roles')}>
+                  {t('Which of the identity provider\'s groups or claims grants a role is set in the server\'s configuration, not here.')}
                 </FieldHint>
               </span>
             </h1>
             <p className={styles.subtitle}>
-              What somebody may do here, in this installation&apos;s own terms.
+              {t('What somebody may do here, in this installation\'s own terms.')}
             </p>
           </div>
           <button
@@ -148,7 +148,7 @@ export function AdminRolesPage({ session, onSignOut }: AdminRolesPageProps) {
             disabled={draft !== null}
           >
             <img src={plusIcon} alt="" width={14} height={14} />
-            New Role
+            {t('New Role')}
           </button>
         </header>
 
@@ -160,31 +160,27 @@ export function AdminRolesPage({ session, onSignOut }: AdminRolesPageProps) {
 
         {draft !== null && (
           <div className={styles.editor}>
-            <h2 className={styles.editorTitle}>{draft.id === null ? 'New role' : `Editing ${draft.name}`}</h2>
+            <h2 className={styles.editorTitle}>{draft.id === null ? t('New role') : `Editing ${draft.name}`}</h2>
 
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="role-name">
-                Name
-              </label>
+              <label className={styles.label} htmlFor="role-name">{t('Name')}</label>
               <input
                 id="role-name"
                 className={styles.input}
                 value={draft.name}
-                placeholder="e.g. Backend"
+                placeholder={t('e.g. Backend')}
                 onChange={(event) => setDraft({ ...draft, name: event.target.value })}
                 autoFocus
               />
             </div>
 
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="role-description">
-                Description
-              </label>
+              <label className={styles.label} htmlFor="role-description">{t('Description')}</label>
               <input
                 id="role-description"
                 className={styles.input}
                 value={draft.description}
-                placeholder="What holding this role means"
+                placeholder={t('What holding this role means')}
                 onChange={(event) => setDraft({ ...draft, description: event.target.value })}
               />
             </div>
@@ -195,7 +191,7 @@ export function AdminRolesPage({ session, onSignOut }: AdminRolesPageProps) {
               than one thing, and the two are not alternatives.
             */}
             <div className={styles.field}>
-              <span className={styles.label}>Scopes</span>
+              <span className={styles.label}>{t('Scopes')}</span>
               {ROLE_SCOPES.map((scope) => (
                 <label key={scope} className={styles.scope}>
                   <input
@@ -219,16 +215,14 @@ export function AdminRolesPage({ session, onSignOut }: AdminRolesPageProps) {
             </div>
 
             <div className={styles.editorActions}>
-              <button type="button" className={styles.ghost} onClick={() => setDraft(null)} disabled={saving}>
-                Cancel
-              </button>
+              <button type="button" className={styles.ghost} onClick={() => setDraft(null)} disabled={saving}>{t('Cancel')}</button>
               <button
                 type="button"
                 className={styles.save}
                 onClick={() => void save()}
                 disabled={saving || draft.name.trim() === ''}
               >
-                {saving ? 'Saving…' : draft.id === null ? 'Create Role' : 'Save Changes'}
+                {saving ? t('Saving…') : draft.id === null ? t('Create Role') : t('Save Changes')}
               </button>
             </div>
           </div>
@@ -236,10 +230,10 @@ export function AdminRolesPage({ session, onSignOut }: AdminRolesPageProps) {
 
         <div className={styles.table}>
           <div className={styles.tableHeader}>
-            <span className={styles.colName}>Name</span>
-            <span className={styles.colScopes}>Scopes</span>
-            <span className={styles.colModified}>Last modified</span>
-            <span className={styles.colActions}>Actions</span>
+            <span className={styles.colName}>{t('Name')}</span>
+            <span className={styles.colScopes}>{t('Scopes')}</span>
+            <span className={styles.colModified}>{t('Last modified')}</span>
+            <span className={styles.colActions}>{t('Actions')}</span>
           </div>
 
           {loading && (
@@ -247,7 +241,7 @@ export function AdminRolesPage({ session, onSignOut }: AdminRolesPageProps) {
               <Loader />
             </p>
           )}
-          {!loading && roles?.length === 0 && <p className={styles.notice}>No roles yet.</p>}
+          {!loading && roles?.length === 0 && <p className={styles.notice}>{t('No roles yet.')}</p>}
 
           {roles?.map((role) => (
             <div
@@ -277,7 +271,7 @@ export function AdminRolesPage({ session, onSignOut }: AdminRolesPageProps) {
                 <span className={styles.name}>
                   {role.name}
                   {role.builtin && (
-                    <img src={lockIcon} alt="Built in" title="Built in: not editable" width={12} height={12} />
+                    <img src={lockIcon} alt={t("Built in")} title={t('Built in: not editable')} width={12} height={12} />
                   )}
                 </span>
                 {role.description !== null && <span className={styles.description}>{role.description}</span>}
@@ -323,9 +317,7 @@ export function AdminRolesPage({ session, onSignOut }: AdminRolesPageProps) {
                           event.stopPropagation();
                           void remove(role);
                         }}
-                      >
-                        Remove?
-                      </button>
+                      >{t('Remove?')}</button>
                     ) : (
                       <button
                         type="button"

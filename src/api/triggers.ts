@@ -1,5 +1,6 @@
 import { graphql } from './client';
 import type { PageOf } from './client';
+import { t } from '../i18n';
 
 /** What kind of event a trigger definition waits for. */
 export type TriggerType = 'INCOMING_CONNECTION' | 'SCHEDULED' | 'WEBHOOK';
@@ -44,12 +45,12 @@ export interface TriggerFiring {
 /** Said in the words the screen uses, so a row explains itself. */
 export const FIRING_OUTCOME_LABEL: Record<FiringOutcome, string> = {
   STARTED: 'Started',
-  NO_INSTANCE: 'Nothing instances it',
-  CONDITION_DID_NOT_HOLD: 'Condition said no',
-  UNDECIDED: 'Could not decide',
+  NO_INSTANCE: t('Nothing instances it'),
+  CONDITION_DID_NOT_HOLD: t('Condition said no'),
+  UNDECIDED: t('Could not decide'),
   FAILED: 'Failed',
-  UNAUTHENTICATED: 'Not authenticated',
-  WORKFLOW_DISABLED: 'Workflow switched off',
+  UNAUTHENTICATED: t('Not authenticated'),
+  WORKFLOW_DISABLED: t('Workflow switched off'),
 };
 
 export interface Trigger {
@@ -348,6 +349,6 @@ export const TRIGGER_ACTION_LABEL: Record<TriggerAction, string> = {
   MENTION: 'Mention',
   REPLY: 'Reply',
   MESSAGE: 'Message',
-  ISSUE_CREATED: 'Issue Created',
-  ISSUE_UPDATED: 'Issue Updated',
+  ISSUE_CREATED: t('Issue Created'),
+  ISSUE_UPDATED: t('Issue Updated'),
 };

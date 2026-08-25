@@ -1,5 +1,6 @@
 import type { SessionUser } from '../../api/session';
 import styles from './NoWorkspacesPage.module.css';
+import { t } from '../../i18n';
 
 export interface NoWorkspacesPageProps {
   session: SessionUser;
@@ -14,7 +15,7 @@ export function NoWorkspacesPage({ session, onSignOut }: NoWorkspacesPageProps) 
   return (
     <main className={styles.page}>
       <div className={styles.card}>
-        <h1 className={styles.title}>No workspaces yet</h1>
+        <h1 className={styles.title}>{t('No workspaces yet')}</h1>
         <p className={styles.message}>
           You are signed in as <strong>{session.username}</strong>, but none of your directory groups grant
           access to a workspace. Ask an administrator to add you to the group for your workspace.
@@ -22,7 +23,7 @@ export function NoWorkspacesPage({ session, onSignOut }: NoWorkspacesPageProps) 
         {session.roles.length > 0 && <p className={styles.roles}>Roles: {session.roles.join(', ')}</p>}
         {onSignOut && (
           <button type="button" className={styles.signOut} onClick={onSignOut}>
-            Sign out
+            {t('Sign out')}
           </button>
         )}
       </div>

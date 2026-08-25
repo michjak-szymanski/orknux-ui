@@ -5,6 +5,7 @@ import { TriggerForm } from './TriggerForm';
 import type { TriggerFormStyles } from './TriggerForm';
 import { PanelClose, panelEscape } from './PanelClose';
 import styles from './Dialog.module.css';
+import { t } from '../i18n';
 
 export interface CreateTriggerDialogProps {
   /**
@@ -84,7 +85,7 @@ export function CreateTriggerDialog({ open, workspaceId, trigger = null, onClose
     >
       <div className={styles.body}>
         <header className={styles.header}>
-          <h2 className={styles.title}>{trigger === null ? 'Create Trigger' : 'Trigger Settings'}</h2>
+          <h2 className={styles.title}>{trigger === null ? t('Create Trigger') : t('Trigger Settings')}</h2>
           {placement === 'panel' && <PanelClose onClose={onClose} />}
         </header>
 

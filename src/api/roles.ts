@@ -1,4 +1,5 @@
 import { graphql } from './client';
+import { t } from '../i18n';
 
 /** What a role lets somebody do, beyond the workspaces it is assigned to. */
 export type RoleScope = 'ADMIN' | 'USER';
@@ -35,8 +36,8 @@ export const ROLE_SCOPE_LABEL: Record<RoleScope, string> = {
 };
 
 export const ROLE_SCOPE_HINT: Record<RoleScope, string> = {
-  ADMIN: 'Sees the Admin section and every workspace, whatever else is assigned.',
-  USER: 'Signs in, and sees the workspaces this role is assigned to.',
+  ADMIN: t('Sees the Admin section and every workspace, whatever else is assigned.'),
+  USER: t('Signs in, and sees the workspaces this role is assigned to.'),
 };
 
 const ROLE_FIELDS = 'id name description scopes builtin lastModifiedAt lastModifiedBy';

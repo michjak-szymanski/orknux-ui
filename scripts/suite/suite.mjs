@@ -1688,6 +1688,44 @@ export const TESTS = [
      */
   },
 
+  // --- the two languages -----------------------------------------------------
+  {
+    name: 'catalogue-check',
+    what: 'the Polish catalogue and the English it is keyed on, still agreeing',
+    needs: ['nothing'],
+    /*
+     * The interface is translated by keying on the English sentence rather than
+     * an invented name - `src/i18n/index.ts` says why, and chiefly that a
+     * made-up key would have blinded `hint-prose-check` to every sentence in
+     * the product at once.
+     *
+     * The one thing that costs is that rewording an English string orphans its
+     * translation, silently: `t` falls back to what it was handed, so the
+     * screen shows correct English and the Polish simply stops appearing. This
+     * fails on the orphan. It reads the source and nothing else, so it runs
+     * anywhere in about a second.
+     */
+  },
+  {
+    name: 'language-check',
+    what: 'a language switch that reaches the server, redraws the page and moves <html lang>',
+    needs: ['session'],
+    /*
+     * The only check that ever sets alice's language, and it sets it back in a
+     * `finally`. Everything else in this suite finds its controls by their
+     * English accessible names, which works because English is what somebody
+     * who has chosen nothing reads and the fixture chooses nothing - so a run
+     * that left her reading Polish would fail every check after it.
+     *
+     * It asserts the mechanism rather than a snapshot of the words. Which
+     * Polish sentence a screen shows is `catalogue-check`'s business and one
+     * improved wording away from being wrong; what this cannot be allowed to
+     * lose is that the choice survives to the next machine, that the whole
+     * application redraws rather than only the button pressed, and that a page
+     * nobody touched is in the right language after a reload.
+     */
+  },
+
   // --- held back ------------------------------------------------------------
   {
     name: 'tool-wand-check',

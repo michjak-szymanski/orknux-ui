@@ -23,6 +23,7 @@ import { Loader } from '../../components/Loader';
 import { DependantLinks } from '../../components/UsedBy';
 import { shellUser } from '../../session/user';
 import styles from './AdminLibrariesPage.module.css';
+import { t } from '../../i18n';
 
 export interface AdminLibrariesPageProps {
   session: SessionUser;
@@ -73,7 +74,7 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
       })
       .catch((cause: unknown) => {
         setLibraries(null);
-        setError(cause instanceof Error ? cause.message : 'Could not load the libraries.');
+        setError(cause instanceof Error ? cause.message : t('Could not load the libraries.'));
         setLoading(false);
       });
   }, []);
@@ -111,7 +112,7 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
       setSpec('');
       load();
     } catch (cause: unknown) {
-      setError(cause instanceof Error ? cause.message : 'Could not install that package.');
+      setError(cause instanceof Error ? cause.message : t('Could not install that package.'));
     } finally {
       setBusy(false);
     }
@@ -127,7 +128,7 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
       setNotice(loaded.replaced ? `Replaced ${loaded.key}.` : `Loaded ${loaded.key}.`);
       load();
     } catch (cause: unknown) {
-      setError(cause instanceof Error ? cause.message : 'Could not load that library.');
+      setError(cause instanceof Error ? cause.message : t('Could not load that library.'));
     } finally {
       setBusy(false);
       // Cleared so choosing the same file again still counts as a change.
@@ -161,7 +162,7 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
       setConfirming(null);
       load();
     } catch (cause: unknown) {
-      const message = cause instanceof Error ? cause.message : 'Could not remove that library.';
+      const message = cause instanceof Error ? cause.message : t('Could not remove that library.');
       if (library.usedBy.length > 0) {
         setRefused(library.id);
         setConfirming(null);
@@ -179,8 +180,8 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
         <div className={styles.titleBlock}>
           <h1 className={styles.title}>
             <span className={styles.titleWithHint}>
-              Libraries
-              <FieldHint label="Libraries">
+              {t('Libraries')}
+              <FieldHint label={t('Libraries')}>
                 A library is available in every workspace, and is imported by a function or a tool under a
                 local name of its own — <code>imports.dateFns</code>. Its key is the filename without the
                 extension, so loading a file with a key already in the list replaces it in place and nothing
@@ -196,7 +197,9 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
               </FieldHint>
             </span>
           </h1>
-          <p className={styles.subtitle}>JavaScript any workspace’s function or tool may import.</p>
+          <p className={styles.subtitle}>
+            {t('JavaScript any workspace’s function or tool may import.')}
+          </p>
         </div>
         {/*
          * The real input is hidden and driven by the button: a file input styles
@@ -227,14 +230,14 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
                 className={styles.spec}
                 type="text"
                 value={spec}
-                placeholder="random@4.1.0"
-                aria-label="Package and exact version"
+                placeholder={t('random@4.1.0')}
+                aria-label={t('Package and exact version')}
                 title={`Fetched once from ${registry.url}`}
                 disabled={busy}
                 onChange={(event) => setSpec(event.target.value)}
               />
               <button type="submit" className={styles.installButton} disabled={busy || spec.trim() === ''}>
-                Install
+                {t('Install')}
               </button>
             </form>
           )}
@@ -245,17 +248,17 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
             onClick={() => picker.current?.click()}
           >
             <img src={plusIcon} alt="" width={14} height={14} />
-            Load Library
+            {t('Load Library')}
           </button>
         </div>
       </header>
 
       <section className={styles.card}>
         <div className={styles.tableHeader}>
-          <span className={styles.colName}>Name</span>
-          <span className={styles.colSize}>Size</span>
-          <span className={styles.colWhen}>Loaded</span>
-          <span className={styles.colActions}>Actions</span>
+          <span className={styles.colName}>{t('Name')}</span>
+          <span className={styles.colSize}>{t('Size')}</span>
+          <span className={styles.colWhen}>{t('Loaded')}</span>
+          <span className={styles.colActions}>{t('Actions')}</span>
         </div>
 
         {loading && (
@@ -266,7 +269,7 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
         {error !== null && <p className={`${styles.notice} ${styles.noticeError}`}>{error}</p>}
         {notice !== null && error === null && <p className={styles.notice}>{notice}</p>}
         {!loading && error === null && libraries?.length === 0 && (
-          <p className={styles.notice}>No libraries loaded yet.</p>
+          <p className={styles.notice}>{t('No libraries loaded yet.')}</p>
         )}
 
         {libraries?.map((library) => (
@@ -314,7 +317,7 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
                 */}
                 {refused === library.id && (
                   <span className={styles.refused} role="alert">
-                    Still imported — open one of those and take the import off first.
+                    {t('Still imported — open one of those and take the import off first.')}
                   </span>
                 )}
               </span>
@@ -346,12 +349,8 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
                     className={styles.confirm}
                     disabled={busy}
                     onClick={() => void onRemove(library)}
-                  >
-                    Remove
-                  </button>
-                  <button type="button" className={styles.cancel} onClick={() => setConfirming(null)}>
-                    Cancel
-                  </button>
+                  >{t('Remove')}</button>
+                  <button type="button" className={styles.cancel} onClick={() => setConfirming(null)}>{t('Cancel')}</button>
                 </>
               ) : (
                 <button

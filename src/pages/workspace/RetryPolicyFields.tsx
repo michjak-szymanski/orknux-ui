@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FieldHint } from '../../components/FieldHint';
 import styles from './RetryPolicyFields.module.css';
+import { t } from '../../i18n';
 
 /**
  * The backoff, as much of it as belongs on the node.
@@ -90,7 +91,7 @@ export function saidAsTime(seconds: number): string {
  */
 export function retrySentence(policy: RetryPolicyDraft): string {
   const attempts = policy.retryAttempts ?? 1;
-  if (attempts <= 1) return 'One attempt. A failure stops here.';
+  if (attempts <= 1) return t('One attempt. A failure stops here.');
 
   const total = totalWaitSeconds(policy);
   const budget = policy.retryBudgetSeconds ?? null;
@@ -146,13 +147,10 @@ export function RetryPolicyFields({ draft, onChange }: RetryPolicyFieldsProps) {
   return (
     <div className={styles.field}>
       <span className={styles.labelWithHint}>
-        <span className={styles.label}>Retries</span>
-        <FieldHint label="Retries">
+        <span className={styles.label}>{t('Retries')}</span>
+        <FieldHint label={t('Retries')}>
           <p>
-            How many goes in all, not extra ones: one is the single attempt every step has always
-            had. The initial wait is what it leaves before the second attempt, and the multiplier is
-            what that wait is multiplied by after each one — 1 repeats it, 2 doubles it, and 1.5 is
-            somewhere between.
+            {t('How many goes in all, not extra ones: one is the single attempt every step has always had. The initial wait is what it leaves before the second attempt, and the multiplier is what that wait is multiplied by after each one — 1 repeats it, 2 doubles it, and 1.5 is somewhere between.')}
           </p>
           <p>
             {draft.kind === 'AGENT' ? (
@@ -169,16 +167,14 @@ export function RetryPolicyFields({ draft, onChange }: RetryPolicyFieldsProps) {
             )}
           </p>
           <p>
-            No single wait ever passes an hour, whatever the numbers multiply out to. A maximum wait
-            below that flattens the curve where it reaches it; a budget stops the whole business at
-            a wall clock, with attempts left over.
+            {t('No single wait ever passes an hour, whatever the numbers multiply out to. A maximum wait below that flattens the curve where it reaches it; a budget stops the whole business at a wall clock, with attempts left over.')}
           </p>
         </FieldHint>
       </span>
 
       <div className={styles.retryFields}>
         <label className={styles.retryField}>
-          <span className={styles.retryCaption}>Attempts</span>
+          <span className={styles.retryCaption}>{t('Attempts')}</span>
           <div className={styles.inputWrapper}>
             <input
               className={styles.input}
@@ -202,7 +198,7 @@ export function RetryPolicyFields({ draft, onChange }: RetryPolicyFieldsProps) {
           to sit between.
         */}
         <label className={retries ? styles.retryField : `${styles.retryField} ${styles.retryFieldOff}`}>
-          <span className={styles.retryCaption}>Initial wait</span>
+          <span className={styles.retryCaption}>{t('Initial wait')}</span>
           <div className={styles.inputWrapper}>
             <input
               className={styles.input}
@@ -228,7 +224,7 @@ export function RetryPolicyFields({ draft, onChange }: RetryPolicyFieldsProps) {
           wait it shapes for the same reason.
         */}
         <label className={retries ? styles.retryField : `${styles.retryField} ${styles.retryFieldOff}`}>
-          <span className={styles.retryCaption}>Multiplier</span>
+          <span className={styles.retryCaption}>{t('Multiplier')}</span>
           <div className={styles.inputWrapper}>
             <span className={styles.retryUnit}>×</span>
             <input
@@ -275,7 +271,7 @@ export function RetryPolicyFields({ draft, onChange }: RetryPolicyFieldsProps) {
         disabled={!retries}
         onClick={() => setOpen((was) => !was)}
       >
-        {open ? 'Fewer settings' : 'Ceiling, jitter and budget'}
+        {open ? t('Fewer settings') : t('Ceiling, jitter and budget')}
       </button>
 
       {open && retries && (
@@ -286,7 +282,7 @@ export function RetryPolicyFields({ draft, onChange }: RetryPolicyFieldsProps) {
             reader of a fixed policy should not be made to look at one.
           */}
           <label className={grows ? styles.retryField : `${styles.retryField} ${styles.retryFieldOff}`}>
-            <span className={styles.retryCaption}>Maximum wait</span>
+            <span className={styles.retryCaption}>{t('Maximum wait')}</span>
             <div className={styles.inputWrapper}>
               <input
                 className={styles.input}
@@ -313,7 +309,7 @@ export function RetryPolicyFields({ draft, onChange }: RetryPolicyFieldsProps) {
             could also have done - the numbers between are what it could not.
           */}
           <label className={styles.retryField}>
-            <span className={styles.retryCaption}>Jitter</span>
+            <span className={styles.retryCaption}>{t('Jitter')}</span>
             <div className={styles.inputWrapper}>
               <input
                 className={styles.input}
@@ -332,7 +328,7 @@ export function RetryPolicyFields({ draft, onChange }: RetryPolicyFieldsProps) {
           </label>
 
           <label className={styles.retryField}>
-            <span className={styles.retryCaption}>Budget</span>
+            <span className={styles.retryCaption}>{t('Budget')}</span>
             <div className={styles.inputWrapper}>
               <input
                 className={styles.input}

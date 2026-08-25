@@ -1,4 +1,5 @@
 import { ApiError, request } from './client';
+import { t } from '../i18n';
 
 /**
  * Asks for a reset link.
@@ -18,7 +19,7 @@ export async function requestPasswordReset(email: string): Promise<string> {
     throw new ApiError(
       seconds > 0
         ? `Too many attempts. Try again in ${seconds} seconds.`
-        : 'Too many attempts. Try again in a little while.',
+        : t('Too many attempts. Try again in a little while.'),
       429,
     );
   }
@@ -45,10 +46,10 @@ export async function completePasswordReset(token: string, password: string): Pr
   });
 
   if (response.status === 400) {
-    throw new ApiError('That link is no longer valid. Ask for a new one from the sign-in page.', 400);
+    throw new ApiError(t('That link is no longer valid. Ask for a new one from the sign-in page.'), 400);
   }
   if (response.status === 429) {
-    throw new ApiError('Too many attempts. Try again in a little while.', 429);
+    throw new ApiError(t('Too many attempts. Try again in a little while.'), 429);
   }
   if (!response.ok) {
     throw new ApiError(`Could not set the password (status ${response.status})`, response.status);

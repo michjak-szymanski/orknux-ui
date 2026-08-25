@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 
 import { PanelClose, panelEscape } from './PanelClose';
 import styles from './Dialog.module.css';
+import { t } from '../i18n';
 
 export interface NameDialogProps {
   /**
@@ -75,7 +76,7 @@ export function NameDialog({
     try {
       await onSubmit(name.trim(), description.trim());
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not create it.');
+      setError(cause instanceof Error ? cause.message : t('Could not create it.'));
       setSubmitting(false);
     }
   }
@@ -111,9 +112,7 @@ export function NameDialog({
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="new-description">
-              Description
-            </label>
+            <label className={styles.label} htmlFor="new-description">{t('Description')}</label>
             <div className={styles.inputWrapper}>
               <input
                 id="new-description"
@@ -136,10 +135,10 @@ export function NameDialog({
 
         <div className={styles.actions}>
           <button type="button" className={styles.ghost} onClick={onClose} disabled={submitting}>
-            Cancel
+            {t('Cancel')}
           </button>
           <button type="submit" className={styles.filled} disabled={name.trim() === '' || submitting}>
-            {submitting ? 'Creating…' : submitLabel}
+            {submitting ? t('Creating…') : submitLabel}
           </button>
         </div>
       </form>

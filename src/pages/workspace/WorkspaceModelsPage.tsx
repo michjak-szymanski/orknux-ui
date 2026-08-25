@@ -19,6 +19,7 @@ import { ModelDialog } from '../../components/ModelDialog';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceModelsPage.module.css';
+import { t } from '../../i18n';
 
 export interface WorkspaceModelsPageProps {
   session: SessionUser;
@@ -57,7 +58,7 @@ export function WorkspaceModelsPage({ session, onSignOut }: WorkspaceModelsPageP
       .catch((cause: unknown) => {
         setProviders(null);
         setModels(null);
-        setError(cause instanceof Error ? cause.message : 'Could not load the models.');
+        setError(cause instanceof Error ? cause.message : t('Could not load the models.'));
       });
   }, [workspaceId]);
 
@@ -68,7 +69,7 @@ export function WorkspaceModelsPage({ session, onSignOut }: WorkspaceModelsPageP
       await setModelEnabled(model.id, !model.enabled);
       load();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not change the model.');
+      setError(cause instanceof Error ? cause.message : t('Could not change the model.'));
     }
   }
 
@@ -81,8 +82,10 @@ export function WorkspaceModelsPage({ session, onSignOut }: WorkspaceModelsPageP
       sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <header className={styles.contentHeader}>
-        <h1 className={styles.title}>Models</h1>
-        <p className={styles.subtitle}>Manage LLM providers and available models for your workspace</p>
+        <h1 className={styles.title}>{t('Models')}</h1>
+        <p className={styles.subtitle}>
+          {t('Manage LLM providers and available models for your workspace')}
+        </p>
       </header>
 
       {error !== null && (
@@ -93,21 +96,21 @@ export function WorkspaceModelsPage({ session, onSignOut }: WorkspaceModelsPageP
 
       <section className={styles.card}>
         <div className={styles.cardHeader}>
-          <h2 className={styles.cardTitle}>Providers</h2>
+          <h2 className={styles.cardTitle}>{t('Providers')}</h2>
           <Link className={styles.addButton} to={`/workspace/${workspaceId}/models/providers/new`}>
-            + Add Provider
+            {t('+ Add Provider')}
           </Link>
         </div>
 
         <div className={styles.tableHeader}>
-          <span className={styles.colProvider}>Provider</span>
-          <span className={styles.colGrow}>API Endpoint</span>
-          <span className={styles.colStatus}>Status</span>
-          <span className={styles.colActions}>Actions</span>
+          <span className={styles.colProvider}>{t('Provider')}</span>
+          <span className={styles.colGrow}>{t('API Endpoint')}</span>
+          <span className={styles.colStatus}>{t('Status')}</span>
+          <span className={styles.colActions}>{t('Actions')}</span>
         </div>
 
         {providers === null && error === null && <p className={styles.notice}><Loader /></p>}
-        {providers?.length === 0 && <p className={styles.notice}>No providers yet.</p>}
+        {providers?.length === 0 && <p className={styles.notice}>{t('No providers yet.')}</p>}
 
         {providers?.map((provider) => (
           // The whole row opens it, the way a connection's row does on
@@ -140,7 +143,7 @@ export function WorkspaceModelsPage({ session, onSignOut }: WorkspaceModelsPageP
               */}
               {provider.secretVariableMissing ? (
                 <span className={styles.secretGone} data-secret-missing="">
-                  Its workspace secret is gone — not its endpoint
+                  {t('Its workspace secret is gone — not its endpoint')}
                 </span>
               ) : provider.secretVariableName !== null ? (
                 <span className={styles.secretFrom} data-secret-variable="">
@@ -174,33 +177,31 @@ export function WorkspaceModelsPage({ session, onSignOut }: WorkspaceModelsPageP
 
       <section className={styles.card}>
         <div className={styles.cardHeader}>
-          <h2 className={styles.cardTitle}>Available Models</h2>
+          <h2 className={styles.cardTitle}>{t('Available Models')}</h2>
           {/* A model belongs to a provider, so there is nothing to add without one. */}
           <button
             type="button"
             className={styles.addButton}
             onClick={() => setAddingModel(true)}
             disabled={providers === null || providers.length === 0}
-          >
-            + Add Model
-          </button>
+          >{t('+ Add Model')}</button>
         </div>
 
         <div className={styles.tableHeader}>
-          <span className={styles.colModel}>Model</span>
-          <span className={styles.colProviderName}>Provider</span>
-          <span className={styles.colKind}>Type</span>
-          <span className={styles.colToggle}>Status</span>
+          <span className={styles.colModel}>{t('Model')}</span>
+          <span className={styles.colProviderName}>{t('Provider')}</span>
+          <span className={styles.colKind}>{t('Type')}</span>
+          <span className={styles.colToggle}>{t('Status')}</span>
           <span className={styles.colGrow} />
-          <span className={styles.colActions}>Actions</span>
+          <span className={styles.colActions}>{t('Actions')}</span>
         </div>
 
         {models === null && error === null && <p className={styles.notice}><Loader /></p>}
         {models?.length === 0 && (
           <p className={styles.notice}>
             {providers?.length === 0
-              ? 'Add a provider first; models belong to one.'
-              : 'No models yet.'}
+              ? t('Add a provider first; models belong to one.')
+              : t('No models yet.')}
           </p>
         )}
 

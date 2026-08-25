@@ -24,6 +24,7 @@ import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { shellUser } from '../../session/user';
 import styles from './AdminUserPage.module.css';
+import { t } from '../../i18n';
 
 export interface AdminUserPageProps {
   session: SessionUser;
@@ -93,7 +94,7 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
       .then((found) => {
         if (!current) return;
         if (found === null) {
-          setLoadError('That user no longer exists.');
+          setLoadError(t('That user no longer exists.'));
         } else {
           setUsername(found.username);
           setDisplayName(found.displayName);
@@ -111,7 +112,7 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
         }
       })
       .catch((cause: unknown) => {
-        if (current) setLoadError(cause instanceof Error ? cause.message : 'Could not load the user.');
+        if (current) setLoadError(cause instanceof Error ? cause.message : t('Could not load the user.'));
       });
     return () => {
       current = false;
@@ -135,7 +136,7 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
         navigate('/admin/users');
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save the user.');
+      setError(cause instanceof Error ? cause.message : t('Could not save the user.'));
     } finally {
       setSaving(false);
     }
@@ -149,9 +150,9 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
       const held = await setUserPassword(userId, password);
       setHasPassword(held.hasPassword);
       setPassword('');
-      setPasswordSaid('Set. They can sign in with it now.');
+      setPasswordSaid(t('Set. They can sign in with it now.'));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not set the password.');
+      setError(cause instanceof Error ? cause.message : t('Could not set the password.'));
     } finally {
       setSaving(false);
     }
@@ -168,11 +169,11 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
       setSavedEmail(held.email ?? '');
       setEmailSaid(
         held.email === null
-          ? 'Cleared. The provider fills it in again at their next sign-in.'
-          : 'Saved. Signing in no longer overwrites it.',
+          ? t('Cleared. The provider fills it in again at their next sign-in.')
+          : t('Saved. Signing in no longer overwrites it.'),
       );
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save the address.');
+      setError(cause instanceof Error ? cause.message : t('Could not save the address.'));
     } finally {
       setSaving(false);
     }
@@ -188,17 +189,17 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
       setMinted(made.secret);
       setTokenName('');
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not make the token.');
+      setError(cause instanceof Error ? cause.message : t('Could not make the token.'));
     } finally {
       setSaving(false);
     }
   }
 
-  const called = displayName.trim() || username.trim() || 'New user';
+  const called = displayName.trim() || username.trim() || t('New user');
 
   return (
     <AppShell
-      title={displayName.trim() || username.trim() || (creating ? 'New user' : undefined)}
+      title={displayName.trim() || username.trim() || (creating ? t('New user') : undefined)}
       user={shellUser(session)}
       showAdmin={session.admin}
       onSignOut={onSignOut}
@@ -209,9 +210,7 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
           <p className={styles.error} role="alert">
             {loadError}
           </p>
-          <Link className={styles.back} to="/admin/users">
-            Back to Users
-          </Link>
+          <Link className={styles.back} to="/admin/users">{t('Back to Users')}</Link>
         </section>
       ) : !creating && username === '' ? (
         <section className={styles.card}>
@@ -221,7 +220,7 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
         <section className={styles.card}>
           <header className={styles.header}>
             <div className={styles.headRow}>
-              <BackLink to="/admin/users" label="Users" />
+              <BackLink to="/admin/users" label={t('Users')} />
               <span className={styles.avatar} aria-hidden="true">
                 {initialsOf(called)}
               </span>
@@ -229,10 +228,10 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
                 <h1 className={styles.title}>{called}</h1>
                 <p className={styles.subtitle}>
                   {creating
-                    ? 'A new internal user.'
+                    ? t('A new internal user.')
                     : external
-                      ? 'External — the identity provider’s, apart from the address below.'
-                      : 'Internal — managed here.'}
+                      ? t('External — the identity provider’s, apart from the address below.')
+                      : t('Internal — managed here.')}
                 </p>
               </div>
             </div>
@@ -244,7 +243,7 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
                 onClick={() => void save()}
                 disabled={saving || username.trim() === ''}
               >
-                {saving ? 'Saving…' : creating ? 'Create User' : 'Save Changes'}
+                {saving ? t('Saving…') : creating ? t('Create User') : t('Save Changes')}
               </button>
             )}
           </header>
@@ -257,9 +256,7 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
 
           <div className={styles.fields}>
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="user-username">
-                Username
-              </label>
+              <label className={styles.label} htmlFor="user-username">{t('Username')}</label>
               <input
                 id="user-username"
                 className={styles.input}
@@ -274,14 +271,14 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
 
             <div className={styles.field}>
               <label className={styles.label} htmlFor="user-display-name">
-                Display Name
+                {t('Display Name')}
               </label>
               <input
                 id="user-display-name"
                 className={styles.input}
                 type="text"
                 value={displayName}
-                placeholder={username.trim() || 'How they are shown'}
+                placeholder={username.trim() || t('How they are shown')}
                 // The provider says what an external user is called, and would
                 // say it again at their next sign-in.
                 disabled={external}
@@ -298,13 +295,11 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
             {!creating && (
               <div className={styles.field}>
                 <span className={styles.labelWithHint}>
-                  <label className={styles.label} htmlFor="user-email">
-                    Email
-                  </label>
-                  <FieldHint label="Email">
+                  <label className={styles.label} htmlFor="user-email">{t('Email')}</label>
+                  <FieldHint label={t('Email')}>
                     {external
-                      ? 'Taken from their directory entry, and refreshed from it at every sign-in until one is set here. Emptying it hands it back.'
-                      : 'Where to write to them. Internal users have no directory entry to inherit one from.'}
+                      ? t('Taken from their directory entry, and refreshed from it at every sign-in until one is set here. Emptying it hands it back.')
+                      : t('Where to write to them. Internal users have no directory entry to inherit one from.')}
                   </FieldHint>
                 </span>
                 <div className={styles.row}>
@@ -324,18 +319,16 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
                     className={styles.save}
                     onClick={() => void saveEmail()}
                     disabled={saving || email.trim() === savedEmail}
-                  >
-                    Save
-                  </button>
+                  >{t('Save')}</button>
                 </div>
                 {emailSaid !== null && <p className={styles.done}>{emailSaid}</p>}
               </div>
             )}
 
             <fieldset className={styles.rolesBox} disabled={external}>
-              <legend className={styles.label}>Roles</legend>
+              <legend className={styles.label}>{t('Roles')}</legend>
               {roles.length === 0 ? (
-                <p className={styles.fieldNote}>No roles are defined yet.</p>
+                <p className={styles.fieldNote}>{t('No roles are defined yet.')}</p>
               ) : (
                 roles.map((role) => (
                   <label key={role.id} className={styles.role}>
@@ -366,7 +359,7 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
             {!creating && !external && (
               <>
                 <div className={styles.field}>
-                  <span className={styles.label}>Password</span>
+                  <span className={styles.label}>{t('Password')}</span>
                   {/*
                     Whether this account can be signed into at all, which is a
                     reading of the user and not an explanation of the box: it
@@ -375,16 +368,16 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
                   */}
                   <p className={styles.fieldNote}>
                     {hasPassword
-                      ? 'They can sign in with a password. Setting a new one replaces it.'
-                      : 'They cannot sign in. Setting a password lets them.'}
+                      ? t('They can sign in with a password. Setting a new one replaces it.')
+                      : t('They cannot sign in. Setting a password lets them.')}
                   </p>
                   <div className={styles.row}>
                     <input
                       className={styles.input}
                       type="password"
                       value={password}
-                      placeholder="At least 12 characters"
-                      aria-label="New password"
+                      placeholder={t('At least 12 characters')}
+                      aria-label={t('New password')}
                       autoComplete="new-password"
                       onChange={(event) => {
                         setPassword(event.target.value);
@@ -405,10 +398,9 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
 
                 <div className={styles.field}>
                   <span className={styles.labelWithHint}>
-                    <span className={styles.label}>Access Tokens</span>
-                    <FieldHint label="Access Tokens">
-                      A token is this user by another door: it carries their roles and nothing more. Sent as
-                      an Authorization: Bearer header.
+                    <span className={styles.label}>{t('Access Tokens')}</span>
+                    <FieldHint label={t('Access Tokens')}>
+                      {t('A token is this user by another door: it carries their roles and nothing more. Sent as an Authorization: Bearer header.')}
                     </FieldHint>
                   </span>
 
@@ -426,9 +418,7 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
                             setTokens(tokens.filter((held) => held.id !== token.id)),
                           );
                         }}
-                      >
-                        Revoke
-                      </button>
+                      >{t('Revoke')}</button>
                     </div>
                   ))}
 
@@ -437,8 +427,8 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
                       className={styles.input}
                       type="text"
                       value={tokenName}
-                      placeholder="What is it for?"
-                      aria-label="Token name"
+                      placeholder={t('What is it for?')}
+                      aria-label={t('Token name')}
                       onChange={(event) => setTokenName(event.target.value)}
                     />
                     <button
@@ -446,19 +436,17 @@ export function AdminUserPage({ session, onSignOut }: AdminUserPageProps) {
                       className={styles.save}
                       onClick={() => void mintToken()}
                       disabled={saving || tokenName.trim() === ''}
-                    >
-                      Make Token
-                    </button>
+                    >{t('Make Token')}</button>
                   </div>
 
                   {/* The one time it is ever on screen. */}
                   {minted !== null && (
                     <div className={styles.secret}>
-                      <p className={styles.secretHead}>Copy it now - it is not shown again.</p>
+                      <p className={styles.secretHead}>
+                        {t('Copy it now - it is not shown again.')}
+                      </p>
                       <code className={styles.secretValue}>{minted}</code>
-                      <button type="button" className={styles.textButton} onClick={() => setMinted(null)}>
-                        Done
-                      </button>
+                      <button type="button" className={styles.textButton} onClick={() => setMinted(null)}>{t('Done')}</button>
                     </div>
                   )}
                 </div>

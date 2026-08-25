@@ -17,6 +17,7 @@ import { Loader } from '../../components/Loader';
 import { Pagination } from '../../components/Pagination';
 import { shellUser } from '../../session/user';
 import styles from './AdminPage.module.css';
+import { t } from '../../i18n';
 
 export interface AdminPageProps {
   session: SessionUser;
@@ -53,8 +54,10 @@ export function AdminPage({ session, onSignOut }: AdminPageProps) {
       <section className={styles.card}>
         <header className={styles.workspacesHeader}>
           <div className={styles.titleBlock}>
-            <h1 className={styles.title}>Workspaces</h1>
-            <p className={styles.subtitle}>Manage workspace membership, access, and ownership.</p>
+            <h1 className={styles.title}>{t('Workspaces')}</h1>
+            <p className={styles.subtitle}>
+              {t('Manage workspace membership, access, and ownership.')}
+            </p>
           </div>
           <button type="button" className={styles.createWorkspace} onClick={() => setCreating(true)}>
             <span
@@ -62,18 +65,18 @@ export function AdminPage({ session, onSignOut }: AdminPageProps) {
               style={{ maskImage: `url("${plusIcon}")`, WebkitMaskImage: `url("${plusIcon}")` }}
               aria-hidden="true"
             />
-            Create Workspace
+            {t('Create Workspace')}
           </button>
         </header>
 
         <div className={styles.table}>
           <div className={`${styles.row} ${styles.tableHeader}`}>
-            <span className={styles.colGrow}>Workspace</span>
-            <span className={styles.colDescription}>Description</span>
+            <span className={styles.colGrow}>{t('Workspace')}</span>
+            <span className={styles.colDescription}>{t('Description')}</span>
             <span className={styles.colActions} aria-hidden="true" />
           </div>
 
-          <TableState state={workspaces} emptyMessage="No workspaces yet." />
+          <TableState state={workspaces} emptyMessage={t("No workspaces yet.")} />
 
           {workspaces.data?.content.map((workspace) => (
             <div key={workspace.id} className={styles.row}>
@@ -105,7 +108,7 @@ export function AdminPage({ session, onSignOut }: AdminPageProps) {
           pageSize={WORKSPACES_PAGE_SIZE}
           totalItems={workspaces.data?.totalElements ?? 0}
           onPageChange={setWorkspacesPage}
-          label="workspaces"
+          label={t('workspaces')}
         />
       </section>
 
@@ -133,7 +136,7 @@ function useLoadedPage<T>(load: () => Promise<PageOf<T>>, deps: unknown[]): Load
       })
       .catch((cause: unknown) => {
         if (!current) return;
-        const message = cause instanceof Error ? cause.message : 'Could not load data.';
+        const message = cause instanceof Error ? cause.message : t('Could not load data.');
         setState({ data: null, loading: false, error: message });
       });
 

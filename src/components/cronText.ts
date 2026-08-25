@@ -35,6 +35,20 @@
  * - before the save, which is the only place the distinction is any use.
  */
 
+/**
+ * This module is not translated, on purpose.
+ *
+ * It writes a sentence rather than printing one - "At 02:00 every day" is
+ * assembled from a dozen fragments in English word order - and Polish declines
+ * the noun after the numeral, so joining the same pieces the same way produces
+ * something no Polish speaker would write. Translating it means writing a
+ * second generator, which is a job of its own and not a catalogue entry.
+ *
+ * It is also the one module a check imports rather than reads: `cron-reading
+ * -check` loads `CRON_FIELDS` from here in Node, where a directory import of
+ * `../i18n` does not resolve.
+ */
+
 /** One position in the expression, for the legend beside the field. */
 export interface CronFieldLegend {
   /** Where it stands, counting from one, in a six-field expression. */

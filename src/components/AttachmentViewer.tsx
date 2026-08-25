@@ -5,6 +5,7 @@ import type { Attachment } from '../api/attachments';
 import arrowLeftIcon from '../assets/arrow-left.svg';
 import downloadIcon from '../assets/download.svg';
 import styles from './AttachmentViewer.module.css';
+import { t } from '../i18n';
 
 export interface AttachmentViewerProps {
   /**
@@ -142,9 +143,9 @@ export function AttachmentViewer({
                 style={{ maskImage: `url("${downloadIcon}")`, WebkitMaskImage: `url("${downloadIcon}")` }}
                 aria-hidden="true"
               />
-              <span className={styles.barButtonLabel}>Download</span>
+              <span className={styles.barButtonLabel}>{t('Download')}</span>
             </a>
-            <button type="button" className={styles.close} onClick={onClose} aria-label="Close" title="Close">
+            <button type="button" className={styles.close} onClick={onClose} aria-label={t('Close')} title={t('Close')}>
               ×
             </button>
           </header>
@@ -155,8 +156,8 @@ export function AttachmentViewer({
                 type="button"
                 className={`${styles.step} ${styles.stepBack}`}
                 onClick={() => step(-1)}
-                aria-label="Previous"
-                title="Previous"
+                aria-label={t('Previous')}
+                title={t('Previous')}
               >
                 <span
                   className={styles.icon}
@@ -184,8 +185,8 @@ export function AttachmentViewer({
                 type="button"
                 className={`${styles.step} ${styles.stepOn}`}
                 onClick={() => step(1)}
-                aria-label="Next"
-                title="Next"
+                aria-label={t('Next')}
+                title={t('Next')}
               >
                 <span
                   className={styles.icon}

@@ -14,6 +14,7 @@ import { FieldHint } from '../../components/FieldHint';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceSessionsPage.module.css';
+import { t } from '../../i18n';
 
 export interface WorkspaceSessionsPageProps {
   session: SessionUser;
@@ -28,7 +29,7 @@ const SEARCH_PAUSE_MS = 300;
  * has: sorting the twelve rows on screen orders the page and not the workspace.
  */
 const ORDERS: { label: string; order: LlmSessionOrder }[] = [
-  { label: 'Last spoken in', order: 'LAST_EVENT' },
+  { label: t('Last spoken in'), order: 'LAST_EVENT' },
   { label: 'Opened', order: 'CREATED' },
   { label: 'Key', order: 'KEY' },
 ];
@@ -76,7 +77,7 @@ export function WorkspaceSessionsPage({ session, onSignOut }: WorkspaceSessionsP
       })
       .catch((cause: unknown) => {
         setSessions(null);
-        setError(cause instanceof Error ? cause.message : 'Could not load the sessions.');
+        setError(cause instanceof Error ? cause.message : t('Could not load the sessions.'));
         setLoading(false);
       });
   }, [workspaceId, debouncedSearch, page, order, ascending]);
@@ -92,9 +93,9 @@ export function WorkspaceSessionsPage({ session, onSignOut }: WorkspaceSessionsP
       sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <header className={styles.titleHeader}>
-        <h1 className={styles.title}>Sessions</h1>
+        <h1 className={styles.title}>{t('Sessions')}</h1>
         <p className={styles.subtitle}>
-          What the agents have said, kept by key so it outlives the run that started it
+          {t('What the agents have said, kept by key so it outlives the run that started it')}
         </p>
       </header>
 
@@ -104,17 +105,15 @@ export function WorkspaceSessionsPage({ session, onSignOut }: WorkspaceSessionsP
           <input
             className={styles.searchField}
             type="search"
-            placeholder="Search keys and prefixes…"
+            placeholder={t('Search keys and prefixes…')}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            aria-label="Search sessions"
+            aria-label={t('Search sessions')}
           />
         </div>
 
         <div className={styles.sortRow}>
-          <label className={styles.sortLabel} htmlFor="session-order">
-            Sort
-          </label>
+          <label className={styles.sortLabel} htmlFor="session-order">{t('Sort')}</label>
           <span className={styles.selectWrapper}>
             <select
               id="session-order"
@@ -136,8 +135,8 @@ export function WorkspaceSessionsPage({ session, onSignOut }: WorkspaceSessionsP
             type="button"
             className={styles.sortDirection}
             onClick={() => setAscending((held) => !held)}
-            title={ascending ? 'Ascending - press for descending' : 'Descending - press for ascending'}
-            aria-label={ascending ? 'Sorted ascending' : 'Sorted descending'}
+            title={ascending ? t('Ascending - press for descending') : t('Descending - press for ascending')}
+            aria-label={ascending ? t('Sorted ascending') : t('Sorted descending')}
           >
             {ascending ? '↑' : '↓'}
           </button>
@@ -146,11 +145,11 @@ export function WorkspaceSessionsPage({ session, onSignOut }: WorkspaceSessionsP
 
       <section className={styles.card}>
         <div className={styles.tableHeader}>
-          <span className={styles.colKey}>Session</span>
-          <span className={styles.colPrefix}>Prefix</span>
-          <span className={styles.colCount}>Lines</span>
-          <span className={styles.colOpened}>Opened</span>
-          <span className={styles.colSpoken}>Last spoken in</span>
+          <span className={styles.colKey}>{t('Session')}</span>
+          <span className={styles.colPrefix}>{t('Prefix')}</span>
+          <span className={styles.colCount}>{t('Lines')}</span>
+          <span className={styles.colOpened}>{t('Opened')}</span>
+          <span className={styles.colSpoken}>{t('Last spoken in')}</span>
         </div>
 
         {loading && sessions === null && (
@@ -184,8 +183,8 @@ export function WorkspaceSessionsPage({ session, onSignOut }: WorkspaceSessionsP
             {debouncedSearch.trim() === '' ? (
               <p className={styles.emptyTitle}>
                 <span className={styles.labelWithHint}>
-                  No sessions yet.
-                  <FieldHint label="No sessions yet">
+                  {t('No sessions yet.')}
+                  <FieldHint label={t('No sessions yet')}>
                     A session is one running conversation — what was put to an agent, what it
                     answered, the tools it called on the way — kept apart from any single run.
                     Nobody creates one here. One appears the first time an agent node with a{' '}
@@ -196,7 +195,7 @@ export function WorkspaceSessionsPage({ session, onSignOut }: WorkspaceSessionsP
                 </span>
               </p>
             ) : (
-              <p className={styles.emptyTitle}>No session's key or prefix matches that.</p>
+              <p className={styles.emptyTitle}>{t('No session\'s key or prefix matches that.')}</p>
             )}
           </div>
         )}
@@ -217,7 +216,7 @@ export function WorkspaceSessionsPage({ session, onSignOut }: WorkspaceSessionsP
               {/* Null is a session opened and never spoken in, which sorts last
                   either way round and should read as itself rather than as a dash. */}
               {one.lastEventAt === null ? (
-                <span className={styles.nothing}>nothing said yet</span>
+                <span className={styles.nothing}>{t('nothing said yet')}</span>
               ) : (
                 timeAgo(one.lastEventAt)
               )}

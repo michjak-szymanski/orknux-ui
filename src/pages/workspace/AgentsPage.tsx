@@ -22,6 +22,7 @@ import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './AgentsPage.module.css';
+import { t } from '../../i18n';
 
 export interface AgentsPageProps {
   session: SessionUser;
@@ -50,7 +51,7 @@ export function AgentsPage({ session, onSignOut }: AgentsPageProps) {
       })
       .catch((cause: unknown) => {
         setAgents(null);
-        setError(cause instanceof Error ? cause.message : 'Could not load agents.');
+        setError(cause instanceof Error ? cause.message : t('Could not load agents.'));
         setLoading(false);
       });
   }, [workspaceId, page]);
@@ -72,30 +73,30 @@ export function AgentsPage({ session, onSignOut }: AgentsPageProps) {
     >
       <header className={styles.header}>
         <div className={styles.titleGroup}>
-          <h1 className={styles.title}>Agents</h1>
-          <p className={styles.subtitle}>Configure and manage AI agents for your workspace</p>
+          <h1 className={styles.title}>{t('Agents')}</h1>
+          <p className={styles.subtitle}>
+            {t('Configure and manage AI agents for your workspace')}
+          </p>
         </div>
         <div className={transferStyles.headerActions}>
           <ImportComponentsButton workspaceId={workspaceId} onImported={load} />
           <UseTemplateButton workspaceId={workspaceId} kind="AGENT" onImported={load} />
-          <button type="button" className={styles.createAgent} onClick={() => setCreating(true)}>
-            + Create Agent
-          </button>
+          <button type="button" className={styles.createAgent} onClick={() => setCreating(true)}>{t('+ Create Agent')}</button>
         </div>
       </header>
 
       <section className={styles.card}>
         <div className={styles.tableHeader}>
-          <span className={styles.colGrow}>Agent</span>
-          <span className={styles.colGrow}>Description</span>
-          <span className={styles.colStatus}>Status</span>
-          <span className={styles.colActions}>Actions</span>
+          <span className={styles.colGrow}>{t('Agent')}</span>
+          <span className={styles.colGrow}>{t('Description')}</span>
+          <span className={styles.colStatus}>{t('Status')}</span>
+          <span className={styles.colActions}>{t('Actions')}</span>
         </div>
 
         {loading && <p className={styles.notice}><Loader /></p>}
         {error !== null && <p className={`${styles.notice} ${styles.noticeError}`}>{error}</p>}
         {!loading && error === null && agents?.content.length === 0 && (
-          <p className={styles.notice}>No agents yet.</p>
+          <p className={styles.notice}>{t('No agents yet.')}</p>
         )}
 
         {agents?.content.map((agent) => (

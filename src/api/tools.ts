@@ -5,6 +5,7 @@ import { asImportInput } from './functions';
 import type { ScriptImport, ScriptImportInput } from './functions';
 import { SCRIPT_LIBRARY_IMPORT_FIELDS, asLibraryInput } from './libraries';
 import type { ScriptLibraryImport, ScriptLibraryImportInput } from './libraries';
+import { t } from '../i18n';
 
 /**
  * One argument a tool takes, in the order it takes them.
@@ -405,7 +406,7 @@ export function timeAgo(iso: string): string {
 
   const days = Math.round(hours / 24);
   if (days < 7) return `${days} day${days === 1 ? '' : 's'} ago`;
-  if (days < 14) return '1 week ago';
+  if (days < 14) return t('1 week ago');
   if (days < 31) return `${Math.round(days / 7)} weeks ago`;
 
   return new Date(then).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });

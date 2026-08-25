@@ -14,6 +14,7 @@ import { timeAgo } from '../api/tools';
 import { FieldHint } from './FieldHint';
 import { Loader } from './Loader';
 import styles from './RevisionHistory.module.css';
+import { t } from '../i18n';
 
 export interface RevisionHistoryProps {
   kind: ComponentRevisionKind;
@@ -67,7 +68,7 @@ export function RevisionHistory({ kind, componentId, currentName, onRestored }: 
       })
       .catch((cause: unknown) => {
         setRevisions([]);
-        setError(cause instanceof Error ? cause.message : 'Could not read the history.');
+        setError(cause instanceof Error ? cause.message : t('Could not read the history.'));
       });
   }, [kind, componentId]);
 
@@ -83,7 +84,7 @@ export function RevisionHistory({ kind, componentId, currentName, onRestored }: 
     try {
       setDetail(await fetchComponentRevision(id));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not read that version.');
+      setError(cause instanceof Error ? cause.message : t('Could not read that version.'));
     }
   }
 
@@ -100,14 +101,14 @@ export function RevisionHistory({ kind, componentId, currentName, onRestored }: 
       load();
       onRestored?.();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'That could not be restored.');
+      setError(cause instanceof Error ? cause.message : t('That could not be restored.'));
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <section className={styles.history} aria-label="History">
+    <section className={styles.history} aria-label={t('History')}>
       {/*
         What this panel is, behind the (?) rather than under the heading.
 
@@ -127,10 +128,9 @@ export function RevisionHistory({ kind, componentId, currentName, onRestored }: 
       */}
       <h2 className={styles.heading}>
         <span className={styles.headingWithHint}>
-          History
-          <FieldHint label="History">
-            Every save keeps what this was before it, and it appears here. How long they are kept
-            is an administrator’s setting.
+          {t('History')}
+          <FieldHint label={t('History')}>
+            {t('Every save keeps what this was before it, and it appears here. How long they are kept is an administrator’s setting.')}
           </FieldHint>
         </span>
       </h2>
@@ -145,7 +145,7 @@ export function RevisionHistory({ kind, componentId, currentName, onRestored }: 
         <Loader />
       ) : revisions.length === 0 ? (
         // A status says the state. It does not teach; the (?) above does that.
-        <p className={styles.empty}>Nothing yet.</p>
+        <p className={styles.empty}>{t('Nothing yet.')}</p>
       ) : (
         <ul className={styles.list}>
           {revisions.map((revision) => (
@@ -168,9 +168,9 @@ export function RevisionHistory({ kind, componentId, currentName, onRestored }: 
                   {detail === null ? (
                     <Loader />
                   ) : detail.content === null || detail.content === '' ? (
-                    <p className={styles.empty}>This version had nothing written in it.</p>
+                    <p className={styles.empty}>{t('This version had nothing written in it.')}</p>
                   ) : (
-                    <pre className={styles.content} aria-label="This version">
+                    <pre className={styles.content} aria-label={t('This version')}>
                       {detail.content}
                     </pre>
                   )}
@@ -179,11 +179,9 @@ export function RevisionHistory({ kind, componentId, currentName, onRestored }: 
                     className={styles.restore}
                     onClick={() => void restore(revision.id)}
                     disabled={busy}
-                  >
-                    Restore this version
-                  </button>
+                  >{t('Restore this version')}</button>
                   <p className={styles.undo}>
-                    Restoring keeps what it replaces, so this is undoable from the row it adds.
+                    {t('Restoring keeps what it replaces, so this is undoable from the row it adds.')}
                   </p>
                 </div>
               )}

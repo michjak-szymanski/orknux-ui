@@ -18,6 +18,7 @@ import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceTasksPage.module.css';
+import { t } from '../../i18n';
 
 export interface WorkspaceTasksPageProps {
   session: SessionUser;
@@ -82,7 +83,7 @@ export function WorkspaceTasksPage({ session, onSignOut }: WorkspaceTasksPagePro
       })
       .catch((cause: unknown) => {
         setTasks(null);
-        setError(cause instanceof Error ? cause.message : 'Could not load the tasks.');
+        setError(cause instanceof Error ? cause.message : t('Could not load the tasks.'));
         setLoading(false);
       });
   }, [workspaceId, status, page]);
@@ -123,7 +124,7 @@ export function WorkspaceTasksPage({ session, onSignOut }: WorkspaceTasksPagePro
       setPrompt('');
       navigate(`/workspace/${workspaceId}/tasks/${made.id}`);
     } catch (cause: unknown) {
-      setStartError(cause instanceof Error ? cause.message : 'Could not start the task.');
+      setStartError(cause instanceof Error ? cause.message : t('Could not start the task.'));
       setStarting(false);
     }
   }
@@ -137,21 +138,19 @@ export function WorkspaceTasksPage({ session, onSignOut }: WorkspaceTasksPagePro
       sidebar={<WorkspaceSidebar workspaceId={workspaceId} />}
     >
       <header className={styles.titleHeader}>
-        <h1 className={styles.title}>Tasks</h1>
-        <p className={styles.subtitle}>An agent given a problem, working at it until it is done</p>
+        <h1 className={styles.title}>{t('Tasks')}</h1>
+        <p className={styles.subtitle}>
+          {t('An agent given a problem, working at it until it is done')}
+        </p>
       </header>
 
       {/* The issue's own layout: the prompt, then who is to do it. */}
       <section className={styles.starter}>
         <label className={styles.label} htmlFor="task-prompt">
           <span className={styles.labelWithHint}>
-            Prompt
-            <FieldHint label="Prompt">
-              What you want done, in your own words. The agent works on its own from here: it uses
-              the tools it has been granted, writes down what it is doing as it goes, and stops when
-              it says it is finished. If it needs something it was not given, or the prompt does not
-              say how the result should reach you, it stops and asks — and you are told. Say where
-              the result should end up and you save it a question.
+            {t('Prompt')}
+            <FieldHint label={t('Prompt')}>
+              {t('What you want done, in your own words. The agent works on its own from here: it uses the tools it has been granted, writes down what it is doing as it goes, and stops when it says it is finished. If it needs something it was not given, or the prompt does not say how the result should reach you, it stops and asks — and you are told. Say where the result should end up and you save it a question.')}
             </FieldHint>
           </span>
         </label>
@@ -159,7 +158,7 @@ export function WorkspaceTasksPage({ session, onSignOut }: WorkspaceTasksPagePro
           id="task-prompt"
           className={styles.prompt}
           rows={4}
-          placeholder="Write a report of last week's failed runs and put it in the shared drive."
+          placeholder={t('Write a report of last week\'s failed runs and put it in the shared drive.')}
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
         />
@@ -167,12 +166,9 @@ export function WorkspaceTasksPage({ session, onSignOut }: WorkspaceTasksPagePro
         <div className={styles.starterRow}>
           <label className={styles.label} htmlFor="task-worker">
             <span className={styles.labelWithHint}>
-              Agent or model
-              <FieldHint label="Agent or model">
-                An agent brings its own instructions, skills and grants, and those grants are the
-                whole of what the task may reach. A bare model brings none of that: it starts with
-                nothing and has to ask for everything, which is the safer place to start and the
-                slower one.
+              {t('Agent or model')}
+              <FieldHint label={t('Agent or model')}>
+                {t('An agent brings its own instructions, skills and grants, and those grants are the whole of what the task may reach. A bare model brings none of that: it starts with nothing and has to ask for everything, which is the safer place to start and the slower one.')}
               </FieldHint>
             </span>
           </label>
@@ -183,9 +179,9 @@ export function WorkspaceTasksPage({ session, onSignOut }: WorkspaceTasksPagePro
               value={worker}
               onChange={(event) => setWorker(event.target.value)}
             >
-              <option value="">Choose…</option>
+              <option value="">{t('Choose…')}</option>
               {agents.length > 0 && (
-                <optgroup label="Agents">
+                <optgroup label={t('Agents')}>
                   {agents.map((one) => (
                     <option key={`agent-${one.id}`} value={workerValue('agent', one.id)}>
                       {one.name}
@@ -194,7 +190,7 @@ export function WorkspaceTasksPage({ session, onSignOut }: WorkspaceTasksPagePro
                 </optgroup>
               )}
               {models.length > 0 && (
-                <optgroup label="Models">
+                <optgroup label={t('Models')}>
                   {models.map((one) => (
                     <option key={`model-${one.id}`} value={workerValue('model', one.id)}>
                       {one.providerName} · {one.name}
@@ -225,9 +221,7 @@ export function WorkspaceTasksPage({ session, onSignOut }: WorkspaceTasksPagePro
 
       <div className={styles.filterBar}>
         <div className={styles.sortRow}>
-          <label className={styles.sortLabel} htmlFor="task-status">
-            State
-          </label>
+          <label className={styles.sortLabel} htmlFor="task-status">{t('State')}</label>
           <span className={styles.selectWrapper}>
             <select
               id="task-status"
@@ -235,7 +229,7 @@ export function WorkspaceTasksPage({ session, onSignOut }: WorkspaceTasksPagePro
               value={status}
               onChange={(event) => setStatus(event.target.value as TaskStatus | '')}
             >
-              <option value="">All</option>
+              <option value="">{t('All')}</option>
               {TASK_STATUSES.map((one) => (
                 <option key={one} value={one}>
                   {TASK_STATUS_LABEL[one]}
@@ -252,11 +246,11 @@ export function WorkspaceTasksPage({ session, onSignOut }: WorkspaceTasksPagePro
 
       <section className={styles.card}>
         <div className={styles.tableHeader}>
-          <span className={styles.colTitle}>Task</span>
-          <span className={styles.colWorker}>Doing it</span>
-          <span className={styles.colState}>State</span>
-          <span className={styles.colTurns}>Turns</span>
-          <span className={styles.colWhen}>Started</span>
+          <span className={styles.colTitle}>{t('Task')}</span>
+          <span className={styles.colWorker}>{t('Doing it')}</span>
+          <span className={styles.colState}>{t('State')}</span>
+          <span className={styles.colTurns}>{t('Turns')}</span>
+          <span className={styles.colWhen}>{t('Started')}</span>
         </div>
 
         {loading && tasks === null && (
@@ -274,12 +268,9 @@ export function WorkspaceTasksPage({ session, onSignOut }: WorkspaceTasksPagePro
           <div className={styles.empty}>
             <p className={styles.emptyTitle}>
               <span className={styles.labelWithHint}>
-                No tasks yet.
-                <FieldHint label="No tasks yet">
-                  A task is an agent working on its own: it is given a problem, it uses its tools
-                  until it decides it is done, and everything it does is written down as it happens.
-                  Type what you want into the box above and choose who is to do it. Tasks also start
-                  from elsewhere in the product, and those appear on this list too.
+                {t('No tasks yet.')}
+                <FieldHint label={t('No tasks yet')}>
+                  {t('A task is an agent working on its own: it is given a problem, it uses its tools until it decides it is done, and everything it does is written down as it happens. Type what you want into the box above and choose who is to do it. Tasks also start from elsewhere in the product, and those appear on this list too.')}
                 </FieldHint>
               </span>
             </p>
@@ -297,10 +288,10 @@ export function WorkspaceTasksPage({ session, onSignOut }: WorkspaceTasksPagePro
             >
               <span className={`${styles.colTitle} ${styles.name}`}>
                 {one.title}
-                {waiting !== null && <span className={styles.needs}>needs you</span>}
+                {waiting !== null && <span className={styles.needs}>{t('needs you')}</span>}
               </span>
               <span className={`${styles.colWorker} ${styles.muted}`}>
-                {one.agentName ?? <span className={styles.nothing}>a model</span>}
+                {one.agentName ?? <span className={styles.nothing}>{t('a model')}</span>}
               </span>
               <span className={styles.colState}>
                 <span className={styles.state} data-state={one.status}>
@@ -312,7 +303,7 @@ export function WorkspaceTasksPage({ session, onSignOut }: WorkspaceTasksPagePro
               </span>
               <span className={`${styles.colWhen} ${styles.muted}`}>
                 {one.startedAt === null ? (
-                  <span className={styles.nothing}>not yet</span>
+                  <span className={styles.nothing}>{t('not yet')}</span>
                 ) : (
                   timeAgo(one.startedAt)
                 )}

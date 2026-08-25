@@ -6,6 +6,7 @@ import { timeAgo } from '../api/tools';
 import { FieldHint } from './FieldHint';
 import { Loader } from './Loader';
 import styles from './RevisionHistory.module.css';
+import { t } from '../i18n';
 
 export interface PublicationHistoryProps {
   workspaceId: string;
@@ -44,7 +45,7 @@ export function PublicationHistory({ workspaceId, workflowId, onRestored }: Publ
       })
       .catch((cause: unknown) => {
         setPublications([]);
-        setError(cause instanceof Error ? cause.message : 'Could not read the publications.');
+        setError(cause instanceof Error ? cause.message : t('Could not read the publications.'));
       });
   }, [workspaceId, workflowId]);
 
@@ -59,14 +60,14 @@ export function PublicationHistory({ workspaceId, workflowId, onRestored }: Publ
       load();
       onRestored?.(status);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'That could not be restored.');
+      setError(cause instanceof Error ? cause.message : t('That could not be restored.'));
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <section className={styles.history} aria-label="Publications">
+    <section className={styles.history} aria-label={t('Publications')}>
       {/*
         What a publication is, behind the (?) rather than under the heading.
 
@@ -88,11 +89,9 @@ export function PublicationHistory({ workspaceId, workflowId, onRestored }: Publ
       */}
       <h2 className={styles.heading}>
         <span className={styles.headingWithHint}>
-          Publications
-          <FieldHint label="Publications">
-            A workflow’s versions are what was published, not what was saved — a draft is a
-            draft. Publishing this workflow makes a version of it, and it appears here. The
-            newest publication is what triggers and schedules run.
+          {t('Publications')}
+          <FieldHint label={t('Publications')}>
+            {t('A workflow’s versions are what was published, not what was saved — a draft is a draft. Publishing this workflow makes a version of it, and it appears here. The newest publication is what triggers and schedules run.')}
           </FieldHint>
         </span>
       </h2>
@@ -107,7 +106,7 @@ export function PublicationHistory({ workspaceId, workflowId, onRestored }: Publ
         <Loader />
       ) : publications.length === 0 ? (
         // The state of this workflow, and only that. The rest is in the (?).
-        <p className={styles.empty}>Never published.</p>
+        <p className={styles.empty}>{t('Never published.')}</p>
       ) : (
         <ul className={styles.list}>
           {publications.map((publication) => (
@@ -118,19 +117,17 @@ export function PublicationHistory({ workspaceId, workflowId, onRestored }: Publ
                   {publication.publishedBy === '' ? 'unknown' : publication.publishedBy}
                 </span>
                 {publication.restoredFrom !== null && (
-                  <span className={styles.renamed}>restored from an earlier one</span>
+                  <span className={styles.renamed}>{t('restored from an earlier one')}</span>
                 )}
                 {publication.current ? (
-                  <span className={styles.live}>Live</span>
+                  <span className={styles.live}>{t('Live')}</span>
                 ) : (
                   <button
                     type="button"
                     className={styles.restore}
                     onClick={() => void restore(publication.id)}
                     disabled={busy}
-                  >
-                    Restore
-                  </button>
+                  >{t('Restore')}</button>
                 )}
               </div>
             </li>
@@ -140,8 +137,7 @@ export function PublicationHistory({ workspaceId, workflowId, onRestored }: Publ
 
       {publications !== null && publications.length > 0 && (
         <p className={styles.undo}>
-          Restoring publishes that graph again and leaves the draft on the canvas alone, so nothing
-          half-finished is lost.
+          {t('Restoring publishes that graph again and leaves the draft on the canvas alone, so nothing half-finished is lost.')}
         </p>
       )}
     </section>

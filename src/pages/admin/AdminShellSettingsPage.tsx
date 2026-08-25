@@ -12,6 +12,7 @@ import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { shellUser } from '../../session/user';
 import styles from './AdminShellSettingsPage.module.css';
+import { t } from '../../i18n';
 
 export interface AdminShellSettingsPageProps {
   session: SessionUser;
@@ -72,7 +73,7 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
       .then((found) => {
         if (!current) return;
         if (found === null) {
-          setLoadError('That shell no longer exists.');
+          setLoadError(t('That shell no longer exists.'));
           return;
         }
         setShell(found);
@@ -82,7 +83,7 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
         setUsername(found.username ?? '');
       })
       .catch((cause: unknown) => {
-        if (current) setLoadError(cause instanceof Error ? cause.message : 'Could not load the shell.');
+        if (current) setLoadError(cause instanceof Error ? cause.message : t('Could not load the shell.'));
       });
     return () => {
       current = false;
@@ -144,7 +145,7 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
        */
       navigate('/admin/shell');
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save the shell.');
+      setError(cause instanceof Error ? cause.message : t('Could not save the shell.'));
       setSaving(false);
     }
   }
@@ -157,34 +158,30 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
       await deleteShell(shellId);
       navigate('/admin/shell');
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not delete the shell.');
+      setError(cause instanceof Error ? cause.message : t('Could not delete the shell.'));
       setSaving(false);
     }
   }
 
-  const called = adding ? 'Add Shell' : (shell?.name ?? '…');
+  const called = adding ? t('Add Shell') : (shell?.name ?? '…');
 
   return (
     <AppShell
-      title={adding ? 'New shell' : shell?.name}
+      title={adding ? t('New shell') : shell?.name}
       user={shellUser(session)}
       onSignOut={onSignOut}
       sidebar={<AdminSidebar active="shell" />}
     >
       <header className={styles.headerBlock}>
         <p className={styles.breadcrumbs}>
-          <BackLink to="/admin/shell" label="Shell" />
-          <Link className={styles.crumbLink} to="/admin/shell">
-            Shell
-          </Link>
+          <BackLink to="/admin/shell" label={t('Shell')} />
+          <Link className={styles.crumbLink} to="/admin/shell">{t('Shell')}</Link>
           <span className={styles.crumbSeparator}>/</span>
           <span className={styles.crumbCurrent}>{called}</span>
         </p>
         <h1 className={styles.pageTitle}>{called}</h1>
         <p className={styles.subtitle}>
-          An SSH target an agent can be given. What contains it is the machine on the other end and
-          the account you name on it - point it at a virtual machine or a container you are willing
-          to lose.
+          {t('An SSH target an agent can be given. What contains it is the machine on the other end and the account you name on it - point it at a virtual machine or a container you are willing to lose.')}
         </p>
       </header>
 
@@ -193,9 +190,7 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
           <p className={styles.loadError} role="alert">
             {loadError}
           </p>
-          <Link className={styles.crumbLink} to="/admin/shell">
-            Back to Shell
-          </Link>
+          <Link className={styles.crumbLink} to="/admin/shell">{t('Back to Shell')}</Link>
         </section>
       ) : !adding && shell === null ? (
         <section className={styles.card}>
@@ -204,7 +199,7 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
       ) : (
         <form className={styles.form} onSubmit={handleSubmit}>
           <section className={styles.card}>
-            <h2 className={styles.cardTitle}>Machine</h2>
+            <h2 className={styles.cardTitle}>{t('Machine')}</h2>
             <div className={styles.divider} />
 
             <div className={styles.field}>
@@ -216,7 +211,7 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
                 name="shellName"
                 className={styles.input}
                 type="text"
-                placeholder="e.g. build box"
+                placeholder={t('e.g. build box')}
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 autoFocus
@@ -230,9 +225,8 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
                   <label className={styles.label} htmlFor="shell-host">
                     Host <span className={styles.required}>*</span>
                   </label>
-                  <FieldHint label="Host">
-                    A host name or address, without a scheme. Changing it forgets the host key this
-                    shell was first seen with, because that key was about a different machine.
+                  <FieldHint label={t('Host')}>
+                    {t('A host name or address, without a scheme. Changing it forgets the host key this shell was first seen with, because that key was about a different machine.')}
                   </FieldHint>
                 </span>
                 <input
@@ -281,7 +275,7 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
                     onChange={(event) => setForgetHostKey(event.target.checked)}
                   />
                   <span>
-                    Forget the host key
+                    {t('Forget the host key')}
                     {/*
                       The key on record stays in the open: it is the state of the
                       machine being looked at, not an explanation of the box.
@@ -294,24 +288,21 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
                   rather than inside its label, since the (?) is a button and a
                   button inside a <label> ticks the box on its way to opening.
                 */}
-                <FieldHint label="Forget the host key">
-                  The next connection will trust whatever answers and record that instead. Tick this
-                  after rebuilding the machine.
+                <FieldHint label={t('Forget the host key')}>
+                  {t('The next connection will trust whatever answers and record that instead. Tick this after rebuilding the machine.')}
                 </FieldHint>
               </span>
             )}
           </section>
 
           <section className={styles.card}>
-            <h2 className={styles.cardTitle}>Account</h2>
+            <h2 className={styles.cardTitle}>{t('Account')}</h2>
             <div className={styles.divider} />
 
             <div className={styles.field}>
               <span className={styles.labelWithHint}>
-                <label className={styles.label} htmlFor="shell-username">
-                  Username
-                </label>
-                <FieldHint label="Username">
+                <label className={styles.label} htmlFor="shell-username">{t('Username')}</label>
+                <FieldHint label={t('Username')}>
                   The account commands run as. Whatever this account can do, an agent given the
                   shells can do - so give it the least that is useful. Leaving it empty means the
                   account this server itself runs as, the same as running ssh with no user in front
@@ -332,13 +323,9 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
 
             <div className={styles.field}>
               <span className={styles.labelWithHint}>
-                <label className={styles.label} htmlFor="shell-key">
-                  Private key
-                </label>
-                <FieldHint label="Private key">
-                  OpenSSH or PEM. Stored encrypted and never shown again; leaving this empty keeps
-                  whatever is already stored. Its matching public key has to be in the
-                  account&apos;s authorized_keys on the far side.
+                <label className={styles.label} htmlFor="shell-key">{t('Private key')}</label>
+                <FieldHint label={t('Private key')}>
+                  {t('OpenSSH or PEM. Stored encrypted and never shown again; leaving this empty keeps whatever is already stored. Its matching public key has to be in the account\'s authorized_keys on the far side.')}
                 </FieldHint>
               </span>
               <textarea
@@ -348,7 +335,7 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
                 rows={6}
                 placeholder={
                   shell?.privateKeySet === true
-                    ? 'Stored; paste a key to replace it'
+                    ? t('Stored; paste a key to replace it')
                     : '-----BEGIN OPENSSH PRIVATE KEY-----'
                 }
                 value={privateKey}
@@ -362,7 +349,7 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
 
             <div className={styles.field}>
               <label className={styles.label} htmlFor="shell-passphrase">
-                Key passphrase
+                {t('Key passphrase')}
               </label>
               <input
                 id="shell-passphrase"
@@ -370,7 +357,7 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
                 className={styles.input}
                 type="password"
                 autoComplete="new-password"
-                placeholder={shell?.passphraseSet === true ? 'Stored; type to replace' : 'Optional'}
+                placeholder={shell?.passphraseSet === true ? t('Stored; type to replace') : 'Optional'}
                 value={passphrase}
                 onChange={(event) => {
                   setPassphrase(event.target.value);
@@ -394,10 +381,10 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
                       }
                     }}
                   />
-                  <span>Remove the stored key</span>
+                  <span>{t('Remove the stored key')}</span>
                 </label>
-                <FieldHint label="Remove the stored key">
-                  Nothing can connect to this machine until another is pasted in
+                <FieldHint label={t('Remove the stored key')}>
+                  {t('Nothing can connect to this machine until another is pasted in')}
                 </FieldHint>
               </span>
             )}
@@ -444,11 +431,9 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
                 className={styles.secondaryButton}
                 onClick={() => navigate('/admin/shell')}
                 disabled={saving}
-              >
-                Cancel
-              </button>
+              >{t('Cancel')}</button>
               <button type="submit" className={styles.primaryButton} disabled={!complete || saving}>
-                {saving ? 'Saving…' : adding ? 'Add Shell' : 'Save Changes'}
+                {saving ? t('Saving…') : adding ? t('Add Shell') : t('Save Changes')}
               </button>
             </div>
           </div>
@@ -463,15 +448,15 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
       */}
       {!adding && loadError === null && shell !== null && (
         <section className={styles.dangerCard}>
-          <h2 className={styles.dangerHeading}>Danger Zone</h2>
+          <h2 className={styles.dangerHeading}>{t('Danger Zone')}</h2>
           <div className={styles.divider} />
           <div className={styles.dangerRow}>
             <div className={styles.dangerText}>
-              <span className={styles.dangerTitle}>Delete Shell</span>
+              <span className={styles.dangerTitle}>{t('Delete Shell')}</span>
               <span className={styles.dangerNote}>
                 {confirmingDelete
                   ? `Delete ${shell.name}? Any sessions still open on it are closed first and their working directories destroyed.`
-                  : 'Remove this machine, and everything on it that belonged to a session'}
+                  : t('Remove this machine, and everything on it that belonged to a session')}
               </span>
             </div>
             {confirmingDelete ? (
@@ -481,16 +466,14 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
                   className={styles.secondaryButton}
                   onClick={() => setConfirmingDelete(false)}
                   disabled={saving}
-                >
-                  Keep
-                </button>
+                >{t('Keep')}</button>
                 <button
                   type="button"
                   className={styles.dangerButton}
                   onClick={() => void handleDelete()}
                   disabled={saving}
                 >
-                  {saving ? 'Deleting…' : 'Delete Shell'}
+                  {saving ? t('Deleting…') : t('Delete Shell')}
                 </button>
               </div>
             ) : (
@@ -499,9 +482,7 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
                 className={styles.dangerButton}
                 onClick={() => setConfirmingDelete(true)}
                 disabled={saving}
-              >
-                Delete Shell
-              </button>
+              >{t('Delete Shell')}</button>
             )}
           </div>
         </section>

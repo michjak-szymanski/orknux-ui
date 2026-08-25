@@ -1,6 +1,7 @@
 import { graphql } from './client';
 import { fetchMcpServers, fetchWorkspaceConnections } from './integrations';
 import { answers, fetchModels } from './models';
+import { t } from '../i18n';
 
 /**
  * Moving components between installations as JSON.
@@ -257,13 +258,13 @@ export const KIND_LABEL: Record<ComponentKind, string> = {
 export const EXTERNAL_LABEL: Record<ExternalKind, string> = {
   MODEL: 'Model',
   CONNECTION: 'Connection',
-  MCP_SERVER: 'MCP server',
+  MCP_SERVER: t('MCP server'),
 };
 
 export const DISPOSITION_LABEL: Record<ImportDisposition, string> = {
   CREATE: 'New',
   RENAME: 'Renamed',
-  REUSE: 'Already here',
-  MISSING: 'Not here',
-  EXCLUDE: 'Left out',
+  REUSE: t('Already here'),
+  MISSING: t('Not here'),
+  EXCLUDE: t('Left out'),
 };

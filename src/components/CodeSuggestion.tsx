@@ -9,6 +9,7 @@ import { compile } from './monaco';
 import { diffLines, diffSummary } from './diff';
 import type { DiffLine } from './diff';
 import styles from './CodeSuggestion.module.css';
+import { t } from '../i18n';
 
 /** Enough of a workspace's objects that an annotation naming one is found. */
 const OBJECT_PAGE_SIZE = 100;
@@ -127,10 +128,10 @@ export function CodeSuggestion({ suggestion, onSettled }: CodeSuggestionProps) {
       onSettled(
         moved
           ? `I accepted the change and it is saved. The function now takes ${stored.signature}.`
-          : 'I accepted the change and it is saved.',
+          : t('I accepted the change and it is saved.'),
       );
     } catch (cause) {
-      const reason = cause instanceof Error ? cause.message : 'It could not be saved.';
+      const reason = cause instanceof Error ? cause.message : t('It could not be saved.');
       setFailed(reason);
       onSettled(`I tried to accept it and it could not be saved — ${reason}`);
       setSettled('rejected');
@@ -141,10 +142,10 @@ export function CodeSuggestion({ suggestion, onSettled }: CodeSuggestionProps) {
 
   function reject() {
     setSettled('rejected');
-    onSettled('I rejected the change. The function is unchanged.');
+    onSettled(t('I rejected the change. The function is unchanged.'));
   }
 
-  if (before === null) return <p className={styles.loading}>Reading what is there now…</p>;
+  if (before === null) return <p className={styles.loading}>{t('Reading what is there now…')}</p>;
 
   const lines: DiffLine[] = diffLines(before, suggestion.code);
 
@@ -181,15 +182,15 @@ export function CodeSuggestion({ suggestion, onSettled }: CodeSuggestionProps) {
       {settled === null ? (
         <div className={styles.buttons}>
           <button type="button" className={styles.accept} onClick={() => void accept()} disabled={saving}>
-            {saving ? 'Saving…' : 'Accept'}
+            {saving ? t('Saving…') : 'Accept'}
           </button>
           <button type="button" className={styles.reject} onClick={reject} disabled={saving}>
-            Reject
+            {t('Reject')}
           </button>
         </div>
       ) : (
         <p className={settled === 'accepted' ? styles.accepted : styles.rejected}>
-          {settled === 'accepted' ? 'Accepted and saved.' : 'Rejected. Nothing was changed.'}
+          {settled === 'accepted' ? t('Accepted and saved.') : t('Rejected. Nothing was changed.')}
         </p>
       )}
     </section>

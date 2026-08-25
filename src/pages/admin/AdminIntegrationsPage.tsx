@@ -15,6 +15,7 @@ import { Loader } from '../../components/Loader';
 import { Pagination } from '../../components/Pagination';
 import { shellUser } from '../../session/user';
 import styles from './AdminIntegrationsPage.module.css';
+import { t } from '../../i18n';
 
 export interface AdminIntegrationsPageProps {
   session: SessionUser;
@@ -42,7 +43,7 @@ export function AdminIntegrationsPage({ session, onSignOut }: AdminIntegrationsP
       })
       .catch((cause: unknown) => {
         setConnections(null);
-        setError(cause instanceof Error ? cause.message : 'Could not load the connections.');
+        setError(cause instanceof Error ? cause.message : t('Could not load the connections.'));
         setLoading(false);
       });
   }, [page]);
@@ -59,39 +60,40 @@ export function AdminIntegrationsPage({ session, onSignOut }: AdminIntegrationsP
         <div className={styles.titleBlock}>
           <h1 className={styles.title}>
             <span className={styles.titleWithHint}>
-              Integrations
+              {t('Integrations')}
               {/*
                 What was a footer under the table, carrying the same information
                 behind the same kind of control as every other explanation in
                 the product. Two icon conventions for one job is the
                 inconsistency this is here to end.
               */}
-              <FieldHint label="Integrations">
-                Default connections are automatically provisioned when a new workspace is created.
-                Workspaces can override credentials in their own integration settings.
+              <FieldHint label={t('Integrations')}>
+                {t('Default connections are automatically provisioned when a new workspace is created. Workspaces can override credentials in their own integration settings.')}
               </FieldHint>
             </span>
           </h1>
-          <p className={styles.subtitle}>Define default connections that are automatically assigned to new workspaces</p>
+          <p className={styles.subtitle}>
+            {t('Define default connections that are automatically assigned to new workspaces')}
+          </p>
         </div>
         <button type="button" className={styles.addConnection} onClick={() => setDialog(true)}>
           <img src={plusIcon} alt="" width={14} height={14} />
-          Add Default Connection
+          {t('Add Default Connection')}
         </button>
       </header>
 
       <section className={styles.card}>
         <div className={styles.tableHeader}>
-          <span className={styles.colName}>Name</span>
-          <span className={styles.colType}>Type</span>
+          <span className={styles.colName}>{t('Name')}</span>
+          <span className={styles.colType}>{t('Type')}</span>
           <span className={styles.colUrl}>URL</span>
-          <span className={styles.colActions}>Actions</span>
+          <span className={styles.colActions}>{t('Actions')}</span>
         </div>
 
         {loading && <p className={styles.notice}><Loader /></p>}
         {error !== null && <p className={`${styles.notice} ${styles.noticeError}`}>{error}</p>}
         {!loading && error === null && connections?.content.length === 0 && (
-          <p className={styles.notice}>No default connections yet.</p>
+          <p className={styles.notice}>{t('No default connections yet.')}</p>
         )}
 
         {connections?.content.map((connection) => (
@@ -121,7 +123,7 @@ export function AdminIntegrationsPage({ session, onSignOut }: AdminIntegrationsP
           pageSize={PAGE_SIZE}
           totalItems={connections?.totalElements ?? 0}
           onPageChange={setPage}
-          label="default connections"
+          label={t('default connections')}
         />
       </section>
 

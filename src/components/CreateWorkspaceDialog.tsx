@@ -5,6 +5,7 @@ import { createWorkspace } from '../api/workspaces';
 import type { Workspace } from '../api/workspaces';
 import { forgetWorkspaces } from '../session/workspaces';
 import styles from './Dialog.module.css';
+import { t } from '../i18n';
 
 export interface CreateWorkspaceDialogProps {
   open: boolean;
@@ -51,7 +52,7 @@ export function CreateWorkspaceDialog({ open, onClose, onCreated }: CreateWorksp
       forgetWorkspaces();
       onCreated(workspace);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not create the workspace.');
+      setError(cause instanceof Error ? cause.message : t('Could not create the workspace.'));
       setSubmitting(false);
     }
   }
@@ -60,12 +61,12 @@ export function CreateWorkspaceDialog({ open, onClose, onCreated }: CreateWorksp
     <dialog ref={dialogRef} className={styles.dialog} onCancel={onClose} onClose={onClose}>
       <form className={styles.body} onSubmit={handleSubmit}>
         <header className={styles.header}>
-          <h2 className={styles.title}>Create Workspace</h2>
+          <h2 className={styles.title}>{t('Create Workspace')}</h2>
         </header>
 
         <div className={styles.field}>
           <label className={styles.label} htmlFor="create-workspace-name">
-            Workspace name
+            {t('Workspace name')}
           </label>
           <div className={styles.inputWrapper}>
             <input
@@ -84,7 +85,7 @@ export function CreateWorkspaceDialog({ open, onClose, onCreated }: CreateWorksp
 
         <div className={styles.field}>
           <label className={styles.label} htmlFor="create-workspace-description">
-            Description
+            {t('Description')}
           </label>
           <div className={styles.inputWrapper}>
             <textarea
@@ -92,7 +93,7 @@ export function CreateWorkspaceDialog({ open, onClose, onCreated }: CreateWorksp
               name="workspaceDescription"
               className={`${styles.input} ${styles.textarea}`}
               rows={3}
-              placeholder="What this workspace owns."
+              placeholder={t('What this workspace owns.')}
               value={description}
               onChange={(event) => setDescription(event.target.value)}
             />
@@ -107,10 +108,10 @@ export function CreateWorkspaceDialog({ open, onClose, onCreated }: CreateWorksp
 
         <div className={styles.actions}>
           <button type="button" className={styles.ghost} onClick={onClose} disabled={submitting}>
-            Cancel
+            {t('Cancel')}
           </button>
           <button type="submit" className={styles.filled} disabled={name.trim() === '' || submitting}>
-            {submitting ? 'Creating…' : 'Create Workspace'}
+            {submitting ? t('Creating…') : t('Create Workspace')}
           </button>
         </div>
       </form>

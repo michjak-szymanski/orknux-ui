@@ -1,4 +1,5 @@
 import { graphql } from './client';
+import { t } from '../i18n';
 
 /** What a component reports about itself. */
 export type ComponentStatus = 'HEALTHY' | 'DEGRADED' | 'DOWN';
@@ -51,7 +52,7 @@ export async function fetchComponents(): Promise<Component[]> {
 export function uiComponent(): Component {
   return {
     name: 'orknux-ui',
-    description: 'The web interface you are looking at',
+    description: t('The web interface you are looking at'),
     status: 'HEALTHY',
     version: __APP_VERSION__,
     detail: 'Loaded',

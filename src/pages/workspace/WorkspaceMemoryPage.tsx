@@ -30,6 +30,7 @@ import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceMemoryPage.module.css';
+import { t } from '../../i18n';
 
 export interface WorkspaceMemoryPageProps {
   session: SessionUser;
@@ -38,8 +39,8 @@ export interface WorkspaceMemoryPageProps {
 
 /** What the grid can be ordered by, and what the control calls each one. */
 const SORTS: { value: MemorySort; label: string }[] = [
-  { value: 'LAST_MODIFIED', label: 'Last Modified' },
-  { value: 'CREATED', label: 'Date Added' },
+  { value: 'LAST_MODIFIED', label: t('Last Modified') },
+  { value: 'CREATED', label: t('Date Added') },
   { value: 'TITLE', label: 'Title' },
 ];
 
@@ -102,7 +103,7 @@ export function WorkspaceMemoryPage({ session, onSignOut }: WorkspaceMemoryPageP
 
   useEffect(() => {
     loadCatalogs().catch((cause: unknown) => {
-      setError(cause instanceof Error ? cause.message : 'Could not load the memory catalogs.');
+      setError(cause instanceof Error ? cause.message : t('Could not load the memory catalogs.'));
     });
   }, [loadCatalogs]);
 
@@ -121,7 +122,7 @@ export function WorkspaceMemoryPage({ session, onSignOut }: WorkspaceMemoryPageP
 
   useEffect(() => {
     loadMemories().catch((cause: unknown) => {
-      setError(cause instanceof Error ? cause.message : 'Could not load the memories.');
+      setError(cause instanceof Error ? cause.message : t('Could not load the memories.'));
     });
   }, [loadMemories]);
 
@@ -147,12 +148,12 @@ export function WorkspaceMemoryPage({ session, onSignOut }: WorkspaceMemoryPageP
     try {
       await work();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'That did not work.');
+      setError(cause instanceof Error ? cause.message : t('That did not work.'));
     }
   }
 
   async function handleNewCatalog() {
-    const name = window.prompt('Name the catalog');
+    const name = window.prompt(t('Name the catalog'));
     if (name === null || name.trim() === '') return;
     await guard(async () => {
       const created = await createMemoryCatalog(workspaceId, name.trim());
@@ -162,7 +163,7 @@ export function WorkspaceMemoryPage({ session, onSignOut }: WorkspaceMemoryPageP
 
   async function handleRenameCatalog() {
     if (current === null) return;
-    const name = window.prompt('Rename the catalog', current.name);
+    const name = window.prompt(t('Rename the catalog'), current.name);
     if (name === null || name.trim() === '' || name.trim() === current.name) return;
     await guard(async () => {
       await renameMemoryCatalog(current.id, name.trim());
@@ -207,13 +208,13 @@ export function WorkspaceMemoryPage({ session, onSignOut }: WorkspaceMemoryPageP
       <div className={styles.split}>
         <aside className={styles.catalogs}>
           <header className={styles.catalogsHeader}>
-            <p className={styles.catalogsTitle}>MEMORY CATALOGS</p>
+            <p className={styles.catalogsTitle}>{t('MEMORY CATALOGS')}</p>
             <button
               type="button"
               className={styles.newCatalog}
               onClick={() => void handleNewCatalog()}
-              aria-label="New catalog"
-              title="New catalog"
+              aria-label={t('New catalog')}
+              title={t('New catalog')}
             >
               <img src={plusIcon} alt="" width={10} height={10} />
             </button>
@@ -221,7 +222,7 @@ export function WorkspaceMemoryPage({ session, onSignOut }: WorkspaceMemoryPageP
 
           <div className={styles.catalogsList}>
             {catalogs === null && <p className={styles.sidebarNote}><Loader /></p>}
-            {catalogs?.length === 0 && <p className={styles.sidebarNote}>No catalogs yet.</p>}
+            {catalogs?.length === 0 && <p className={styles.sidebarNote}>{t('No catalogs yet.')}</p>}
             {catalogs?.map((catalog) => {
               const open = catalog.id === selected;
               return (
@@ -251,8 +252,8 @@ export function WorkspaceMemoryPage({ session, onSignOut }: WorkspaceMemoryPageP
           {current === null ? (
             <p className={styles.empty}>
               {catalogs?.length === 0
-                ? 'Add a catalog to start writing things down.'
-                : 'Choose a catalog to see what is in it.'}
+                ? t('Add a catalog to start writing things down.')
+                : t('Choose a catalog to see what is in it.')}
             </p>
           ) : (
             <>
@@ -264,7 +265,7 @@ export function WorkspaceMemoryPage({ session, onSignOut }: WorkspaceMemoryPageP
                     className={styles.iconButton}
                     onClick={() => void handleRenameCatalog()}
                     aria-label={`Rename ${current.name}`}
-                    title="Rename"
+                    title={t('Rename')}
                   >
                     <img src={penIcon} alt="" width={14} height={14} />
                   </button>
@@ -273,7 +274,7 @@ export function WorkspaceMemoryPage({ session, onSignOut }: WorkspaceMemoryPageP
                     className={styles.iconButton}
                     onClick={() => void handleDeleteCatalog()}
                     aria-label={`Delete ${current.name}`}
-                    title="Delete"
+                    title={t('Delete')}
                   >
                     <img src={trashIcon} alt="" width={14} height={14} />
                   </button>
@@ -287,13 +288,13 @@ export function WorkspaceMemoryPage({ session, onSignOut }: WorkspaceMemoryPageP
                   <input
                     className={styles.searchInput}
                     type="search"
-                    placeholder="Search memories..."
+                    placeholder={t('Search memories...')}
                     value={search}
                     onChange={(event) => {
                       setSearch(event.target.value);
                       setPage(0);
                     }}
-                    aria-label="Search memories"
+                    aria-label={t('Search memories')}
                   />
                 </div>
                 <div className={styles.selectBox}>
@@ -305,9 +306,9 @@ export function WorkspaceMemoryPage({ session, onSignOut }: WorkspaceMemoryPageP
                       setAuthor(event.target.value);
                       setPage(0);
                     }}
-                    aria-label="Filter by author"
+                    aria-label={t('Filter by author')}
                   >
-                    <option value="">All Authors</option>
+                    <option value="">{t('All Authors')}</option>
                     {authors.map((name) => (
                       <option key={name} value={name}>
                         {name}
@@ -319,9 +320,7 @@ export function WorkspaceMemoryPage({ session, onSignOut }: WorkspaceMemoryPageP
                 <Link
                   className={styles.addMemory}
                   to={`/workspace/${workspaceId}/memory/new?catalog=${current.id}`}
-                >
-                  + Add Memory
-                </Link>
+                >{t('+ Add Memory')}</Link>
               </div>
 
               <div className={styles.stats}>
@@ -331,7 +330,7 @@ export function WorkspaceMemoryPage({ session, onSignOut }: WorkspaceMemoryPageP
                     : `Showing ${memories.length} ${memories.length === 1 ? 'memory' : 'memories'} in ${current.name}`}
                 </p>
                 <div className={styles.sortBy}>
-                  <span className={styles.statsText}>Sort by:</span>
+                  <span className={styles.statsText}>{t('Sort by:')}</span>
                   <select
                     className={styles.sortSelect}
                     value={sort}
@@ -339,7 +338,7 @@ export function WorkspaceMemoryPage({ session, onSignOut }: WorkspaceMemoryPageP
                       setSort(event.target.value as MemorySort);
                       setPage(0);
                     }}
-                    aria-label="Sort memories"
+                    aria-label={t('Sort memories')}
                   >
                     {SORTS.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -355,8 +354,8 @@ export function WorkspaceMemoryPage({ session, onSignOut }: WorkspaceMemoryPageP
                 {memories.length === 0 && (
                   <p className={styles.empty}>
                     {search !== '' || author !== ''
-                      ? 'Nothing here matches that.'
-                      : 'Nothing written down here yet.'}
+                      ? t('Nothing here matches that.')
+                      : t('Nothing written down here yet.')}
                   </p>
                 )}
                 {memories.map((memory) => (
@@ -372,7 +371,7 @@ export function WorkspaceMemoryPage({ session, onSignOut }: WorkspaceMemoryPageP
                           className={styles.iconButton}
                           to={`/workspace/${workspaceId}/memory/${memory.id}`}
                           aria-label={`Edit ${memory.title}`}
-                          title="Edit"
+                          title={t('Edit')}
                         >
                           <img src={penIcon} alt="" width={14} height={14} />
                         </Link>
@@ -381,7 +380,7 @@ export function WorkspaceMemoryPage({ session, onSignOut }: WorkspaceMemoryPageP
                           className={styles.iconButton}
                           onClick={() => void handleDeleteMemory(memory)}
                           aria-label={`Delete ${memory.title}`}
-                          title="Delete"
+                          title={t('Delete')}
                         >
                           <img src={trashIcon} alt="" width={14} height={14} />
                         </button>
@@ -403,7 +402,7 @@ export function WorkspaceMemoryPage({ session, onSignOut }: WorkspaceMemoryPageP
 
               <div className={styles.pagination}>
                 <p className={styles.statsText}>
-                  {total === 0 ? 'No memories' : `Showing ${from}-${to} of ${total} memories`}
+                  {total === 0 ? t('No memories') : `Showing ${from}-${to} of ${total} memories`}
                 </p>
                 <div className={styles.pageControls}>
                   <button
@@ -411,9 +410,7 @@ export function WorkspaceMemoryPage({ session, onSignOut }: WorkspaceMemoryPageP
                     className={styles.pageButton}
                     onClick={() => setPage((present) => Math.max(0, present - 1))}
                     disabled={page === 0}
-                  >
-                    Previous
-                  </button>
+                  >{t('Previous')}</button>
                   {Array.from({ length: totalPages }, (_, index) => index).map((index) => (
                     <button
                       key={index}
@@ -430,9 +427,7 @@ export function WorkspaceMemoryPage({ session, onSignOut }: WorkspaceMemoryPageP
                     className={styles.pageButton}
                     onClick={() => setPage((present) => Math.min(totalPages - 1, present + 1))}
                     disabled={page >= totalPages - 1}
-                  >
-                    Next
-                  </button>
+                  >{t('Next')}</button>
                 </div>
               </div>
             </>

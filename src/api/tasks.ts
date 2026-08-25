@@ -1,4 +1,5 @@
 import { graphql } from './client';
+import { t } from '../i18n';
 
 /**
  * Where a task has got to.
@@ -91,7 +92,7 @@ export interface TaskPage {
 export const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
   QUEUED: 'Queued',
   RUNNING: 'Working',
-  WAITING: 'Needs you',
+  WAITING: t('Needs you'),
   DONE: 'Done',
   FAILED: 'Failed',
   STOPPED: 'Stopped',

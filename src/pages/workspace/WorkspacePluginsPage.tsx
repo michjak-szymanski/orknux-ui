@@ -19,6 +19,7 @@ import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import { useWorkspaceVariables } from './workspaceVariables';
 import styles from './WorkspacePluginsPage.module.css';
+import { t } from '../../i18n';
 
 export interface WorkspacePluginsPageProps {
   session: SessionUser;
@@ -39,10 +40,10 @@ type Answer = 'VALUE' | 'REFERENCE';
  * rather than the fields an earlier node produces.
  */
 const VARIABLE_LABELS: FieldPickerLabels = {
-  empty: 'Choose a variable…',
-  search: 'Search variables',
-  none: 'This workspace has no variables yet.',
-  noMatch: 'No variable matches',
+  empty: t('Choose a variable…'),
+  search: t('Search variables'),
+  none: t('This workspace has no variables yet.'),
+  noMatch: t('No variable matches'),
   gone: 'no longer in this workspace',
 };
 
@@ -85,7 +86,7 @@ export function WorkspacePluginsPage({ session, onSignOut }: WorkspacePluginsPag
       })
       .catch((cause: unknown) => {
         setPlugins(null);
-        setError(cause instanceof Error ? cause.message : 'Could not load the plugins.');
+        setError(cause instanceof Error ? cause.message : t('Could not load the plugins.'));
         setLoading(false);
       });
   }, [workspaceId]);
@@ -111,7 +112,7 @@ export function WorkspacePluginsPage({ session, onSignOut }: WorkspacePluginsPag
     try {
       replace(await setPluginParameter(workspaceId, pluginId, name, answer));
     } catch (cause: unknown) {
-      setError(cause instanceof Error ? cause.message : 'Could not set that parameter.');
+      setError(cause instanceof Error ? cause.message : t('Could not set that parameter.'));
     } finally {
       setBusy(false);
     }
@@ -123,7 +124,7 @@ export function WorkspacePluginsPage({ session, onSignOut }: WorkspacePluginsPag
     try {
       replace(await clearPluginParameter(workspaceId, pluginId, name));
     } catch (cause: unknown) {
-      setError(cause instanceof Error ? cause.message : 'Could not clear that parameter.');
+      setError(cause instanceof Error ? cause.message : t('Could not clear that parameter.'));
     } finally {
       setBusy(false);
     }
@@ -140,10 +141,9 @@ export function WorkspacePluginsPage({ session, onSignOut }: WorkspacePluginsPag
       <section className={styles.card}>
         <header className={styles.header}>
           <div className={styles.titleGroup}>
-            <h1 className={styles.title}>Plugins</h1>
+            <h1 className={styles.title}>{t('Plugins')}</h1>
             <p className={styles.subtitle}>
-              What this workspace tells the plugins loaded into the installation. A plugin only ever
-              sees what is set here, so this list is also the answer to what each one can reach.
+              {t('What this workspace tells the plugins loaded into the installation. A plugin only ever sees what is set here, so this list is also the answer to what each one can reach.')}
             </p>
           </div>
         </header>
@@ -156,7 +156,7 @@ export function WorkspacePluginsPage({ session, onSignOut }: WorkspacePluginsPag
         {error !== null && <p className={`${styles.notice} ${styles.noticeError}`}>{error}</p>}
         {!loading && error === null && plugins?.length === 0 && (
           <p className={styles.notice}>
-            No plugins are loaded into this installation, so there is nothing to configure.
+            {t('No plugins are loaded into this installation, so there is nothing to configure.')}
           </p>
         )}
 
@@ -176,7 +176,7 @@ export function WorkspacePluginsPage({ session, onSignOut }: WorkspacePluginsPag
                 Why the list is empty is the status and stays. How a plugin comes
                 to have anything here at all is teaching, and goes behind the (?).
               */}
-              <FieldHint label="Nothing to set">
+              <FieldHint label={t('Nothing to set')}>
                 A plugin declares what it has to be told and only what it declares can be answered
                 here
                 {session.admin
@@ -190,8 +190,8 @@ export function WorkspacePluginsPage({ session, onSignOut }: WorkspacePluginsPag
         {plugins !== null && plugins.length > 0 && (
           <div className={styles.table}>
             <div className={styles.tableHeader}>
-              <span className={styles.colName}>Plugin</span>
-              <span className={styles.colParams}>Parameters</span>
+              <span className={styles.colName}>{t('Plugin')}</span>
+              <span className={styles.colParams}>{t('Parameters')}</span>
             </div>
 
             {plugins.map((entry) => {
@@ -299,7 +299,7 @@ function Summary({ entry }: { entry: WorkspacePlugin }) {
    * page had decided there was nothing worth showing.
    */
   if (entry.parameters.length === 0) {
-    return <span className={styles.muted}>declares no parameters</span>;
+    return <span className={styles.muted}>{t('declares no parameters')}</span>;
   }
   if (entry.missing.length > 0) {
     return (
@@ -312,7 +312,7 @@ function Summary({ entry }: { entry: WorkspacePlugin }) {
   }
   return (
     <span className={styles.muted}>
-      {entry.parameters.length === 1 ? '1 parameter set' : `all ${entry.parameters.length} set`}
+      {entry.parameters.length === 1 ? t('1 parameter set') : `all ${entry.parameters.length} set`}
     </span>
   );
 }
@@ -395,8 +395,8 @@ function ParameterRow({ pluginId, parameter, variables, busy, onSet, onClear }: 
             <FieldHint label={parameter.name}>{parameter.description}</FieldHint>
           )}
           <span className={styles.parameterType}>{parameter.type.toLowerCase()}</span>
-          {parameter.required && <span className={styles.required}>required</span>}
-          {parameter.secret && <span className={styles.secret}>secret</span>}
+          {parameter.required && <span className={styles.required}>{t('required')}</span>}
+          {parameter.secret && <span className={styles.secret}>{t('secret')}</span>}
         </span>
         <span className={styles.parameterActions}>
           {/*
@@ -404,10 +404,10 @@ function ParameterRow({ pluginId, parameter, variables, busy, onSet, onClear }: 
             marked in the list is one thing, being told which of its parameters is
             the problem is what somebody actually needs to act on.
           */}
-          {parameter.missing && <span className={styles.parameterMark}>not set</span>}
+          {parameter.missing && <span className={styles.parameterMark}>{t('not set')}</span>}
           {answered && (
             <button type="button" className={styles.parameterAction} disabled={busy} onClick={onClear}>
-              Clear
+              {t('Clear')}
             </button>
           )}
         </span>
@@ -424,7 +424,7 @@ function ParameterRow({ pluginId, parameter, variables, busy, onSet, onClear }: 
               disabled={parameter.secret && option === 'VALUE'}
               title={
                 parameter.secret && option === 'VALUE'
-                  ? 'A secret is only ever answered by pointing at a variable'
+                  ? t('A secret is only ever answered by pointing at a variable')
                   : undefined
               }
               onClick={() => setMode(option)}
@@ -438,8 +438,8 @@ function ParameterRow({ pluginId, parameter, variables, busy, onSet, onClear }: 
           sentence stood under every parameter of every plugin, which is a lot
           of screen for something somebody reads once.
         */}
-        <FieldHint label="Source">
-          <strong>Value</strong> is used exactly as written. <strong>Reference</strong> reads one of this
+        <FieldHint label={t('Source')}>
+          <strong>{t('Value')}</strong> is used exactly as written. <strong>{t('Reference')}</strong> reads one of this
           workspace&apos;s variables, and what that variable holds is never shown here.
         </FieldHint>
       </div>
@@ -485,9 +485,7 @@ function ParameterRow({ pluginId, parameter, variables, busy, onSet, onClear }: 
             className={styles.parameterAction}
             disabled={busy || !unsaved}
             onClick={() => onSet({ literal: typed.trim() })}
-          >
-            Set
-          </button>
+          >{t('Set')}</button>
         </div>
       )}
 
@@ -498,8 +496,7 @@ function ParameterRow({ pluginId, parameter, variables, busy, onSet, onClear }: 
       */}
       {parameter.secret && variables.length === 0 && (
         <p className={styles.parameterNote}>
-          A secret is only ever answered by pointing at a variable, and this workspace has none yet. Add
-          one on the Variables page and it will be offered here.
+          {t('A secret is only ever answered by pointing at a variable, and this workspace has none yet. Add one on the Variables page and it will be offered here.')}
         </p>
       )}
 

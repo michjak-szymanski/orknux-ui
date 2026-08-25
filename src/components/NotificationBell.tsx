@@ -8,6 +8,7 @@ import { timeAgo } from '../api/tools';
 import bellIcon from '../assets/bell.svg';
 import { FieldHint } from './FieldHint';
 import styles from './NotificationBell.module.css';
+import { t } from '../i18n';
 
 /** How often the count is asked for while somebody has the page open. */
 const ASK_EVERY_MS = 60_000;
@@ -115,15 +116,15 @@ export function NotificationBell() {
         onClick={() => void show()}
         aria-label={waiting === 0 ? 'Notifications' : `Notifications, ${waiting} waiting`}
         aria-expanded={open}
-        title="What has happened that concerns you"
+        title={t('What has happened that concerns you')}
       >
         <img src={bellIcon} alt="" width={16} height={16} />
         {waiting > 0 && <span className={styles.count}>{waiting > 9 ? '9+' : waiting}</span>}
       </button>
 
       {open && (
-        <div className={styles.panel} role="dialog" aria-label="Notifications">
-          {items === null && <p className={styles.notice}>Looking…</p>}
+        <div className={styles.panel} role="dialog" aria-label={t('Notifications')}>
+          {items === null && <p className={styles.notice}>{t('Looking…')}</p>}
           {/*
             Split the way the rules split a status line. "Nothing yet." stops
             being true the moment there is a notification; "anything on your
@@ -134,10 +135,9 @@ export function NotificationBell() {
           {items !== null && items.length === 0 && (
             <p className={styles.notice}>
               <span className={styles.labelWithHint}>
-                Nothing yet.
-                <FieldHint label="Nothing yet">
-                  Anything on your issues will appear here — a comment, an assignment, a change of
-                  status on something you reported or are watching.
+                {t('Nothing yet.')}
+                <FieldHint label={t('Nothing yet')}>
+                  {t('Anything on your issues will appear here — a comment, an assignment, a change of status on something you reported or are watching.')}
                 </FieldHint>
               </span>
             </p>

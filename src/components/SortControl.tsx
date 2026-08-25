@@ -1,5 +1,6 @@
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
 import styles from './SortControl.module.css';
+import { t } from '../i18n';
 
 export interface SortChoice<Order extends string> {
   /** What somebody reading the list would call this order. */
@@ -62,9 +63,7 @@ export function SortControl<Order extends string>({
 }: SortControlProps<Order>) {
   return (
     <div className={styles.sortRow}>
-      <label className={styles.sortLabel} htmlFor={id}>
-        Sort
-      </label>
+      <label className={styles.sortLabel} htmlFor={id}>{t('Sort')}</label>
       <span className={styles.selectWrapper}>
         <select
           id={id}
@@ -89,8 +88,8 @@ export function SortControl<Order extends string>({
         type="button"
         className={styles.sortDirection}
         onClick={() => onDirectionChange(!ascending)}
-        title={ascending ? 'Ascending - press for descending' : 'Descending - press for ascending'}
-        aria-label={ascending ? 'Sorted ascending' : 'Sorted descending'}
+        title={ascending ? t('Ascending - press for descending') : t('Descending - press for ascending')}
+        aria-label={ascending ? t('Sorted ascending') : t('Sorted descending')}
       >
         {ascending ? '↑' : '↓'}
       </button>

@@ -36,6 +36,7 @@ import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './ExecutionDetailPage.module.css';
+import { t } from '../../i18n';
 
 export interface ExecutionDetailPageProps {
   session: SessionUser;
@@ -120,11 +121,11 @@ const OUTCOME_LABEL: Record<StepOutcome, string> = {
   failed: 'Failed',
   running: 'Running',
   waiting: 'Waiting',
-  'not-met': 'Condition not met',
+  'not-met': t('Condition not met'),
   skipped: 'Skipped',
-  start: 'Started here',
+  start: t('Started here'),
   pending: 'Pending',
-  carried: 'Carried over',
+  carried: t('Carried over'),
 };
 
 /** The mark in the corner: what happened, at a glance. */
@@ -328,7 +329,7 @@ const LATE_FIT_MS = 250;
  * where the link used to be, and beside the name in the summary — because
  * neither place is where everybody looks.
  */
-const REMOVED_NOTE = 'This workflow has been removed from the workspace. The run is kept; there is no workflow to open.';
+const REMOVED_NOTE = t('This workflow has been removed from the workspace. The run is kept; there is no workflow to open.');
 
 export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageProps) {
   const { workspaceId = '', executionId = '' } = useParams();
@@ -346,13 +347,13 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
     fetchExecution(executionId)
       .then((found) => {
         if (found === null) {
-          setLoadError('That run does not exist, or you do not have access to it.');
+          setLoadError(t('That run does not exist, or you do not have access to it.'));
           return;
         }
         setRun(found);
       })
       .catch((cause: unknown) => {
-        setLoadError(cause instanceof Error ? cause.message : 'Could not load the run.');
+        setLoadError(cause instanceof Error ? cause.message : t('Could not load the run.'));
       })
       .finally(() => setRefreshing(false));
   }, [executionId]);
@@ -460,7 +461,7 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
       // The queued run is a new one; follow it rather than staying on the old.
       window.location.assign(`/workspace/${workspaceId}/executions/${queued.id}`);
     } catch (cause) {
-      setLoadError(cause instanceof Error ? cause.message : 'Could not re-run.');
+      setLoadError(cause instanceof Error ? cause.message : t('Could not re-run.'));
       setRerunning(false);
     }
   }
@@ -510,9 +511,9 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
       <div className={styles.headerRow}>
         <header className={styles.contentHeader}>
             <p className={styles.breadcrumb}>
-              <BackLink to={`/workspace/${workspaceId}/executions`} label="Executions" />
+              <BackLink to={`/workspace/${workspaceId}/executions`} label={t('Executions')} />
               <Link className={styles.crumbLink} to={`/workspace/${workspaceId}/executions`}>
-                Executions
+                {t('Executions')}
               </Link>
               <span className={styles.crumbSeparator}>/</span>
               <span className={styles.crumbCurrent}>Run #{executionId}</span>
@@ -538,11 +539,11 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
                 {run !== null &&
                   (run.workflowAssigned ? (
                     <Link className={styles.viewWorkflow} to={`/workspace/${workspaceId}/workflows/${run.workflowId}/editor`}>
-                      View Workflow
+                      {t('View Workflow')}
                     </Link>
                   ) : (
                     <span className={styles.workflowGone} title={REMOVED_NOTE}>
-                      Workflow removed
+                      {t('Workflow removed')}
                     </span>
                   ))}
                 <span className={styles.duration}>
@@ -558,15 +559,15 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
                 className={styles.refresh}
                 onClick={load}
                 disabled={refreshing}
-                title="Reload this run"
+                title={t('Reload this run')}
               >
                 <img src={refreshIcon} alt="" width={14} height={14} />
-                {refreshing ? 'Refreshing…' : 'Refresh'}
+                {refreshing ? t('Refreshing…') : 'Refresh'}
               </button>
               <AutoRefresh onRefresh={load} busy={refreshing} />
               <button type="button" className={styles.rerun} onClick={handleRerun} disabled={run === null || rerunning}>
                 <img src={refreshIcon} alt="" width={14} height={14} />
-                {rerunning ? 'Queueing…' : 'Re-run'}
+                {rerunning ? t('Queueing…') : 'Re-run'}
               </button>
               {/*
                 What this page shows is what each node did. Every attempt behind
@@ -579,10 +580,8 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
                   href={run.temporalUrl}
                   target="_blank"
                   rel="noreferrer"
-                  title="This run in Temporal, attempt by attempt"
-                >
-                  Open in Temporal
-                </a>
+                  title={t('This run in Temporal, attempt by attempt')}
+                >{t('Open in Temporal')}</a>
               )}
             </div>
         </header>
@@ -603,14 +602,14 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
           ) : (
             <>
               <section className={styles.card}>
-                <h2 className={styles.cardTitle}>Summary</h2>
+                <h2 className={styles.cardTitle}>{t('Summary')}</h2>
                 <dl className={styles.summary}>
-                  <SummaryRow label="Run ID">#{executionId}</SummaryRow>
+                  <SummaryRow label={t('Run ID')}>#{executionId}</SummaryRow>
                   {/* Where this run came from, for a run that came of re-running
                       another. Only the id is kept, and only the id is needed:
                       the workflow is the same one named two rows below. */}
                   {run?.startedFrom != null && (
-                    <SummaryRow label="Started from">
+                    <SummaryRow label={t('Started from')}>
                       <Link
                         className={styles.summaryLink}
                         to={`/workspace/${workspaceId}/executions/${run.startedFrom}`}
@@ -619,7 +618,7 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
                       </Link>
                     </SummaryRow>
                   )}
-                  <SummaryRow label="Status">
+                  <SummaryRow label={t('Status')}>
                     {run !== null && (
                       <span className={`${styles.statusBadge} ${styles[run.status.toLowerCase()]}`}>
                         <span className={styles.statusDot} aria-hidden="true" />
@@ -627,7 +626,7 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
                       </span>
                     )}
                   </SummaryRow>
-                  <SummaryRow label="Workflow">
+                  <SummaryRow label={t('Workflow')}>
                     {run === null ? (
                       '—'
                     ) : (
@@ -637,18 +636,18 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
                       </>
                     )}
                   </SummaryRow>
-                  <SummaryRow label="Triggered by">
+                  <SummaryRow label={t('Triggered by')}>
                     {run === null ? '—' : TRIGGER_LABEL[run.trigger]}
                   </SummaryRow>
-                  <SummaryRow label="Started" mono>
+                  <SummaryRow label={t('Started')} mono>
                     {formatStamp(run?.startedAt)}
                   </SummaryRow>
-                  <SummaryRow label="Finished" mono>
+                  <SummaryRow label={t('Finished')} mono>
                     {formatStamp(run?.finishedAt ?? null)}
                   </SummaryRow>
-                  <SummaryRow label="Duration">{formatDuration(run?.durationSeconds ?? null)}</SummaryRow>
+                  <SummaryRow label={t('Duration')}>{formatDuration(run?.durationSeconds ?? null)}</SummaryRow>
                   {run?.error != null && (
-                    <SummaryRow label="Error">
+                    <SummaryRow label={t('Error')}>
                       <span className={styles.summaryError}>{run.error}</span>
                     </SummaryRow>
                   )}
@@ -657,7 +656,7 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
                       const stopped = run.steps.find((step) => step.key === run.stoppedAtNodeKey);
                       const name = stopped?.name ?? run.stoppedAtNodeKey;
                       return (
-                        <SummaryRow label="Condition not met">
+                        <SummaryRow label={t('Condition not met')}>
                           {/* The question that was asked is a click away, in the catalogue. */}
                           {stopped?.conditionId != null ? (
                             <Link
@@ -677,7 +676,7 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
 
               <section className={styles.card}>
                 <div className={styles.graphHeader}>
-                  <h2 className={styles.cardTitle}>Workflow Graph</h2>
+                  <h2 className={styles.cardTitle}>{t('Workflow Graph')}</h2>
                   {run !== null && (
                     <span className={`${styles.graphStatus} ${styles[run.status.toLowerCase()]}`}>
                       <span className={styles.statusDot} aria-hidden="true" />
@@ -687,7 +686,7 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
                 </div>
 
                 {run !== null && run.steps.length === 0 ? (
-                  <p className={styles.notice}>No step detail was recorded for this run.</p>
+                  <p className={styles.notice}>{t('No step detail was recorded for this run.')}</p>
                 ) : (
                   <div className={styles.canvas}>
                     <ReactFlow
@@ -722,18 +721,18 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
                       <input
                         className={styles.logSearchField}
                         type="search"
-                        placeholder="Filter logs..."
+                        placeholder={t('Filter logs...')}
                         value={logFilter}
                         onChange={(event) => setLogFilter(event.target.value)}
-                        aria-label="Filter logs"
+                        aria-label={t('Filter logs')}
                       />
                     </span>
                     <button
                       type="button"
                       className={styles.download}
                       onClick={downloadLogs}
-                      aria-label="Download logs"
-                      title="Download logs"
+                      aria-label={t('Download logs')}
+                      title={t('Download logs')}
                     >
                       <img src={downloadIcon} alt="" width={14} height={14} />
                     </button>
@@ -743,7 +742,7 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
                 <div className={styles.terminal}>
                   {visibleLogs.length === 0 ? (
                     <p className={styles.terminalEmpty}>
-                      {run?.logs.length === 0 ? 'This run produced no log.' : 'Nothing matches that filter.'}
+                      {run?.logs.length === 0 ? t('This run produced no log.') : t('Nothing matches that filter.')}
                     </p>
                   ) : (
                     visibleLogs.map((line) => (
@@ -817,7 +816,7 @@ function NodeDetailsPanel({
        * lost, a field that was never produced - and guessing at those rules
        * here would mean a second, worse copy of them going stale on its own.
        */
-      setRefusal(cause instanceof Error ? cause.message : 'Could not re-run from this step.');
+      setRefusal(cause instanceof Error ? cause.message : t('Could not re-run from this step.'));
       setRerunning(false);
     }
   }
@@ -831,35 +830,35 @@ function NodeDetailsPanel({
         : null;
 
   return (
-    <aside className={styles.panel} aria-label="Node details">
+    <aside className={styles.panel} aria-label={t('Node details')}>
       <div className={styles.panelHeader}>
-        <h2 className={styles.panelTitle}>Node Details</h2>
-        <button type="button" className={styles.panelClose} onClick={onClose} aria-label="Close node details">
+        <h2 className={styles.panelTitle}>{t('Node Details')}</h2>
+        <button type="button" className={styles.panelClose} onClick={onClose} aria-label={t('Close node details')}>
           ✕
         </button>
       </div>
-      <p className={styles.panelSubtitle}>Execution info for selected node</p>
+      <p className={styles.panelSubtitle}>{t('Execution info for selected node')}</p>
 
-      <PanelField label="Node name">{step.name}</PanelField>
-      <PanelField label="Node type">{NODE_KIND_LABEL[step.kind]}</PanelField>
+      <PanelField label={t('Node name')}>{step.name}</PanelField>
+      <PanelField label={t('Node type')}>{NODE_KIND_LABEL[step.kind]}</PanelField>
       {definition !== null && (
-        <PanelField label="Defined by">
+        <PanelField label={t('Defined by')}>
           <Link className={styles.panelLink} to={definition.to}>
             {`Open ${definition.label.toLowerCase()}`}
           </Link>
         </PanelField>
       )}
-      <PanelField label="Status">
+      <PanelField label={t('Status')}>
         <span className={`${styles.statusBadge} ${styles[stepStatusClass(step.status)]}`}>
           <span className={styles.statusDot} aria-hidden="true" />
           {/* A step still pending in a run that has ended was never reached. */}
-          {step.status === 'PENDING' && runEnded ? 'Not reached' : STEP_STATUS_LABEL[step.status]}
+          {step.status === 'PENDING' && runEnded ? t('Not reached') : STEP_STATUS_LABEL[step.status]}
         </span>
         {/* The status here, and the duration and times under it, belong to the
             run this one was started from rather than to this one. Unsaid, they
             read as work that happened here, which is the misleading part. */}
         {step.carriedOver && (
-          <span className={styles.carriedNote}>Carried over from the earlier run</span>
+          <span className={styles.carriedNote}>{t('Carried over from the earlier run')}</span>
         )}
       </PanelField>
       {/*
@@ -869,12 +868,12 @@ function NodeDetailsPanel({
         like a contradiction until the page says the failure was the answer.
       */}
       {step.branch !== null && (
-        <PanelField label="Branch">
+        <PanelField label={t('Branch')}>
           {step.branch === 'FAILURE' ? (
             <>
-              Failure
+              {t('Failure')}
               <span className={styles.carriedNote}>
-                The run carried on down this node&apos;s failure line rather than stopping here.
+                {t('The run carried on down this node\'s failure line rather than stopping here.')}
               </span>
             </>
           ) : step.branch === 'YES' ? (
@@ -889,10 +888,10 @@ function NodeDetailsPanel({
         what every step without a retry policy spends - a field reading 1 on
         every node in every run is a row nobody reads twice.
       */}
-      {step.attempts > 1 && <PanelField label="Attempts">{step.attempts}</PanelField>}
-      <PanelField label="Duration">{formatDuration(step.durationSeconds)}</PanelField>
-      <PanelField label="Started">{timeOf(step.startedAt)}</PanelField>
-      <PanelField label="Finished">{timeOf(step.finishedAt)}</PanelField>
+      {step.attempts > 1 && <PanelField label={t('Attempts')}>{step.attempts}</PanelField>}
+      <PanelField label={t('Duration')}>{formatDuration(step.durationSeconds)}</PanelField>
+      <PanelField label={t('Started')}>{timeOf(step.startedAt)}</PanelField>
+      <PanelField label={t('Finished')}>{timeOf(step.finishedAt)}</PanelField>
 
       {/* The button the issue asked for. Never disabled on a rule worked out in
           the browser - only while the request it started is still out. */}
@@ -904,7 +903,7 @@ function NodeDetailsPanel({
           disabled={rerunning}
         >
           <img src={refreshIcon} alt="" width={14} height={14} />
-          {rerunning ? 'Queueing…' : 'Re-run from here'}
+          {rerunning ? t('Queueing…') : t('Re-run from here')}
         </button>
         {refusal !== null && (
           <p className={styles.rerunRefusal} role="alert">
@@ -915,15 +914,15 @@ function NodeDetailsPanel({
 
       {step.error !== null && (
         <>
-          <h3 className={styles.panelHeading}>Error</h3>
+          <h3 className={styles.panelHeading}>{t('Error')}</h3>
           <pre className={`${styles.payload} ${styles.payloadError}`}>{step.error}</pre>
         </>
       )}
 
-      <h3 className={styles.panelHeading}>Input</h3>
+      <h3 className={styles.panelHeading}>{t('Input')}</h3>
       <pre className={styles.payload}>{prettyJson(step.input)}</pre>
 
-      <h3 className={styles.panelHeading}>Output</h3>
+      <h3 className={styles.panelHeading}>{t('Output')}</h3>
       <pre className={styles.payload}>{prettyJson(step.output)}</pre>
     </aside>
   );

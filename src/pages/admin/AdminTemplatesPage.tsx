@@ -12,6 +12,7 @@ import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { shellUser } from '../../session/user';
 import styles from './AdminTemplatesPage.module.css';
+import { t } from '../../i18n';
 
 export interface AdminTemplatesPageProps {
   session: SessionUser;
@@ -47,7 +48,7 @@ export function AdminTemplatesPage({ session, onSignOut }: AdminTemplatesPagePro
       })
       .catch((cause: unknown) => {
         setTemplates(null);
-        setError(cause instanceof Error ? cause.message : 'Could not load the templates.');
+        setError(cause instanceof Error ? cause.message : t('Could not load the templates.'));
         setLoading(false);
       });
   }, []);
@@ -68,39 +69,32 @@ export function AdminTemplatesPage({ session, onSignOut }: AdminTemplatesPagePro
         <div className={styles.titleBlock}>
           <h1 className={styles.title}>
             <span className={styles.titleWithHint}>
-              Templates
+              {t('Templates')}
               {/*
                 Was the footer under the table. An explanation gets one
                 affordance across the product, and this is it.
               */}
-              <FieldHint label="Templates">
-                A template holds a copy of the components as they were when it was published, and
-                follows nothing: editing the function one was made from does not change the
-                template, and deleting a template does not touch what it has already created in a
-                workspace. Replacing its file is how one is brought up to date. Nothing secret is
-                ever inside — a variable a function is handed travels as a name, and the workspace
-                it lands in supplies its own value.
+              <FieldHint label={t('Templates')}>
+                {t('A template holds a copy of the components as they were when it was published, and follows nothing: editing the function one was made from does not change the template, and deleting a template does not touch what it has already created in a workspace. Replacing its file is how one is brought up to date. Nothing secret is ever inside — a variable a function is handed travels as a name, and the workspace it lands in supplies its own value.')}
               </FieldHint>
             </span>
           </h1>
           <p className={styles.subtitle}>
-            Components published for the whole installation. Any workspace can take one from Use
-            template on its own Functions, Objects, Conditions, Tools or Skills page, which creates
-            copies there and changes nothing that is already in it.
+            {t('Components published for the whole installation. Any workspace can take one from Use template on its own Functions, Objects, Conditions, Tools or Skills page, which creates copies there and changes nothing that is already in it.')}
           </p>
         </div>
         <Link className={styles.addTemplate} to="/admin/templates/new">
           <img src={plusIcon} alt="" width={14} height={14} />
-          New Template
+          {t('New Template')}
         </Link>
       </header>
 
       <section className={styles.card}>
         <div className={styles.tableHeader}>
-          <div className={styles.colName}>Name</div>
-          <div className={styles.colHolds}>Holds</div>
-          <div className={styles.colVersion}>Format</div>
-          <div className={styles.colWho}>Published by</div>
+          <div className={styles.colName}>{t('Name')}</div>
+          <div className={styles.colHolds}>{t('Holds')}</div>
+          <div className={styles.colVersion}>{t('Format')}</div>
+          <div className={styles.colWho}>{t('Published by')}</div>
           <div className={styles.colActions} />
         </div>
 
@@ -112,8 +106,7 @@ export function AdminTemplatesPage({ session, onSignOut }: AdminTemplatesPagePro
         {error !== null && <p className={`${styles.notice} ${styles.noticeError}`}>{error}</p>}
         {!loading && error === null && listed.length === 0 && (
           <p className={styles.notice}>
-            No templates yet. Export a function, an object, a condition, a tool or a skill from a
-            workspace and publish the file here — or use Save as template on the component itself.
+            {t('No templates yet. Export a function, an object, a condition, a tool or a skill from a workspace and publish the file here — or use Save as template on the component itself.')}
           </p>
         )}
 
@@ -138,7 +131,7 @@ export function AdminTemplatesPage({ session, onSignOut }: AdminTemplatesPagePro
                 <span className={styles.version}>Version {template.formatVersion}</span>
               ) : (
                 <span className={styles.unusable} title={template.problem ?? undefined}>
-                  Cannot be read
+                  {t('Cannot be read')}
                 </span>
               )}
             </div>
@@ -150,7 +143,7 @@ export function AdminTemplatesPage({ session, onSignOut }: AdminTemplatesPagePro
                 className={styles.rowAction}
                 to={`/admin/templates/${template.id}`}
                 aria-label={`Edit ${template.name}`}
-                title="Edit"
+                title={t('Edit')}
               >
                 <img src={settingsIcon} alt="" width={14} height={14} />
               </Link>

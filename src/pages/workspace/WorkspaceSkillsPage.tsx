@@ -36,6 +36,7 @@ import { NameDialog } from '../../components/NameDialog';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceMemoryPage.module.css';
+import { t } from '../../i18n';
 
 export interface WorkspaceSkillsPageProps {
   session: SessionUser;
@@ -99,7 +100,7 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
   useEffect(() => {
     if (workspaceId === '') return;
     loadCatalogs().catch((cause: unknown) => {
-      setError(cause instanceof Error ? cause.message : 'Could not load the skill catalogs.');
+      setError(cause instanceof Error ? cause.message : t('Could not load the skill catalogs.'));
     });
   }, [loadCatalogs, workspaceId]);
 
@@ -113,7 +114,7 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
 
   useEffect(() => {
     loadSkills().catch((cause: unknown) => {
-      setError(cause instanceof Error ? cause.message : 'Could not load the skills.');
+      setError(cause instanceof Error ? cause.message : t('Could not load the skills.'));
     });
   }, [loadSkills]);
 
@@ -122,12 +123,12 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
     try {
       await work();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'That did not work.');
+      setError(cause instanceof Error ? cause.message : t('That did not work.'));
     }
   }
 
   async function handleNewCatalog() {
-    const name = window.prompt('Name the catalog');
+    const name = window.prompt(t('Name the catalog'));
     if (name === null || name.trim() === '') return;
     await guard(async () => {
       const created = await createSkillCatalog(workspaceId, name.trim());
@@ -137,7 +138,7 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
 
   async function handleRenameCatalog() {
     if (current === null) return;
-    const name = window.prompt('Rename the catalog', current.name);
+    const name = window.prompt(t('Rename the catalog'), current.name);
     if (name === null || name.trim() === '' || name.trim() === current.name) return;
     await guard(async () => {
       await renameSkillCatalog(current.id, name.trim());
@@ -187,14 +188,14 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
       <div className={styles.split}>
         <aside className={foldedCatalogs ? `${styles.catalogs} ${styles.catalogsCollapsed}` : styles.catalogs}>
           <header className={styles.catalogsHeader}>
-            {!foldedCatalogs && <p className={styles.catalogsTitle}>SKILL CATALOGS</p>}
+            {!foldedCatalogs && <p className={styles.catalogsTitle}>{t('SKILL CATALOGS')}</p>}
             {!foldedCatalogs && (
             <button
               type="button"
               className={styles.newCatalog}
               onClick={() => void handleNewCatalog()}
-              aria-label="New catalog"
-              title="New catalog"
+              aria-label={t('New catalog')}
+              title={t('New catalog')}
             >
               <img src={plusIcon} alt="" width={10} height={10} />
             </button>
@@ -204,7 +205,7 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
           {!foldedCatalogs && (
           <div className={styles.catalogsList}>
             {catalogs === null && <p className={styles.sidebarNote}><Loader /></p>}
-            {catalogs?.length === 0 && <p className={styles.sidebarNote}>No catalogs yet.</p>}
+            {catalogs?.length === 0 && <p className={styles.sidebarNote}>{t('No catalogs yet.')}</p>}
             {catalogs?.map((catalog) => {
               const open = catalog.id === selected;
               return (
@@ -234,8 +235,8 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
             className={foldedCatalogs ? `${styles.collapseCatalogs} ${styles.collapseCatalogsShut}` : styles.collapseCatalogs}
             onClick={() => setFoldedCatalogs((folded) => !folded)}
             aria-expanded={!foldedCatalogs}
-            aria-label={foldedCatalogs ? 'Show catalogs' : 'Hide catalogs'}
-            title={foldedCatalogs ? 'Show catalogs' : 'Hide catalogs'}
+            aria-label={foldedCatalogs ? t('Show catalogs') : t('Hide catalogs')}
+            title={foldedCatalogs ? t('Show catalogs') : t('Hide catalogs')}
           >
             <span
               className={
@@ -260,8 +261,8 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
           {current === null ? (
             <p className={styles.empty}>
               {catalogs?.length === 0
-                ? 'Add a catalog to start writing skills.'
-                : 'Choose a catalog to see what is in it.'}
+                ? t('Add a catalog to start writing skills.')
+                : t('Choose a catalog to see what is in it.')}
             </p>
           ) : (
             <>
@@ -273,7 +274,7 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
                     className={styles.iconButton}
                     onClick={() => void handleRenameCatalog()}
                     aria-label={`Rename ${current.name}`}
-                    title="Rename"
+                    title={t('Rename')}
                   >
                     <img src={penIcon} alt="" width={14} height={14} />
                   </button>
@@ -282,7 +283,7 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
                     className={styles.iconButton}
                     onClick={() => void handleDeleteCatalog()}
                     aria-label={`Delete ${current.name}`}
-                    title="Delete"
+                    title={t('Delete')}
                   >
                     <img src={trashIcon} alt="" width={14} height={14} />
                   </button>
@@ -296,10 +297,10 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
                   <input
                     className={styles.searchInput}
                     type="search"
-                    placeholder="Search skills..."
+                    placeholder={t('Search skills...')}
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
-                    aria-label="Search skills"
+                    aria-label={t('Search skills')}
                   />
                 </div>
                 <ImportComponentsButton
@@ -324,9 +325,7 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
                     })
                   }
                 />
-                <button type="button" className={styles.addMemory} onClick={() => setCreating(true)}>
-                  + Add Skill
-                </button>
+                <button type="button" className={styles.addMemory} onClick={() => setCreating(true)}>{t('+ Add Skill')}</button>
               </div>
 
               <div className={styles.stats}>
@@ -340,7 +339,7 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
               <div className={styles.cards}>
                 {showing.length === 0 && (
                   <p className={styles.empty}>
-                    {search !== '' ? 'Nothing here matches that.' : 'No skills in this catalog yet.'}
+                    {search !== '' ? t('Nothing here matches that.') : t('No skills in this catalog yet.')}
                   </p>
                 )}
                 {showing.map((skill) => (
@@ -396,7 +395,7 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
                           className={styles.iconButton}
                           to={`/workspace/${workspaceId}/skills/${skill.id}`}
                           aria-label={`Edit ${skill.name}`}
-                          title="Edit"
+                          title={t('Edit')}
                         >
                           <img src={penIcon} alt="" width={14} height={14} />
                         </Link>
@@ -405,13 +404,13 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
                           className={styles.iconButton}
                           onClick={() => void handleDeleteSkill(skill)}
                           aria-label={`Delete ${skill.name}`}
-                          title="Delete"
+                          title={t('Delete')}
                         >
                           <img src={trashIcon} alt="" width={14} height={14} />
                         </button>
                       </div>
                     </header>
-                    <p className={styles.cardBody}>{skill.description ?? 'No description'}</p>
+                    <p className={styles.cardBody}>{skill.description ?? t('No description')}</p>
                     <footer className={styles.cardFooter}>
                       <span className={styles.author}>
                         <span className={styles.avatar} aria-hidden="true">
@@ -430,12 +429,12 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
 
       <NameDialog
         open={creating}
-        title="Create Skill"
-        message="A skill is markdown telling an agent how to go about something."
+        title={t('Create Skill')}
+        message={t("A skill is markdown telling an agent how to go about something.")}
         nameLabel="Name"
         namePlaceholder="codeReviewGuidelines"
-        descriptionPlaceholder="Guidelines for thorough and consistent code reviews"
-        submitLabel="Create Skill"
+        descriptionPlaceholder={t("Guidelines for thorough and consistent code reviews")}
+        submitLabel={t("Create Skill")}
         onClose={() => setCreating(false)}
         onSubmit={async (name, description) => {
           const created = await createSkill(workspaceId, {

@@ -1,4 +1,5 @@
 import { graphql } from './client';
+import { t } from '../i18n';
 
 /**
  * What a dependency question is asked about, and what an answer may name.
@@ -84,7 +85,7 @@ const LABELS: Record<DependencyKind, string> = {
   VARIABLE: 'variable',
   LIBRARY: 'library',
   CONNECTION: 'connection',
-  MCP_SERVER: 'MCP server',
+  MCP_SERVER: t('MCP server'),
   MODEL_PROVIDER: 'model provider',
 };
 

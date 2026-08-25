@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import { FieldHint } from './FieldHint';
 import styles from './ValidationStatus.module.css';
+import { t } from '../i18n';
 
 /**
  * What the last press of Validate found, or null if nothing has been validated
@@ -109,7 +110,7 @@ export function ValidationStatus({ subject, status, saved = false, explains }: V
       <span className={status?.ok === false ? styles.textBad : styles.text} title={sentence}>
         {sentence}
       </span>
-      <FieldHint label="Validate">{explains}</FieldHint>
+      <FieldHint label={t('Validate')}>{explains}</FieldHint>
     </span>
   );
 }

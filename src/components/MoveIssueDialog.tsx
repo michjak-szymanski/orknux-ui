@@ -7,6 +7,7 @@ import { fetchWorkspaces } from '../api/workspaces';
 import type { Workspace } from '../api/workspaces';
 import { FieldHint } from './FieldHint';
 import styles from './Dialog.module.css';
+import { t } from '../i18n';
 
 /**
  * How many workspaces the list offers.
@@ -86,7 +87,7 @@ export function MoveIssueDialog({ issue, onClose, onMoved }: MoveIssueDialogProp
         setWorkspaces(page.content.filter((workspace) => workspace.id !== issue.workspaceId));
       })
       .catch((cause: unknown) => {
-        if (current) setError(cause instanceof Error ? cause.message : 'Could not read the workspaces.');
+        if (current) setError(cause instanceof Error ? cause.message : t('Could not read the workspaces.'));
       });
     return () => {
       current = false;
@@ -107,7 +108,7 @@ export function MoveIssueDialog({ issue, onClose, onMoved }: MoveIssueDialogProp
        * going - and rewording it here would drop the one detail that tells an
        * administrator what to change before trying again.
        */
-      setError(cause instanceof Error ? cause.message : 'Could not move the issue.');
+      setError(cause instanceof Error ? cause.message : t('Could not move the issue.'));
       setSubmitting(false);
     }
   }
@@ -116,16 +117,14 @@ export function MoveIssueDialog({ issue, onClose, onMoved }: MoveIssueDialogProp
     <dialog ref={dialogRef} className={styles.dialog} onCancel={onClose} onClose={onClose}>
       <div className={styles.body}>
         <header className={styles.header}>
-          <h2 className={styles.title}>Move Issue</h2>
+          <h2 className={styles.title}>{t('Move Issue')}</h2>
         </header>
 
         <div className={styles.fields}>
           <div className={styles.field}>
             <span className={styles.labelWithHint}>
-              <label className={styles.label} htmlFor="move-issue-workspace">
-                Move to
-              </label>
-              <FieldHint label="Move to">
+              <label className={styles.label} htmlFor="move-issue-workspace">{t('Move to')}</label>
+              <FieldHint label={t('Move to')}>
                 Its comments, labels, links, observers and files come with it. It is given a number
                 that is free where it lands, so <strong>#{issue?.number}</strong> stops being this
                 issue: the address people have been using will not find it, and references written
@@ -147,7 +146,7 @@ export function MoveIssueDialog({ issue, onClose, onMoved }: MoveIssueDialogProp
                 onChange={(event) => setChosen(event.target.value)}
                 disabled={submitting}
               >
-                <option value="">Choose a workspace…</option>
+                <option value="">{t('Choose a workspace…')}</option>
                 {workspaces.map((workspace) => (
                   <option key={workspace.id} value={workspace.id}>
                     {workspace.name}
@@ -167,7 +166,7 @@ export function MoveIssueDialog({ issue, onClose, onMoved }: MoveIssueDialogProp
 
         <div className={styles.actions}>
           <button type="button" className={styles.ghost} onClick={onClose} disabled={submitting}>
-            Cancel
+            {t('Cancel')}
           </button>
           <button
             type="button"
@@ -175,7 +174,7 @@ export function MoveIssueDialog({ issue, onClose, onMoved }: MoveIssueDialogProp
             onClick={() => void handleMove()}
             disabled={submitting || chosen === ''}
           >
-            {submitting ? 'Moving…' : 'Move issue'}
+            {submitting ? t('Moving…') : t('Move issue')}
           </button>
         </div>
       </div>

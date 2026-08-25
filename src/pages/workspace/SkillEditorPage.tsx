@@ -26,6 +26,7 @@ import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import { highlightMarkdown } from './highlightMarkdown';
 import styles from './EditorPage.module.css';
+import { t } from '../../i18n';
 
 export interface SkillEditorPageProps {
   session: SessionUser;
@@ -88,13 +89,13 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
     fetchSkill(skillId)
       .then((found) => {
         if (found === null) {
-          setLoadError('That skill does not exist, or you do not have access to it.');
+          setLoadError(t('That skill does not exist, or you do not have access to it.'));
           return;
         }
         apply(found);
       })
       .catch((cause: unknown) => {
-        setLoadError(cause instanceof Error ? cause.message : 'Could not load the skill.');
+        setLoadError(cause instanceof Error ? cause.message : t('Could not load the skill.'));
       });
   }, [skillId]);
 
@@ -123,12 +124,12 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
               ok: false,
               message:
                 checked.line === null
-                  ? (checked.message ?? 'Not well formed')
+                  ? (checked.message ?? t('Not well formed'))
                   : `Line ${checked.line}: ${checked.message ?? 'not well formed'}`,
             },
       );
     } catch (cause) {
-      setStatus({ ok: false, message: cause instanceof Error ? cause.message : 'Could not validate.', whole: true });
+      setStatus({ ok: false, message: cause instanceof Error ? cause.message : t('Could not validate.'), whole: true });
     }
   }
 
@@ -161,7 +162,7 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
       setStatus({ ok: true, message: 'the frontmatter and the body are well formed' });
       return true;
     } catch (cause) {
-      setSaveError(cause instanceof Error ? cause.message : 'Could not save the skill.');
+      setSaveError(cause instanceof Error ? cause.message : t('Could not save the skill.'));
       return false;
     } finally {
       setSaving(false);
@@ -234,7 +235,7 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
       const { enabled, lastModifiedAt, lastModifiedBy } = await setSkillEnabled(skill.id, !skill.enabled);
       setSkill((current) => (current === null ? current : { ...current, enabled, lastModifiedAt, lastModifiedBy }));
     } catch (cause) {
-      setSaveError(cause instanceof Error ? cause.message : 'Could not change the skill.');
+      setSaveError(cause instanceof Error ? cause.message : t('Could not change the skill.'));
     }
   }
 
@@ -246,7 +247,7 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
       navigate(`/workspace/${workspaceId}/skills`);
     } catch (cause) {
       setRemoving(false);
-      setSaveError(cause instanceof Error ? cause.message : 'Could not delete the skill.');
+      setSaveError(cause instanceof Error ? cause.message : t('Could not delete the skill.'));
     }
   }
 
@@ -261,9 +262,9 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
     >
       <header className={styles.headerBlock}>
         <p className={styles.breadcrumbs}>
-          <BackLink to={`/workspace/${workspaceId}/skills`} label="Skills" />
+          <BackLink to={`/workspace/${workspaceId}/skills`} label={t('Skills')} />
           <Link className={styles.crumbLink} to={`/workspace/${workspaceId}/skills`}>
-            Skills
+            {t('Skills')}
           </Link>
           <span className={styles.crumbSeparator}>/</span>
           <span className={styles.crumbCurrent}>{skill?.name ?? '…'}</span>
@@ -276,7 +277,7 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
                 type="button"
                 className={skill.enabled ? styles.activeBadge : styles.inactiveBadge}
                 onClick={() => void handleToggle()}
-                title={skill.enabled ? 'Disable this skill' : 'Enable this skill'}
+                title={skill.enabled ? t('Disable this skill') : t('Enable this skill')}
               >
                 {skill.enabled ? 'Active' : 'Inactive'}
               </button>
@@ -284,13 +285,13 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
           </div>
           <div className={styles.actions}>
             {/* Beside the button that caused it, where somebody is already looking. */}
-            {saved && saveError === null && <span className={styles.savedInline}>Saved.</span>}
+            {saved && saveError === null && <span className={styles.savedInline}>{t('Saved.')}</span>}
             {/*
               Beside the button it is about, not down in the footer where it
               used to sit - and in the button's own word. See `ValidationStatus`.
             */}
             <ValidationStatus
-              subject="The definition"
+              subject={t("The definition")}
               status={status}
               explains={
                 <>
@@ -300,16 +301,14 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
                 </>
               }
             />
-            <button type="button" className={styles.secondaryButton} onClick={() => void handleValidate()}>
-              Validate
-            </button>
+            <button type="button" className={styles.secondaryButton} onClick={() => void handleValidate()}>{t('Validate')}</button>
             <button
               type="button"
               className={styles.primaryButton}
               onClick={() => void handleSave()}
               disabled={saving || skill === null}
             >
-              {saving ? 'Saving…' : 'Save Changes'}
+              {saving ? t('Saving…') : t('Save Changes')}
             </button>
           </div>
         </div>
@@ -333,7 +332,7 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
               <header className={styles.editorHeader}>
                 <span className={styles.editorTitle}>
                   <img src={fileTextIcon} alt="" width={16} height={16} />
-                  Skill Definition
+                  {t('Skill Definition')}
                 </span>
                 <span className={styles.formatBadge}>Standard Format</span>
               </header>
@@ -351,7 +350,7 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
                   className={styles.prose}
                   value={content}
                   spellCheck={false}
-                  aria-label="Skill definition"
+                  aria-label={t('Skill definition')}
                   onChange={(event) => {
                     setContent(event.target.value);
                     setSaved(false);
@@ -372,17 +371,15 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
 
               {/* What the column is written in, and nothing else; see the function editor. */}
               <footer className={`${styles.editorFooter} ${styles.editorFooterEnd}`}>
-                <span className={styles.caret}>Markdown</span>
+                <span className={styles.caret}>{t('Markdown')}</span>
               </footer>
             </section>
 
             <aside className={styles.panel}>
               <div className={styles.panelSection}>
-                <h2 className={styles.panelHeading}>Skill Details</h2>
+                <h2 className={styles.panelHeading}>{t('Skill Details')}</h2>
                 <div className={styles.field}>
-                  <label className={styles.label} htmlFor="skill-name">
-                    Name
-                  </label>
+                  <label className={styles.label} htmlFor="skill-name">{t('Name')}</label>
                   <input
                     id="skill-name"
                     className={`${styles.input} ${styles.inputMono}`}
@@ -394,9 +391,7 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
                   />
                 </div>
                 <div className={styles.field}>
-                  <label className={styles.label} htmlFor="skill-catalog">
-                    Catalog
-                  </label>
+                  <label className={styles.label} htmlFor="skill-catalog">{t('Catalog')}</label>
                   <div className={styles.selectWrapper}>
                     <select
                       id="skill-catalog"
@@ -418,7 +413,7 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
                 </div>
                 <div className={styles.field}>
                   <label className={styles.label} htmlFor="skill-description">
-                    Description
+                    {t('Description')}
                   </label>
                   <textarea
                     id="skill-description"
@@ -428,14 +423,14 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
                       setDescription(event.target.value);
                       setSaved(false);
                     }}
-                    placeholder="What an agent reads to decide whether to follow this."
+                    placeholder={t('What an agent reads to decide whether to follow this.')}
                   />
                 </div>
               </div>
 
               {skill !== null && (
                 <div className={styles.metadata}>
-                  <span className={styles.metadataLabel}>Last modified</span>
+                  <span className={styles.metadataLabel}>{t('Last modified')}</span>
                   <span className={styles.metadataValue}>
                     {timeAgo(skill.lastModifiedAt)} by{' '}
                     <span className={styles.metadataWho}>{skill.lastModifiedBy}</span>
@@ -469,7 +464,7 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
                 onClick={() => void handleDelete()}
                 disabled={removing || skill === null}
               >
-                {removing ? 'Deleting…' : 'Delete'}
+                {removing ? t('Deleting…') : 'Delete'}
               </button>
             </aside>
           </div>
@@ -482,7 +477,7 @@ export function SkillEditorPage({ session, onSignOut }: SkillEditorPageProps) {
         be showing behind it.
       */}
       <UnsavedWorkDialog
-        subject={guard.asking ? (skill?.name ?? 'This skill') : null}
+        subject={guard.asking ? (skill?.name ?? t('This skill')) : null}
         creating={false}
         onStay={guard.stay}
         onLeave={guard.leave}

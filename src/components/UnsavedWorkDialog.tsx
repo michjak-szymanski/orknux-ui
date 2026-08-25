@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import alertTriangleIcon from '../assets/alert-triangle.svg';
 import styles from './Dialog.module.css';
+import { t } from '../i18n';
 
 export interface UnsavedWorkDialogProps {
   /** What the thing is called, or null while there is nothing to ask about. */
@@ -66,11 +67,11 @@ export function UnsavedWorkDialog({
       // False means the server refused it; the reason is already on the page
       // behind this, beside the function's name, so this only has to stay put.
       if (!(await onSaveAndLeave())) {
-        setError('That could not be saved, so nothing has been left behind. The reason is on the page.');
+        setError(t('That could not be saved, so nothing has been left behind. The reason is on the page.'));
         setSaving(false);
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'That could not be saved.');
+      setError(cause instanceof Error ? cause.message : t('That could not be saved.'));
       setSaving(false);
     }
   }
@@ -129,10 +130,10 @@ export function UnsavedWorkDialog({
 
         <div className={styles.actions}>
           <button type="button" className={styles.ghost} onClick={onStay} disabled={saving}>
-            Cancel
+            {t('Cancel')}
           </button>
           <button type="button" className={styles.amber} onClick={onLeave} disabled={saving}>
-            Leave
+            {t('Leave')}
           </button>
           <button
             type="button"
@@ -141,7 +142,7 @@ export function UnsavedWorkDialog({
             disabled={saving}
             autoFocus
           >
-            {saving ? 'Saving…' : 'Save & Leave'}
+            {saving ? t('Saving…') : t('Save & Leave')}
           </button>
         </div>
       </div>

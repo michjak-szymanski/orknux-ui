@@ -15,6 +15,7 @@ import { Loader } from '../../components/Loader';
 import { Pagination } from '../../components/Pagination';
 import { shellUser } from '../../session/user';
 import styles from './AdminAuditPage.module.css';
+import { t } from '../../i18n';
 
 export interface AdminAuditPageProps {
   session: SessionUser;
@@ -62,7 +63,7 @@ export function AdminAuditPage({ session, onSignOut }: AdminAuditPageProps) {
       })
       .catch((cause: unknown) => {
         setEntries(null);
-        setError(cause instanceof Error ? cause.message : 'Could not load the audit log.');
+        setError(cause instanceof Error ? cause.message : t('Could not load the audit log.'));
         setLoading(false);
       });
   }, [page, debouncedSearch, userId, days]);
@@ -76,8 +77,8 @@ export function AdminAuditPage({ session, onSignOut }: AdminAuditPageProps) {
       sidebar={<AdminSidebar active="audit" />}
     >
       <header className={styles.titleHeader}>
-        <h1 className={styles.title}>Audit Log</h1>
-        <p className={styles.subtitle}>Track all admin-level actions and changes</p>
+        <h1 className={styles.title}>{t('Audit Log')}</h1>
+        <p className={styles.subtitle}>{t('Track all admin-level actions and changes')}</p>
       </header>
 
       <div className={styles.filterBar}>
@@ -86,21 +87,21 @@ export function AdminAuditPage({ session, onSignOut }: AdminAuditPageProps) {
           <input
             className={styles.searchField}
             type="search"
-            placeholder="Search actions, users or servers..."
+            placeholder={t('Search actions, users or servers...')}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            aria-label="Search the audit log"
+            aria-label={t('Search the audit log')}
           />
         </div>
 
         <label className={styles.filter}>
-          <span className={styles.filterLabel}>User:</span>
+          <span className={styles.filterLabel}>{t('User:')}</span>
           <select
             className={styles.filterSelect}
             value={userId}
             onChange={(event) => setUserId(event.target.value)}
           >
-            <option value="">All Users</option>
+            <option value="">{t('All Users')}</option>
             {users.map((user) => (
               <option key={user} value={user}>
                 {user}
@@ -116,12 +117,12 @@ export function AdminAuditPage({ session, onSignOut }: AdminAuditPageProps) {
             className={`${styles.filterSelect} ${styles.filterValue}`}
             value={days}
             onChange={(event) => setDays(event.target.value === '' ? '' : Number(event.target.value))}
-            aria-label="Date range"
+            aria-label={t('Date range')}
           >
-            <option value={1}>Last 24 Hours</option>
-            <option value={7}>Last 7 Days</option>
-            <option value={30}>Last 30 Days</option>
-            <option value="">All Time</option>
+            <option value={1}>{t('Last 24 Hours')}</option>
+            <option value={7}>{t('Last 7 Days')}</option>
+            <option value={30}>{t('Last 30 Days')}</option>
+            <option value="">{t('All Time')}</option>
           </select>
           <img src={chevronDown12Icon} alt="" width={12} height={12} />
         </label>
@@ -136,8 +137,8 @@ export function AdminAuditPage({ session, onSignOut }: AdminAuditPageProps) {
             type="button"
             className={styles.refresh}
             onClick={load}
-            aria-label="Refresh the audit log"
-            title="Refresh the audit log"
+            aria-label={t('Refresh the audit log')}
+            title={t('Refresh the audit log')}
           >
             <img src={refreshIcon} alt="" width={14} height={14} />
           </button>
@@ -147,15 +148,15 @@ export function AdminAuditPage({ session, onSignOut }: AdminAuditPageProps) {
 
       <section className={styles.card}>
         <div className={styles.tableHeader}>
-          <span className={styles.colAction}>Action</span>
-          <span className={styles.colUser}>User</span>
-          <span className={styles.colTimestamp}>Timestamp</span>
+          <span className={styles.colAction}>{t('Action')}</span>
+          <span className={styles.colUser}>{t('User')}</span>
+          <span className={styles.colTimestamp}>{t('Timestamp')}</span>
         </div>
 
         {loading && <p className={styles.notice}><Loader /></p>}
         {error !== null && <p className={`${styles.notice} ${styles.noticeError}`}>{error}</p>}
         {!loading && error === null && entries?.content.length === 0 && (
-          <p className={styles.notice}>Nothing matches those filters.</p>
+          <p className={styles.notice}>{t('Nothing matches those filters.')}</p>
         )}
 
         {entries?.content.map((entry) => (
@@ -179,7 +180,7 @@ export function AdminAuditPage({ session, onSignOut }: AdminAuditPageProps) {
           pageSize={PAGE_SIZE}
           totalItems={entries?.totalElements ?? 0}
           onPageChange={setPage}
-          label="audit entries"
+          label={t('audit entries')}
         />
       </section>
     </AppShell>

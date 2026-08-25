@@ -28,6 +28,7 @@ import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceWorkflowsPage.module.css';
+import { t } from '../../i18n';
 
 /** "in 42 seconds", for a run the clock has not started yet. */
 function inWords(iso: string): string {
@@ -91,8 +92,8 @@ const PAGE_SIZE_KEY = 'orknux.workflows.page-size';
  */
 const ORDERS: { label: string; order: WorkflowOrder }[] = [
   { label: 'Name', order: 'NAME' },
-  { label: 'Last run', order: 'LAST_RUN' },
-  { label: 'Switched on', order: 'ENABLED' },
+  { label: t('Last run'), order: 'LAST_RUN' },
+  { label: t('Switched on'), order: 'ENABLED' },
 ];
 
 const WORKSPACE_LIST_SIZE = 100;
@@ -221,7 +222,7 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
       .catch((cause: unknown) => {
         if (mine !== newest.current) return;
         setWorkflows(null);
-        setError(cause instanceof Error ? cause.message : 'Could not load workflows.');
+        setError(cause instanceof Error ? cause.message : t('Could not load workflows.'));
         setLoading(false);
       });
   }, [workspaceId, page, pageSize, order, ascending]);
@@ -236,7 +237,7 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
       await startExecution(workspaceId, workflow.workflowId);
       load();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not start the run.');
+      setError(cause instanceof Error ? cause.message : t('Could not start the run.'));
     } finally {
       setRunning(null);
     }
@@ -264,7 +265,7 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
     >
       <section className={styles.card}>
         <header className={styles.header}>
-          <h1 className={styles.title}>Workflows</h1>
+          <h1 className={styles.title}>{t('Workflows')}</h1>
           <span className={styles.headerSpacer} />
           {/*
             The order, on the header row with everything else that acts on this
@@ -302,7 +303,7 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
           <UseTemplateButton workspaceId={workspaceId} kind="WORKFLOW" onImported={load} />
           <button type="button" className={styles.createWorkflow} onClick={() => setCreating(true)}>
             <span aria-hidden="true">+</span>
-            Create Workflow
+            {t('Create Workflow')}
           </button>
         </header>
 
@@ -318,11 +319,11 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
               own Use template button. The column headed with another screen's
               noun, above rows linking into the workflow editor.
             */}
-            <span className={styles.colGrow}>Workflow</span>
-            <span className={styles.colGrow}>Description</span>
-            <span className={styles.colLastRun}>Last Run</span>
-            <span className={styles.colLastRun}>Next Run</span>
-            <span className={styles.colActions}>Actions</span>
+            <span className={styles.colGrow}>{t('Workflow')}</span>
+            <span className={styles.colGrow}>{t('Description')}</span>
+            <span className={styles.colLastRun}>{t('Last Run')}</span>
+            <span className={styles.colLastRun}>{t('Next Run')}</span>
+            <span className={styles.colActions}>{t('Actions')}</span>
           </div>
 
           {loading && <p className={styles.notice}><Loader /></p>}
@@ -344,7 +345,7 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
               <span className={`${styles.colGrow} ${styles.description}`}>{workflow.description ?? '—'}</span>
               <span className={styles.colLastRun}>
                 {workflow.lastRun === null ? (
-                  <span className={styles.neverRun}>Never run</span>
+                  <span className={styles.neverRun}>{t('Never run')}</span>
                 ) : (
                   <Link
                     className={styles.lastRun}
@@ -362,9 +363,9 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
                   this is rather than calling both of them "not scheduled".
                 */}
                 {!workflow.enabled ? (
-                  <span className={styles.neverRun}>Switched off</span>
+                  <span className={styles.neverRun}>{t('Switched off')}</span>
                 ) : workflow.nextRun === null ? (
-                  <span className={styles.neverRun}>Not scheduled</span>
+                  <span className={styles.neverRun}>{t('Not scheduled')}</span>
                 ) : (
                   <span className={styles.nextRun} title={workflow.nextRun}>
                     {inWords(workflow.nextRun)}

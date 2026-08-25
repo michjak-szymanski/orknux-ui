@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 /**
  * Text to speech, for reading an answer aloud.
  *
@@ -30,7 +31,7 @@ export async function speak(workspaceId: string, text: string): Promise<Blob> {
         return undefined;
       }
     })();
-    throw new Error(reason ?? 'That could not be read aloud.');
+    throw new Error(reason ?? t('That could not be read aloud.'));
   }
 
   return answer.blob();

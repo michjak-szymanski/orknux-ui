@@ -1,5 +1,6 @@
 import { graphql } from './client';
 import type { PageOf } from './client';
+import { t } from '../i18n';
 
 /** What an action does when a workflow reaches it. */
 export type ActionType = 'EXECUTE' | 'WAIT';
@@ -240,11 +241,11 @@ export const SUBTYPES_BY_TYPE: Record<ActionType, ActionSubtype[]> = {
 };
 
 export const ACTION_SUBTYPE_LABEL: Record<ActionSubtype, string> = {
-  OUTGOING_CONNECTION: 'Outgoing Connection',
-  SEND_EMAIL: 'Send Email',
-  HTTP_REQUEST: 'HTTP Request',
+  OUTGOING_CONNECTION: t('Outgoing Connection'),
+  SEND_EMAIL: t('Send Email'),
+  HTTP_REQUEST: t('HTTP Request'),
   FUNCTION: 'Function',
-  INLINE_CONDITION: 'Inline Condition',
+  INLINE_CONDITION: t('Inline Condition'),
   CONDITION: 'Condition',
   TIME: 'Time',
 };
@@ -263,10 +264,10 @@ export const ACTION_SUBTYPE_LABEL: Record<ActionSubtype, string> = {
 export const CONNECTION_ACTIONS: ConnectionActionKind[] = ['SEND_MESSAGE', 'REPLY_IN_THREAD'];
 
 export const CONNECTION_ACTION_LABEL: Record<ConnectionActionKind, string> = {
-  SEND_MESSAGE: 'Send Message',
-  REPLY_IN_THREAD: 'Reply in Thread',
-  CREATE_ISSUE: 'Create Issue',
-  UPDATE_ISSUE: 'Update Issue',
+  SEND_MESSAGE: t('Send Message'),
+  REPLY_IN_THREAD: t('Reply in Thread'),
+  CREATE_ISSUE: t('Create Issue'),
+  UPDATE_ISSUE: t('Update Issue'),
 };
 
 export const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];

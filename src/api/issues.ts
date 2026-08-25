@@ -1,4 +1,5 @@
 import { graphql } from './client';
+import { t } from '../i18n';
 
 /** Where an issue is in its life. Two states; a third would need a reason. */
 export type IssueStatus = 'OPEN' | 'IN_PROGRESS' | 'CLOSED';
@@ -37,7 +38,7 @@ export type IssueTypeFilter = string | null;
 /** What each state is called where somebody reads it. */
 export const ISSUE_STATUS_LABEL: Record<IssueStatus, string> = {
   OPEN: 'Open',
-  IN_PROGRESS: 'In progress',
+  IN_PROGRESS: t('In progress'),
   CLOSED: 'Closed',
 };
 
@@ -114,11 +115,11 @@ export type IssueRelationKind =
 
 /** What each relation is called where it is read as a heading over the issue it names. */
 export const ISSUE_RELATION_LABEL: Record<IssueRelationKind, string> = {
-  RELATES_TO: 'Relates to',
+  RELATES_TO: t('Relates to'),
   BLOCKS: 'Blocks',
-  BLOCKED_BY: 'Blocked by',
+  BLOCKED_BY: t('Blocked by'),
   DUPLICATES: 'Duplicates',
-  DUPLICATED_BY: 'Duplicated by',
+  DUPLICATED_BY: t('Duplicated by'),
 };
 
 /**
@@ -580,7 +581,7 @@ export async function uploadIssueAttachments(
     | { attachments?: IssueAttachment[]; error?: string; message?: string }
     | null;
   if (!answer.ok) {
-    throw new Error(said?.error ?? said?.message ?? 'Those files could not be uploaded.');
+    throw new Error(said?.error ?? said?.message ?? t('Those files could not be uploaded.'));
   }
   return said?.attachments ?? [];
 }

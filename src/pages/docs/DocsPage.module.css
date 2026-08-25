@@ -165,3 +165,17 @@
   padding-top: var(--space-40);
   border-top: 1px solid var(--color-border);
 }
+
+/*
+ * A page of the manual that has no version in the language being read.
+ *
+ * Said above the page rather than left for the reader to notice, and said in
+ * their language: arriving at English prose in an otherwise Polish product
+ * reads as a bug until something says it is not one. Muted and small, because
+ * it is a note about the page and not part of it.
+ */
+.notTranslated {
+  margin: 0 0 var(--space-16);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-xs);
+}

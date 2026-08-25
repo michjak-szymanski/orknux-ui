@@ -17,6 +17,7 @@ import { Loader } from '../../components/Loader';
 import { shellUser } from '../../session/user';
 import { forgetWorkspaces } from '../../session/workspaces';
 import styles from './WorkspaceSettingsPage.module.css';
+import { t } from '../../i18n';
 
 export interface WorkspaceSettingsPageProps {
   session: SessionUser;
@@ -68,7 +69,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       .then((page) => {
         const found = page.content.find((candidate) => candidate.id === workspaceId) ?? null;
         if (found === null) {
-          setLoadError('That workspace does not exist, or you do not have access to it.');
+          setLoadError(t('That workspace does not exist, or you do not have access to it.'));
           return;
         }
         setWorkspace(found);
@@ -78,7 +79,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         setAdminRoleIds(found.adminRoles.map((role) => role.id));
       })
       .catch((cause: unknown) => {
-        setLoadError(cause instanceof Error ? cause.message : 'Could not load the workspace.');
+        setLoadError(cause instanceof Error ? cause.message : t('Could not load the workspace.'));
       });
   }, [workspaceId]);
 
@@ -101,7 +102,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       setWorkspace(updated);
       setSaved(true);
     } catch (cause) {
-      setSaveError(cause instanceof Error ? cause.message : 'Could not save the workspace.');
+      setSaveError(cause instanceof Error ? cause.message : t('Could not save the workspace.'));
     } finally {
       setSaving(false);
     }
@@ -115,13 +116,11 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
     >
       <header className={styles.headerBlock}>
         <p className={styles.breadcrumbs}>
-          <Link className={styles.crumbLink} to="/admin">
-            Workspaces
-          </Link>
+          <Link className={styles.crumbLink} to="/admin">{t('Workspaces')}</Link>
           <span className={styles.crumbSeparator}>/</span>
           <span className={styles.crumbCurrent}>{workspace?.name ?? '…'}</span>
         </p>
-        <h1 className={styles.pageTitle}>Workspace Settings</h1>
+        <h1 className={styles.pageTitle}>{t('Workspace Settings')}</h1>
       </header>
 
       {loadError !== null ? (
@@ -138,13 +137,13 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         <>
           <form className={styles.card} onSubmit={handleSave}>
             <div className={styles.sectionTitle}>
-              <h2 className={styles.sectionHeading}>General</h2>
+              <h2 className={styles.sectionHeading}>{t('General')}</h2>
             </div>
 
             <div className={styles.fields}>
               <div className={styles.field}>
                 <label className={styles.label} htmlFor="workspace-name">
-                  Workspace Name
+                  {t('Workspace Name')}
                 </label>
                 <div className={styles.inputWrapper}>
                   <input
@@ -161,7 +160,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
 
               <div className={styles.field}>
                 <label className={styles.label} htmlFor="workspace-description">
-                  Description
+                  {t('Description')}
                 </label>
                 <div className={`${styles.inputWrapper} ${styles.inputWrapperTall}`}>
                   <textarea
@@ -187,12 +186,9 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
               */}
               <div className={styles.field}>
                 <span className={styles.labelWithHint}>
-                  <span className={styles.label}>Roles</span>
-                  <FieldHint label="Roles">
-                    Whoever holds one of these can see the workspace. None assigned keeps it
-                    administrators-only. Administers adds this workspace&rsquo;s settings, its issue
-                    observers and moving an issue in or out &mdash; here only, and nothing
-                    installation-wide.
+                  <span className={styles.label}>{t('Roles')}</span>
+                  <FieldHint label={t('Roles')}>
+                    {t('Whoever holds one of these can see the workspace. None assigned keeps it administrators-only. Administers adds this workspace’s settings, its issue observers and moving an issue in or out — here only, and nothing installation-wide.')}
                   </FieldHint>
                 </span>
                 <div className={styles.roleList}>
@@ -248,7 +244,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                             )
                           }
                         />
-                        Administers
+                        {t('Administers')}
                       </label>
                       <button
                         type="button"
@@ -270,20 +266,18 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                     disabled={unassigned.length === 0}
                     title={
                       roleCatalogue.failure !== null
-                        ? 'The roles could not be listed'
+                        ? t('The roles could not be listed')
                         : roles.length === 0
-                          ? 'No roles are defined yet'
+                          ? t('No roles are defined yet')
                           : unassigned.length === 0
-                            ? 'Every role is already assigned'
-                            : 'Assign another role to this workspace'
+                            ? t('Every role is already assigned')
+                            : t('Assign another role to this workspace')
                     }
                     onClick={() => {
                       const next = unassigned[0];
                       if (next !== undefined) setRoleIds((held) => [...held, next.id]);
                     }}
-                  >
-                    + Add Role
-                  </button>
+                  >{t('+ Add Role')}</button>
 
                   {/*
                     What the list has instead of rows, so it stays printed: the
@@ -311,25 +305,23 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             )}
 
             <div className={styles.cardActions}>
-              {saved && saveError === null && <p className={styles.savedNote}>Saved.</p>}
+              {saved && saveError === null && <p className={styles.savedNote}>{t('Saved.')}</p>}
               <button type="submit" className={styles.save} disabled={name.trim() === '' || saving}>
-                {saving ? 'Saving…' : 'Save Changes'}
+                {saving ? t('Saving…') : t('Save Changes')}
               </button>
             </div>
           </form>
 
           <section className={`${styles.card} ${styles.dangerCard}`}>
-            <h2 className={styles.dangerHeading}>Danger Zone</h2>
+            <h2 className={styles.dangerHeading}>{t('Danger Zone')}</h2>
             <div className={styles.dangerRow}>
               <div className={styles.dangerText}>
-                <p className={styles.dangerTitle}>Delete Workspace</p>
+                <p className={styles.dangerTitle}>{t('Delete Workspace')}</p>
                 <p className={styles.dangerMessage}>
-                  Permanently remove this workspace and all associated workflows and executions.
+                  {t('Permanently remove this workspace and all associated workflows and executions.')}
                 </p>
               </div>
-              <button type="button" className={styles.delete} onClick={() => setDeleting(true)}>
-                Delete Workspace
-              </button>
+              <button type="button" className={styles.delete} onClick={() => setDeleting(true)}>{t('Delete Workspace')}</button>
             </div>
           </section>
         </>

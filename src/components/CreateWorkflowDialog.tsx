@@ -4,6 +4,7 @@ import type { FormEvent } from 'react';
 import { createWorkflow } from '../api/workflows';
 import type { WorkspaceWorkflow } from '../api/workflows';
 import styles from './Dialog.module.css';
+import { t } from '../i18n';
 
 export interface CreateWorkflowDialogProps {
   open: boolean;
@@ -45,7 +46,7 @@ export function CreateWorkflowDialog({ open, workspaceId, onClose, onCreated }: 
         await createWorkflow({ workspaceId, name: name.trim(), description: description.trim() || undefined }),
       );
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not create the workflow.');
+      setError(cause instanceof Error ? cause.message : t('Could not create the workflow.'));
       setSubmitting(false);
     }
   }
@@ -54,13 +55,13 @@ export function CreateWorkflowDialog({ open, workspaceId, onClose, onCreated }: 
     <dialog ref={dialogRef} className={`${styles.dialog} ${styles.dialogWide}`} onCancel={onClose} onClose={onClose}>
       <form className={styles.body} onSubmit={handleSubmit}>
         <header className={styles.header}>
-          <h2 className={styles.title}>Create workflow</h2>
+          <h2 className={styles.title}>{t('Create workflow')}</h2>
         </header>
 
         <div className={styles.fields}>
           <div className={styles.field}>
             <label className={styles.label} htmlFor="create-workflow-name">
-              Workflow name
+              {t('Workflow name')}
             </label>
             <div className={styles.inputWrapper}>
               <input
@@ -68,7 +69,7 @@ export function CreateWorkflowDialog({ open, workspaceId, onClose, onCreated }: 
                 name="workflowName"
                 className={styles.input}
                 type="text"
-                placeholder="e.g. Backend CI/CD Pipeline"
+                placeholder={t('e.g. Backend CI/CD Pipeline')}
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 autoFocus
@@ -79,14 +80,14 @@ export function CreateWorkflowDialog({ open, workspaceId, onClose, onCreated }: 
 
           <div className={styles.field}>
             <label className={styles.label} htmlFor="create-workflow-description">
-              Description
+              {t('Description')}
             </label>
             <div className={`${styles.inputWrapper} ${styles.inputWrapperTall}`}>
               <textarea
                 id="create-workflow-description"
                 name="workflowDescription"
                 className={`${styles.input} ${styles.textarea}`}
-                placeholder="Describe this workflow..."
+                placeholder={t('Describe this workflow...')}
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
               />
@@ -102,10 +103,10 @@ export function CreateWorkflowDialog({ open, workspaceId, onClose, onCreated }: 
 
         <div className={styles.actions}>
           <button type="button" className={styles.ghost} onClick={onClose} disabled={submitting}>
-            Cancel
+            {t('Cancel')}
           </button>
           <button type="submit" className={styles.filled} disabled={name.trim() === '' || submitting}>
-            {submitting ? 'Creating…' : 'Create'}
+            {submitting ? t('Creating…') : 'Create'}
           </button>
         </div>
       </form>

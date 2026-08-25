@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import styles from './FieldPicker.module.css';
+import { t } from '../i18n';
 
 /** One thing a parameter can be pointed at, in the group it belongs to. */
 export interface FieldOption {
@@ -36,10 +37,10 @@ export interface FieldPickerLabels {
 }
 
 const FIELD_LABELS: FieldPickerLabels = {
-  empty: 'Choose a field…',
-  search: 'Search fields',
-  none: 'Nothing upstream produces a field yet.',
-  noMatch: 'No field matches',
+  empty: t('Choose a field…'),
+  search: t('Search fields'),
+  none: t('Nothing upstream produces a field yet.'),
+  noMatch: t('No field matches'),
   gone: 'no longer produced',
 };
 
