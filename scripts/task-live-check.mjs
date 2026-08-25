@@ -5,45 +5,73 @@
  * proves nothing about a live view - the old page did that perfectly, one
  * refresh at a time - so what is asserted here is that lines the page did not
  * have when it was drawn were on it afterwards, with nothing having reloaded and
- * nothing having polled.
+ * nothing having polled, and that they were on it at a moment when the page
+ * still said the task was running.
  *
- * **How it can prove that without a model.** Three things make it airtight:
+ * **How it can prove that.** Four things make it airtight:
  *
  *   1. There is no refresh control on the page any more, and this asserts that
  *      too. If a poll comes back, this check starts lying, so it also checks
  *      that it cannot.
  *   2. A marker is put on `window` after the page settles. A reload would take
  *      it away, so its survival is proof that nothing navigated.
- *   3. The count of lines the page had drawn is read *before* the task ends and
- *      compared with what it holds afterwards. Only the stream can have put the
- *      difference there.
+ *   3. The count of lines and what the page says it is doing are read in *one*
+ *      evaluate, so "a line was there while it said Working" is a claim about
+ *      one moment rather than about two readings a tenth of a second apart.
+ *   4. The task lasts long enough for any of that to be observed at all. See
+ *      below, because this is the part that was wrong.
  *
- * One thing is retried, and it is the fixture rather than an assertion: a model
- * pointed at `.invalid` can fail before the page has finished drawing, and a
- * task that was already over is a task there was nothing live to see. So it
- * starts another, up to four times, and fails saying so if it never catches one
- * running. Every assertion below is made once, on the task that was.
+ * ## Why it needs a model, when it used not to
  *
- * And it does not need a model that answers, for the reason `task-check` gives:
- * the prompt is written into the task's log before the model is asked, and a
- * model that never answers is recorded as a note saying so. So the session gets
- * lines either way - a question, a note about the model, a note about the ending
- * - and they arrive over the stream one at a time exactly as an agent's would.
- * The model it makes points at `.invalid`, which by definition cannot resolve,
- * so nothing here touches a network.
+ * It was written against a model pointed at `.invalid`, on the reasoning
+ * `task-check` gives: the prompt is written into the log before the model is
+ * asked and a model that never answers is recorded as a note saying so, so the
+ * session gets lines either way. That is true and it is not enough. Measured:
+ * such a task is **forty milliseconds** end to end and writes three lines - the
+ * prompt, a note that the model could not answer, and a note that the task
+ * stopped. There is no "while". The page usually draws after the task is
+ * already over, and on the runs where it does not, every remaining line arrives
+ * inside one frame. The retry loop that used to be here - start another, up to
+ * four times, until one is caught running - was a lottery dressed as a fixture,
+ * and the first time this check was ever executed it lost it four times out of
+ * four.
  *
- * The second half opens the finished task in a *new* page, which is the other
+ * So the fixture is a model that takes its time, which is also the only kind
+ * that can show the other half of this page: a reasoning model's thinking,
+ * drawn while it is being thought. `scripts/suite/reasoning-stub.py` is that
+ * model - a page of Python emitting `reasoning_content` over twelve seconds and
+ * then calling `task_done`. It cannot be stubbed in the browser, for the reason
+ * `image-model-check` gives about its own: the thinking is produced by the
+ * server calling a provider, written into the task's session, and followed over
+ * a stream, so a stub in the page would be a check of the stub.
+ *
+ * That is what makes this `ci: false`. What CI keeps is `task-check`, which
+ * proves the machinery around a task and needs nothing; what it gives up is a
+ * check that could only ever have passed by luck. Run this by hand:
+ *
+ *   python scripts/suite/reasoning-stub.py 8198
+ *   node scripts/suite/run.mjs --only task-live-check
+ *
+ * Where the stub is, as the *server* reaches it, goes in ORKNUX_REASONING_STUB.
+ *
+ * The last part opens the finished task in a *new* page, which is the other
  * half of the promise: somebody arriving after the fact must get the same
- * account without the streaming. Same lines, same order, from the same record.
+ * account without the streaming. Same lines, same thinking, same durations, from
+ * the same record - which is why the reasoning is written down rather than
+ * relayed. `TaskStreamAPI` hands the connection back every four minutes, so
+ * anything only relayed would be gone at the next stint.
  */
 import { BASE, WORKSPACE, open, check, record, shot, finish } from './suite/harness.mjs';
+
+/** Where something that thinks out loud is, as the *server* sees it. */
+const STUB = process.env.ORKNUX_REASONING_STUB ?? 'http://localhost:8198';
 
 const stamp = Date.now();
 const PROVIDER = `zzScratchLiveProvider${stamp}`;
 const MODEL = `zzScratchLiveModel${stamp}`;
-const PROMPT = `zz Scratch Live Task ${stamp} - look at something and report back`;
+const PROMPT = `zz Scratch Live Task ${stamp} - look at last week's runs and report back`;
 
-const { browser, context, page, graphql } = await open({ viewport: { width: 1440, height: 900 } });
+const { browser, context, page, graphql } = await open({ viewport: { width: 1440, height: 1000 } });
 
 /*
  * Anything an earlier run left behind. Swept at the start rather than guarded at
@@ -68,116 +96,82 @@ for (const old of before.modelProviders.filter((row) => row.name.startsWith('zzS
   console.log(`swept provider ${old.name} (#${old.id}) from an earlier run`);
 }
 
-// A model that cannot answer, which is all this check needs one to be.
+// A model that takes its time and thinks out loud, which is what this check
+// needs one to be. It makes its own and takes it away again: a seeded
+// installation has none, and one that borrowed whatever was there would say a
+// different thing on every machine.
 const provider = (
   await graphql(`mutation ($input: CreateModelProviderInput!) { createModelProvider(input: $input) { id } }`, {
-    input: {
-      workspaceId: WORKSPACE,
-      name: PROVIDER,
-      endpoint: 'http://nowhere.invalid',
-      secret: 'sk-scratch',
-    },
+    input: { workspaceId: WORKSPACE, name: PROVIDER, endpoint: STUB, secret: 'sk-scratch' },
   })
 ).createModelProvider;
 const model = (
   await graphql(`mutation ($input: CreateModelInput!) { createModel(input: $input) { id } }`, {
-    input: { providerId: provider.id, name: MODEL, modelId: 'scratch', kind: 'CHAT' },
+    input: { providerId: provider.id, name: MODEL, modelId: 'stub-reasoning', kind: 'CHAT' },
   })
 ).createModel;
-console.log(`made ${MODEL} (#${model.id}) for the task to be given`);
+console.log(`made ${MODEL} (#${model.id}) pointed at ${STUB}`);
 
 // --- start it from the page, so the page is open while it works -------------
 
 const OVER = ['Done', 'Failed', 'Stopped'];
-const lines = () => page.locator('[data-testid="task-log"] [data-kind]').count();
-const stateNow = () => page.locator('[data-testid="task-state"]').innerText();
 
-/** Starts one from the page and lands on it, the way a person does. */
-async function startFromThePage() {
-  await page.goto(`${BASE}/workspace/${WORKSPACE}/tasks`, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('h1:text("Tasks")', { timeout: 20_000 });
-  await page.locator('#task-prompt').fill(PROMPT);
-  await page.locator('#task-worker').selectOption(`model:${model.id}`);
-  await page.locator('button:text("Start")').click();
-  await page.waitForURL(/\/tasks\/\d+$/, { timeout: 20_000 });
-  const id = page.url().split('/').pop();
-  await page.waitForSelector('[data-testid="task-log"]', { timeout: 20_000 });
-  return id;
-}
-
-/*
- * Catching it while it is still going, which is a race against the fixture and
- * not against the feature.
+/**
+ * Everything this check reads off the page, in one evaluate.
  *
- * A model pointed at `.invalid` fails as fast as the machine can decide that
- * `.invalid` does not resolve, and on a fast one that can be sooner than a React
- * route change and two queries. So the task may already be over by the time the
- * page draws - which says nothing about whether the page is live, only that
- * there was nothing left to be live about.
- *
- * Retried rather than slept through, and retried in the *setup* rather than in
- * any assertion: what is being repeated is "make me a task that is still
- * running", and every assertion below is made exactly once, on the task that
- * was. A check that retried its assertions would be a check that passes on the
- * third try, which is worse than one that fails.
+ * One round trip rather than five, and that is the whole of what makes the
+ * assertions below say anything. "A line was on the page while the page said the
+ * task was running" is a claim about *one* moment; two round trips to the
+ * browser are two moments a tenth of a second apart, and this check's first ever
+ * run failed on exactly that - it read the state, found the task over, and
+ * stopped without ever looking at the log that had filled up while it was
+ * asking. Which of the two came first decided the verdict, and neither order
+ * was measuring anything.
  */
-const ATTEMPTS = 4;
-let taskId = null;
-let drawnWhileGoing = 0;
-let stateWhileGoing = '';
+const readPage = () =>
+  page.evaluate(() => {
+    const block = document.querySelector('[data-testid="thinking"]');
+    return {
+      lines: document.querySelectorAll('[data-testid="task-log"] [data-kind]').length,
+      state: document.querySelector('[data-testid="task-state"]')?.textContent?.trim() ?? '',
+      watching: document.querySelector('[data-testid="task-watching"]')?.textContent?.trim() ?? '',
+      thinking: block !== null,
+      live: block?.getAttribute('data-live') ?? '',
+      open: block?.querySelector('button')?.getAttribute('aria-expanded') ?? '',
+      elapsed: block?.querySelector('[data-testid="thinking-elapsed"]')?.textContent?.trim() ?? '',
+      reasoning: block?.querySelector('pre')?.textContent?.length ?? 0,
+    };
+  });
+
+await page.goto(`${BASE}/workspace/${WORKSPACE}/tasks`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('h1:text("Tasks")', { timeout: 20_000 });
+await page.locator('#task-prompt').fill(PROMPT);
+await page.locator('#task-worker').selectOption(`model:${model.id}`);
+await page.locator('button:text("Start")').click();
+await page.waitForURL(/\/tasks\/\d+$/, { timeout: 20_000 });
+const taskId = page.url().split('/').pop();
+await page.waitForSelector('[data-testid="task-log"]', { timeout: 20_000 });
+
+const drawn = await readPage();
+check(
+  !OVER.includes(drawn.state),
+  `the page is open on a task that is still going: "${drawn.state}", with ${drawn.lines} line(s) drawn`,
+  `task #${taskId} already read "${drawn.state}" when the page drew, so there was nothing live to watch. ` +
+    `Is ${STUB} answering? (python scripts/suite/reasoning-stub.py 8198)`,
+);
+if (OVER.includes(drawn.state)) await finish(browser);
 
 /**
  * What the page held the moment it was drawn, and never touched again.
  *
- * The growth assertion used to be made against `drawnWhileGoing`, which the
- * watching loop overwrites every quarter second - so what it actually asserted
- * was that a line landed in the last 250ms before the ending, which is a
- * quarter-second window this check has no way to aim at. It passes or fails on
- * where the ending happened to fall between two polls of the browser, and both
- * outcomes say nothing about the stream.
- *
- * This one is the reading taken before any of it, so the comparison is "the
- * page has more on it than it was drawn with" - which is the claim, and is not
- * a race.
+ * The growth assertion used to be made against a variable the watching loop
+ * overwrote every quarter second - so what it actually asserted was that a line
+ * landed in the last 250ms before the ending, which is a window this check has
+ * no way to aim at. This one is the reading taken before any of it, so the
+ * comparison is "the page has more on it than it was drawn with" - which is the
+ * claim, and is not a race.
  */
-let drawnAtFirst = 0;
-
-/**
- * Whether a line landed while the task was still going, seen while it still
- * was.
- *
- * The assertion actually worth having, and the one the brief for this page
- * asks for: reading a finished task's log proves nothing, and even growth
- * measured after the ending could in principle be the last frames of a task
- * that had already stopped. This is set inside the loop, on a page whose state
- * still reads as running, so it can only have been put there by the stream
- * mid-task.
- */
-let grewWhileGoing = false;
-
-for (let attempt = 1; attempt <= ATTEMPTS && taskId === null; attempt += 1) {
-  const started = await startFromThePage();
-  const state = (await stateNow()).trim();
-
-  if (OVER.includes(state)) {
-    console.log(`task #${started} was already "${state}" when the page drew; starting another`);
-    await graphql(`mutation ($id: ID!) { deleteTask(id: $id) }`, { id: started }).catch(() => undefined);
-    continue;
-  }
-
-  taskId = started;
-  stateWhileGoing = state;
-  drawnWhileGoing = await lines();
-  drawnAtFirst = drawnWhileGoing;
-  console.log(`watching task #${taskId}, which reads "${state}" with ${drawnWhileGoing} line(s) drawn`);
-}
-
-check(
-  taskId !== null,
-  `the page was open on a task that was still going: "${stateWhileGoing}"`,
-  `every one of ${ATTEMPTS} tasks was already over by the time the page drew, so nothing here watched one run`,
-);
-if (taskId === null) await finish(browser);
+const drawnAtFirst = drawn.lines;
 
 /*
  * The marker. Anything that navigates takes it with it, so every assertion after
@@ -202,28 +196,111 @@ check(
   'a refresh control is on the page, and anything arriving could be a poll rather than the stream',
 );
 
+// --- the model thinking, drawn while it thinks -------------------------------
+
 /*
- * Keep looking until it is over, and keep the last reading taken while it was
- * not. Reading the browser only - no reload, no navigation, no GraphQL - so the
- * only thing that can move these numbers is the stream.
+ * Waited for on its own rather than after the ending, because a check that only
+ * looked at a finished task's log would pass just as well on a build that wrote
+ * the whole of the reasoning down once the turn was over - which is exactly the
+ * shape this feature replaced, and the one that made the page read as dead
+ * between turns.
+ */
+let sawThinking = false;
+try {
+  await page.locator('[data-testid="thinking"]').first().waitFor({ state: 'visible', timeout: 60_000 });
+  sawThinking = true;
+} catch {
+  sawThinking = false;
+}
+const midRun = await readPage();
+check(
+  sawThinking && midRun.live === 'true' && !OVER.includes(midRun.state),
+  `what the model is thinking is drawn while the task still reads "${midRun.state}"`,
+  `the thinking block reads live="${midRun.live}" on a task reading "${midRun.state}"`,
+);
+
+/*
+ * The fold, which is where this page and the chat part company.
+ *
+ * The chat folds every block, because thinking is the model talking to itself
+ * and belongs where a footnote belongs. A task takes dozens of turns, so drawing
+ * all of them open would put the work somebody came to watch off the bottom of
+ * the screen - but what they came for is the model thinking *now*. So the block
+ * being written is open, and the ones after the fact are not; the second half of
+ * that is asserted at the end.
+ */
+check(
+  midRun.open === 'true' && midRun.reasoning > 0,
+  `the block being written is open, with ${midRun.reasoning} characters of reasoning readable without a press`,
+  `the live block reads aria-expanded="${midRun.open}" with ${midRun.reasoning} characters shown`,
+);
+
+/*
+ * And something on it moves.
+ *
+ * The assertion the chat's own check was rebuilt around, and the one worth
+ * having here. A block of text that happens to be growing does not tell somebody
+ * the model is alive - a number going up does - and neither "it is drawn" nor
+ * "the live mark is set" can tell those apart. Two and a bit seconds, because
+ * the count moves once a second and one second could straddle a single tick and
+ * read the same value twice for honest reasons.
+ */
+await page.waitForTimeout(2200);
+const later = await readPage();
+check(
+  midRun.elapsed !== '' && later.elapsed !== '' && midRun.elapsed !== later.elapsed && !OVER.includes(later.state),
+  `the count of how long it has been thinking moves while the task runs (${midRun.elapsed} then ${later.elapsed})`,
+  `the count read ${JSON.stringify(midRun.elapsed)} then ${JSON.stringify(later.elapsed)} ` +
+    `on a task reading "${later.state}"`,
+);
+
+/*
+ * And the words themselves grow, which is the other half of "live".
+ *
+ * The count is the browser's own clock and would tick just as happily beside a
+ * block that never changed. This is what says the *session* is being written to
+ * while the model works rather than once at the end - the line is opened on the
+ * first frame of reasoning and grown as the rest arrives, and the page is being
+ * handed it again each time it does.
+ */
+check(
+  later.reasoning > midRun.reasoning,
+  `and the reasoning itself grows on the open page: ${midRun.reasoning} characters, then ${later.reasoning}`,
+  `the reasoning stood at ${midRun.reasoning} characters and was still ${later.reasoning} two seconds later`,
+);
+
+await page.screenshot({ path: shot('task-live-check.png'), fullPage: true });
+
+// --- and it reaches the ending on its own ------------------------------------
+
+/*
+ * Keep looking until it is over. Reading the browser only - no reload, no
+ * navigation, no GraphQL - so the only thing that can move any of this is the
+ * stream.
  */
 let ended = null;
-for (let look = 0; look < 120 && ended === null; look += 1) {
-  const state = (await stateNow()).trim();
-  if (OVER.includes(state)) {
-    ended = state;
+
+/**
+ * Whether a line landed while the page still said the task was running.
+ *
+ * The assertion this check exists for, and it is noted *inside* the loop rather
+ * than sampled once. Not "the page ended up with more lines than it started
+ * with", which a task that delivered everything in its dying moment would also
+ * satisfy - but that a line was on the page at a moment when the page still
+ * said the task was running. Read from the browser only, on a page that has not
+ * reloaded and has no refresh control, so the stream is the only thing that can
+ * have put it there.
+ */
+let grewWhileGoing = false;
+
+for (let look = 0; look < 600 && ended === null; look += 1) {
+  const held = await readPage();
+  if (held.lines > drawnAtFirst && !OVER.includes(held.state)) grewWhileGoing = true;
+  if (OVER.includes(held.state)) {
+    ended = held.state;
     break;
   }
-  stateWhileGoing = state;
-  drawnWhileGoing = await lines();
-  /*
-   * Noted here, inside the branch where the state still reads as running. That
-   * is what makes it "while": the page says the task has not finished and the
-   * page already holds more than it was drawn with, so a line arrived mid-task
-   * over the stream.
-   */
-  if (drawnWhileGoing > drawnAtFirst) grewWhileGoing = true;
-  await page.waitForTimeout(250);
+  await page.waitForTimeout(200);
 }
 
 check(
@@ -232,22 +309,21 @@ check(
   'the page never showed the task ending, having neither been reloaded nor polled',
 );
 
-const drawnAtEnd = await lines();
-
 /*
- * The assertion this check exists for.
+ * A moment for the last of it to land before the page is measured.
  *
- * Not "the page ended up with more lines than it started with", which a task
- * that delivered everything in its dying moment would also satisfy - but that
- * a line was on the page at a moment when the page still said the task was
- * running. Read from the browser only, on a page that has not reloaded and has
- * no refresh control, so the stream is the only thing that can have put it
- * there.
+ * The state and the last few lines of a finished task arrive within
+ * milliseconds of each other, and which the browser paints first is not a fact
+ * about anything. Waiting is not touching the page: no reload, no navigation,
+ * no query, and the marker below still has to survive.
  */
+await page.waitForTimeout(1_500);
+const drawnAtEnd = (await readPage()).lines;
+
 check(
   grewWhileGoing,
   `a line arrived on the open page while the task was still running: ${drawnAtFirst} drawn, then more before it ended`,
-  `nothing arrived while the task was running: the page held ${drawnAtFirst} lines throughout and only changed once it was over`,
+  `nothing arrived while the task was running: the page held ${drawnAtFirst} lines throughout`,
 );
 
 check(
@@ -257,7 +333,7 @@ check(
 );
 
 /*
- * And none of it was a reload. This is the assertion the three above lean on:
+ * And none of it was a reload. This is the assertion the ones above lean on:
  * without it "the page changed" could always have been "the page was rebuilt".
  */
 const marker = await page.evaluate(() => window.__orknuxNeverReloaded === true);
@@ -272,14 +348,36 @@ check(
  * happening has to be honest about having stopped, and a finished task is the
  * one case where "live" would be a lie for ever.
  */
-const watching = (await page.locator('[data-testid="task-watching"]').innerText()).trim();
+const finished = await readPage();
 check(
-  watching === 'Finished',
+  finished.watching === 'Finished',
   'a finished task says it is finished rather than going on claiming to be live',
-  `the page still says "${watching}" on a task that has ended`,
+  `the page still says "${finished.watching}" on a task that has ended`,
 );
 
-await page.screenshot({ path: shot('task-live-check.png'), fullPage: true });
+/*
+ * And the thinking settles rather than counting for ever. A block still saying
+ * "Thinking" under a task that ended last week is the same lie in the other
+ * direction.
+ */
+const settled = await page.evaluate(() => {
+  const blocks = [...document.querySelectorAll('[data-testid="thinking"]')];
+  return {
+    blocks: blocks.length,
+    live: blocks.some((block) => block.getAttribute('data-live') === 'true'),
+    label: blocks[0]?.querySelector('button')?.textContent?.trim() ?? '',
+  };
+});
+check(
+  settled.blocks > 0 && !settled.live,
+  `${settled.blocks} block(s) of thinking on the finished task, none still claiming to be arriving`,
+  'a block still reads live on a task that has ended',
+);
+check(
+  /second/i.test(settled.label) || /sekund/i.test(settled.label),
+  `and each says how long it took (the first reads ${JSON.stringify(settled.label)})`,
+  `the row reads ${JSON.stringify(settled.label)} and says no duration`,
+);
 
 // --- and it reads the same after the fact ------------------------------------
 
@@ -287,30 +385,57 @@ await page.screenshot({ path: shot('task-live-check.png'), fullPage: true });
  * A page that never saw any of it happen. Everything the first one was handed a
  * line at a time is in the session, so this must hold the same account - which
  * is the whole reason the stream relays a durable log rather than carrying the
- * work itself.
+ * work itself, and the reason the reasoning is written down rather than passed
+ * on and forgotten.
  */
-const later = await context.newPage();
-await later.goto(`${BASE}/workspace/${WORKSPACE}/tasks/${taskId}`, { waitUntil: 'domcontentloaded' });
-await later.waitForSelector('[data-testid="task-log"]', { timeout: 20_000 });
-const drawnLater = await later.locator('[data-testid="task-log"] [data-kind]').count();
+const afterwards = await context.newPage();
+await afterwards.goto(`${BASE}/workspace/${WORKSPACE}/tasks/${taskId}`, { waitUntil: 'domcontentloaded' });
+await afterwards.waitForSelector('[data-testid="task-log"]', { timeout: 20_000 });
+await afterwards.waitForTimeout(1_000);
+const read = await afterwards.evaluate(() => {
+  const blocks = [...document.querySelectorAll('[data-testid="thinking"]')];
+  return {
+    lines: document.querySelectorAll('[data-testid="task-log"] [data-kind]').length,
+    state: document.querySelector('[data-testid="task-state"]')?.textContent?.trim() ?? '',
+    blocks: blocks.length,
+    folded: blocks.every((block) => block.querySelector('button')?.getAttribute('aria-expanded') === 'false'),
+    live: blocks.some((block) => block.getAttribute('data-live') === 'true'),
+  };
+});
 
 check(
-  drawnLater === drawnAtEnd,
-  `a page opened after the fact shows the same ${drawnLater} lines, without having streamed any of them`,
-  `the page that watched it holds ${drawnAtEnd} lines and one opened afterwards holds ${drawnLater}`,
+  read.lines === drawnAtEnd,
+  `a page opened after the fact shows the same ${read.lines} lines, without having streamed any of them`,
+  `the page that watched it holds ${drawnAtEnd} lines and one opened afterwards holds ${read.lines}`,
 );
 
-const laterHasPrompt = (await later.locator(`[data-testid="task-log"] :text("${PROMPT}")`).count()) > 0;
+const laterHasPrompt = (await afterwards.locator(`[data-testid="task-log"] :text("${PROMPT}")`).count()) > 0;
 record(laterHasPrompt, 'and it is the same account: what was asked is on it');
 
-const laterState = (await later.locator('[data-testid="task-state"]').innerText()).trim();
 check(
-  laterState === ended,
-  `and the same ending: "${laterState}"`,
-  `the ending reads "${laterState}" after the fact and read "${ended}" live`,
+  read.blocks === settled.blocks && !read.live,
+  `and the same ${read.blocks} block(s) of thinking, none of them claiming to still be arriving`,
+  `it holds ${read.blocks} block(s) where the page that watched held ${settled.blocks}, still live=${read.live}`,
 );
 
-await later.close();
+/*
+ * Folded, every one of them. The block that was open was open because it was
+ * being written; a page opened afterwards has no such block, so it has no
+ * business opening any of them.
+ */
+check(
+  read.folded,
+  'and every block of it is folded, because none of them is the one being written',
+  'a block is drawn open on a page that watched none of it happen',
+);
+
+check(
+  read.state === ended,
+  `and the same ending: "${read.state}"`,
+  `the ending reads "${read.state}" after the fact and read "${ended}" live`,
+);
+
+await afterwards.close();
 
 // --- put it back the way it was ---------------------------------------------
 
