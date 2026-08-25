@@ -1719,6 +1719,31 @@ export const TESTS = [
      * defect rather than a bug.
      */
   },
+  {
+    name: 'chat-working-check',
+    what: 'a chat drawing what the model thought and what it looked up, and keeping neither inside the answer',
+    needs: ['model'],
+    ci: false,
+    /*
+     * Issues #271 and #272, and it needs a model for the same reason the three
+     * above do: there is nothing to watch without one. Not a *good* model,
+     * though - what it needs is one that emits reasoning and asks for a tool,
+     * which is a property of the provider rather than of the answer. So the
+     * assertions about text are deliberately weak, and the one that matters is
+     * not about text at all: that the thinking is drawn *outside* the answer.
+     *
+     * That is the assertion worth having a check for. Everything downstream is
+     * correct because the string it reads does not hold the thinking - the copy
+     * control, the speech model and the next turn's prompt all read the
+     * answer - so a change that quietly folded the two back together would look
+     * perfectly fine in a screenshot and would be a reasoning model read aloud.
+     *
+     * Run it by hand against an installation whose provider answers the
+     * OpenAI-compatible shape with `reasoning_content` and a tool call:
+     *
+     *   node scripts/suite/run.mjs --only chat-working-check
+     */
+  },
 
   // --- the two languages -----------------------------------------------------
   {

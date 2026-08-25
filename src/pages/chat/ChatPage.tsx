@@ -1556,24 +1556,24 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                   const opening = !pickerOpen;
                   setPickerOpen(opening);
                   /*
-                    Agents first, unless this chat is on a bare model it has
-                    actually been used on — then Models, so the entry that is
-                    already ticked is the one under the pointer rather than one
-                    tab away.
+                    Agents first, unless this chat is on a bare model — then
+                    Models, so the entry that is already ticked is the one under
+                    the pointer rather than one tab away.
 
-                    "Used on" is what issue #273 added, and it restores #249
-                    rather than qualifying it. A brand-new chat gets a model
-                    nobody chose, and a chat nobody has spoken in was therefore
-                    always `agentId === null && modelId !== null` — so the test
-                    was true for every new chat and the picker opened on Models
-                    every time, which is precisely the case #249 was written
-                    about. `lastMessageAt` is what separates a chat somebody
-                    decided to hold on a bare model from one that has only ever
-                    held a default.
+                    Untouched by issue #273, deliberately. It looked like the
+                    place to fix "a new chat never opens on Agents", because a
+                    new chat used to be handed a bare model whatever anybody had
+                    been talking to, so this test was true every time. But the
+                    rule here was never the fault: it is about showing the
+                    ticked entry, and it was right about a chat that really was
+                    on a bare model. What was wrong was what the chat was
+                    pointed at, and that is fixed where it was decided —
+                    `ChatService.lastUsed`. A new chat now inherits the agent,
+                    so `agentId` is set, so this opens on Agents by the rule it
+                    already had.
                   */
                   if (opening) {
-                    const chose = current.agentId === null && current.modelId !== null;
-                    setPickerTab(chose && current.lastMessageAt !== null ? 'models' : 'agents');
+                    setPickerTab(current.agentId === null && current.modelId !== null ? 'models' : 'agents');
                   }
                 }}
                 aria-expanded={pickerOpen}
