@@ -1628,6 +1628,130 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                 </p>
               </section>
 
+              {/*
+                Running it, which is what Validate never could — issue #266.
+
+                Not offered while a function is being written: there is nothing to
+                run until there is a row, and the button takes an id.
+
+                Every field here is a parameter with a type, offered as that type,
+                rather than one JSON box: a number field is where somebody types a
+                number, and asking them to remember that a string needs quotes is
+                asking them to do the editor's job. The shapes that have no
+                spelling as a plain word — map, array, an object — are the
+                exception and are typed as JSON, because that is what they are.
+
+                The externals are not here and must not be. A grant belongs to the
+                function; a field for one would let a test run be given a value the
+                real run would never see, and the run would prove nothing about the
+                function it was run on.
+              */}
+              {!creating && (
+                <section className={styles.panelSection}>
+                  <span className={styles.headingWithHint}>
+                    <h2 className={styles.panelHeading}>Test Run</h2>
+                    <FieldHint label={t('Test Run')}>
+                      Runs the saved function the way an action node would: the same sandbox, the same imports
+                      and libraries, and the workspace’s variables resolved the same way. It runs what is stored
+                      rather than what is in the column, so save first to try a change — and every run is
+                      recorded in this workspace’s audit, because it leaves no run of its own behind it.
+                    </FieldHint>
+                  </span>
+
+                  <div className={styles.paramList}>
+                    {declared(params).map((param) => (
+                      <div key={param.name} className={styles.field}>
+                        <label className={styles.fieldLabel} htmlFor={`run-arg-${param.name}`}>
+                          {param.name} · {valueTypeLabel(param.type)}
+                        </label>
+                        {param.type === 'BOOLEAN' ? (
+                          <div className={styles.selectWrapper}>
+                            <select
+                              id={`run-arg-${param.name}`}
+                              className={`${styles.input} ${styles.inputMono}`}
+                              value={testValues[param.name] ?? ''}
+                              aria-label={`Argument ${param.name}`}
+                              onChange={(event) =>
+                                setTestValues((current) => ({ ...current, [param.name]: event.target.value }))
+                              }
+                            >
+                              {/* Blank is a real answer: it is the `null` an unmapped node passes. */}
+                              <option value="">nothing</option>
+                              <option value="true">true</option>
+                              <option value="false">false</option>
+                            </select>
+                            <img src={chevronDown12Icon} alt="" width={12} height={12} />
+                          </div>
+                        ) : param.type === 'STRING' || param.type === 'NUMBER' ? (
+                          <input
+                            id={`run-arg-${param.name}`}
+                            className={`${styles.input} ${styles.inputMono}`}
+                            type={param.type === 'NUMBER' ? 'number' : 'text'}
+                            value={testValues[param.name] ?? ''}
+                            aria-label={`Argument ${param.name}`}
+                            onChange={(event) =>
+                              setTestValues((current) => ({ ...current, [param.name]: event.target.value }))
+                            }
+                          />
+                        ) : (
+                          <textarea
+                            id={`run-arg-${param.name}`}
+                            className={`${styles.input} ${styles.textarea} ${styles.inputMono}`}
+                            value={testValues[param.name] ?? ''}
+                            placeholder={param.type === 'ARRAY' ? '[]' : '{}'}
+                            aria-label={`Argument ${param.name}`}
+                            onChange={(event) =>
+                              setTestValues((current) => ({ ...current, [param.name]: event.target.value }))
+                            }
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    className={styles.ghostButton}
+                    onClick={() => void handleRun()}
+                    disabled={running}
+                  >
+                    {running ? 'Running…' : 'Run'}
+                  </button>
+
+                  {/* One line, and only when it is true: the column has moved on. */}
+                  {unsaved && <p className={styles.paramHint}>This runs the saved function, not the column.</p>}
+
+                  {runFailed !== null && (
+                    <p className={styles.runFailed} role="alert">
+                      {runFailed}
+                    </p>
+                  )}
+
+                  {ran !== null && (
+                    <div className={styles.runResult}>
+                      <p className={ran.ok ? styles.runVerdict : styles.runVerdictBad} role="status">
+                        {ran.ok ? 'Returned' : 'Failed'} in {ran.durationMillis} ms
+                      </p>
+                      {/*
+                        What came back, whichever it was. A failure prints its
+                        reason here rather than in a toast, because it is the
+                        answer to the question the button asked - and it is
+                        worded exactly as the run history would have worded it.
+                      */}
+                      <pre className={styles.runAnswer}>
+                        {ran.ok ? (ran.returned ?? t('It returned nothing.')) : ran.error}
+                      </pre>
+                      {!ran.ok && !ran.settled && (
+                        <p className={styles.paramHint}>It was stopped rather than refused; running it again may answer.</p>
+                      )}
+                      {ran.grants.length > 0 && (
+                        <p className={styles.paramHint}>Handed {ran.grants.join(', ')} from the workspace.</p>
+                      )}
+                    </div>
+                  )}
+                </section>
+              )}
+
               <section className={styles.panelSection}>
                 <h2 className={styles.panelHeading}>Parameters</h2>
                 <div className={styles.paramList}>
@@ -2261,129 +2385,6 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                 )}
               </section>
 
-              {/*
-                Running it, which is what Validate never could — issue #266.
-
-                Not offered while a function is being written: there is nothing to
-                run until there is a row, and the button takes an id.
-
-                Every field here is a parameter with a type, offered as that type,
-                rather than one JSON box: a number field is where somebody types a
-                number, and asking them to remember that a string needs quotes is
-                asking them to do the editor's job. The shapes that have no
-                spelling as a plain word — map, array, an object — are the
-                exception and are typed as JSON, because that is what they are.
-
-                The externals are not here and must not be. A grant belongs to the
-                function; a field for one would let a test run be given a value the
-                real run would never see, and the run would prove nothing about the
-                function it was run on.
-              */}
-              {!creating && (
-                <section className={styles.panelSection}>
-                  <span className={styles.headingWithHint}>
-                    <h2 className={styles.panelHeading}>Test Run</h2>
-                    <FieldHint label={t('Test Run')}>
-                      Runs the saved function the way an action node would: the same sandbox, the same imports
-                      and libraries, and the workspace’s variables resolved the same way. It runs what is stored
-                      rather than what is in the column, so save first to try a change — and every run is
-                      recorded in this workspace’s audit, because it leaves no run of its own behind it.
-                    </FieldHint>
-                  </span>
-
-                  <div className={styles.paramList}>
-                    {declared(params).map((param) => (
-                      <div key={param.name} className={styles.field}>
-                        <label className={styles.fieldLabel} htmlFor={`run-arg-${param.name}`}>
-                          {param.name} · {valueTypeLabel(param.type)}
-                        </label>
-                        {param.type === 'BOOLEAN' ? (
-                          <div className={styles.selectWrapper}>
-                            <select
-                              id={`run-arg-${param.name}`}
-                              className={`${styles.input} ${styles.inputMono}`}
-                              value={testValues[param.name] ?? ''}
-                              aria-label={`Argument ${param.name}`}
-                              onChange={(event) =>
-                                setTestValues((current) => ({ ...current, [param.name]: event.target.value }))
-                              }
-                            >
-                              {/* Blank is a real answer: it is the `null` an unmapped node passes. */}
-                              <option value="">nothing</option>
-                              <option value="true">true</option>
-                              <option value="false">false</option>
-                            </select>
-                            <img src={chevronDown12Icon} alt="" width={12} height={12} />
-                          </div>
-                        ) : param.type === 'STRING' || param.type === 'NUMBER' ? (
-                          <input
-                            id={`run-arg-${param.name}`}
-                            className={`${styles.input} ${styles.inputMono}`}
-                            type={param.type === 'NUMBER' ? 'number' : 'text'}
-                            value={testValues[param.name] ?? ''}
-                            aria-label={`Argument ${param.name}`}
-                            onChange={(event) =>
-                              setTestValues((current) => ({ ...current, [param.name]: event.target.value }))
-                            }
-                          />
-                        ) : (
-                          <textarea
-                            id={`run-arg-${param.name}`}
-                            className={`${styles.input} ${styles.textarea} ${styles.inputMono}`}
-                            value={testValues[param.name] ?? ''}
-                            placeholder={param.type === 'ARRAY' ? '[]' : '{}'}
-                            aria-label={`Argument ${param.name}`}
-                            onChange={(event) =>
-                              setTestValues((current) => ({ ...current, [param.name]: event.target.value }))
-                            }
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  <button
-                    type="button"
-                    className={styles.ghostButton}
-                    onClick={() => void handleRun()}
-                    disabled={running}
-                  >
-                    {running ? 'Running…' : 'Run'}
-                  </button>
-
-                  {/* One line, and only when it is true: the column has moved on. */}
-                  {unsaved && <p className={styles.paramHint}>This runs the saved function, not the column.</p>}
-
-                  {runFailed !== null && (
-                    <p className={styles.runFailed} role="alert">
-                      {runFailed}
-                    </p>
-                  )}
-
-                  {ran !== null && (
-                    <div className={styles.runResult}>
-                      <p className={ran.ok ? styles.runVerdict : styles.runVerdictBad} role="status">
-                        {ran.ok ? 'Returned' : 'Failed'} in {ran.durationMillis} ms
-                      </p>
-                      {/*
-                        What came back, whichever it was. A failure prints its
-                        reason here rather than in a toast, because it is the
-                        answer to the question the button asked - and it is
-                        worded exactly as the run history would have worded it.
-                      */}
-                      <pre className={styles.runAnswer}>
-                        {ran.ok ? (ran.returned ?? t('It returned nothing.')) : ran.error}
-                      </pre>
-                      {!ran.ok && !ran.settled && (
-                        <p className={styles.paramHint}>It was stopped rather than refused; running it again may answer.</p>
-                      )}
-                      {ran.grants.length > 0 && (
-                        <p className={styles.paramHint}>Handed {ran.grants.join(', ')} from the workspace.</p>
-                      )}
-                    </div>
-                  )}
-                </section>
-              )}
 
               <hr className={styles.divider} />
 
