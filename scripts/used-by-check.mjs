@@ -41,6 +41,20 @@ const listFunctions = async () =>
 const dropTool = (id) => graphql(`mutation ($id: ID!) { deleteTool(id: $id) }`, { id }).catch(() => {});
 const dropFunction = (id) => graphql(`mutation ($id: ID!) { deleteFunction(id: $id) }`, { id }).catch(() => {});
 
+const listActions = async () =>
+  (await graphql(`query ($w: ID!) { workspaceActions(workspaceId: $w, size: 200) { content { id name } } }`, {
+    w: WORKSPACE,
+  })).workspaceActions.content;
+
+const listWorkflows = async () =>
+  (await graphql(
+    `query ($w: ID!) { workspaceWorkflows(workspaceId: $w, size: 200) { content { id name } } }`,
+    { w: WORKSPACE },
+  )).workspaceWorkflows.content;
+
+const dropAction = (id) => graphql(`mutation ($id: ID!) { deleteAction(id: $id) }`, { id }).catch(() => {});
+const dropWorkflow = (id) => graphql(`mutation ($id: ID!) { removeWorkflow(id: $id) }`, { id }).catch(() => {});
+
 /** The library this check loads, by the key it loads it under. */
 const dropLibraries = async () => {
   const { scriptLibraries } = await graphql(`query { scriptLibraries { id key } }`).catch(() => ({
@@ -58,6 +72,9 @@ for (const stale of (await listFunctions()).filter((one) => one.name.startsWith(
   await dropFunction(stale.id);
 }
 await dropLibraries();
+// The workflow before the action, for the same reason: the node holds it.
+for (const stale of (await listWorkflows()).filter((one) => one.name.startsWith(SCRATCH))) await dropWorkflow(stale.id);
+for (const stale of (await listActions()).filter((one) => one.name.startsWith(SCRATCH))) await dropAction(stale.id);
 
 const SOURCE = 'export default function f(word) { return word; }';
 const { createFunction: shared } = await graphql(
@@ -75,7 +92,10 @@ const { createFunction: shared } = await graphql(
 
 async function done() {
   // In the order the guards allow, which is the rule this check is about: the
-  // tool holds the function it imports, and the function holds the library.
+  // workflow holds the action, the tool holds the function it imports, and the
+  // function holds the library.
+  for (const mine of (await listWorkflows()).filter((one) => one.name.startsWith(SCRATCH))) await dropWorkflow(mine.id);
+  for (const mine of (await listActions()).filter((one) => one.name.startsWith(SCRATCH))) await dropAction(mine.id);
   for (const mine of (await listTools()).filter((one) => one.name.startsWith(SCRATCH))) await dropTool(mine.id);
   for (const mine of (await listFunctions()).filter((one) => one.name.startsWith(SCRATCH))) {
     await dropFunction(mine.id);
@@ -204,6 +224,84 @@ record(
   toolPanel.includes('Nothing uses this yet') && !toolPanel.includes(shared.name),
   `the tool's own panel answered, and does not name the function it imports - that arrow points ` +
     `the other way (${JSON.stringify(toolPanel.replace(/\s+/g, ' ').trim())})`,
+);
+
+// ----------------------------------------------------- an action, which had none
+
+/*
+ * The half #258 asked for and did not get.
+ *
+ * `ComponentDependants` answered ACTION from the day it was written - it is
+ * what `deleteAction` refuses on - and no screen ever asked it, so a workflow
+ * node pointing at an action could not be found from the action. The action has
+ * no page of its own: it is edited in a dialog, opened by
+ * `/workspace/:id/actions/:actionId`, and that dialog is where the panel goes.
+ *
+ * Both states again, and in the order that proves the empty one is real: an
+ * action nothing runs says so, and the same action inside a workflow names it.
+ */
+const { createAction: action } = await graphql(
+  `mutation ($input: CreateActionInput!) { createAction(input: $input) { id name } }`,
+  { input: { workspaceId: WORKSPACE, name: `${SCRATCH}wait`, type: 'WAIT', subtype: 'TIME', durationSeconds: 1 } },
+);
+
+const actionPage = `${BASE}/workspace/${WORKSPACE}/actions/${action.id}`;
+await page.goto(actionPage, { waitUntil: 'domcontentloaded' });
+if (!(await drawn(page, "the action's settings"))) await done();
+await settled();
+
+const unusedAction = (await page.locator('[aria-label="Used by"]').innerText()).replace(/\s+/g, ' ').trim();
+record(
+  unusedAction.includes('Nothing uses this yet'),
+  `an action no workflow runs says so on its own settings (${JSON.stringify(unusedAction)})`,
+);
+
+const { createWorkflow: flow } = await graphql(
+  `mutation ($input: CreateWorkflowInput!) { createWorkflow(input: $input) { id workflowId name } }`,
+  { input: { workspaceId: WORKSPACE, name: `${SCRATCH}flow`, description: 'Made by used-by-check.mjs.' } },
+);
+await graphql(
+  `mutation ($w: ID!, $f: ID!, $input: WorkflowGraphInput!) {
+     saveWorkflowGraph(workspaceId: $w, workflowId: $f, input: $input) { nodes { key } }
+   }`,
+  {
+    w: WORKSPACE,
+    f: flow.workflowId,
+    input: { nodes: [{ key: 'act', kind: 'ACTION', name: 'Act', actionId: action.id, x: 0, y: 0 }], edges: [] },
+  },
+);
+
+await page.goto(actionPage, { waitUntil: 'domcontentloaded' });
+if (!(await drawn(page, "the action's settings, with a workflow running it"))) await done();
+await page.waitForSelector('[aria-label="Used by"] [data-dependants]', { timeout: 20_000 });
+
+const actionRows = page.locator('[aria-label="Used by"] [data-dependants] a');
+record((await actionRows.count()) === 1, `one row for the one workflow running it (${await actionRows.count()})`);
+
+const actionRow = actionRows.first();
+const runner = await actionRow.getAttribute('data-dependant-name');
+const runnerKind = await actionRow.getAttribute('data-dependant-kind');
+record(runner === flow.name, `the row names the workflow whose node runs it (${runner})`);
+record(runnerKind === 'WORKFLOW', `and says it is a workflow (${runnerKind})`);
+await page.locator('[aria-label="Used by"]').scrollIntoViewIfNeeded();
+await page.waitForTimeout(300);
+await page.screenshot({ path: shot('used-by-action.png') });
+
+/*
+ * The promise the whole exercise rests on, asserted where it was never asserted:
+ * the panel and the refusal are one set. Being shown a list and then refused for
+ * a reason that is not on it is worse than having no list.
+ */
+const listedOnAction = await actionRows.first().getAttribute('data-dependant-name');
+let refusedWith = '';
+try {
+  await graphql(`mutation ($id: ID!) { deleteAction(id: $id) }`, { id: action.id });
+} catch (cause) {
+  refusedWith = String(cause.message ?? cause);
+}
+record(
+  refusedWith.includes(listedOnAction),
+  `deleting it is refused by the name the panel drew (${JSON.stringify(refusedWith.slice(0, 160))})`,
 );
 
 // ------------------------------------------------ the same rows, one screen up
