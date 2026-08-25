@@ -1791,7 +1791,6 @@ export const PL: Record<string, string> = {
   "It came back with nothing.": "Wróciło z niczym.",
 
   // --- what the model thought, and a lookup that could not be made ---------
-  "Thought for": "Myślało przez",
   "Continuing an LLM session — what is said here is written into it": "Kontynuuje sesję LLM — to, co tu napisane, trafia do niej",
 
   // --- two notes the transform reached this time ---------------------------
