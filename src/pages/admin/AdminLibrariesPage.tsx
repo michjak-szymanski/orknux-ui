@@ -20,6 +20,7 @@ import { AdminSidebar } from '../../components/AdminSidebar';
 import { AppShell } from '../../components/AppShell';
 import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { DependantLinks } from '../../components/UsedBy';
 import { shellUser } from '../../session/user';
 import styles from './AdminLibrariesPage.module.css';
@@ -341,33 +342,40 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
               >
                 <img src={downloadIcon} alt="" width={14} height={14} />
               </a>
-              {/* Confirmed in the row rather than in a modal, as unloading a plugin is. */}
-              {confirming === library.id ? (
-                <>
-                  <button
-                    type="button"
-                    className={styles.confirm}
-                    disabled={busy}
-                    onClick={() => void onRemove(library)}
-                  >{t('Remove')}</button>
-                  <button type="button" className={styles.cancel} onClick={() => setConfirming(null)}>{t('Cancel')}</button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  className={styles.rowAction}
-                  disabled={busy}
-                  onClick={() => setConfirming(library.id)}
-                  aria-label={`Remove ${library.key}`}
-                  title={`Remove ${library.key}`}
-                >
-                  <img src={trashIcon} alt="" width={14} height={14} />
-                </button>
-              )}
+              {/*
+                Asked in a modal, not in the row.
+                
+                Unloading a plugin confirms in its row and this followed it, but
+                the two are not the same size of act: a plugin belongs to the
+                installation and so does a library, yet a library is imported by
+                name from any workspace's functions and tools - so removing one
+                breaks code somewhere nobody removing it is looking. That is the
+                company an issue and a chat keep, and both of those ask here.
+              */}
+              <button
+                type="button"
+                className={styles.rowAction}
+                disabled={busy}
+                onClick={() => setConfirming(library.id)}
+                aria-label={`Remove ${library.key}`}
+                title={`Remove ${library.key}`}
+              >
+                <img src={trashIcon} alt="" width={14} height={14} />
+              </button>
             </span>
           </div>
         ))}
       </section>
+
+      <ConfirmDialog
+        subject={libraries?.find((library) => library.id === confirming)?.key ?? null}
+        kind="removeLibrary"
+        onClose={() => setConfirming(null)}
+        onConfirm={async () => {
+          const library = libraries?.find((held) => held.id === confirming);
+          if (library !== undefined) await onRemove(library);
+        }}
+      />
     </AppShell>
   );
 }

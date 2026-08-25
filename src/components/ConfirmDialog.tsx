@@ -6,7 +6,7 @@ import trash2Icon from '../assets/trash-2.svg';
 import styles from './Dialog.module.css';
 import { t } from '../i18n';
 
-export type ConfirmKind = 'disable' | 'remove' | 'discard' | 'deleteChat';
+export type ConfirmKind = 'disable' | 'remove' | 'discard' | 'deleteChat' | 'removeLibrary';
 
 export interface ConfirmDialogProps {
   /** What is being acted on, named, or null when the dialog is closed. */
@@ -78,6 +78,16 @@ export function ConfirmDialog({ subject, kind, onClose, onConfirm }: ConfirmDial
         </>
       ),
       button: submitting ? t('Removing…') : 'Remove',
+    },
+    removeLibrary: {
+      title: t('Remove library'),
+      message: (
+        <>
+          Remove {name} from this installation? Every workspace loses it at once, and a function or
+          tool that imports it stops working the next time it runs.
+        </>
+      ),
+      button: submitting ? t('Removing…') : t('Remove'),
     },
     deleteChat: {
       title: t('Delete chat'),
