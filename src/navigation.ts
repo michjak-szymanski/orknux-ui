@@ -700,6 +700,25 @@ export function sectionHome(where: Where, workspacePath: string): string | undef
  */
 export function workspaceSwitchPath(pathname: string, workspaceId: string): string {
   const home = `/workspace/${workspaceId}`;
+
+  /*
+   * A form for making one keeps its place, the way a list does.
+   *
+   * `.../issues/new` is not a particular issue - it is where filing one begins,
+   * which is why it carries an `action` rather than being remembered as
+   * somewhere you were. Walking up from it landed a switch on the issue list of
+   * the next workspace, so somebody halfway through writing one was put in
+   * front of everybody else's (issue #234). What travels is the intention to
+   * file something, and that is as true in the workspace being switched to.
+   *
+   * Nothing is carried over: the guard has already asked, and a half-written
+   * issue belongs to the workspace it was started in.
+   */
+  const page = pageAt(pathname);
+  if (page?.action !== undefined && page.path.startsWith('/workspace/:workspaceId')) {
+    return page.path.replace('/workspace/:workspaceId', home);
+  }
+
   const section = sectionAt(pathname);
 
   if (section === undefined) return home;
