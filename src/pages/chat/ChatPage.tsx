@@ -10,6 +10,7 @@ import {
   fetchChatMessages,
   fetchChatSessions,
   fetchChatsMentioning,
+  drawChatPicture,
   regenerateChatAnswer,
   renameChat,
   streamChatMessage,
@@ -50,6 +51,7 @@ import cpuIcon from '../../assets/cpu.svg';
 import messageSquareIcon from '../../assets/message-square.svg';
 import penIcon from '../../assets/pen.svg';
 import plusIcon from '../../assets/plus.svg';
+import imageIcon from '../../assets/image.svg';
 import micIcon from '../../assets/mic.svg';
 import refreshCwIcon from '../../assets/refresh-cw.svg';
 import searchIcon from '../../assets/search.svg';
@@ -575,6 +577,27 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
   /** Whether a speech model is set, which is what puts a speaker under an answer. */
   const [reads, setReads] = useState(false);
   /*
+   * Whether this workspace has anything to draw with, and whether the composer
+   * is currently pointed at it.
+   *
+   * Two things and not one. The first is the workspace's answer and decides
+   * whether the button exists at all - absent, for the reason the microphone is
+   * absent, rather than present and failing. The second is what somebody has
+   * just pressed, and it is what the send button then means: with it on, what is
+   * typed is a description to be drawn rather than a message to be answered.
+   *
+   * A visible switch rather than a chat model deciding for itself. It cannot:
+   * drawing is a second model at an endpoint the conversation never touches, so
+   * "answer this with a picture" would have to be a tool, and a tool is a thing
+   * an agent may be granted rather than something every chat has. A switch also
+   * says which it is going to do before it is done, which a model reading the
+   * room does not.
+   */
+  const [draws, setDraws] = useState(false);
+  const [drawing, setDrawing] = useState(false);
+  /** Whether the composer is pointed at the image model. Off on every new chat. */
+  const [describing, setDescribing] = useState(false);
+  /*
    * Whether this chat is being held out loud.
    *
    * Needs both halves — something to hear with and something to answer with —
@@ -635,6 +658,7 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
       .then((held) => {
         setHears(held?.transcriptionModelId != null);
         setReads(held?.speechModelId != null);
+        setDraws(held?.imageModelId != null);
         setChunking(held?.voiceSpeechChunking ?? CHUNKING_DEFAULT);
         setTurnTaking(
           held === null
@@ -649,6 +673,7 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
       .catch(() => {
         setHears(false);
         setReads(false);
+        setDraws(false);
         // Nothing rather than a guess: null in all three is exactly "the
         // workspace has decided nothing", which is the panel's own numbers.
         setTurnTaking(null);
@@ -1036,9 +1061,64 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
     };
   }
 
+  /**
+   * Draws what was typed, rather than answering it.
+   *
+   * A different mutation because it is a different model at a different
+   * endpoint - see `ChatPictureAPI` - and the whole exchange comes back written
+   * into the chat's own history, so the log is re-read afterwards rather than
+   * assembled here. The picture itself is an attachment, which is why the file
+   * row above the composer picks it up too.
+   *
+   * A failure is a sentence in the banner and nothing else. Not an empty
+   * assistant bubble and not a half-written turn: the picture was the whole of
+   * the request, so there is nothing partial to leave behind, and the reason -
+   * a refused description, a provider with no key, a request that ran out of
+   * time - is the only thing worth putting on the screen.
+   */
+  async function handleDraw() {
+    if (currentId === null || drawing) return;
+
+    const asked = draft.trim();
+    if (asked === '') return;
+
+    setDrawing(true);
+    setError(null);
+    try {
+      const picture = await drawChatPicture(currentId, asked);
+      setDraft('');
+      // The server wrote both lines into the thread; this reads back what it
+      // wrote rather than guessing at it.
+      setMessages(await fetchChatMessages(currentId));
+      // No token counts on a drawing, so the time and the price are all there
+      // is - and the price is null wherever the model records none.
+      setLastSpend({ millis: picture.millis, inputTokens: 0, outputTokens: 0, cost: picture.cost });
+      await fetchChatAttachments(currentId)
+        .then(setChatFiles)
+        .catch(() => undefined);
+      await loadSessions(currentId);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t('The picture could not be drawn.'));
+    } finally {
+      setDrawing(false);
+    }
+  }
+
   async function handleSend(event: FormEvent) {
     event.preventDefault();
     if (currentId === null || draft.trim() === '') return;
+
+    /*
+     * The switch decides which model this send is for.
+     *
+     * Before everything below it, because none of the rest applies: a drawing
+     * takes no attachments, is not a turn voice mode can hold, and streams
+     * nothing.
+     */
+    if (describing) {
+      await handleDraw();
+      return;
+    }
 
     /*
      * What was attached is named in the message.
@@ -1315,7 +1395,15 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
    * A button labelled with the turn's progress and refusing the press would be
    * the same message lost that voice mode was just taught to keep.
    */
-  const sendLabel = voice || !sending ? 'Send' : answering ? t('Answering…') : t('Waiting…');
+  const sendLabel = describing
+    ? drawing
+      ? t('Drawing…')
+      : t('Draw')
+    : voice || !sending
+      ? 'Send'
+      : answering
+        ? t('Answering…')
+        : t('Waiting…');
 
   /*
    * One banner, drawn in whichever half is showing. It cannot simply sit above
@@ -1501,6 +1589,15 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
    * counts, and for every answer that came back out of the history: three
    * different reasons to know nothing, and one honest way of showing it.
    */
+  /**
+   * Whether what was last paid for was a picture rather than an answer.
+   *
+   * No tokens and a price is only ever an image model: every chat provider that
+   * charges reports counts, and one that reports none carries no price either.
+   */
+  const drawn =
+    lastSpend !== null && lastSpend.inputTokens === 0 && lastSpend.outputTokens === 0 && lastSpend.cost !== null;
+
   const spend =
     session.chatCostShown === true && lastSpend !== null && spendKnown(lastSpend)
       ? lastSpend.cost === null
@@ -1903,7 +2000,9 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                         onClick={() => setThoughtOpen(!thoughtOpen)}
                         aria-expanded={thoughtOpen}
                       >
-                        Thought for {thinkingTime(lastSpend.millis)}
+                        {/* A picture was not thought about; it was drawn. */}
+                        {drawn ? 'Drew for ' : 'Thought for '}
+                        {thinkingTime(lastSpend.millis)}
                         {spend !== null && ` \u00b7 ${spend}`}
                         <img
                           className={thoughtOpen ? styles.thoughtChevronOpen : styles.thoughtChevron}
@@ -1920,6 +2019,17 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                           <>
                             The provider took {lastSpend.millis} ms to answer. Nothing else is
                             recorded: the history keeps what was said, not how it was arrived at.
+                          </>
+                        ) : drawn ? (
+                          /*
+                            A picture, which is not billed the way an answer is.
+                            Saying "charged for 0 tokens in and 0 out" would be
+                            true of the counts and false about the money.
+                          */
+                          <>
+                            The provider took {lastSpend.millis} ms to draw it, and charged for one
+                            picture rather than for tokens - which is why there are no counts here.{' '}
+                            {`At the price recorded for this model that is ${costAmount(lastSpend.cost ?? 0)}.`}
                           </>
                         ) : (
                           <>
@@ -2294,7 +2404,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
                 onKeyDown={handleComposerKey}
-                placeholder={t('Type a message...')}
+                placeholder={describing ? t('Describe a picture to draw...') : t('Type a message...')}
                 rows={1}
                 aria-label={t('Message')}
               />
@@ -2303,6 +2413,32 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                 is a draft like any other, and a mishearing is fixed before
                 anybody else reads it.
               */}
+              {/*
+                Points the composer at the image model instead of the chat one.
+                Only where the workspace has set one, for the reason the
+                microphone is only there where it can hear.
+
+                A switch beside the box rather than a second box, so that the
+                thing already typed can be drawn instead of sent without being
+                typed again - and so that what the send button is about to do is
+                readable before it is pressed: it says Draw.
+              */}
+              {draws && (
+                <button
+                  id="chat-picture"
+                  type="button"
+                  className={
+                    describing ? `${styles.micButton} ${styles.micRecording}` : styles.micButton
+                  }
+                  onClick={() => setDescribing((on) => !on)}
+                  disabled={drawing}
+                  aria-pressed={describing}
+                  aria-label={describing ? t('Send this as a message') : t('Draw a picture instead')}
+                  title={describing ? t('Send this as a message') : t('Draw a picture instead')}
+                >
+                  <img src={imageIcon} alt="" width={16} height={16} />
+                </button>
+              )}
               {/* What the microphone is hearing, while it hears it. */}
               {listening !== null && <VoiceMeter stream={listening} />}
               {hears && (
@@ -2416,7 +2552,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
               <button
                 type="submit"
                 className={styles.sendButton}
-                disabled={draft.trim() === '' || (sending && !voice)}
+                disabled={draft.trim() === '' || drawing || (!describing && sending && !voice)}
               >
                 {sendLabel}
               </button>

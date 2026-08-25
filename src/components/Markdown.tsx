@@ -90,6 +90,18 @@ type RehypePlugins = ComponentProps<typeof ReactMarkdown>['rehypePlugins'];
 export function Markdown({ children, highlight, issuesIn, zoomImages = false }: MarkdownProps) {
   /** Which picture is open over the page, or null while none is. */
   const [zoomed, setZoomed] = useState<Picture | null>(null);
+  /*
+   * The pictures whose bytes did not come back.
+   *
+   * A chat can now hold a picture it drew, and that picture is an attachment
+   * like any other: deleted, or on an installation whose attachment directory
+   * has been moved out from under it, the link answers 404 and the browser draws
+   * its broken-image icon - which says this page is broken rather than that the
+   * file is gone. One line saying so is the truth, and it belongs here rather
+   * than in the chat, because a manual page whose screenshot is missing has
+   * exactly the same problem.
+   */
+  const [missing, setMissing] = useState<string[]>([]);
 
   /*
    * Rebuilt only when the term changes. A fresh array on every render would have
@@ -158,7 +170,19 @@ export function Markdown({ children, highlight, issuesIn, zoomImages = false }: 
            */
           img: ({ node: _node, ...props }) => {
             const picture = { src: String(props.src ?? ''), alt: String(props.alt ?? '') };
-            const image = <img {...props} data-keeps-colour="" />;
+            if (missing.includes(picture.src)) {
+              return <span className={styles.gone}>{t('This picture is gone.')}</span>;
+            }
+
+            const image = (
+              <img
+                {...props}
+                data-keeps-colour=""
+                onError={() =>
+                  setMissing((known) => (known.includes(picture.src) ? known : [...known, picture.src]))
+                }
+              />
+            );
             if (!zoomImages || picture.src === '') return image;
 
             return (

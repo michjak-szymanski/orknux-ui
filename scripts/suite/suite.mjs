@@ -848,6 +848,37 @@ export const TESTS = [
      */
   },
   {
+    name: 'image-model-check',
+    what: 'the picture button in a chat, and the drawing it puts in the answer',
+    needs: ['workspace'],
+    ci: false,
+    /*
+     * Issue #240, the interface half. The server half is `ChatPictureTest`, ten
+     * tests on both engines over a stub on the loopback address: which endpoint
+     * is called, which providers are refused without being called, where the
+     * bytes go, what the picture cost.
+     *
+     * What that cannot say is whether anybody can find it. The assertions worth
+     * the whole check are the two about the answer bubble - the picture is drawn
+     * *inside* it rather than only listed in the file row above the composer, and
+     * it has loaded, which is `naturalWidth` and not the presence of an `<img>`,
+     * because a broken picture is an `<img>` too. Then the cost line, which must
+     * say four cents and must never say $0.00: an image model reports no tokens,
+     * so the ordinary arithmetic makes every drawing free.
+     *
+     * Not in CI, and the reason is one thing. Every other chat check stubs the
+     * provider inside the browser; this one cannot, because the drawing happens
+     * on the server from a mutation and a stub in the page would be a check of
+     * the stub. It needs something answering `/images/generations` that the
+     * *server* can reach - `scripts/suite/image-stub.py`, a dozen lines and a red
+     * square, named in ORKNUX_IMAGE_STUB - and the CI installation is a
+     * container with nothing beside it. Closing that gap means a service in the
+     * browser job's compose file, which is a change to how CI is built rather
+     * than to this check.
+     */
+  },
+
+  {
     name: 'speech-chunking-check',
     what: 'what one answer costs to read aloud on each of the three things a workspace can say about cutting it',
     needs: ['workspace'],

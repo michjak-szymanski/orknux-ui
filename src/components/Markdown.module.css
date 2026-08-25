@@ -296,3 +296,20 @@
 .markdown mark[data-current='true'] {
   box-shadow: 0 0 0 1px var(--color-accent-brand);
 }
+
+/*
+ * What stands where a picture was.
+ *
+ * A link that answers 404 draws the browser's broken-image icon, and that icon
+ * says the page is broken rather than that the file has gone - which for a
+ * chat holding a picture it drew is the wrong half of the story entirely.
+ *
+ * No font-size of its own: it takes the size of the prose it is standing in,
+ * which is what makes it read as the missing picture rather than as a note
+ * about it.
+ */
+.markdown .gone {
+  display: inline-block;
+  color: var(--color-text-muted);
+  font-style: italic;
+}

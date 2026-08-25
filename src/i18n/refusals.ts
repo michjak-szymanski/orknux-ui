@@ -186,6 +186,11 @@ const PL: Record<string, string> = {
   ChatDisabled: 'Czat jest wyłączony w tej instalacji',
   ChatMessageEmpty: 'Nie ma czego wysłać',
   ChatModelNotChosen: 'Ten czat nie ma modelu, który mógłby odpowiedzieć; wybierz najpierw jeden',
+  ChatPictureModelNotChosen:
+    'Ta przestrzeń robocza nie ma modelu obrazu. Wybierz jeden w ustawieniach czatu przestrzeni ' +
+    'roboczej albo dodaj go w Modelach.',
+  ChatPictureUnstorable:
+    'Narysowany obraz jest przechowywany jako załącznik, a załączniki są wyłączone w tej instalacji.',
   ConnectionUrlInvalid: 'Adres połączenia jest wymagany',
   McpServerAddressInvalid: 'Adres serwera MCP jest wymagany',
   MemoryContentInvalid: 'Wspomnienie potrzebuje czegoś do zapamiętania',

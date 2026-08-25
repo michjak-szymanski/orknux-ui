@@ -36,6 +36,12 @@ export interface Workspace {
    */
   speechModelId: string | null;
   /**
+   * The model that draws a picture for the picture button in a chat. Null means
+   * the button is not offered, which is right where there is nothing to draw
+   * with.
+   */
+  imageModelId: string | null;
+  /**
    * The model behind the quick chat beside the page. Null means the button is
    * not offered.
    */
@@ -100,7 +106,7 @@ export interface Workspace {
 
 const WORKSPACE_FIELDS =
   'id name description roles { id name } adminRoles { id name } administered ' +
-  'companionModelId transcriptionModelId speechModelId quickChatModelId quickChatMayWrite ' +
+  'companionModelId transcriptionModelId speechModelId imageModelId quickChatModelId quickChatMayWrite ' +
   'defaultMemoryShare voicePauseEndsTurnMs voiceSpeechOverRoomPercent voiceUnattendedMicrophoneMs ' +
   'voiceSpeechChunking';
 
@@ -155,6 +161,20 @@ export async function setWorkspaceSpeechModel(
     { workspaceId, modelId },
   );
   return data.setWorkspaceSpeechModel;
+}
+
+/** Chooses the model the workspace draws with; null takes the picture button away. */
+export async function setWorkspaceImageModel(
+  workspaceId: string,
+  modelId: string | null,
+): Promise<Workspace> {
+  const data = await graphql<{ setWorkspaceImageModel: Workspace }>(
+    `mutation SetWorkspaceImageModel($workspaceId: ID!, $modelId: ID) {
+       setWorkspaceImageModel(workspaceId: $workspaceId, modelId: $modelId) { ${WORKSPACE_FIELDS} }
+     }`,
+    { workspaceId, modelId },
+  );
+  return data.setWorkspaceImageModel;
 }
 
 /** Chooses the model behind the quick chat; null takes the button away. */

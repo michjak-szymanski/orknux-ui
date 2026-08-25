@@ -178,9 +178,9 @@ const IN_THE_OPEN = [
   },
   {
     file: 'src/pages/chat/ChatPage.tsx',
-    says: 'out - every round of this turn, so a lookup an agent made on the way is counted here too.',
+    says: 'ms to draw it, and charged for one picture rather than for tokens',
     because: 'status',
-    why: "how long this particular answer took, what it cost, and what was kept of it. The sentence this entry used to quote is the other arm of the same ternary - #227 gave the paragraph two of them, and what is recorded here is whichever arm reads longest. The entry went briefly missing from this table: after #227 the scanner could not see into a fragment at all, so it read as excusing something that no longer existed and was deleted. It existed the whole time; `fragmentsIn` is why it can be seen again",
+    why: "how long this particular answer took, what it cost, and what was kept of it. The paragraph has three arms now and what is recorded here is whichever reads longest, so this quotation moves when one is added - it quoted the nothing-was-reported arm until #227 added the token one, and the token one until #240 added this. #240's is a drawn picture, which is billed per picture and reports no tokens, so \"charged for 0 tokens in and 0 out\" would be true of the counts and false about the money. The entry went briefly missing from this table once: after #227 the scanner could not see into a fragment at all, so it read as excusing something that no longer existed and was deleted. It existed the whole time; `fragmentsIn` is why it can be seen again",
   },
   {
     file: 'src/components/CodeSuggestion.tsx',
@@ -387,6 +387,12 @@ const IN_THE_OPEN = [
     says: 'No speech model has been added yet.',
     because: 'status',
     why: 'the same, for the speech picker',
+  },
+  {
+    file: 'src/pages/workspace/WorkspaceSettingsPage.tsx',
+    says: 'No image model has been added yet.',
+    because: 'status',
+    why: 'the same, for the picker that chooses what draws',
   },
   {
     file: 'src/pages/admin/AdminSettingsPage.tsx',
