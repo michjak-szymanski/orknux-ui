@@ -1662,6 +1662,14 @@ export const TESTS = [
      * either way and they arrive over the stream one at a time exactly as an
      * agent's would. It makes its own model pointed at `.invalid` and removes
      * it.
+     *
+     * It retries one thing, and it is the fixture: a model that cannot resolve
+     * fails as fast as the machine can say so, which on a quick one is before
+     * the page has drawn - and a task that was already over is a task there was
+     * nothing live to see. It starts another, up to four times, and fails saying
+     * so if it never catches one running. The assertions themselves are made
+     * once each; a check that retried those would be one that passes on the
+     * third try, which is worse than one that fails.
      */
   },
   {

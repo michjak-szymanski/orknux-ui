@@ -18,6 +18,12 @@
  *      compared with what it holds afterwards. Only the stream can have put the
  *      difference there.
  *
+ * One thing is retried, and it is the fixture rather than an assertion: a model
+ * pointed at `.invalid` can fail before the page has finished drawing, and a
+ * task that was already over is a task there was nothing live to see. So it
+ * starts another, up to four times, and fails saying so if it never catches one
+ * running. Every assertion below is made once, on the task that was.
+ *
  * And it does not need a model that answers, for the reason `task-check` gives:
  * the prompt is written into the task's log before the model is asked, and a
  * model that never answers is recorded as a note saying so. So the session gets
@@ -82,16 +88,66 @@ console.log(`made ${MODEL} (#${model.id}) for the task to be given`);
 
 // --- start it from the page, so the page is open while it works -------------
 
-await page.goto(`${BASE}/workspace/${WORKSPACE}/tasks`, { waitUntil: 'domcontentloaded' });
-await page.waitForSelector('h1:text("Tasks")', { timeout: 20_000 });
-await page.locator('#task-prompt').fill(PROMPT);
-await page.locator('#task-worker').selectOption(`model:${model.id}`);
-await page.locator('button:text("Start")').click();
-await page.waitForURL(/\/tasks\/\d+$/, { timeout: 20_000 });
-const taskId = page.url().split('/').pop();
-console.log(`started task #${taskId} with the page already on it`);
+const OVER = ['Done', 'Failed', 'Stopped'];
+const lines = () => page.locator('[data-testid="task-log"] [data-kind]').count();
+const stateNow = () => page.locator('[data-testid="task-state"]').innerText();
 
-await page.waitForSelector('[data-testid="task-log"]', { timeout: 20_000 });
+/** Starts one from the page and lands on it, the way a person does. */
+async function startFromThePage() {
+  await page.goto(`${BASE}/workspace/${WORKSPACE}/tasks`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('h1:text("Tasks")', { timeout: 20_000 });
+  await page.locator('#task-prompt').fill(PROMPT);
+  await page.locator('#task-worker').selectOption(`model:${model.id}`);
+  await page.locator('button:text("Start")').click();
+  await page.waitForURL(/\/tasks\/\d+$/, { timeout: 20_000 });
+  const id = page.url().split('/').pop();
+  await page.waitForSelector('[data-testid="task-log"]', { timeout: 20_000 });
+  return id;
+}
+
+/*
+ * Catching it while it is still going, which is a race against the fixture and
+ * not against the feature.
+ *
+ * A model pointed at `.invalid` fails as fast as the machine can decide that
+ * `.invalid` does not resolve, and on a fast one that can be sooner than a React
+ * route change and two queries. So the task may already be over by the time the
+ * page draws - which says nothing about whether the page is live, only that
+ * there was nothing left to be live about.
+ *
+ * Retried rather than slept through, and retried in the *setup* rather than in
+ * any assertion: what is being repeated is "make me a task that is still
+ * running", and every assertion below is made exactly once, on the task that
+ * was. A check that retried its assertions would be a check that passes on the
+ * third try, which is worse than one that fails.
+ */
+const ATTEMPTS = 4;
+let taskId = null;
+let drawnWhileGoing = 0;
+let stateWhileGoing = '';
+
+for (let attempt = 1; attempt <= ATTEMPTS && taskId === null; attempt += 1) {
+  const started = await startFromThePage();
+  const state = (await stateNow()).trim();
+
+  if (OVER.includes(state)) {
+    console.log(`task #${started} was already "${state}" when the page drew; starting another`);
+    await gql(`mutation ($id: ID!) { deleteTask(id: $id) }`, { id: started }).catch(() => undefined);
+    continue;
+  }
+
+  taskId = started;
+  stateWhileGoing = state;
+  drawnWhileGoing = await lines();
+  console.log(`watching task #${taskId}, which reads "${state}" with ${drawnWhileGoing} line(s) drawn`);
+}
+
+check(
+  taskId !== null,
+  `the page was open on a task that was still going: "${stateWhileGoing}"`,
+  `every one of ${ATTEMPTS} tasks was already over by the time the page drew, so nothing here watched one run`,
+);
+if (taskId === null) await finish(browser);
 
 /*
  * The marker. Anything that navigates takes it with it, so every assertion after
@@ -116,20 +172,6 @@ check(
   'a refresh control is on the page, and anything arriving could be a poll rather than the stream',
 );
 
-// --- what it holds while it is still going -----------------------------------
-
-const lines = () => page.locator('[data-testid="task-log"] [data-kind]').count();
-const stateNow = () => page.locator('[data-testid="task-state"]').innerText();
-
-/*
- * The reading taken while it is working. The prompt is in the log before the
- * model is asked, so there is something here even at the first look; what
- * matters is that it is *fewer* than there will be.
- */
-let drawnWhileGoing = await lines();
-let stateWhileGoing = (await stateNow()).trim();
-let sawItGoing = !['Done', 'Failed', 'Stopped'].includes(stateWhileGoing);
-
 /*
  * Keep looking until it is over, and keep the last reading taken while it was
  * not. Reading the browser only - no reload, no navigation, no GraphQL - so the
@@ -138,21 +180,14 @@ let sawItGoing = !['Done', 'Failed', 'Stopped'].includes(stateWhileGoing);
 let ended = null;
 for (let look = 0; look < 120 && ended === null; look += 1) {
   const state = (await stateNow()).trim();
-  if (['Done', 'Failed', 'Stopped'].includes(state)) {
+  if (OVER.includes(state)) {
     ended = state;
     break;
   }
-  sawItGoing = true;
   stateWhileGoing = state;
   drawnWhileGoing = await lines();
   await page.waitForTimeout(250);
 }
-
-check(
-  sawItGoing,
-  `the page showed the task working before it ended: "${stateWhileGoing}"`,
-  'the task was already over by the time the page was looked at, so nothing here watched it run',
-);
 
 check(
   ended !== null,
