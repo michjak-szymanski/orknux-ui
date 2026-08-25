@@ -108,7 +108,8 @@ record(
  */
 const hintFor = (source, label) =>
   source.includes(`<FieldHint label="${label}">`) ||
-  new RegExp(`<FieldHint label=\{t\((['"])${label}\1\)\}`).test(source);
+  source.includes(`<FieldHint label={t('${label}')}>`) ||
+  source.includes(`<FieldHint label={t("${label}")}>`);
 
 const held = readFileSync('src/components/RevisionHistory.tsx', 'utf8');
 record(
