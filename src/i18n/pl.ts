@@ -15,6 +15,7 @@
  * of English on an otherwise Polish screen.
  */
 export const PL: Record<string, string> = {
+  "What the last answer read and wrote": "Ile ostatnia odpowiedź przeczytała i napisała",
   'Nothing imports it.': 'Nic tego nie importuje.',
   'Imported by': 'Importowane przez',
   'Fetched once from': 'Pobrane raz z',

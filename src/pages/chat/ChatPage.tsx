@@ -153,20 +153,6 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
     [chatId, navigate],
   );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  /**
-   * How many turns at the top were carried in from the session, rather than
-   * said here.
-   *
-   * The count is where they stop: a turn with a name on it came out of the
-   * session, and the chat's own turns have none. A chat opened to work out what
-   * an agent did is read for the difference between the two, so the boundary is
-   * drawn rather than left to be inferred from the names.
-   */
-  const carried = useMemo(() => {
-    const own = messages.findIndex((message) => message.actor === null);
-    return own === -1 ? messages.length : own;
-  }, [messages]);
-
   const [search, setSearch] = useState('');
   /** Off by default: most searches are for a chat by name, not through everything said. */
   const [searchInMessages, setSearchInMessages] = useState(false);
@@ -1650,6 +1636,24 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
         : costAmount(lastSpend.cost)
       : null;
 
+  /*
+   * What the last answer cost, under the corner of the composer.
+   *
+   * It used to ride on the disclosure beside "Thought for 9 seconds", where a
+   * bare number next to a duration is a second unlabelled figure on a control
+   * that is about something else. Down here it is one thing saying one thing,
+   * out of the way of the conversation and next to the box the next question is
+   * typed into - which is where somebody wondering what this is costing them is
+   * already looking.
+   *
+   * The same three silences as before: the switch off, a provider that reported
+   * no counts, and an answer read back out of the history.
+   */
+  const spent =
+    session.chatCostShown === true && lastSpend !== null && spendKnown(lastSpend) && !drawn
+      ? tokenCount(lastSpend.inputTokens + lastSpend.outputTokens)
+      : null;
+
   return (
     <AppShell
       user={shellUser(session)}
@@ -2065,7 +2069,6 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                         {/* A picture was not thought about; it was drawn. */}
                         {drawn ? 'Drew for ' : 'Thought for '}
                         {thinkingTime(lastSpend.millis)}
-                        {spend !== null && ` \u00b7 ${spend}`}
                         <img
                           className={thoughtOpen ? styles.thoughtChevronOpen : styles.thoughtChevron}
                           src={chevronDown12Icon}
@@ -2298,9 +2301,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                 different question - which of this was already there, and which
                 of it is theirs - and one line answers it at a glance.
               */}
-              {index === carried - 1 && (
-                <p className={styles.carriedEdge}>Everything above was carried over from the session</p>
-              )}
+
               </Fragment>
             ))}
 
@@ -2371,6 +2372,11 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
             </div>
           )}
 
+          {spent !== null && (
+            <p className={styles.spent} title={t('What the last answer read and wrote')}>
+              {spent} {t('tokens')}
+            </p>
+          )}
           <form className={styles.composer} onSubmit={handleSend}>
             {/* What is going with the message, above the box it is going from. */}
             {attached.length > 0 && (
