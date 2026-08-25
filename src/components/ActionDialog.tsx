@@ -46,6 +46,7 @@ import { IconField } from './IconField';
 import { OpenDefinitionIcon } from './OpenDefinitionIcon';
 import { PanelClose, panelEscape } from './PanelClose';
 import { SlackTargetField } from './SlackTargetField';
+import { UsedBy } from './UsedBy';
 import styles from './Dialog.module.css';
 import { t } from '../i18n';
 
@@ -1187,6 +1188,29 @@ export function ActionDialog({ open, workspaceId, action, onClose, onSaved, onDe
                 <p className={styles.paramHeading}>{t('Output Parameters')}</p>
                 <ParamList params={action.outputParams.map((param) => param.display)} />
               </div>
+
+              {/*
+                What runs it, immediately above the button that takes it away.
+
+                An action is reached from one direction only - a workflow node
+                points at it - and that direction is invisible from here, which
+                is what #258 was: the set was already computed and already what
+                Delete refuses on, and the only surface it had was the refusal.
+                So it is drawn where the six other components draw it, and each
+                row opens the workflow that names it.
+
+                Gated on `open` as well as on there being an action, because
+                this dialog stays mounted while it is shut - the workflow editor
+                keeps the action it was last handed - and a panel that fetches
+                on mount would ask the question every time the page loads.
+                Keyed by the action, so opening a second one asks again rather
+                than showing the first one's answer.
+              */}
+              {open && (
+                <div className={styles.field}>
+                  <UsedBy key={action.id} kind="ACTION" componentId={action.id} />
+                </div>
+              )}
             </>
           )}
         </div>

@@ -324,10 +324,6 @@ record(
   panel.includes('handed to this function after its own parameters') === false,
   'externals: the paragraph is gone from the drawn form',
 );
-record(
-  panel.includes('An object names a shape this workspace defines') === false,
-  'return type: the paragraph is gone from the drawn form',
-);
 
 const externalsHint = page.getByRole('button', { name: 'About External Parameters' });
 record((await externalsHint.count()) === 1, 'externals: there is a (?) on the heading');
@@ -346,6 +342,41 @@ record(
 await page.keyboard.press('Escape');
 await page.waitForTimeout(300);
 
+/*
+ * The link is not prose and does not move. Asked here rather than at the end,
+ * because it belongs to External Parameters and the rest of this walks off the
+ * editor to the settings page.
+ */
+const openVariables = page.getByRole('link', { name: 'Open Variables' });
+record((await openVariables.count()) === 1, 'externals: "Open Variables" is still drawn, in the open');
+record(
+  (await openVariables.getAttribute('href')) === `/workspace/${WORKSPACE}/variables`,
+  'externals: and still points at the Variables page',
+);
+record(
+  (await openVariables.getAttribute('target')) === '_blank',
+  'externals: in a new tab, so it does not take the code being written with it',
+);
+
+/*
+ * The return type is on the function's settings page now, and so is its (?).
+ *
+ * Followed rather than dropped: the paragraph it replaced is the same
+ * paragraph, and what this asserts about it - gone from the drawn form, carried
+ * whole behind the mark - is what was asserted when the two sat in one column.
+ */
+await page.goto(`${BASE}/workspace/${WORKSPACE}/functions/${madeFunction.createFunction.id}/settings`, {
+  waitUntil: 'domcontentloaded',
+});
+await page.waitForSelector('select[aria-label="Return type"]', { timeout: 30_000 });
+await page.waitForTimeout(500);
+
+const settingsForm = await page.locator('form').last().innerText();
+record(
+  settingsForm.includes('An object names a shape this workspace defines') === false,
+  'return type: the paragraph is gone from the drawn form',
+);
+
 const returnHint = page.getByRole('button', { name: 'About Return Type' });
 record((await returnHint.count()) === 1, 'return type: there is a (?) on the heading');
 await returnHint.click();
@@ -362,18 +393,6 @@ record(
 );
 await page.keyboard.press('Escape');
 await page.waitForTimeout(300);
-
-/* The link is not prose and does not move. */
-const openVariables = page.getByRole('link', { name: 'Open Variables' });
-record((await openVariables.count()) === 1, 'externals: "Open Variables" is still drawn, in the open');
-record(
-  (await openVariables.getAttribute('href')) === `/workspace/${WORKSPACE}/variables`,
-  'externals: and still points at the Variables page',
-);
-record(
-  (await openVariables.getAttribute('target')) === '_blank',
-  'externals: in a new tab, so it does not take the code being written with it',
-);
 
 /* ---------------------------------------------------------------- clean up */
 

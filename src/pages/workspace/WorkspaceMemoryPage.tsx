@@ -27,6 +27,7 @@ import slidersIcon from '../../assets/sliders-horizontal.svg';
 import trashIcon from '../../assets/trash-grey.svg';
 import { AppShell } from '../../components/AppShell';
 import { Loader } from '../../components/Loader';
+import { UsedBy } from '../../components/UsedBy';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceMemoryPage.module.css';
@@ -430,6 +431,16 @@ export function WorkspaceMemoryPage({ session, onSignOut }: WorkspaceMemoryPageP
                   >{t('Next')}</button>
                 </div>
               </div>
+
+              {/*
+                Which agents are granted this catalog, under what is in it. The
+                same panel the skills page draws, for the same reason: the
+                folder is the unit an agent is granted and the unit a delete is
+                refused on, so it is the unit the question is asked about.
+              */}
+              <section className={styles.card}>
+                <UsedBy key={current.id} kind="MEMORY_CATALOG" componentId={current.id} />
+              </section>
             </>
           )}
         </section>

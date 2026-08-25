@@ -5,13 +5,10 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import type { ValueType } from '../../api/actions';
 import {
   NEW_FUNCTION_NAME,
-  RETURN_TYPES,
   VALUE_TYPES,
   createFunction,
-  deleteFunction,
   fetchFunction,
   fetchWorkspaceFunctions,
-  timeAgo,
   namesObject,
   parametersOf,
   sameParameters,
@@ -20,17 +17,17 @@ import {
   updateFunction,
   validateFunctionSource,
   valueTypeLabel,
-  argumentJson,
-  runFunction,
   withName,
   withParameters,
 } from '../../api/functions';
-import type { FunctionParam, FunctionRun, ScriptImport, WorkspaceFunction } from '../../api/functions';
-import { fetchWorkspaceLibraries, localName } from '../../api/libraries';
+import type { FunctionParam, ScriptImport, WorkspaceFunction } from '../../api/functions';
+import { fetchWorkspaceLibraries } from '../../api/libraries';
 import type { ScriptLibrary, ScriptLibraryImport, ScriptLibraryImportInput } from '../../api/libraries';
 import type { SessionUser } from '../../api/session';
 import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import codeIcon from '../../assets/code.svg';
+import playIcon from '../../assets/play.svg';
+import settingsIcon from '../../assets/settings-14.svg';
 import plusIcon from '../../assets/plus.svg';
 import wandIcon from '../../assets/wand.svg';
 import { VARIABLE_TYPE_LABEL } from '../../api/variables';
@@ -43,14 +40,13 @@ import type { CodeEditorHandle } from '../../components/CodeEditor';
 import { OpenDefinitionIcon } from '../../components/OpenDefinitionIcon';
 import { Loader } from '../../components/Loader';
 import { RevisionHistory } from '../../components/RevisionHistory';
-import { UsedBy } from '../../components/UsedBy';
 import { compile, declareImports, declareObjects } from '../../components/monaco';
 import { importTypes } from '../../components/importTypes';
 import { objectTypes } from '../../components/objectTypes';
 import { fetchWorkspaceObjects } from '../../api/objects';
 import type { WorkflowObject } from '../../api/objects';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
-import { TrashIcon } from '../../components/TrashIcon';
+import { TestRunDialog } from '../../components/TestRunDialog';
 import { UnsavedWorkDialog } from '../../components/UnsavedWorkDialog';
 import { ValidationStatus } from '../../components/ValidationStatus';
 import type { Validation } from '../../components/ValidationStatus';
@@ -216,22 +212,13 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
   const [returnObjectId, setReturnObjectId] = useState<string | null>(null);
 
   /*
-   * What a test run would pass, as typed, by parameter name.
+   * Whether the Test Run window is open.
    *
-   * As typed rather than as JSON: the panel offers a control per type, and what
-   * somebody has half-written in a number field is not a number yet. It becomes
-   * JSON in `handleRun`, at the one moment there is a type to read it against.
-   *
-   * Keyed by name rather than by position, because a parameter renamed in the
-   * panel above is a different parameter and should not keep a value that was
-   * typed for the old one.
+   * All this page keeps of it. What was typed into it, what came back and how
+   * long it took belong to the window, which is where they are read - see
+   * `TestRunDialog`.
    */
-  const [testValues, setTestValues] = useState<Record<string, string>>({});
-  const [running, setRunning] = useState(false);
-  /** What the last run came to, or null before there has been one. */
-  const [ran, setRan] = useState<FunctionRun | null>(null);
-  /** The run could not be asked for at all — the request failed, not the script. */
-  const [runFailed, setRunFailed] = useState<string | null>(null);
+  const [testing, setTesting] = useState(false);
 
   /*
    * What there is to choose from. Their values are not here and cannot be: an
@@ -1207,42 +1194,6 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
   }
 
   /**
-   * Runs the function, with what is in the Test Run fields, and shows the answer.
-   *
-   * The server is handed an id and arguments and nothing else — no source. So what
-   * runs is the *saved* function, in the sandbox a workflow runs it in, with the
-   * workspace's variables it is granted resolved the same way; the panel says so,
-   * and says so again when there is unsaved work in the column, because otherwise
-   * a run that disagreed with the code on screen would read as the run being wrong
-   * rather than as the code not having been saved.
-   *
-   * A failure is the interesting answer and is shown as one: the reason comes back
-   * on `error` with the function's name in front of it, worded exactly as a run of
-   * the workflow would have worded it in its history.
-   */
-  async function handleRun() {
-    if (running || creating) return;
-    setRunning(true);
-    setRan(null);
-    setRunFailed(null);
-    try {
-      const answer = await runFunction({
-        workspaceId,
-        functionId,
-        arguments: declared(params).map((param) => ({
-          name: param.name,
-          json: argumentJson(param.type, testValues[param.name] ?? ''),
-        })),
-      });
-      setRan(answer);
-    } catch (cause) {
-      setRunFailed(cause instanceof Error ? cause.message : t('It could not be run.'));
-    } finally {
-      setRunning(false);
-    }
-  }
-
-  /**
    * Saves both halves, from one compile of what is on screen.
    *
    * This is the whole of the guarantee that the two are the same function. The
@@ -1265,24 +1216,41 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
         return false;
       }
 
+      /**
+       * What this page owns, which is what it sends.
+       *
+       * The name, the code and the two lists that make up the declaration.
+       * Imports, libraries and the return type are the settings page's since
+       * they moved there, and `updateFunction` leaves out what it is not
+       * handed - so a save here cannot write back a copy of them that went
+       * stale while somebody was editing them in the other tab.
+       */
       const details = {
         name: name.trim(),
         description,
         source: emitted.javascript,
         typescript: source,
-        returnType,
-        returnObjectId: namesObject(returnType) ? returnObjectId : null,
         params: params.filter((param) => param.name.trim() !== ''),
         externalVariableIds: externals,
-        // A row nobody has named is not an import yet, and sending it would be
-        // refused for a name no code can call it by.
-        imports: named(imports),
-        // The same rule for a library: a row nobody has named is not one yet.
-        libraries: chosen(libraries),
       };
 
+      /*
+       * Creating is the exception, and has to be: there is no settings page for
+       * a function that does not exist yet, so the starter's return type and its
+       * empty lists are established here and edited there afterwards.
+       */
       const stored = creating
-        ? await createFunction({ workspaceId, ...details })
+        ? await createFunction({
+            workspaceId,
+            ...details,
+            returnType,
+            returnObjectId: namesObject(returnType) ? returnObjectId : null,
+            // A row nobody has named is not an import yet, and sending it would
+            // be refused for a name no code can call it by.
+            imports: named(imports),
+            // The same rule for a library: a row nobody has named is not one yet.
+            libraries: chosen(libraries),
+          })
         : await updateFunction(functionId, details);
       setFn(stored);
       setStatus({ ok: true, message: "the code compiles and the sandbox's parser accepts it" });
@@ -1304,15 +1272,6 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
       return false;
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function handleDelete() {
-    try {
-      await deleteFunction(functionId);
-      navigate(`/workspace/${workspaceId}/functions`);
-    } catch (cause) {
-      setStatus({ ok: false, message: cause instanceof Error ? cause.message : t('Could not delete.'), whole: true });
     }
   }
 
@@ -1351,10 +1310,29 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                 {!creating && <span className={styles.activeBadge}>{t('Active')}</span>}
               </div>
               <div className={styles.headerActions}>
+                {/*
+                  The way to the rest of this function, which is now a page.
+
+                  What it is wired to - imports, libraries, what it hands back -
+                  and where it is used and how to be rid of it all moved off this
+                  column and onto `/settings`, the way a workflow's did. A cog
+                  rather than a word, beside the other marks, and it is what the
+                  functions list opens too - so the two doors are one page.
+
+                  Deleting went with them. It used to be a trash mark here that
+                  removed a function on one press, with everything that pointed
+                  at it finding out afterwards; it is a Danger Zone now, and it
+                  is under the list of what would break.
+                */}
                 {!creating && (
-                  <button type="button" className={styles.deleteButton} onClick={handleDelete}>
-                    <TrashIcon />
-                  </button>
+                  <Link
+                    className={styles.settingsButton}
+                    to={`/workspace/${workspaceId}/functions/${functionId}/settings`}
+                    aria-label={t('Function settings')}
+                    title={t('Function settings')}
+                  >
+                    <img src={settingsIcon} alt="" width={14} height={14} />
+                  </Link>
                 )}
                 {/*
                   A function that answers yes or no is a condition waiting to be
@@ -1370,6 +1348,33 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                   first question, so one click goes from stuck to being helped -
                   a conversation already under way is joined, not talked over.
                 */}
+                {/*
+                  Running it, which is what Validate never could - issue #266,
+                  a second time.
+
+                  A mark in the corner where the page's other actions are,
+                  rather than a section in the column: it was the seventh of
+                  nine there, 1,364px into a thousand-pixel column, and moving
+                  it second only made it the second thing nobody was looking
+                  for. The fields and the answer are in the window it opens,
+                  which is the shape the workflow editor's Run already has -
+                  a picture on the bar, and what it did somewhere with room.
+
+                  Drawn from the first moment, including on a function nobody
+                  has saved. A control that appears only after the first save
+                  is one that somebody writing their first function never
+                  learns exists; the window says why it cannot run yet, which
+                  is a sentence a tooltip on a dead button could not carry.
+                */}
+                <button
+                  type="button"
+                  className={styles.runButton}
+                  onClick={() => setTesting(true)}
+                  aria-label={t('Test Run')}
+                  title={t('Test Run')}
+                >
+                  <img src={playIcon} alt="" width={16} height={16} />
+                </button>
                 <button
                   type="button"
                   className={styles.wandButton}
@@ -1627,130 +1632,6 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                   </Link>
                 </p>
               </section>
-
-              {/*
-                Running it, which is what Validate never could — issue #266.
-
-                Not offered while a function is being written: there is nothing to
-                run until there is a row, and the button takes an id.
-
-                Every field here is a parameter with a type, offered as that type,
-                rather than one JSON box: a number field is where somebody types a
-                number, and asking them to remember that a string needs quotes is
-                asking them to do the editor's job. The shapes that have no
-                spelling as a plain word — map, array, an object — are the
-                exception and are typed as JSON, because that is what they are.
-
-                The externals are not here and must not be. A grant belongs to the
-                function; a field for one would let a test run be given a value the
-                real run would never see, and the run would prove nothing about the
-                function it was run on.
-              */}
-              {!creating && (
-                <section className={styles.panelSection}>
-                  <span className={styles.headingWithHint}>
-                    <h2 className={styles.panelHeading}>Test Run</h2>
-                    <FieldHint label={t('Test Run')}>
-                      Runs the saved function the way an action node would: the same sandbox, the same imports
-                      and libraries, and the workspace’s variables resolved the same way. It runs what is stored
-                      rather than what is in the column, so save first to try a change — and every run is
-                      recorded in this workspace’s audit, because it leaves no run of its own behind it.
-                    </FieldHint>
-                  </span>
-
-                  <div className={styles.paramList}>
-                    {declared(params).map((param) => (
-                      <div key={param.name} className={styles.field}>
-                        <label className={styles.fieldLabel} htmlFor={`run-arg-${param.name}`}>
-                          {param.name} · {valueTypeLabel(param.type)}
-                        </label>
-                        {param.type === 'BOOLEAN' ? (
-                          <div className={styles.selectWrapper}>
-                            <select
-                              id={`run-arg-${param.name}`}
-                              className={`${styles.input} ${styles.inputMono}`}
-                              value={testValues[param.name] ?? ''}
-                              aria-label={`Argument ${param.name}`}
-                              onChange={(event) =>
-                                setTestValues((current) => ({ ...current, [param.name]: event.target.value }))
-                              }
-                            >
-                              {/* Blank is a real answer: it is the `null` an unmapped node passes. */}
-                              <option value="">nothing</option>
-                              <option value="true">true</option>
-                              <option value="false">false</option>
-                            </select>
-                            <img src={chevronDown12Icon} alt="" width={12} height={12} />
-                          </div>
-                        ) : param.type === 'STRING' || param.type === 'NUMBER' ? (
-                          <input
-                            id={`run-arg-${param.name}`}
-                            className={`${styles.input} ${styles.inputMono}`}
-                            type={param.type === 'NUMBER' ? 'number' : 'text'}
-                            value={testValues[param.name] ?? ''}
-                            aria-label={`Argument ${param.name}`}
-                            onChange={(event) =>
-                              setTestValues((current) => ({ ...current, [param.name]: event.target.value }))
-                            }
-                          />
-                        ) : (
-                          <textarea
-                            id={`run-arg-${param.name}`}
-                            className={`${styles.input} ${styles.textarea} ${styles.inputMono}`}
-                            value={testValues[param.name] ?? ''}
-                            placeholder={param.type === 'ARRAY' ? '[]' : '{}'}
-                            aria-label={`Argument ${param.name}`}
-                            onChange={(event) =>
-                              setTestValues((current) => ({ ...current, [param.name]: event.target.value }))
-                            }
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  <button
-                    type="button"
-                    className={styles.ghostButton}
-                    onClick={() => void handleRun()}
-                    disabled={running}
-                  >
-                    {running ? 'Running…' : 'Run'}
-                  </button>
-
-                  {/* One line, and only when it is true: the column has moved on. */}
-                  {unsaved && <p className={styles.paramHint}>This runs the saved function, not the column.</p>}
-
-                  {runFailed !== null && (
-                    <p className={styles.runFailed} role="alert">
-                      {runFailed}
-                    </p>
-                  )}
-
-                  {ran !== null && (
-                    <div className={styles.runResult}>
-                      <p className={ran.ok ? styles.runVerdict : styles.runVerdictBad} role="status">
-                        {ran.ok ? 'Returned' : 'Failed'} in {ran.durationMillis} ms
-                      </p>
-                      {/*
-                        What came back, whichever it was. A failure prints its
-                        reason here rather than in a toast, because it is the
-                        answer to the question the button asked - and it is
-                        worded exactly as the run history would have worded it.
-                      */}
-                      <pre className={styles.runAnswer}>
-                        {ran.ok ? (ran.returned ?? t('It returned nothing.')) : ran.error}
-                      </pre>
-                      {!ran.ok && !ran.settled && (
-                        <p className={styles.paramHint}>It was stopped rather than refused; running it again may answer.</p>
-                      )}
-                      {ran.grants.length > 0 && (
-                        <p className={styles.paramHint}>Handed {ran.grants.join(', ')} from the workspace.</p>
-                      )}
-                    </div>
-                  )}
-                </section>
-              )}
 
               <section className={styles.panelSection}>
                 <h2 className={styles.panelHeading}>Parameters</h2>
@@ -2040,368 +1921,6 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
               </section>
 
               {/*
-                What this function calls, as opposed to what it is handed.
-
-                Reached through the sandbox's `imports` object rather than through
-                the signature, so a row here changes what the code may call and not
-                what it has to accept - which is why this section is beside the
-                parameters rather than another kind of them.
-
-                Only the workspace's own functions are offered. The server refuses a
-                plugin's, refuses a loop and refuses this function itself; the first
-                two of those are not worth offering, and its refusal is what says so
-                for the third.
-              */}
-              <section className={styles.panelSection}>
-                <span className={styles.headingWithHint}>
-                  <h2 className={styles.panelHeading}>{t('Imports')}</h2>
-                  <FieldHint label={t('Imports')}>
-                    The workspace’s other functions this one may call, as <code>imports.name(…)</code>. The name is
-                    this code’s own word for it: renaming the function it points at changes nothing here. A
-                    plugin’s function cannot be imported, and neither can a loop back to this one.
-                  </FieldHint>
-                </span>
-                <div className={styles.paramList}>
-                  {imports.map((held, index) => (
-                    <div key={index} className={styles.paramRow}>
-                      <select
-                        className={`${styles.paramName} ${styles.inputMono}`}
-                        value={held.functionId}
-                        aria-label={`Import ${index + 1} function`}
-                        onChange={(event) => {
-                          const chosen = importable.find((fn) => fn.id === event.target.value);
-                          setImports((current) =>
-                            current.map((row, at) =>
-                              at === index
-                                ? {
-                                    ...row,
-                                    functionId: event.target.value,
-                                    /*
-                                     * Only ever filled in, never rewritten. The name
-                                     * is what the code below already says, and moving
-                                     * an import to another function is not a request
-                                     * to go through the code renaming the calls.
-                                     */
-                                    name: row.name.trim() === '' ? (chosen?.name ?? '') : row.name,
-                                  }
-                                : row,
-                            ),
-                          );
-                          setSaved(false);
-                        }}
-                      >
-                        {/*
-                          What it points at now, when that is not on offer: a
-                          function deleted out from under this one, or the list
-                          not yet fetched. Without it the select would show the
-                          first option and read as though the import had been
-                          quietly moved.
-                        */}
-                        {!importable.some((fn) => fn.id === held.functionId) && (
-                          <option value={held.functionId}>{held.function?.name ?? '—'}</option>
-                        )}
-                        {importable.map((fn) => (
-                          <option key={fn.id} value={fn.id}>
-                            {fn.name}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        className={`${styles.paramName} ${styles.inputMono}`}
-                        type="text"
-                        value={held.name}
-                        aria-label={`Import ${index + 1} name`}
-                        onChange={(event) => {
-                          setImports((current) =>
-                            current.map((row, at) => (at === index ? { ...row, name: event.target.value } : row)),
-                          );
-                          setSaved(false);
-                        }}
-                      />
-                      <button
-                        type="button"
-                        className={styles.removeParam}
-                        aria-label={`Remove ${held.name || `import ${index + 1}`}`}
-                        onClick={() => {
-                          setImports((current) => current.filter((_, at) => at !== index));
-                          setSaved(false);
-                        }}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    className={styles.addParam}
-                    disabled={importable.length === 0}
-                    title={
-                      importable.length === 0
-                        ? t('This workspace has no other functions to import')
-                        : t('Call one of the workspace’s other functions from this one')
-                    }
-                    onClick={() => {
-                      /*
-                        One that is not imported already, so the row arrives
-                        pointing at something and under a name the server would
-                        take. The same choice Add External makes.
-                      */
-                      const next =
-                        importable.find((fn) => !imports.some((held) => held.functionId === fn.id)) ??
-                        importable[0];
-                      if (next === undefined) return;
-                      setImports((current) => [
-                        ...current,
-                        { functionId: next.id, name: next.name, function: null },
-                      ]);
-                      setSaved(false);
-                    }}
-                  >
-                    <img src={plusIcon} alt="" width={14} height={14} />
-                    {t('Add Import')}
-                  </button>
-                </div>
-              </section>
-
-              {/*
-                The installation's libraries, directly after the workspace's own
-                functions, because at run time they are the same thing: both arrive
-                on `imports` under the local name chosen here, and the code cannot
-                tell which is which.
-
-                What differs is where they come from and who loads them - a library
-                is loaded once for the whole installation by an administrator - so
-                they are picked from a list of their own rather than mixed into the
-                one above.
-              */}
-              <section className={styles.panelSection}>
-                <span className={styles.headingWithHint}>
-                  <h2 className={styles.panelHeading}>{t('Libraries')}</h2>
-                  <FieldHint label={t('Libraries')}>
-                    The installation’s libraries this function may use, reached as <code>imports.name</code>.
-                    The name is this code’s own word for it and is seeded from the library’s key the first
-                    time a row points at one. An administrator loads them, on Admin → Libraries.
-                  </FieldHint>
-                </span>
-                <div className={styles.paramList}>
-                  {libraries.map((held, index) => (
-                    <div key={index} className={styles.paramRow}>
-                      <select
-                        className={`${styles.paramName} ${styles.inputMono}`}
-                        value={held.libraryId}
-                        aria-label={`Library ${index + 1}`}
-                        onChange={(event) => {
-                          const picked = loadable.find((one) => one.id === event.target.value);
-                          setLibraries((current) =>
-                            current.map((row, at) =>
-                              at === index
-                                ? {
-                                    ...row,
-                                    libraryId: event.target.value,
-                                    library: null,
-                                    /*
-                                     * Only ever filled in, never rewritten - the
-                                     * same rule an import's name follows, for the
-                                     * same reason: the code below already says
-                                     * `imports.dateFns`.
-                                     */
-                                    name:
-                                      row.name.trim() === ''
-                                        ? picked === undefined
-                                          ? ''
-                                          : localName(picked.key)
-                                        : row.name,
-                                  }
-                                : row,
-                            ),
-                          );
-                          setSaved(false);
-                        }}
-                      >
-                        {/*
-                          What it points at now, when that is not on offer: one
-                          removed out from under this function, or the list not
-                          yet fetched.
-                        */}
-                        {!loadable.some((one) => one.id === held.libraryId) && (
-                          <option value={held.libraryId}>{held.library?.key ?? '—'}</option>
-                        )}
-                        {loadable.map((one) => (
-                          <option key={one.id} value={one.id}>
-                            {one.key}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        className={`${styles.paramName} ${styles.inputMono}`}
-                        type="text"
-                        value={held.name}
-                        aria-label={`Library ${index + 1} name`}
-                        onChange={(event) => {
-                          setLibraries((current) =>
-                            current.map((row, at) => (at === index ? { ...row, name: event.target.value } : row)),
-                          );
-                          setSaved(false);
-                        }}
-                      />
-                      <button
-                        type="button"
-                        className={styles.removeParam}
-                        aria-label={`Remove ${held.name || `library ${index + 1}`}`}
-                        onClick={() => {
-                          setLibraries((current) => current.filter((_, at) => at !== index));
-                          setSaved(false);
-                        }}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    className={styles.addParam}
-                    disabled={loadable.length === 0}
-                    title={
-                      loadable.length === 0
-                        ? t('No libraries are loaded into this installation')
-                        : t('Use one of the installation’s libraries from this function')
-                    }
-                    onClick={() => {
-                      /*
-                        One that is not used already, so the row arrives pointing
-                        at something and under a name the server would take. The
-                        same choice Add Import makes.
-                      */
-                      const next =
-                        loadable.find((one) => !libraries.some((held) => held.libraryId === one.id)) ??
-                        loadable[0];
-                      if (next === undefined) return;
-                      setLibraries((current) => [
-                        ...current,
-                        { libraryId: next.id, name: localName(next.key), library: null },
-                      ]);
-                      setSaved(false);
-                    }}
-                  >
-                    <img src={plusIcon} alt="" width={14} height={14} />
-                    {t('Add Library')}
-                  </button>
-                </div>
-              </section>
-
-              <section className={styles.panelSection}>
-                <span className={styles.headingWithHint}>
-                  <h2 className={styles.panelHeading}>Return Type</h2>
-                  <FieldHint label={t('Return Type')}>
-                    An object names a shape this workspace defines, and the editor checks the code against it. Map
-                    is for a structure with no defined shape.
-                  </FieldHint>
-                </span>
-                <div className={styles.selectWrapper}>
-                  <select
-                    className={`${styles.input} ${styles.inputMono}`}
-                    value={returnType}
-                    aria-label={t('Return type')}
-                    onChange={(event) => {
-                      const type = event.target.value as ValueType;
-                      setReturnType(type);
-                      // Same rule as a parameter's: naming an object means naming one.
-                      setReturnObjectId(namesObject(type) ? (returnObjectId ?? objects[0]?.id ?? null) : null);
-                      setSaved(false);
-                    }}
-                  >
-                    {RETURN_TYPES.map((type) => (
-                      <option key={type} value={type} disabled={namesObject(type) && objects.length === 0}>
-                        {valueTypeLabel(type)}
-                      </option>
-                    ))}
-                  </select>
-                  <img src={chevronDown12Icon} alt="" width={12} height={12} />
-                </div>
-
-                {namesObject(returnType) && (
-                  /* Beside the select, exactly as a parameter's is: one rule for
-                     reaching an object's definition, wherever this panel names one. */
-                  <div className={styles.paramObjectLine}>
-                    <div className={styles.selectWrapper}>
-                      <select
-                        className={`${styles.input} ${styles.inputMono}`}
-                        value={returnObjectId ?? ''}
-                        aria-label={t('Returned object')}
-                        onChange={(event) => {
-                          setReturnObjectId(event.target.value);
-                          setSaved(false);
-                        }}
-                      >
-                        {objects.map((held) => (
-                          <option key={held.id} value={held.id}>
-                            {held.name} · {held.propertyCount} fields
-                          </option>
-                        ))}
-                      </select>
-                      <img src={chevronDown12Icon} alt="" width={12} height={12} />
-                    </div>
-                    {returnObjectId !== null && returnObjectId !== '' && (
-                      <Link
-                        className={styles.jump}
-                        to={`/workspace/${workspaceId}/objects/${returnObjectId}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        title={t('Opens the object\'s definition in a new tab')}
-                        aria-label={`Open definition of ${objectNameOf(returnObjectId) ?? 'the returned object'}`}
-                      >
-                        <OpenDefinitionIcon />
-                      </Link>
-                    )}
-                  </div>
-                )}
-
-                {/*
-                  What the workspace has, which is a state and not an
-                  explanation: what an object type *means* has gone behind the
-                  (?) on the heading, and this says only that there are none to
-                  name yet.
-
-                  The link stays in the open with it, and only in this case, for
-                  the reason the Variables one does: there is no definition to
-                  jump to yet, and a sentence that says to define one otherwise
-                  leaves somebody to find the page themselves. Once objects
-                  exist, the way out is the "Open definition" link beside the
-                  select, not a second one here - and this paragraph is gone
-                  altogether.
-                */}
-                {objects.length === 0 && (
-                  <p className={styles.paramHint}>
-                    {t('There are no objects in this workspace yet, so define one first or use map.')}{' '}
-                    <Link
-                      className={styles.shortcutLink}
-                      to={`/workspace/${workspaceId}/objects`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {t('Open Objects')}
-                    </Link>
-                  </p>
-                )}
-              </section>
-
-
-              <hr className={styles.divider} />
-
-              <div className={styles.metadata}>
-                <p className={styles.metadataLabel}>{t('Last modified')}</p>
-                <p className={styles.metadataValue}>
-                  {creating || fn === null ? (
-                    t('Not saved yet')
-                  ) : (
-                    <>
-                      {timeAgo(fn.lastModifiedAt)} by <strong>{fn.lastModifiedBy}</strong>
-                    </>
-                  )}
-                </p>
-              </div>
-
-              {/*
                 What this function has been. Not while creating one: there is
                 nothing it has been yet, and the panel would be asking about an
                 id that does not exist.
@@ -2439,15 +1958,6 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                         .catch(() => undefined);
                     }}
                   />
-                  {/*
-                    And what leans on it, under what it has been. A function is
-                    the most-pointed-at thing this product has - actions call
-                    it, conditions ask it, webhooks authenticate with it, other
-                    functions and tools import it - so being refused a delete
-                    was the only way anybody found out.
-                  */}
-                  <hr className={styles.divider} />
-                  <UsedBy kind="FUNCTION" componentId={functionId} />
                 </>
               )}
             </aside>
@@ -2466,6 +1976,22 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
         onStay={guard.stay}
         onLeave={guard.leave}
         onSaveAndLeave={guard.saveAndLeave}
+      />
+
+      {/*
+        Out here for the same reason, and handed the parameters as the panel has
+        them rather than as the last save had them: somebody adds an argument
+        and tries it, in that order, and a window offering the fields the server
+        last heard about would be a window missing the one they just made.
+      */}
+      <TestRunDialog
+        open={testing}
+        onClose={() => setTesting(false)}
+        workspaceId={workspaceId}
+        functionId={creating ? '' : functionId}
+        params={declared(params)}
+        unsaved={unsaved}
+        creating={creating}
       />
     </AppShell>
   );

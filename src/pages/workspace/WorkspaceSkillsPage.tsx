@@ -33,6 +33,7 @@ import {
 } from '../../components/ComponentTransfer';
 import { Loader } from '../../components/Loader';
 import { NameDialog } from '../../components/NameDialog';
+import { UsedBy } from '../../components/UsedBy';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceMemoryPage.module.css';
@@ -422,6 +423,19 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
                   </article>
                 ))}
               </div>
+
+              {/*
+                Which agents are granted this catalog, under what is in it.
+
+                The folder is what an agent is granted, so the folder is what
+                the question is asked about - the same unit the delete guard
+                refuses on. Under the skills rather than over them: somebody
+                opens a catalog to read it, and this is what they want at the
+                point they are thinking of taking it away.
+              */}
+              <section className={styles.card}>
+                <UsedBy key={current.id} kind="SKILL_CATALOG" componentId={current.id} />
+              </section>
             </>
           )}
         </section>
