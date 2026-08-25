@@ -267,7 +267,7 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
                   long one is a press away rather than a screen away.
                 */}
                 {silent !== null && (
-                  <span className={styles.cannotFire}>
+                  <span className={styles.cannotFire} id={`trigger-cannot-fire-${trigger.id}`}>
                     <span className={styles.cannotFireBadge}>{t('Will not fire')}</span>
                     <FieldHint label={t('Will not fire')}>{silent.message}</FieldHint>
                   </span>
