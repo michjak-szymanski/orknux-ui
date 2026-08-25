@@ -41,11 +41,49 @@
 }
 
 /*
- * While it is still arriving. The same cyan a running tool call uses, because
- * it is the same fact - something is happening that has not finished.
+ * While it is still arriving.
+ *
+ * Grey, like the rest of the row: this is the model muttering to itself on the
+ * way to an answer, and a colour of its own made the quietest thing on the page
+ * the loudest. What says it is alive is that it moves.
+ *
+ * The pulse is on the label rather than on the reasoning, because the reasoning
+ * cannot be relied on to move at all - a provider that sends its thinking in
+ * one frame delivers the whole block at once, and then nothing on the row has
+ * changed for as long as the model is quiet. The label is the one part that can
+ * always be seen to be waiting.
  */
 .thinking[data-live='true'] .head {
-  color: var(--color-cyan);
+  color: var(--color-text-secondary);
+}
+
+.thinking[data-live='true'] .head::after {
+  content: '';
+  width: 5px;
+  height: 5px;
+  margin-left: var(--space-2);
+  border-radius: 50%;
+  background: currentColor;
+  animation: breathing 1.4s ease-in-out infinite;
+}
+
+@keyframes breathing {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Somebody who asked for less motion is told by the count, which still moves. */
+@media (prefers-reduced-motion: reduce) {
+  .thinking[data-live='true'] .head::after {
+    animation: none;
+    opacity: 0.6;
+  }
 }
 
 /*
