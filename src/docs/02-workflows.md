@@ -167,6 +167,12 @@ back](/screens/actions.png)
 function, a wait. Each declares its inputs and outputs, and those are what a
 node pointing at it is offered to map.
 
+An action is a **page** too, at `/actions/<id>`, with a new one written at
+`/actions/new` — for the reasons a condition is one, and for one more: this form
+names a connection, a mail server, a function or a condition, and **Open
+definition** beside each of those opens it in a tab of its own. The page also
+says which workflows run this action, above the Danger Zone that removes it.
+
 ![Conditions: the question each one asks, and what it asks it
 of](/screens/conditions.png)
 
@@ -187,9 +193,9 @@ than in this one. The form you are in is holding edits nobody has saved, and in
 the workflow editor the same form is a panel beside the graph - a jump in the
 same tab would take both off screen.
 
-It is the same form wherever it is: this page, the editor's node panel, and the
-trigger and action dialogs all draw it, so there is one thing to learn rather
-than two that drift apart.
+It is the same form wherever it is: this page, the editor's node panel, the
+trigger dialog and the action form all draw it, so there is one thing to learn
+rather than two that drift apart.
 
 ![The workspace's functions](/screens/functions.png)
 

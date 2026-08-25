@@ -111,6 +111,14 @@ const hasPanel = await usedBy
   .catch(() => false);
 check(hasPanel, 'the page draws Used by', 'no Used by panel on the action page');
 if (hasPanel) {
+  /*
+   * Waited out rather than slept past, the way `used-by-check` waits it out: the
+   * panel asks the server as it mounts and draws a loading mark until the answer
+   * comes back, and reading it a moment too early reports the mark as the
+   * answer.
+   */
+  await usedBy.locator('[role="status"]').waitFor({ state: 'detached', timeout: 20_000 }).catch(() => {});
+  await page.waitForTimeout(300);
   const said = (await usedBy.innerText()).replace(/\s+/g, ' ').trim();
   check(
     said.includes('Nothing uses this yet'),
