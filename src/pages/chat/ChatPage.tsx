@@ -279,6 +279,16 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
   const [takeAt, setTakeAt] = useState<Record<number, number>>({});
 
   const logRef = useRef<HTMLDivElement>(null);
+  /*
+   * The same element, as state.
+   *
+   * A ref alone cannot say *when* it was attached, and this one is attached on a
+   * render that changes neither the turns nor which chat is open - so an effect
+   * keyed on those two ran three times with nothing to scroll and never again
+   * once there was. Holding it as state makes the attachment itself the thing
+   * the effect waits for.
+   */
+  const [logBox, setLogBox] = useState<HTMLDivElement | null>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   /** Set when the collapsed search icon was the thing that opened the column. */
@@ -504,10 +514,47 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
     };
   }, [pickerOpen]);
 
-  // A new message should be the thing you are looking at.
+  /*
+   * The newest turn is the thing you are looking at, on arrival as well as after.
+   *
+   * This used to depend on `messages` alone, and opening a chat never scrolled:
+   * the turns are fetched while the log is still behind its loading state, so
+   * the effect ran with `logRef.current` null, and nothing changed afterwards to
+   * run it again. A chat of six thousand pixels opened at the top of the first
+   * thing anybody had said.
+   *
+   * So it also watches which chat is open, and asks for the frame after the one
+   * it is on: a run of markdown is laid out by then, where at effect time the
+   * box can still be shorter than what is in it. An image arriving later moves
+   * the floor again, which is what the observer is for - it keeps the newest
+   * turn in view until somebody scrolls away from it themselves.
+   */
   useEffect(() => {
-    logRef.current?.scrollTo({ top: logRef.current.scrollHeight });
-  }, [messages]);
+    const log = logBox;
+    if (log === null) return;
+
+    let following = true;
+    const toBottom = () => {
+      if (following) log.scrollTo({ top: log.scrollHeight });
+    };
+
+    const frame = requestAnimationFrame(toBottom);
+    // Reading up is a decision; nothing below should undo it.
+    const onScroll = () => {
+      following = log.scrollHeight - log.clientHeight - log.scrollTop < 40;
+    };
+    log.addEventListener('scroll', onScroll, { passive: true });
+
+    const grew = new ResizeObserver(toBottom);
+    grew.observe(log);
+    for (const child of Array.from(log.children)) grew.observe(child);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      log.removeEventListener('scroll', onScroll);
+      grew.disconnect();
+    };
+  }, [messages, currentId, logBox]);
 
   /*
    * The box is as tall as what has been typed into it, up to the top of the
@@ -1980,7 +2027,13 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
             </div>
           )}
 
-          <div className={styles.log} ref={logRef}>
+          <div
+            className={styles.log}
+            ref={(box) => {
+              logRef.current = box;
+              setLogBox(box);
+            }}
+          >
             {messages.length === 0 && (
               <p className={styles.logEmpty}>Nothing said yet. What is typed below starts the conversation.</p>
             )}
