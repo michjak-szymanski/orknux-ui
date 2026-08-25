@@ -122,9 +122,15 @@ async function settled() {
 
 // ------------------------------------------------- nothing uses it, said aloud
 
-const editor = `${BASE}/workspace/${WORKSPACE}/functions/${shared.id}`;
-await page.goto(editor, { waitUntil: 'domcontentloaded' });
-if (!(await drawn(page, "the new function's editor"))) await done();
+/*
+ * A function's panel is on its settings page now, not beside its code. The
+ * panel moved off the editor's side column with the imports, the libraries and
+ * the return type - what stayed there is what writes into the code - so this
+ * follows it. Everything asserted below is what was asserted before.
+ */
+const settings = `${BASE}/workspace/${WORKSPACE}/functions/${shared.id}/settings`;
+await page.goto(settings, { waitUntil: 'domcontentloaded' });
+if (!(await drawn(page, "the new function's settings"))) await done();
 await settled();
 
 const panel = page.locator('[aria-label="Used by"]');
@@ -152,8 +158,8 @@ const { createTool: tool } = await graphql(
   },
 );
 
-await page.goto(editor, { waitUntil: 'domcontentloaded' });
-if (!(await drawn(page, "the function's editor, with an importer"))) await done();
+await page.goto(settings, { waitUntil: 'domcontentloaded' });
+if (!(await drawn(page, "the function's settings, with an importer"))) await done();
 await page.waitForSelector('[aria-label="Used by"] [data-dependants]', { timeout: 20_000 });
 
 const rows = page.locator('[aria-label="Used by"] [data-dependants] a');
@@ -258,7 +264,19 @@ record(
 
 const { createWorkflow: flow } = await graphql(
   `mutation ($input: CreateWorkflowInput!) { createWorkflow(input: $input) { id workflowId name } }`,
-  { input: { workspaceId: WORKSPACE, name: `${SCRATCH}flow`, description: 'Made by used-by-check.mjs.' } },
+  /*
+   * A name nothing has had before, because removing a workflow keeps its
+   * definition: the assignment goes and the name stays taken, so a fixed name
+   * here would refuse the second run of this check for ever after the first one
+   * that was killed halfway. The prefix is still what the sweep looks for.
+   */
+  {
+    input: {
+      workspaceId: WORKSPACE,
+      name: `${SCRATCH}flow ${Date.now()}`,
+      description: 'Made by used-by-check.mjs.',
+    },
+  },
 );
 await graphql(
   `mutation ($w: ID!, $f: ID!, $input: WorkflowGraphInput!) {
