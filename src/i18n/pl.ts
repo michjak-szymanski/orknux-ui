@@ -15,6 +15,10 @@
  * of English on an otherwise Polish screen.
  */
 export const PL: Record<string, string> = {
+  'Which bots to watch for replies to — not the connection this listens on.':
+    'Które boty obserwować pod kątem odpowiedzi — nie połączenie, którego to nasłuchuje.',
+  'A reply names whoever wrote the message it hangs under, and a bot token is a Slack user. Two connections sharing a token are one user, and the row says so.':
+    'Odpowiedź wskazuje autora wiadomości, pod którą wisi, a token bota to użytkownik Slacka. Dwa połączenia z tym samym tokenem to jeden użytkownik i wiersz to mówi.',
   // --- navigation and the shell ------------------------------------------
   "Sections": "Sekcje",
   "Primary": "Główna",

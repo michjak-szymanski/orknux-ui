@@ -781,20 +781,14 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                       {t('Replies To')}
                     </span>
                     <FieldHint label={t('Replies To')}>
-                      Whose messages this watches for replies to, which is not the connection it listens
-                      on.
-                      <br />
-                      <br />
-                      A bot token is a Slack user. Every thread reply carries the user who wrote the
-                      message the thread hangs under, so a reply is one of ours when that user is the user
-                      one of these connections posts as. The connection above is a different row: it is
-                      the Slack app whose app-level token this installation receives events over, and the
-                      bots people want answered are usually other apps.
-                      <br />
-                      <br />
-                      Two connections holding the same bot token are one Slack user twice over, and
-                      nothing on an arriving reply can tell them apart. Where that is so, each row says
-                      it.
+                      <p>
+                        {t('Which bots to watch for replies to — not the connection this listens on.')}
+                      </p>
+                      <p>
+                        {t(
+                          'A reply names whoever wrote the message it hangs under, and a bot token is a Slack user. Two connections sharing a token are one user, and the row says so.',
+                        )}
+                      </p>
                     </FieldHint>
                   </span>
                   <ul className={own.watchList} aria-labelledby="trigger-watched-label">
