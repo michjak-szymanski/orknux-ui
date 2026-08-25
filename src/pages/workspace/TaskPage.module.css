@@ -265,22 +265,43 @@
 }
 
 /*
- * A call's arguments are JSON somebody reads a character at a time, and a long
- * one must not push the page sideways.
+ * Whether the page is keeping up, said in one word beside the thread.
+ *
+ * It is here because the promise this screen makes is that what is on it is what
+ * is happening, and a page that has lost the stream and is coming back must not
+ * go on claiming that. A dot rather than a sentence: what it means is behind the
+ * (?) next to it.
  */
-.call {
-  margin: 0;
-  max-height: 240px;
-  padding: var(--space-8) var(--space-12);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-6);
-  font-family: var(--font-mono);
+.watching {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
   font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  overflow: auto;
-  white-space: pre-wrap;
-  word-break: break-word;
+  color: var(--color-text-muted);
+}
+
+.watching::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+}
+
+.watching[data-watching='live'] {
+  color: var(--color-accent-brand);
+}
+
+.watching[data-watching='live']::before {
+  background: var(--color-accent-brand);
+}
+
+.watching[data-watching='returning'] {
+  color: var(--color-amber);
+}
+
+.watching[data-watching='returning']::before {
+  background: var(--color-amber);
 }
 
 .grant {

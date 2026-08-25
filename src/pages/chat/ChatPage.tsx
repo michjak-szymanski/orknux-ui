@@ -31,6 +31,7 @@ import {
 } from '../../api/attachments';
 import type { Attachment } from '../../api/attachments';
 import { AttachmentViewer } from '../../components/AttachmentViewer';
+import { CallLine } from '../../components/CallLine';
 import { answers, fetchModels } from '../../api/models';
 import { CHUNKING_DEFAULT, readAloud } from '../../components/readAloud';
 import type { Reading, SpeechChunking } from '../../components/readAloud';
@@ -71,7 +72,6 @@ import { useLastWorkspaceId } from '../../session/lastWorkspace';
 import { FieldHint } from '../../components/FieldHint';
 import { OpenDefinitionIcon } from '../../components/OpenDefinitionIcon';
 import styles from './ChatPage.module.css';
-import { t } from '../../i18n';
 
 export interface ChatPageProps {
   session: SessionUser;
@@ -103,66 +103,6 @@ type PickerTab = 'models' | 'agents';
  */
 /** How long typing has to stop before what was said is worth asking about. */
 const SEARCH_PAUSE_MS = 300;
-
-/**
- * How much of a call is shown before it is folded.
- *
- * The same number the session's page uses, for the same reason: what a model
- * passes a tool can be a whole file, and one call left to run would bury the
- * exchange it was made in the middle of.
- */
-const FOLD_CALL_OVER_CHARS = 600;
-
-/**
- * A call the agent made, on its way to an answer.
- *
- * Drawn as what it is rather than as a turn. Nobody said this: it is the agent
- * going and looking something up, and the reason it is on a page of
- * conversation at all is that an answer with the lookup taken out of it reads
- * as the model having simply known.
- *
- * So it borrows the session's page rather than inventing a second visual
- * language - the word, the tool's name, a coloured edge and the arguments as
- * code - because somebody who has read one transcript already knows what this
- * line means.
- */
-function CallLine({ actor, content }: { actor: string | null; content: string }) {
-  const [open, setOpen] = useState(false);
-  /*
-   * Indented where it parses and left exactly as it arrived where it does not.
-   * What was recorded is what the model sent, and prettying something that is
-   * not JSON would be this deciding what it meant.
-   */
-  const text = useMemo(() => {
-    try {
-      return JSON.stringify(JSON.parse(content), null, 2);
-    } catch {
-      return content;
-    }
-  }, [content]);
-  const long = text.length > FOLD_CALL_OVER_CHARS;
-
-  return (
-    <article className={styles.call}>
-      <p className={styles.callHead}>
-        <span className={styles.callBadge}>{t('Tool')}</span>
-        <span className={styles.callName}>{actor ?? 'a tool'}</span>
-      </p>
-      {text.trim() === '' ? (
-        <p className={styles.callNote}>{t('Called with nothing.')}</p>
-      ) : (
-        <>
-          <pre className={`${styles.callArgs} ${long && !open ? styles.callFolded : ''}`}>{text}</pre>
-          {long && (
-            <button type="button" className={styles.callFold} onClick={() => setOpen((held) => !held)}>
-              {open ? t('Show less') : `Show all ${text.length.toLocaleString()} characters`}
-            </button>
-          )}
-        </>
-      )}
-    </article>
-  );
-}
 
 export function ChatPage({ session, onSignOut }: ChatPageProps) {
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
@@ -393,12 +333,12 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
         if (abandoned) return;
         const live = page.content.find((entry) => entry.id === remembered) ?? page.content[0];
         setWorkspaceId(live?.id ?? null);
-        if (live === undefined) setError(t('There is no workspace to chat in yet.'));
+        if (live === undefined) setError('There is no workspace to chat in yet.');
       })
       .catch((cause: unknown) => {
         if (abandoned) return;
         setWorkspaceId(null);
-        setError(cause instanceof Error ? cause.message : t('Could not find a workspace to chat in.'));
+        setError(cause instanceof Error ? cause.message : 'Could not find a workspace to chat in.');
       });
     return () => {
       abandoned = true;
@@ -429,7 +369,7 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
   useEffect(() => {
     if (workspaceId === null) return;
     void loadSessions().catch((cause: unknown) =>
-      setError(cause instanceof Error ? cause.message : t('Could not load the chats.')),
+      setError(cause instanceof Error ? cause.message : 'Could not load the chats.'),
     );
   }, [workspaceId, loadSessions]);
 
@@ -743,18 +683,18 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
     try {
       await work();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t('That did not work.'));
+      setError(cause instanceof Error ? cause.message : 'That did not work.');
     }
   }
 
   async function handleNew() {
     // Saying why beats a button that looks like it did nothing.
     if (workspaceId === null) {
-      setError(t('There is no workspace to chat in yet.'));
+      setError('There is no workspace to chat in yet.');
       return;
     }
     await guard(async () => {
-      const created = await startChat(workspaceId, t('New chat'));
+      const created = await startChat(workspaceId, 'New chat');
       await loadSessions(created.id);
     });
   }
@@ -837,7 +777,7 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
             setDraft((current) => (current.trim() === '' ? text : `${current.trim()} ${text}`));
           })
           .catch((cause: unknown) =>
-            setError(cause instanceof Error ? cause.message : t('That could not be transcribed.')),
+            setError(cause instanceof Error ? cause.message : 'That could not be transcribed.'),
           )
           .finally(() => setTranscribing(false));
       };
@@ -848,7 +788,7 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
       setListening(stream);
       held.start();
     } catch {
-      setError(t('The microphone could not be opened. The browser may have refused it.'));
+      setError('The microphone could not be opened. The browser may have refused it.');
     }
   }
 
@@ -868,7 +808,7 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
       const held = await uploadAttachments(workspaceId, Array.from(files));
       setAttached((current) => [...current, ...held]);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t('Those files could not be uploaded.'));
+      setError(cause instanceof Error ? cause.message : 'Those files could not be uploaded.');
     } finally {
       setAttaching(false);
       // Cleared so the same file can be picked twice in a row.
@@ -1100,7 +1040,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
       }
       await loadSessions(currentId);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t('The model did not answer.'));
+      setError(cause instanceof Error ? cause.message : 'The model did not answer.');
       // What the server kept is the truth about what was said.
       fetchChatMessages(currentId).then(setMessages).catch(() => undefined);
     } finally {
@@ -1159,7 +1099,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
       if (failure !== null) throw new Error(failure);
       await loadSessions(currentId);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t('The model did not answer.'));
+      setError(cause instanceof Error ? cause.message : 'The model did not answer.');
       // The server puts the answer back when it could not give another, so what
       // it holds is the truth about what this chat says.
       fetchChatMessages(currentId).then(setMessages).catch(() => undefined);
@@ -1177,7 +1117,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
   }
 
   async function handleRename(entry: ChatSession) {
-    const title = window.prompt(t('Rename chat'), entry.title);
+    const title = window.prompt('Rename chat', entry.title);
     if (title === null || title.trim() === '') return;
     await guard(async () => {
       await renameChat(entry.id, title.trim());
@@ -1280,7 +1220,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
    * A button labelled with the turn's progress and refusing the press would be
    * the same message lost that voice mode was just taught to keep.
    */
-  const sendLabel = voice || !sending ? 'Send' : answering ? t('Answering…') : t('Waiting…');
+  const sendLabel = voice || !sending ? 'Send' : answering ? 'Answering…' : 'Waiting…';
 
   /*
    * One banner, drawn in whichever half is showing. It cannot simply sit above
@@ -1307,8 +1247,8 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
         type="button"
         className={styles.collapsedAction}
         onClick={() => void handleNew()}
-        aria-label={t('New chat')}
-        title={t('New chat')}
+        aria-label="New chat"
+        title="New chat"
       >
         <img src={plusIcon} alt="" width={14} height={14} />
       </button>
@@ -1319,8 +1259,8 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
           wantsSearch.current = true;
           setSidebarCollapsed(false);
         }}
-        aria-label={t('Search chats')}
-        title={t('Search chats')}
+        aria-label="Search chats"
+        title="Search chats"
       >
         <img src={searchIcon} alt="" width={14} height={14} />
       </button>
@@ -1328,8 +1268,10 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
   ) : (
     <div className={styles.sidebar}>
       <div className={styles.sidebarHeader}>
-        <span className={styles.sidebarTitle}>{t('User Chats')}</span>
-        <button type="button" className={styles.newButton} onClick={() => void handleNew()}>{t('+ New')}</button>
+        <span className={styles.sidebarTitle}>User Chats</span>
+        <button type="button" className={styles.newButton} onClick={() => void handleNew()}>
+          + New
+        </button>
       </div>
 
       <div className={styles.searchBox}>
@@ -1339,8 +1281,8 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
           className={styles.searchInput}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder={t('Search chats...')}
-          aria-label={t('Search chats')}
+          placeholder="Search chats..."
+          aria-label="Search chats"
         />
       </div>
 
@@ -1350,11 +1292,11 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
           checked={searchInMessages}
           onChange={(event) => setSearchInMessages(event.target.checked)}
         />
-        {t('Search content')}
+        Search content
       </label>
 
       {sessions === null && <p className={styles.sidebarNotice}><Loader /></p>}
-      {sessions?.length === 0 && <p className={styles.sidebarNotice}>{t('No chats yet.')}</p>}
+      {sessions?.length === 0 && <p className={styles.sidebarNotice}>No chats yet.</p>}
 
       {pinned.length > 0 && (
         <>
@@ -1366,7 +1308,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
               width={8}
               height={6}
             />
-            {t('Pinned')}
+            Pinned
           </button>
           {pinnedOpen && (
             <div className={styles.sessionList}>
@@ -1399,7 +1341,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
               width={8}
               height={6}
             />
-            {t('Recent')}
+            Recent
           </button>
           {recentOpen && (
             <div className={styles.sessionList}>
@@ -1434,9 +1376,10 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
         hideSidebar
       >
         <div className={styles.empty}>
-          <p className={styles.emptyTitle}>{t('Chat is turned off')}</p>
+          <p className={styles.emptyTitle}>Chat is turned off</p>
           <p className={styles.emptyNote}>
-            {t('An administrator has switched chat off for this installation. The conversations already had are kept, and come back if it is switched on again.')}
+            An administrator has switched chat off for this installation. The conversations already had
+            are kept, and come back if it is switched on again.
           </p>
         </div>
       </AppShell>
@@ -1485,15 +1428,16 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
       {current === null ? (
         <div className={styles.empty}>
           {errorBanner}
-          <p className={styles.emptyTitle}>{t('No chat open')}</p>
+          <p className={styles.emptyTitle}>No chat open</p>
           {/*
             The way out stays in the open; what a chat *is* goes behind the (?).
           */}
           <p className={styles.emptyNote}>
             <span className={styles.labelWithHint}>
-              Start one with <strong>{t('+ New')}</strong>.
-              <FieldHint label={t('No chat open')}>
-                {t('Each chat is a conversation of its own, kept the same way a workflow run keeps the thread its agents share.')}
+              Start one with <strong>+ New</strong>.
+              <FieldHint label="No chat open">
+                Each chat is a conversation of its own, kept the same way a workflow run keeps the
+                thread its agents share.
               </FieldHint>
             </span>
           </p>
@@ -1532,7 +1476,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                 aria-expanded={pickerOpen}
               >
                 <span className={current.modelName === null ? styles.modelUnset : styles.modelName}>
-                  {current.agentName ?? current.modelName ?? t('Choose a model')}
+                  {current.agentName ?? current.modelName ?? 'Choose a model'}
                 </span>
                 <img src={chevronDown12Icon} alt="" width={12} height={12} />
               </button>
@@ -1545,8 +1489,8 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                       className={styles.searchInput}
                       value={pickerSearch}
                       onChange={(event) => setPickerSearch(event.target.value)}
-                      placeholder={t('Search')}
-                      aria-label={t('Search models')}
+                      placeholder="Search"
+                      aria-label="Search models"
                       autoFocus
                     />
                   </div>
@@ -1559,14 +1503,18 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                       aria-selected={pickerTab === 'agents'}
                       className={pickerTab === 'agents' ? styles.pickerTabActive : styles.pickerTab}
                       onClick={() => setPickerTab('agents')}
-                    >{t('Agents')}</button>
+                    >
+                      Agents
+                    </button>
                     <button
                       type="button"
                       role="tab"
                       aria-selected={pickerTab === 'models'}
                       className={pickerTab === 'models' ? styles.pickerTabActive : styles.pickerTab}
                       onClick={() => setPickerTab('models')}
-                    >{t('Models')}</button>
+                    >
+                      Models
+                    </button>
                   </div>
                   <div className={styles.pickerList}>
                     {/*
@@ -1579,13 +1527,13 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                       className={styles.pickerEmpty}
                       empty={
                         pickerTab === 'models'
-                          ? t('No models in this workspace yet.')
-                          : t('No agents in this workspace yet.')
+                          ? 'No models in this workspace yet.'
+                          : 'No agents in this workspace yet.'
                       }
                     />
                     {pickerEntries.length === 0 &&
                       (pickerTab === 'models' ? models.length > 0 : agents.length > 0) && (
-                        <p className={styles.pickerEmpty}>{t('Nothing by that name.')}</p>
+                        <p className={styles.pickerEmpty}>Nothing by that name.</p>
                       )}
                     {pickerEntries.map((entry) => (
                       <button
@@ -1599,11 +1547,11 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                         // An agent with no model cannot answer; the server says so
                         // too, but there is no reason to offer it as a choice.
                         disabled={!entry.enabled}
-                        title={entry.enabled ? undefined : t('Not active')}
+                        title={entry.enabled ? undefined : 'Not active'}
                         onClick={() => void handleChoose(entry.id)}
                       >
                         {entry.label}
-                        {!entry.enabled && <span className={styles.pickerNote}>{t('inactive')}</span>}
+                        {!entry.enabled && <span className={styles.pickerNote}>inactive</span>}
                       </button>
                     ))}
                   </div>
@@ -1669,8 +1617,8 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                   setFinding(true);
                   window.setTimeout(() => findRef.current?.focus(), 0);
                 }}
-                title={t('Find in this chat')}
-                aria-label={t('Find in this chat')}
+                title="Find in this chat"
+                aria-label="Find in this chat"
                 aria-expanded={finding}
               >
                 <img src={searchIcon} alt="" width={14} height={14} />
@@ -1679,8 +1627,8 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                 type="button"
                 className={styles.iconButton}
                 onClick={() => void handleRename(current)}
-                title={t('Rename this chat')}
-                aria-label={t('Rename this chat')}
+                title="Rename this chat"
+                aria-label="Rename this chat"
               >
                 <img src={penIcon} alt="" width={14} height={14} />
               </button>
@@ -1688,8 +1636,8 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                 type="button"
                 className={styles.iconButton}
                 onClick={() => handleDelete(current)}
-                title={t('Delete this chat')}
-                aria-label={t('Delete this chat')}
+                title="Delete this chat"
+                aria-label="Delete this chat"
               >
                 <img src={trashIcon} alt="" width={14} height={14} />
               </button>
@@ -1720,8 +1668,8 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                     stepFind(event.shiftKey ? -1 : 1);
                   }
                 }}
-                placeholder={t('Find in this chat')}
-                aria-label={t('Find in this chat')}
+                placeholder="Find in this chat"
+                aria-label="Find in this chat"
               />
               <span className={styles.findCount} role="status">
                 {find.trim() === ''
@@ -1736,8 +1684,8 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                   className={styles.findStep}
                   onClick={() => stepFind(-1)}
                   disabled={findHits.length === 0}
-                  aria-label={t('Previous match')}
-                  title={t('Previous match')}
+                  aria-label="Previous match"
+                  title="Previous match"
                 >
                   <img src={chevronDown12Icon} alt="" width={12} height={12} style={{ transform: 'rotate(180deg)' }} />
                 </button>
@@ -1746,13 +1694,13 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                   className={styles.findStep}
                   onClick={() => stepFind(1)}
                   disabled={findHits.length === 0}
-                  aria-label={t('Next match')}
-                  title={t('Next match')}
+                  aria-label="Next match"
+                  title="Next match"
                 >
                   <img src={chevronDown12Icon} alt="" width={12} height={12} />
                 </button>
               </span>
-              <button type="button" className={styles.findStep} onClick={closeFind} aria-label={t('Close find')} title={t('Close find')}>
+              <button type="button" className={styles.findStep} onClick={closeFind} aria-label="Close find" title="Close find">
                 <img src={xIcon} alt="" width={12} height={12} />
               </button>
             </div>
@@ -1775,7 +1723,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                 className={styles.continuingLink}
                 to={`/workspace/${current.workspaceId}/sessions/${current.llmSessionId}`}
               >
-                {t('Open the transcript')}
+                Open the transcript
               </Link>
             </p>
           )}
@@ -1791,9 +1739,17 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                 A call is not a turn and is not drawn as one: it was made
                 between two of them, by the agent, and the page it was carried
                 out of already says so this way.
+
+                `CallLine` is the drawing, and it is also what a task's page
+                uses. No `result` passed, and that is the chat's own shape rather
+                than an omission: what it carries from the session it continues
+                is the calls that were made, and the data they returned belongs
+                in front of the model rather than in the thread.
               */}
               {message.role === CALL_ROLE ? (
-                <CallLine actor={message.actor} content={message.content} />
+                <div className={styles.call}>
+                  <CallLine actor={message.actor} content={message.content} />
+                </div>
               ) : message.role === 'user' ? (
                 <div className={styles.userRow} data-find={findMark(index)}>
                   <div className={styles.userBody}>
@@ -1816,8 +1772,8 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                         type="button"
                         className={styles.rowAction}
                         onClick={() => copy(message.content, index)}
-                        title={t('Copy')}
-                        aria-label={t('Copy this message')}
+                        title="Copy"
+                        aria-label="Copy this message"
                       >
                         <img src={copyIcon} alt="" width={14} height={14} />
                       </button>
@@ -1873,7 +1829,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                             {tokenCount(lastSpend.outputTokens)} out - every round of this turn, so
                             a lookup an agent made on the way is counted here too.{' '}
                             {lastSpend.cost === null
-                              ? t('This model carries no prices, so there is nothing to cost that at.')
+                              ? 'This model carries no prices, so there is nothing to cost that at.'
                               : `At the prices recorded for it that is ${costAmount(lastSpend.cost)}.`}{' '}
                             None of it is kept: the history holds what was said, not what it cost.
                           </>
@@ -1899,8 +1855,8 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                           className={styles.rowAction}
                           onClick={() => stepTake(index, message, -1)}
                           disabled={takeShowing(index, message) === 0}
-                          title={t('The answer before this one')}
-                          aria-label={t('The answer before this one')}
+                          title="The answer before this one"
+                          aria-label="The answer before this one"
                         >
                           <img
                             src={chevronDown12Icon}
@@ -1925,8 +1881,8 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                           className={styles.rowAction}
                           onClick={() => stepTake(index, message, 1)}
                           disabled={takeShowing(index, message) === message.takes.length}
-                          title={t('The answer after this one')}
-                          aria-label={t('The answer after this one')}
+                          title="The answer after this one"
+                          aria-label="The answer after this one"
                         >
                           <img
                             src={chevronDown12Icon}
@@ -1943,8 +1899,8 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                         type="button"
                         className={styles.rowAction}
                         onClick={() => copy(shownTake(index, message), index)}
-                        title={t('Copy')}
-                        aria-label={t('Copy this answer')}
+                        title="Copy"
+                        aria-label="Copy this answer"
                       >
                         <img src={copyIcon} alt="" width={14} height={14} />
                       </button>
@@ -1966,8 +1922,8 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                             type="button"
                             className={styles.rowAction}
                             onClick={() => void handleRegenerate()}
-                            title={t('Answer again — this one is kept')}
-                            aria-label={t('Answer again')}
+                            title="Answer again — this one is kept"
+                            aria-label="Answer again"
                           >
                             <img src={refreshCwIcon} alt="" width={14} height={14} />
                           </button>
@@ -1986,12 +1942,12 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                           aria-pressed={speaking === index}
                           title={
                             fetchingSpeech === index
-                              ? t('Reading it…')
+                              ? 'Reading it…'
                               : speaking === index
                                 ? 'Stop'
-                                : t('Read this answer aloud')
+                                : 'Read this answer aloud'
                           }
-                          aria-label={speaking === index ? t('Stop reading') : t('Read this answer aloud')}
+                          aria-label={speaking === index ? 'Stop reading' : 'Read this answer aloud'}
                         >
                           <img src={volume2Icon} alt="" width={14} height={14} />
                         </button>
@@ -2121,7 +2077,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                       className={styles.attachmentRemove}
                       onClick={() => setAttached((current) => current.filter((held) => held.id !== file.id))}
                       aria-label={`Remove ${file.filename}`}
-                      title={t('Remove')}
+                      title="Remove"
                     >
                       ×
                     </button>
@@ -2166,8 +2122,8 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                     disabled={attaching}
                     aria-haspopup="menu"
                     aria-expanded={addOpen}
-                    aria-label={t('Add to this message')}
-                    title={attaching ? t('Uploading…') : t('Add to this message')}
+                    aria-label="Add to this message"
+                    title={attaching ? 'Uploading…' : 'Add to this message'}
                   >
                     +
                   </button>
@@ -2182,7 +2138,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                           filesRef.current?.click();
                         }}
                       >
-                        {t('Upload files')}
+                        Upload files
                       </button>
                     </div>
                   )}
@@ -2204,9 +2160,9 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
                 onKeyDown={handleComposerKey}
-                placeholder={t('Type a message...')}
+                placeholder="Type a message..."
                 rows={1}
-                aria-label={t('Message')}
+                aria-label="Message"
               />
               {/*
                 Speech goes into the box, not out to the model: what was heard
@@ -2222,13 +2178,13 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                   onClick={() => void handleMicrophone()}
                   disabled={transcribing}
                   aria-pressed={recording}
-                  aria-label={recording ? t('Stop recording') : t('Record a message')}
+                  aria-label={recording ? 'Stop recording' : 'Record a message'}
                   title={
                     transcribing
-                      ? t('Transcribing…')
+                      ? 'Transcribing…'
                       : recording
-                        ? t('Stop and transcribe')
-                        : t('Record a message')
+                        ? 'Stop and transcribe'
+                        : 'Record a message'
                   }
                 >
                   <img src={micIcon} alt="" width={16} height={16} />
@@ -2262,21 +2218,21 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                     aria-pressed={voice}
                     title={
                       !voice
-                        ? t('Talk instead of typing')
+                        ? 'Talk instead of typing'
                         : voicePhase === 'speaking'
-                          ? t('Speaking - press to cut in')
+                          ? 'Speaking - press to cut in'
                           : voicePhase === 'thinking'
                             ? 'Thinking'
-                            : t('Listening - press when you have finished')
+                            : 'Listening - press when you have finished'
                     }
                     aria-label={
                       !voice
-                        ? t('Enter voice mode')
+                        ? 'Enter voice mode'
                         : voicePhase === 'speaking'
-                          ? t('Stop speaking and listen')
+                          ? 'Stop speaking and listen'
                           : voicePhase === 'thinking'
                             ? 'Thinking'
-                            : t('Finish speaking')
+                            : 'Finish speaking'
                     }
                   >
                     {voice && voicePhase === 'thinking' ? (
@@ -2315,8 +2271,8 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                       */
                       className={styles.micButton}
                       onClick={() => setVoice(false)}
-                      title={t('Leave voice mode')}
-                      aria-label={t('Leave voice mode')}
+                      title="Leave voice mode"
+                      aria-label="Leave voice mode"
                     >
                       <img src={xIcon} alt="" width={16} height={16} />
                     </button>
@@ -2409,13 +2365,13 @@ function SessionRow({
       {menuOpen && (
         <div className={styles.contextMenu} role="menu">
           <button type="button" role="menuitem" className={styles.menuItem} onClick={onPin}>
-            {entry.pinned ? t('Unpin chat') : t('Pin chat')}
+            {entry.pinned ? 'Unpin chat' : 'Pin chat'}
           </button>
           <button type="button" role="menuitem" className={styles.menuItem} onClick={onRename}>
-            {t('Rename chat')}
+            Rename chat
           </button>
           <button type="button" role="menuitem" className={styles.menuItemDanger} onClick={onDelete}>
-            {t('Delete chat')}
+            Delete chat
           </button>
         </div>
       )}

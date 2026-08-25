@@ -1641,6 +1641,38 @@ export const TESTS = [
      */
   },
   {
+    name: 'task-live-check',
+    what: 'a task watched while it runs, lines arriving on a page nobody reloaded, and the same account afterwards',
+    needs: ['workspace'],
+    /*
+     * The live half of #229's page. `task-check` next door proves the machinery
+     * around a task; this one proves the *while*, which is the thing a check
+     * that only reads a finished log cannot say anything about.
+     *
+     * Three assertions carry it, and they are written to fail rather than to
+     * quietly stop meaning anything. It asserts there is no refresh control on
+     * the page, so growth cannot be a poll. It leaves a marker on `window`, so
+     * growth cannot be a reload. And it compares what the page held while the
+     * task was still going with what it held once it had ended, having touched
+     * neither the browser's address bar nor GraphQL in between.
+     *
+     * 'workspace' and not 'model', for the reason `task-check` gives: the prompt
+     * is written into the task's log before the model is asked and a model that
+     * never answers is recorded as a note saying so, so the session gets lines
+     * either way and they arrive over the stream one at a time exactly as an
+     * agent's would. It makes its own model pointed at `.invalid` and removes
+     * it.
+     *
+     * It retries one thing, and it is the fixture: a model that cannot resolve
+     * fails as fast as the machine can say so, which on a quick one is before
+     * the page has drawn - and a task that was already over is a task there was
+     * nothing live to see. It starts another, up to four times, and fails saying
+     * so if it never catches one running. The assertions themselves are made
+     * once each; a check that retried those would be one that passes on the
+     * third try, which is worse than one that fails.
+     */
+  },
+  {
     name: 'issue-start-by-ai-check',
     what: 'Start by AI on an agent-assigned issue, and the link from it to the task',
     needs: ['workspace'],
