@@ -168,8 +168,11 @@
   white-space: nowrap;
 }
 
+/* The settings square is an anchor here, as it is on the conditions list, so it
+   has to say it is not an underlined word. */
 .rowAction {
   composes: rowAction from '../../styles/rowAction.module.css';
+  text-decoration: none;
 }
 
 /* ---- Loading / empty / error ---- */
