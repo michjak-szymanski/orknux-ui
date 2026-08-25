@@ -868,6 +868,25 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                               what a person needs to see here. */}
                           <span className={own.watchHandle}>{bot.handle ?? '\u2014'}</span>
                         </label>
+                        {/*
+                          Outside the label, deliberately.
+
+                          A press on a link inside a `<label>` is forwarded to
+                          the checkbox it belongs to, so going to read what a
+                          connection is would have silently ticked or unticked
+                          it - the same trap the agent grant rows were fixed
+                          for.
+                        */}
+                        <Link
+                          className={styles.jump}
+                          to={`/workspace/${workspaceId}/integrations/connections/${bot.connectionId}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          title={t('Opens the connection in a new tab')}
+                          aria-label={t("Open the connection's definition")}
+                        >
+                          <OpenDefinitionIcon />
+                        </Link>
                         {bot.message !== '' && <p className={own.watchNote}>{bot.message}</p>}
                       </li>
                     ))}

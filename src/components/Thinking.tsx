@@ -134,9 +134,14 @@ export function Thinking({ text, live = false, millis = null }: ThinkingProps) {
           This block carries no bookkeeping. The only number on it is how long
           somebody waited for the thinking, which is what the block is about.
         */}
-        {live ? t('Thinking') : t('Thought for')}
+        {live ? t('Thinking') : t('Thought')}
         {shown > 0 && (
           <span className={styles.size} data-testid="thinking-elapsed">
+            {/* The joining word belongs to the duration, not to the label: the
+                label is what this block is, and "for" is part of saying how
+                long - so it is set with the number rather than in the heavier
+                ink beside it. */}
+            {live ? '' : `${t('for')} `}
             {thinkingTime(shown)}
           </span>
         )}

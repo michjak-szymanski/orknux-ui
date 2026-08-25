@@ -1832,7 +1832,8 @@ export const PL: Record<string, string> = {
 
   // --- what a model was thinking ---------------------------------------------
   "Thinking": "Myśli",
-  "Thought for": "Myślało przez",
+  "Thought": "Myślało",
+  "for": "przez",
 
   // --- drawing a picture -------------------------------------------------------
   "Draw": "Narysuj",

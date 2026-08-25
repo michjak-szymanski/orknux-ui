@@ -117,10 +117,18 @@
   list-style: none;
 }
 
+/*
+ * The row, and the way out of it to the connection it names.
+ *
+ * A grid rather than a column so the mark sits on the first line beside the
+ * name, with the note under both - a link below the sentence explaining why
+ * the connection cannot receive would read as being about the note.
+ */
 .watchRow {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--space-2) var(--space-8);
   min-width: 0;
 }
 
@@ -166,6 +174,7 @@
  * connection name cannot push the rest of the form down the page.
  */
 .watchNote {
+  grid-column: 1 / -1;
   margin: 0 0 0 var(--space-20);
   overflow: hidden;
   color: var(--color-text-muted);
