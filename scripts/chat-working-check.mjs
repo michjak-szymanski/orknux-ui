@@ -148,8 +148,6 @@ try {
     const block = document.querySelector('[data-testid="thinking"]');
     return JSON.stringify({
       live: block?.getAttribute('data-live') ?? '',
-      // Opened here so there is something to measure. It is folded by default,
-      // which the assertion below re-checks on a fresh block.
       said: block?.textContent ?? '',
     });
   });
@@ -161,6 +159,32 @@ record(
   sawThinking && JSON.parse(midRun || '{}').live === 'true',
   'and it is on the screen while the answer is still being written, not after',
 );
+
+/*
+ * And something on it moves.
+ *
+ * This is the assertion the feature was rejected for the want of, twice over.
+ * A block of text that happens to be growing does not tell somebody the model
+ * is alive - what does is a number going up - and neither "it is drawn" nor
+ * "the live mark is set" can tell the two apart. So this reads the elapsed
+ * count, waits, and reads it again: a count that has not changed is a page that
+ * has stopped as far as anybody looking at it is concerned.
+ *
+ * Two seconds because the count moves once a second; one second could straddle
+ * a single tick and read the same value twice for honest reasons.
+ */
+let ticked = false;
+if (sawThinking) {
+  const elapsed = () =>
+    page.evaluate(() => document.querySelector('[data-testid="thinking-elapsed"]')?.textContent?.trim() ?? '');
+  const first = await elapsed();
+  await page.waitForTimeout(2200);
+  const second = await elapsed();
+  ticked = first !== '' && second !== '' && first !== second;
+  record(ticked, `the count of how long it has been thinking moves (${first} then ${second})`);
+} else {
+  record(false, 'the count of how long it has been thinking moves');
+}
 
 /*
  * Wait for the turn to actually finish, so everything read below is final.
@@ -258,6 +282,38 @@ const label = await page.evaluate(
 record(
   /second/i.test(label) || /sekund/i.test(label),
   `the thinking says how long it took (the row reads ${JSON.stringify(label)})`,
+);
+
+/*
+ * And it settles rather than carrying on counting.
+ *
+ * The point of the count is that it means something while it is moving. One
+ * that kept ticking after the answer had landed would be saying the model is
+ * still thinking, which would be worse than no count at all.
+ */
+const settled = await page.evaluate(
+  () => document.querySelector('[data-testid="thinking-elapsed"]')?.textContent?.trim() ?? '',
+);
+await page.waitForTimeout(2200);
+const stillSettled = await page.evaluate(
+  () => document.querySelector('[data-testid="thinking-elapsed"]')?.textContent?.trim() ?? '',
+);
+record(
+  settled !== '' && settled === stillSettled,
+  `and it stops when the thinking does (it read ${JSON.stringify(settled)} and stayed there)`,
+);
+
+/*
+ * Nothing about money on the thinking block.
+ *
+ * Asked for by name: what belongs on it is the reasoning and how long it took,
+ * and a price beside those was read as this having bookkeeping attached to the
+ * model's own words. What an answer cost is a separate control under the
+ * answer - #227's, behind a preference - and it stays there.
+ */
+record(
+  !/[$€£]/.test(label) && !/token/i.test(label),
+  `and it says nothing about money or tokens (the row reads ${JSON.stringify(label)})`,
 );
 
 /* --------------------------------------- and it is still there after a reload */

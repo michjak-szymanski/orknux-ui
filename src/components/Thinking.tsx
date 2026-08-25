@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import styles from './Thinking.module.css';
 import { thinkingTime } from '../api/chat';
@@ -10,18 +10,18 @@ export interface ThinkingProps {
   /** Whether it is still arriving, which is worth saying while it is. */
   live?: boolean;
   /**
-   * How long the thinking went on for, or null where nobody measured it.
+   * How long the thinking went on for, as the server measured it.
    *
-   * A count of characters used to sit here instead, and it was read as a token
-   * count by the first person to see it - which is the trouble with a bare
-   * number beside a word: it is an answer to a question nobody asked and there
-   * is no way to tell which question. Time is what somebody wants to know about
-   * a model that made them wait.
+   * A count of characters used to sit here instead and was read as a token
+   * count by the first person to see it, which is the trouble with a bare
+   * number beside a word: it answers a question nobody asked and gives no way
+   * to tell which. Time is what somebody wants to know about a model that made
+   * them wait.
    *
-   * Null draws nothing rather than nought seconds, and it never borrows the
-   * turn's own time: that is already reported under the answer, and two numbers
-   * on one screen that look like one measurement and are not is worse than one
-   * number missing.
+   * Null where the server measured none, and then the block falls back to what
+   * it counted itself while the thinking was arriving - so the row always has a
+   * duration on it. It shipped once without that fallback and without a working
+   * measurement behind it, and the row read "Thought" and nothing else.
    */
   millis?: number | null;
 }
@@ -63,14 +63,51 @@ export interface ThinkingProps {
  */
 export function Thinking({ text, live = false, millis = null }: ThinkingProps) {
   const [open, setOpen] = useState(false);
+  /*
+   * How long it has been thinking, while it still is.
+   *
+   * A block of text that happens to be growing does not tell anybody the model
+   * is alive — it reads as a page that has stopped. A number going up does, and
+   * it is the only thing on this row that moves, which is the whole of what it
+   * is for. Counted here rather than sent, because the server has nothing to
+   * say between two frames and this has to tick through the gaps.
+   *
+   * The clock starts when the block first goes live and is dropped when it
+   * stops, so a second turn counts its own thinking rather than carrying on
+   * from the first.
+   */
+  const [since, setSince] = useState(0);
+  const from = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!live) {
+      from.current = null;
+      return;
+    }
+    if (from.current === null) from.current = Date.now();
+    setSince(Date.now() - from.current);
+    const ticking = window.setInterval(() => {
+      setSince(Date.now() - (from.current ?? Date.now()));
+    }, TICK);
+    return () => window.clearInterval(ticking);
+  }, [live]);
+
+  // After the hooks and never before: a component that returns early above them
+  // runs a different number of hooks on the render where its text arrives.
   if (text.trim() === '') return null;
 
   /*
-   * Whether there is a duration to say. Not while it is still arriving: the
-   * thinking has not finished, so any number would be how long it has taken so
-   * far dressed up as how long it took.
+   * The duration to show, and there is one either way.
+   *
+   * While it is thinking, what this has counted. Once it has stopped, what the
+   * server measured — the request going out to the last piece of reasoning,
+   * which is the wait this block is explaining. It falls back to the counted
+   * figure where the server measured none, so the number cannot disappear at
+   * the moment the thinking ends: a row that reads "4 seconds" and then drops
+   * to nothing looks like a fault, and it is how this shipped saying only
+   * "Thought" with no time at all.
    */
-  const known = !live && millis !== null && millis !== undefined && millis > 0;
+  const shown = live ? since : (millis ?? since);
 
   return (
     <div className={styles.thinking} data-testid="thinking" data-live={live}>
@@ -83,18 +120,31 @@ export function Thinking({ text, live = false, millis = null }: ThinkingProps) {
         <span className={styles.mark} aria-hidden="true">
           {open ? '▾' : '▸'}
         </span>
-        {live ? t('Thinking') : known ? t('Thought for') : t('Thought')}
         {/*
-          How long it went on for, drawn only where it was measured.
+          "Thinking" while it is, "Thought" once it has stopped, with the
+          duration beside it either way.
 
-          `thinkingTime` and not a second way of saying a duration: the answer's
-          own disclosure a few lines below reads "Thought for 2 seconds" out of
-          that same function, and two durations formatted two ways on one screen
-          read as two different kinds of thing.
+          Deliberately not "Thought for", which is the answer's own disclosure a
+          few lines below — that one reports the whole turn and, where somebody
+          has turned the switch on, what it cost. Two controls under one answer
+          both reading "Thought for N seconds" is how they came to be read as
+          one control, and the cost on that one was taken for something this had
+          attached to the reasoning.
+
+          This block carries no bookkeeping. The only number on it is how long
+          somebody waited for the thinking, which is what the block is about.
         */}
-        {known && <span className={styles.size}>{thinkingTime(millis)}</span>}
+        {live ? t('Thinking') : t('Thought')}
+        {shown > 0 && (
+          <span className={styles.size} data-testid="thinking-elapsed">
+            {thinkingTime(shown)}
+          </span>
+        )}
       </button>
       {open && <pre className={styles.body}>{text}</pre>}
     </div>
   );
 }
+
+/** How often the count moves while the model is thinking. */
+const TICK = 1000;
