@@ -114,18 +114,28 @@ export function TestRunDialog({
     const held = dialogRef.current;
     if (held === null) return;
     if (open && !held.open) {
-      held.showModal();
       /*
-       * Into the first field, by hand.
+       * Into the first field, and *before* the window opens.
        *
-       * `showModal` puts the focus on the first focusable thing it finds, and
-       * here that is the (?) beside the heading - which opens on focus, so the
-       * window arrived with its own explanation hanging over the fields it was
-       * opened to fill in. React's `autoFocus` does not help: it fires when the
-       * element mounts, which is long before the window is shown.
+       * `showModal` focuses the first focusable thing it finds, and here that
+       * is the (?) beside the heading - which opens on focus, so the window
+       * arrived with its own explanation hanging over the fields it was opened
+       * to fill in. Focusing the field afterwards was the first answer and it
+       * is not one: the hint had already been drawn, so what somebody saw was a
+       * paragraph appearing and vanishing, which reads as a fault.
+       *
+       * The attribute rather than a call, because `showModal` looks for it: the
+       * dialog focusing steps take the first element carrying `autofocus`, so
+       * the (?) is never focused at all and there is nothing to undo. React's
+       * `autoFocus` prop cannot do this - it calls `focus()` when the element
+       * mounts, which is long before the window is shown.
        */
+      // Cleared first: the fields change with the function, and an attribute
+      // left on yesterday's first field would take the focus ahead of today's.
+      held.querySelectorAll('[autofocus]').forEach((one) => one.removeAttribute('autofocus'));
       const first = held.querySelector('input, select, textarea') ?? held.querySelector('[data-close]');
-      if (first instanceof HTMLElement) first.focus();
+      if (first instanceof HTMLElement) first.setAttribute('autofocus', '');
+      held.showModal();
     }
     if (!open && held.open) held.close();
   }, [open]);

@@ -75,6 +75,8 @@ export interface Workspace {
    * decides what the next task gets.
    */
   taskMaxTurns: number | null;
+  /** What a task here gets when the field above is null, so the box can show it. */
+  taskMaxTurnsDefault: number;
   /**
    * How long a pause has to run, after somebody has been talking, before voice
    * mode decides they have finished and sends what it heard.
@@ -115,7 +117,7 @@ export interface Workspace {
 const WORKSPACE_FIELDS =
   'id name description roles { id name } adminRoles { id name } administered ' +
   'companionModelId transcriptionModelId speechModelId imageModelId quickChatModelId quickChatMayWrite ' +
-  'defaultMemoryShare taskMaxTurns voicePauseEndsTurnMs voiceSpeechOverRoomPercent voiceUnattendedMicrophoneMs ' +
+  'defaultMemoryShare taskMaxTurns taskMaxTurnsDefault voicePauseEndsTurnMs voiceSpeechOverRoomPercent voiceUnattendedMicrophoneMs ' +
   'voiceSpeechChunking';
 
 /** Just enough of a role to name it where a workspace lists what opens it. */

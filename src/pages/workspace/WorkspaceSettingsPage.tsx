@@ -1006,7 +1006,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
               type="number"
               min={1}
               max={200}
-              placeholder={t('the installation’s own')}
+              placeholder={workspace === null ? '' : String(workspace.taskMaxTurnsDefault)}
               value={turns}
               onChange={(event) => setTurns(event.target.value)}
             />
