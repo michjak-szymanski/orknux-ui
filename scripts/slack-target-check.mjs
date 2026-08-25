@@ -95,7 +95,7 @@
  *
  *  13. Neither surface tells the server which kind it is asking about, and both
  *      are measured on the wire rather than on the screen: no `target` travels
- *      with either question, from the dialog or from the panel. There is nothing
+ *      with either question, from the action form or from the panel. There is nothing
  *      left to send one from, and a narrowing put back would be a list cut to
  *      half of what the connection can offer, chosen by a form that has no way
  *      of knowing which half is right. Silence is left to the one case that
@@ -104,7 +104,7 @@
  *      row, drawn as a mark, and named for anything that is listening rather
  *      than looking. All three are asserted separately: a row that knew and did
  *      not show would pass one of them. Taking a row fills the field and does
- *      nothing else, on either surface: the dialog has no Target control left to
+ *      nothing else, on either surface: the action form has no Target control left to
  *      settle, which is asserted as an absence so that the dropdown coming back
  *      is a failure rather than a silent return, and the panel leaves the
  *      definition exactly as it found it, which is read back over the wire. The
@@ -158,7 +158,7 @@ const WORKFLOW_NAME = `zz scratch target workflow ${stamp}`;
  *
  * The wording is the server's own, copied from `SlackDirectory`, so that what
  * is asserted below is a real sentence of the length a real one is - the
- * `UNCHECKED` one is four sentences and eight lines in this dialog, which is
+ * `UNCHECKED` one is four sentences and eight lines on this form, which is
  * the whole reason the layout claim exists. Nothing here pins the wording: the
  * assertions compare the screen against whatever came back, so the server may
  * reword any of it without this check going red. What it may not do is arrive
@@ -388,7 +388,16 @@ let ANSWER = 'action-target-answer';
 const box = () => page.locator(`#${ANSWER}`);
 const said = async () => ((await box().count()) === 0 ? '' : (await box().innerText()).trim());
 const outcomeOf = () => box().getAttribute('data-outcome');
-const saveButton = () => page.locator('dialog[open] button[type="submit"]');
+/*
+ * The thing under the field, and the thing somebody is reaching for while they
+ * read the answer - which is what every layout claim below is measured against.
+ *
+ * Found by the form it is in rather than by an open dialog: an action is edited
+ * on a page of its own now, and the shell around that page has no form of its
+ * own for this to find instead. It is only ever asked for on the action surface;
+ * the node panel's half of this file measures its own controls.
+ */
+const saveButton = () => page.locator('form button[type="submit"]');
 
 /**
  * The list under whichever field is being read, and what is in it.
@@ -554,12 +563,14 @@ try {
     )
   ).createWorkspaceConnection.id;
 
-  /* ------------------------------------------ the dialog, and the two fields */
+  /* --------------------------------------- the action form, and the two fields */
 
   await page.goto(`${BASE}/workspace/${WORKSPACE}/actions`, { waitUntil: 'domcontentloaded' });
   if (!(await drawn(page, 'the actions page'))) await finish(browser, false);
 
-  await page.locator('button', { hasText: /^\+ Create Action$/ }).click();
+  // Create Action is a link now: an action is written on a page of its own.
+  await page.locator('a', { hasText: /^\+ Create Action$/ }).first().click();
+  await page.waitForURL(/\/actions\/new$/, { timeout: 30_000 });
   await page.waitForSelector('#action-name', { timeout: 20_000 });
   await page.waitForTimeout(1200);
 
@@ -738,8 +749,8 @@ try {
   await page.screenshot({ path: shot('slack-target-found.png') });
 
   /*
-   * And the dialog asks about both halves, because there is nothing left to
-   * narrow with.
+   * And the action form asks about both halves, because there is nothing left
+   * to narrow with.
    *
    * The Target control above this field is gone: nothing read it to send
    * anything, and all it did here was cut the question - and the list - to one
@@ -750,16 +761,16 @@ try {
    */
   record(
     askedTargets.at(-1) === null,
-    `the dialog names no kind in the question (${JSON.stringify(askedTargets.at(-1))})`,
+    `the action form names no kind in the question (${JSON.stringify(askedTargets.at(-1))})`,
   );
-  const dialogMark = box().locator('svg');
+  const formMark = box().locator('svg');
   record(
-    (await dialogMark.count()) === 1,
-    `and the answer draws which kind it turned out to be (${await dialogMark.count()} marks)`,
+    (await formMark.count()) === 1,
+    `and the answer draws which kind it turned out to be (${await formMark.count()} marks)`,
   );
   record(
-    (await dialogMark.getAttribute('aria-label')) === 'Channel',
-    `named as the rows name it (${await dialogMark.getAttribute('aria-label')})`,
+    (await formMark.getAttribute('aria-label')) === 'Channel',
+    `named as the rows name it (${await formMark.getAttribute('aria-label')})`,
   );
 
   // The label, when the sentence does not lead with it.
@@ -923,7 +934,7 @@ try {
   );
   record(suggested.includes(''), 'which is a list asked for with nothing typed, and not an empty box waiting');
   /*
-   * Everything, and not everything of one kind. The dialog used to open on the
+   * Everything, and not everything of one kind. The action form used to open on the
    * channels alone, because the control above the field said Channel - so a form
    * whose author meant to address a person was shown a picker with no people in
    * it and no way to say so.
@@ -1110,7 +1121,16 @@ try {
   await page.waitForTimeout(400);
   record((await list().count()) === 0, 'Escape gives up on the list');
   record((await page.inputValue(FIELD)) === 'e', 'and keeps what was typed');
-  record((await page.locator('dialog[open]').count()) === 1, 'and does not take the dialog with it');
+  /*
+   * The same claim as before, against the surface this is now: Escape gives up
+   * on the list and takes nothing else with it. It used to be the dialog that
+   * had to survive; on a page what has to survive is the address and the form
+   * standing at it, and both are asserted rather than one.
+   */
+  record(
+    page.url().endsWith('/actions/new') && (await page.locator('form #action-name').count()) === 1,
+    `and does not take the form with it (${new URL(page.url()).pathname})`,
+  );
   const withoutList = Math.round((await saveButton().boundingBox()).y);
   console.log(`Create Action sat at y = ${withList} with the list open, ${withoutList} without it`);
   record(withList === withoutList, 'the longest list there is moves nothing below the field');
@@ -1187,7 +1207,7 @@ try {
    * one step of it, which is where somebody typing a channel name most often
    * is, and until now that panel said nothing at all. Everything asserted above
    * is asserted again here, against the same interception, because the point of
-   * lifting the box out of the dialog is that the two cannot drift - and a
+   * lifting the box out of the action form is that the two cannot drift - and a
    * shared component nothing reads on the second surface would prove nothing.
    *
    * Two things are this surface's own and are asserted only here: a parameter
@@ -1330,8 +1350,8 @@ try {
    * this panel used to pass it on, so a node under an action set to Channel was
    * offered channels and nothing else - and a node under an action whose kind
    * had never been set was offered nothing at all, which is the report. There is
-   * no kind to pass on now, so both halves are read here exactly as they are in
-   * the dialog: one list, and each row saying which of the two it is.
+   * no kind to pass on now, so both halves are read here exactly as they are on
+   * the action form: one list, and each row saying which of the two it is.
    */
   record(
     suggestedTargets.at(-1) === null,
@@ -1458,7 +1478,7 @@ try {
   suggested = [];
   suggestedTargets = [];
   // Cleared here, so that what is read back below is what picking a row did and
-  // not what saving the action in the dialog did an hour of assertions ago.
+  // not what saving the action on its own page did an hour of assertions ago.
   mutated = [];
 
   await type('gen');
@@ -1542,7 +1562,7 @@ try {
    * node editing everybody's action from a field that says nothing about doing
    * so. Measured twice, because the two say different things: nothing that
    * writes an action reached the wire at all, and the definition still holds
-   * what the dialog saved before any of this was picked.
+   * what the action form saved before any of this was picked.
    */
   record(
     !mutated.includes('updateAction'),

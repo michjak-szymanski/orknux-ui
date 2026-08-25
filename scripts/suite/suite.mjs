@@ -713,6 +713,23 @@ export const TESTS = [
      */
   },
   {
+    name: 'action-page-check',
+    what: 'the action editor as a page: create, find, change, reload, Used by, and the Danger Zone',
+    needs: ['workspace'],
+    /*
+     * An action was the last component edited only in a modal. It follows the
+     * condition's page rather than a third arrangement, so this follows
+     * `condition-page-check` - with one assertion of its own, that `Used by` is
+     * drawn here. #258 put that panel in the dialog because an action had no
+     * page, and a check that did not look for it on the page would let it be
+     * lost in the move without anything going red.
+     *
+     * It builds a wait on a fixed time, which is the one subtype that names
+     * nothing else in the workspace, and deletes it through the Danger Zone -
+     * so the deletion is driven rather than assumed, and nothing is left behind.
+     */
+  },
+  {
     name: 'definition-jump-check',
     what: "the way out of a function's object parameter to that object's editor",
     needs: ['workspace'],

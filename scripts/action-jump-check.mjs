@@ -6,6 +6,14 @@
  * opens Create Action, works through the four subtypes that ask, and checks the
  * mark appears only once something is chosen, points where the route says
  * it should, and opens a tab of its own with the half-filled form left alone.
+ *
+ * It used to press a button and read the marks out of `dialog a[target=_blank]`.
+ * Creating an action is a page now - `/actions/new`, the shape the condition
+ * editor took in #87 - so Create Action is followed as the link it became and
+ * the marks are read off the form. Every claim below is the claim it always
+ * was; what changed is where the form is standing. The last one gained a
+ * sentence rather than losing one: the form was asserted to survive opening a
+ * second tab, and now the address it is at is asserted with it.
  */
 import { BASE, WORKSPACE, open, record, shot, finish } from './suite/harness.mjs';
 
@@ -44,7 +52,8 @@ const made = await call(
 const mailConnectionId = made.createWorkspaceConnection.id;
 
 await page.goto(`${BASE}/workspace/${WORKSPACE}/actions`, { waitUntil: 'domcontentloaded' });
-await page.locator('button', { hasText: /^\+ Create Action$/ }).click();
+await page.locator('a', { hasText: /^\+ Create Action$/ }).first().click();
+await page.waitForURL(/\/actions\/new$/, { timeout: 30_000 });
 await page.waitForSelector('#action-name', { timeout: 20_000 });
 await page.waitForTimeout(1200);
 
@@ -52,9 +61,16 @@ await page.waitForTimeout(1200);
 const picker = (id) => page.locator(`#${id}`);
 const chosenIn = async (id) => (await picker(id).innerText()).trim().split('\n')[0].trim();
 
-/** Every way out drawn in the dialog right now. */
-const jumps = page.locator('dialog a[target="_blank"]');
-const jumpFor = (label) => page.locator(`dialog a[aria-label="${label}"]`);
+/*
+ * Every way out drawn on the form right now.
+ *
+ * Scoped to the `<form>` rather than to the page, for the reason it was scoped
+ * to the dialog before: the shell around it draws links of its own, and "one
+ * way out on screen" below is a claim about this form and not about the
+ * furniture.
+ */
+const jumps = page.locator('form a[target="_blank"]');
+const jumpFor = (label) => page.locator(`form a[aria-label="${label}"]`);
 
 /** Opens a picker and takes the row whose label is not a "+ New …" instruction. */
 async function chooseFirst(id) {
@@ -213,10 +229,10 @@ record(heading !== '', `that page has a heading (${heading})`);
 
 record(context.pages().length === 2, 'a new tab rather than this one');
 record(
-  page.url().includes(`/workspace/${WORKSPACE}/actions`),
-  'the dialog\'s page was not navigated away',
+  page.url().endsWith(`/workspace/${WORKSPACE}/actions/new`),
+  `the form's own page was not navigated away (${new URL(page.url()).pathname})`,
 );
-const stillOpen = await page.locator('dialog[open] #action-name').count();
+const stillOpen = await page.locator('form #action-name').count();
 const stillTyped = stillOpen === 1 ? await page.locator('#action-name').inputValue() : '';
 record(stillOpen === 1 && stillTyped === typedName, `the form is as it was left ("${stillTyped}")`);
 

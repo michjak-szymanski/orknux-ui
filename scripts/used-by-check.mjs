@@ -233,9 +233,14 @@ record(
  *
  * `ComponentDependants` answered ACTION from the day it was written - it is
  * what `deleteAction` refuses on - and no screen ever asked it, so a workflow
- * node pointing at an action could not be found from the action. The action has
- * no page of its own: it is edited in a dialog, opened by
- * `/workspace/:id/actions/:actionId`, and that dialog is where the panel goes.
+ * node pointing at an action could not be found from the action.
+ *
+ * `/workspace/:id/actions/:actionId` is the same address it always was, and the
+ * panel is still what it opens on. What it opens is a page now rather than a
+ * dialog over the list, which is where a panel like this belongs: it sits above
+ * the Danger Zone, so what a deletion is about to break is on screen before the
+ * button that breaks it. The refusal asserted at the end of this block is what
+ * ties the two together.
  *
  * Both states again, and in the order that proves the empty one is real: an
  * action nothing runs says so, and the same action inside a workflow names it.

@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 
-import { ACTION_TYPE_LABEL, fetchAction, fetchWorkspaceActions, paramSummary } from '../../api/actions';
+import { ACTION_TYPE_LABEL, fetchWorkspaceActions, paramSummary } from '../../api/actions';
 import type { Action } from '../../api/actions';
 import type { PageOf } from '../../api/client';
 import type { SessionUser } from '../../api/session';
 import settingsIcon from '../../assets/settings-14.svg';
-import { ActionDialog } from '../../components/ActionDialog';
 import { AppShell } from '../../components/AppShell';
 import { CompactPagination } from '../../components/CompactPagination';
 import {
@@ -29,17 +28,22 @@ export interface WorkspaceActionsPageProps {
 
 const PAGE_SIZE = 6;
 
-/** The workspace's action catalogue: the blocks its workflows are built from. */
+/**
+ * The workspace's action catalogue: the blocks its workflows are built from.
+ *
+ * A row is a link rather than a button, and so is Create Action: an action is
+ * edited on a page of its own now, at `…/actions/:actionId`, which is what a
+ * ctrl-click, a middle click and a pasted address all need it to be. The dialog
+ * this page used to open is still there for the workflow editor's node panel;
+ * see `ActionSettingsPage` for why the two doors differ.
+ */
 export function WorkspaceActionsPage({ session, onSignOut }: WorkspaceActionsPageProps) {
-  const { workspaceId = '', actionId } = useParams();
-  const navigate = useNavigate();
+  const { workspaceId = '' } = useParams();
 
   const [actions, setActions] = useState<PageOf<Action> | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [editing, setEditing] = useState<Action | null>(null);
 
   const load = useCallback(() => {
     if (workspaceId === '') return;
@@ -59,30 +63,6 @@ export function WorkspaceActionsPage({ session, onSignOut }: WorkspaceActionsPag
 
   useEffect(load, [load]);
 
-  /** `/actions/:actionId` opens that action straight away — where a run links to. */
-  useEffect(() => {
-    if (actionId === undefined) return;
-    let current = true;
-    fetchAction(actionId)
-      .then((action) => {
-        if (!current) return;
-        if (action === null) setError(t('That action does not exist, or you do not have access to it.'));
-        else setEditing(action);
-      })
-      .catch((cause: unknown) => {
-        if (current) setError(cause instanceof Error ? cause.message : t('Could not open the action.'));
-      });
-    return () => {
-      current = false;
-    };
-  }, [actionId]);
-
-  const closeDialog = useCallback(() => {
-    setCreating(false);
-    setEditing(null);
-    if (actionId !== undefined) navigate(`/workspace/${workspaceId}/actions`, { replace: true });
-  }, [actionId, navigate, workspaceId]);
-
   return (
     <AppShell
       user={shellUser(session)}
@@ -100,7 +80,9 @@ export function WorkspaceActionsPage({ session, onSignOut }: WorkspaceActionsPag
           <div className={transferStyles.headerActions}>
             <ImportComponentsButton workspaceId={workspaceId} onImported={load} />
             <UseTemplateButton workspaceId={workspaceId} kind="ACTION" onImported={load} />
-            <button type="button" className={styles.createAction} onClick={() => setCreating(true)}>{t('+ Create Action')}</button>
+            <Link className={styles.createAction} to={`/workspace/${workspaceId}/actions/new`}>
+              {t('+ Create Action')}
+            </Link>
           </div>
         </header>
 
@@ -122,14 +104,13 @@ export function WorkspaceActionsPage({ session, onSignOut }: WorkspaceActionsPag
 
           {actions?.content.map((action) => (
             <div key={action.id} className={styles.row}>
-              <button
-                type="button"
-                className={`${styles.colName} ${styles.name} ${styles.nameButton}`}
-                onClick={() => setEditing(action)}
+              <Link
+                className={`${styles.colName} ${styles.name} ${styles.nameLink}`}
+                to={`/workspace/${workspaceId}/actions/${action.id}`}
                 title={`Settings for ${action.name}`}
               >
                 {action.name}
-              </button>
+              </Link>
               <span className={styles.colType}>
                 <span className={styles.badge}>{ACTION_TYPE_LABEL[action.type]}</span>
               </span>
@@ -156,15 +137,14 @@ export function WorkspaceActionsPage({ session, onSignOut }: WorkspaceActionsPag
                   className={styles.rowAction}
                   canPublish={session.admin}
                 />
-                <button
-                  type="button"
+                <Link
                   className={styles.rowAction}
-                  onClick={() => setEditing(action)}
+                  to={`/workspace/${workspaceId}/actions/${action.id}`}
                   aria-label={`Settings for ${action.name}`}
                   title={`Settings for ${action.name}`}
                 >
                   <img src={settingsIcon} alt="" width={14} height={14} />
-                </button>
+                </Link>
               </span>
             </div>
           ))}
@@ -178,22 +158,6 @@ export function WorkspaceActionsPage({ session, onSignOut }: WorkspaceActionsPag
           />
         </div>
       </section>
-
-      <ActionDialog
-        open={creating || editing !== null}
-        workspaceId={workspaceId}
-        action={editing}
-        onClose={closeDialog}
-        onSaved={() => {
-          closeDialog();
-          load();
-        }}
-        onDeleted={() => {
-          closeDialog();
-          setPage(1);
-          load();
-        }}
-      />
     </AppShell>
   );
 }
