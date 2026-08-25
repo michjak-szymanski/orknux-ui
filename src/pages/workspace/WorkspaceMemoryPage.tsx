@@ -41,7 +41,7 @@ export interface WorkspaceMemoryPageProps {
 const SORTS: { value: MemorySort; label: string }[] = [
   { value: 'LAST_MODIFIED', label: t('Last Modified') },
   { value: 'CREATED', label: t('Date Added') },
-  { value: 'TITLE', label: 'Title' },
+  { value: 'TITLE', label: t('Title') },
 ];
 
 /** Five to a page, as the design shows. */

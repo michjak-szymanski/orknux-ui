@@ -91,7 +91,7 @@ const PAGE_SIZE_KEY = 'orknux.workflows.page-size';
  * out to be on page two.
  */
 const ORDERS: { label: string; order: WorkflowOrder }[] = [
-  { label: 'Name', order: 'NAME' },
+  { label: t('Name'), order: 'NAME' },
   { label: t('Last run'), order: 'LAST_RUN' },
   { label: t('Switched on'), order: 'ENABLED' },
 ];

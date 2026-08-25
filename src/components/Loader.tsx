@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from 'react';
 
 import styles from './Loader.module.css';
+import { t } from '../i18n';
 
 /**
  * How long a wait has to last before it is worth saying anything about.
@@ -43,7 +44,7 @@ export interface LoaderProps {
  * interrupting — a page that swaps a loader for a table has not raised an alert.
  * Under `prefers-reduced-motion` the animation stops and the mark stays whole.
  */
-export function Loader({ label = 'Loading…', size = 28, delay = QUIET_MS }: LoaderProps) {
+export function Loader({ label = t('Loading…'), size = 28, delay = QUIET_MS }: LoaderProps) {
   // Two loaders can be on screen at once, and duplicate ids would make the
   // second one reference the first one's gradient.
   const id = useId();

@@ -156,7 +156,6 @@ export const PL: Record<string, string> = {
   "Companion Model": "Model pomocniczy",
   "Speech-to-text Model": "Model mowy na tekst",
   "Text-to-speech Model": "Model tekstu na mowę",
-  "Text-to-image Model": "Model tekstu na obraz",
   "MCP Servers": "Serwery MCP",
   "Add MCP Server": "Dodaj serwer MCP",
   "Remove MCP Server": "Usuń serwer MCP",
@@ -624,7 +623,6 @@ export const PL: Record<string, string> = {
   "Width of the code editor": "Szerokość edytora kodu",
   "Describe this workflow...": "Opisz ten przepływ pracy...",
   "Type a message...": "Napisz wiadomość...",
-  "Describe a picture to draw...": "Opisz obraz do narysowania...",
   "Say something… paste a screenshot to attach it.": "Powiedz coś… wklej zrzut ekranu, aby go załączyć.",
   "Markdown · @ to mention": "Markdown · @, aby kogoś wspomnieć",
   "Add to this message": "Dodaj do tej wiadomości",
@@ -705,13 +703,6 @@ export const PL: Record<string, string> = {
   "This one only": "Tylko ten",
   "Danger Zone": "Strefa nieodwracalna",
   "Copy it now - it is not shown again.": "Skopiuj go teraz — nie zostanie pokazany ponownie.",
-  "The picture could not be drawn.": "Nie udało się narysować obrazu.",
-  "This picture is gone.": "Tego obrazu już nie ma.",
-  "Draw": "Narysuj",
-  "Drawing…": "Rysowanie…",
-  "$ / picture": "$ / obraz",
-  "Price": "Cena",
-  "What the provider charges for one picture at the size this model draws. It is asked for here rather than as a price per million tokens because that is how these models are billed, and because an image call reports no tokens at all — costed the ordinary way, every picture would come out free. Empty means not recorded, and a drawing then reports no cost rather than nought.": "Ile dostawca liczy za jeden obraz w rozmiarze, w jakim rysuje ten model. Pytamy o to tutaj, a nie o cenę za milion tokenów, ponieważ tak właśnie rozliczane są te modele i ponieważ wywołanie obrazu nie zgłasza żadnych tokenów — policzone zwykłym sposobem każdy obraz wyszedłby za darmo. Puste oznacza brak zapisu, a rysunek nie podaje wtedy żadnego kosztu zamiast zera.",
   "Could not save that.": "Nie udało się tego zapisać.",
   "Your request has been approved": "Twoja prośba została zatwierdzona",
   "Your request has been approved.": "Twoja prośba została zatwierdzona.",
@@ -895,9 +886,6 @@ export const PL: Record<string, string> = {
   "Used for the workspace’s own small jobs rather than for the conversation — naming a chat from what was said. A cheap model is the right choice here.": "Używany do drobnych zadań własnych przestrzeni roboczej, a nie do rozmowy — na przykład do nazwania czatu na podstawie tego, co w nim powiedziano. Tani model jest tu właściwym wyborem.",
   "A speaker appears under every answer in a chat, which reads it in this model’s voice.": "Pod każdą odpowiedzią w czacie pojawia się głośnik, który czyta ją głosem tego modelu.",
   "No speech model has been added yet. Add one under Models, pointing at whatever reads text aloud.": "Nie dodano jeszcze żadnego modelu mowy. Dodaj go w Modelach, wskazując to, co czyta tekst na głos.",
-  "No image model has been added yet. Add one under Models, pointing at whatever draws.": "Nie dodano jeszcze żadnego modelu obrazu. Dodaj go w Modelach, wskazując to, co rysuje.",
-  "A picture button appears in the chat composer, and what is typed there is drawn rather than answered. The picture is kept as an attachment on the chat, so it is still there when the chat is opened again. OpenAI, Azure OpenAI and any server speaking their image API can draw; Anthropic and Ollama have no image endpoint and are refused with a sentence rather than called.": "W polu wiadomości czatu pojawia się przycisk obrazu, a to, co się tam wpisze, zostaje narysowane zamiast otrzymać odpowiedź. Obraz jest przechowywany jako załącznik czatu, więc jest tam nadal po ponownym otwarciu rozmowy. Rysować potrafią OpenAI, Azure OpenAI i każdy serwer mówiący ich API obrazów; Anthropic i Ollama nie mają takiego punktu końcowego i zostają odrzucone zdaniem, zamiast być wywołane.",
-  "None — the picture button is not offered": "Brak — przycisk obrazu nie jest oferowany",
   "No transcription model has been added yet. Add one under Models, pointing at your Whisper instance.": "Nie dodano jeszcze żadnego modelu transkrypcji. Dodaj go w Modelach, wskazując swoją instancję Whispera.",
   "Where an answer is cut for the speech provider.": "Gdzie odpowiedź jest cięta dla dostawcy mowy.",
   "Each chat is a conversation of its own, kept the same way a workflow run keeps the thread its agents share.": "Każdy czat jest osobną rozmową, przechowywaną tak samo jak wątek, który uruchomienie przepływu pracy dzieli między swoich agentów.",
@@ -1302,8 +1290,6 @@ export const PL: Record<string, string> = {
   "Close the quick chat": "Zamknij szybki czat",
   "Continue in chat": "Kontynuuj w czacie",
   "Read this answer aloud": "Przeczytaj tę odpowiedź na głos",
-  "Draw a picture instead": "Narysuj obraz zamiast tego",
-  "Send this as a message": "Wyślij to jako wiadomość",
   "Stop reading": "Przestań czytać",
   "Record a message": "Nagraj wiadomość",
   "Stop recording": "Zatrzymaj nagrywanie",
@@ -1795,13 +1781,51 @@ export const PL: Record<string, string> = {
   "Returned": "Zwróciło",
   "It came back with nothing.": "Wróciło z niczym.",
 
-  // --- what the model thought, and a lookup that could not be made ---------
-  "Failed": "Nie powiodło się",
-  "Could not be run": "Nie udało się wywołać",
-  "Thinking": "Myśli",
-  "Thought": "Myślało",
-
   // --- two notes the transform reached this time ---------------------------
   "A saved shape fixes which fields there are; this node decides what goes in them. Custom means the fields are this node's own.": "Zapisany kształt ustala, jakie są pola; ten węzeł decyduje, co się w nich znajdzie. „Własny” oznacza, że pola należą do tego węzła.",
   "The workspace’s values, handed to this function after its own parameters. Their values are never shown here — which is why a variable that is set looks empty on this page: what is chosen is the name, and only the sandbox ever sees what is behind it.": "Wartości przestrzeni roboczej, przekazywane tej funkcji po jej własnych parametrach. Ich wartości nigdy nie są tu pokazywane — dlatego ustawiona zmienna wygląda na tej stronie na pustą: wybiera się nazwę, a to, co za nią stoi, widzi wyłącznie piaskownica.",
+
+  // --- one-word labels, which is what the menu is made of -------------------
+  "Assignee": "Przypisany",
+  "Closed": "Zamknięte",
+  "Completed": "Zakończone",
+  "Running": "W trakcie",
+  "Failed": "Nie powiodło się",
+  "Could not be run": "Nie udało się uruchomić",
+  "Kind": "Rodzaj",
+  "Number": "Numer",
+  "Time": "Czas",
+  "Link": "Odnośnik",
+  "Import": "Importuj",
+  "Code": "Kod",
+
+  // --- the markdown editor's own buttons -------------------------------------
+  "Bold": "Pogrubienie",
+  "Italic": "Kursywa",
+  "Quote": "Cytat",
+
+  // --- what a model was thinking ---------------------------------------------
+  "Thinking": "Myśli",
+  "Thought": "Tok myślenia",
+
+  // --- drawing a picture -------------------------------------------------------
+  "Draw": "Narysuj",
+  "Drawing…": "Rysowanie…",
+  "Draw a picture instead": "Zamiast tego narysuj obraz",
+  "Send this as a message": "Wyślij to jako wiadomość",
+  "Describe a picture to draw...": "Opisz obraz do narysowania...",
+  "The picture could not be drawn.": "Nie udało się narysować obrazu.",
+  "This picture is gone.": "Tego obrazu już nie ma.",
+  "Text-to-image Model": "Model tekstu na obraz",
+  "None — the picture button is not offered": "Brak — przycisk obrazu nie jest oferowany",
+  "No image model has been added yet. Add one under Models, pointing at whatever draws.": "Nie dodano jeszcze żadnego modelu obrazu. Dodaj go w Modelach, wskazując to, co rysuje.",
+  "A picture button appears in the chat composer, and what is typed there is drawn rather than answered. The picture is kept as an attachment on the chat, so it is still there when the chat is opened again. OpenAI, Azure OpenAI and any server speaking their image API can draw; Anthropic and Ollama have no image endpoint and are refused with a sentence rather than called.": "W polu wiadomości czatu pojawia się przycisk obrazu, a to, co się w nim wpisze, zostaje narysowane zamiast doczekać się odpowiedzi. Obraz przechowywany jest jako załącznik czatu, więc jest tam nadal po ponownym otwarciu rozmowy. Rysować potrafią OpenAI, Azure OpenAI i każdy serwer mówiący ich API obrazów; Anthropic i Ollama nie mają punktu końcowego obrazów i są odrzucane zdaniem, a nie wywoływane.",
+
+  // --- what a picture costs ------------------------------------------------------
+  "Price": "Cena",
+  "$ / picture": "$ / obraz",
+  "What the provider charges for one picture at the size this model draws. It is asked for here rather than as a price per million tokens because that is how these models are billed, and because an image call reports no tokens at all — costed the ordinary way, every picture would come out free. Empty means not recorded, and a drawing then reports no cost rather than nought.": "Ile dostawca liczy za jeden obraz w rozmiarze, w jakim rysuje ten model. Pytamy o to tutaj, a nie o cenę za milion tokenów, bo tak właśnie rozliczane są te modele i bo wywołanie obrazu nie zgłasza żadnych tokenów — liczony zwykłym sposobem, każdy obraz wychodziłby za darmo. Puste znaczy: nie zapisano, a rysunek nie podaje wtedy kosztu, zamiast podawać zero.",
+
+  // --- an example of a name -------------------------------------------------------
+  "e.g. BuildFinished": "np. BuildFinished",
 };

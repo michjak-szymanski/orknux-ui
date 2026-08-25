@@ -497,7 +497,7 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
                   <label className={styles.label} htmlFor="trigger-webhook-path">
                     {t('URL')}
                   </label>
-                  <FieldHint label="URL">
+                  <FieldHint label={t("URL")}>
                     {t('Where this installation answers. One trigger per path, across every workspace.')}
                   </FieldHint>
                 </span>
@@ -1034,7 +1034,7 @@ export function TriggerForm({ workspaceId, trigger = null, styles, onSaved, onCa
           title={t('Create Object')}
           message={t("Name the shape a caller has to send. Its fields are written in Objects.")}
           nameLabel={t("Object Name")}
-          namePlaceholder="e.g. BuildFinished"
+          namePlaceholder={t('e.g. BuildFinished')}
           descriptionPlaceholder={t("What this describes")}
           submitLabel={t("Create Object")}
           onClose={() => setMakingObject(false)}

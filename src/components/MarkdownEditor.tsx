@@ -24,13 +24,13 @@ export interface MarkdownEditorProps {
 
 /** What the toolbar does, in the order a hand reaches for it. */
 const MARKS: { label: string; title: string; before: string; after: string; block?: boolean }[] = [
-  { label: 'B', title: 'Bold', before: '**', after: '**' },
-  { label: 'I', title: 'Italic', before: '_', after: '_' },
-  { label: '</>', title: 'Code', before: '`', after: '`' },
+  { label: 'B', title: t('Bold'), before: '**', after: '**' },
+  { label: 'I', title: t('Italic'), before: '_', after: '_' },
+  { label: '</>', title: t('Code'), before: '`', after: '`' },
   { label: '{ }', title: t('Code block'), before: '```\n', after: '\n```', block: true },
-  { label: '"', title: 'Quote', before: '> ', after: '', block: true },
-  { label: '•', title: 'List', before: '- ', after: '', block: true },
-  { label: '🔗', title: 'Link', before: '[', after: '](https://)' },
+  { label: '"', title: t('Quote'), before: '> ', after: '', block: true },
+  { label: '•', title: t('List'), before: '- ', after: '', block: true },
+  { label: '🔗', title: t('Link'), before: '[', after: '](https://)' },
 ];
 
 /** How long typing after an @ waits before the names are asked for. */
