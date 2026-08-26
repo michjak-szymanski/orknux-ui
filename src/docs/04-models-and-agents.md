@@ -350,13 +350,18 @@ breaks, so grant it where that is not a risk.
 
 ## Tasks
 
+![Every task this workspace has started](/screens/tasks.png)
+
 A **task** is an agent given a problem and left to work at it until it says it is
 done. A workflow is a graph somebody drew, and every step of it was decided in
 advance; a task is the other bargain — you say what you want, the agent decides
 what to do, and what you get is the working.
 
-Start one from the **Tasks** section, or from an issue with **Start by AI**. Its
-page fills in as the model works: what it is thinking, what it called, what came
+Start one from the **Tasks** section, or from an issue with **Start by AI**.
+
+![A task being worked on: what it is thinking, what it called, what came back](/screens/task.png)
+
+Its page fills in as the model works: what it is thinking, what it called, what came
 back. You do not have to reload it — the log is followed as it is written, and
 the block being written is the one that is open. Tool calls arrive folded, so a
 long run reads as a list of what was done rather than as a wall.

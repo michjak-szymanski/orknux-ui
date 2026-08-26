@@ -175,6 +175,7 @@ const found = await gql(`{
   issues: workspaceIssues(workspaceId: "${ws}", size: 100) {
     content { number title attachments { id } comments { id } }
   }
+  tasks: workspaceTasks(workspaceId: "${ws}", size: 20) { content { id title status } }
   users { id username type email }
 }`);
 
@@ -186,6 +187,14 @@ const tool = byName(found.tools.content, 'lookupCustomer');
 const skill = byName(found.skills.content, 'When to escalate');
 const condition = byName(found.conditions.content, 'Mentions an outage');
 const run = found.executions.content[0];
+/*
+ * The task the manual points at: the newest one the seed started.
+ *
+ * By recency and not by name, because what makes this picture worth taking is
+ * the state rather than the title - a log filling in while the model works. The
+ * seed starts one immediately before the capture runs, so the newest is it.
+ */
+const task = found.tasks?.content?.[0];
 const provider = found.providers[0];
 /*
  * The conversation the transcript is photographed from, chosen by how many
@@ -536,6 +545,30 @@ const SHOTS = [
         { timeout: 10_000 },
       );
       await page.waitForTimeout(600);
+    },
+  },
+  { name: 'tasks', path: `/workspace/${ws}/tasks`, waitFor: 'a[href*="/tasks/"]' },
+  /*
+   * One task, open on its own page, while it is still being worked on.
+   *
+   * The point of the picture is the log: what the model is thinking, what it
+   * called and what came back, arriving as it happens rather than after. So it
+   * waits for a line to be drawn rather than for the page to load - a page that
+   * has loaded but has nothing in it yet photographs the one thing this feature
+   * is not.
+   *
+   * And it waits rather than requires: a model that has already finished by now
+   * is a perfectly good picture of a task too, and stopping the whole capture
+   * because a local model was quick would be a poor trade.
+   */
+  task && {
+    name: 'task',
+    path: `/workspace/${ws}/tasks/${task.id}`,
+    prepare: async (page) => {
+      await page.waitForSelector('[data-kind]', { timeout: 60_000 }).catch(() => undefined);
+      // A moment more, so what is on screen is a log with something in it
+      // rather than the first line arriving.
+      await page.waitForTimeout(4_000);
     },
   },
   { name: 'actions', path: `/workspace/${ws}/actions` },

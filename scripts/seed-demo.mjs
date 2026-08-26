@@ -1912,4 +1912,36 @@ for (const machine of MACHINES) {
 }
 log(`shells: ${MACHINES.filter((machine) => !machines.has(machine.name)).length} added`);
 
+/*
+ * A task, set going and left going.
+ *
+ * The manual's picture of a task is a picture of it *working* - a log filling
+ * in, a block of reasoning open, a tool call that has not come back yet - and
+ * that state cannot be staged. So one is genuinely started here and the capture
+ * photographs whatever it has reached by the time it gets there.
+ *
+ * The prompt is small on purpose: it is answered out of the agent's own
+ * briefing with no tool the model has to guess at, so a local model reaches
+ * something worth photographing in seconds rather than going round its turns.
+ */
+const TASK_PROMPT = [
+  'Write the handover note for tonight.',
+  '',
+  'Two customers are still waiting on the export outage, the mail relay was',
+  'restarted at 18:40, and the Slack connection was reauthorised this afternoon.',
+].join('\n');
+
+const { startTask: task } = await gql(
+  'mutation($input: StartTaskInput!) { startTask(input: $input) { id title status } }',
+  {
+    input: {
+      workspaceId: ws,
+      prompt: TASK_PROMPT,
+      title: 'Handover note for tonight',
+      agentId: summariser.id,
+    },
+  },
+);
+log(`task: ${task.title} (${task.status})`);
+
 log(`\n${WORKSPACE_NAME} is workspace ${ws}. Point the capture at it.`);
