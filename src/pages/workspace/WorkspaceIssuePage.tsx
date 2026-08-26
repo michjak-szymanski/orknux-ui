@@ -528,8 +528,18 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
     return (
       title.trim() !== issue.title.trim() ||
       description !== (issue.description ?? '') ||
+      /*
+       * The labels are a set, and are compared as one.
+       *
+       * A label is added to the end of the box it is typed into, and the server
+       * keeps labels in a set and hands them back in its own order - sorted, as
+       * it happens. Comparing the two position by position therefore reported
+       * an issue as unsaved for as long as it was open whenever a label was
+       * added that did not happen to sort last, and reopening the page - which
+       * takes both sides from the same answer - reported nothing (issue #282).
+       */
       labels.length !== issue.labels.length ||
-      labels.some((one, at) => one !== issue.labels[at]) ||
+      labels.some((one) => !issue.labels.includes(one)) ||
       (assignee?.kind ?? null) !== (issue.assignee?.kind ?? null) ||
       (assignee?.id ?? null) !== (issue.assignee?.id ?? null)
     );

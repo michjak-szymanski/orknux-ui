@@ -1093,6 +1093,25 @@ export const TESTS = [
      */
   },
   {
+    name: 'issue-label-guard-check',
+    what: 'a label added to an issue and saved leaves nothing to be warned about',
+    needs: ['workspace'],
+    /*
+     * Issue #282, and it is the guard's comparison rather than its exits. The
+     * labels are a set the server hands back sorted and the box appends to what
+     * is on screen, so comparing them position by position reported an issue as
+     * unsaved for as long as it stayed open whenever a label was added that did
+     * not sort last - and reopening it, which takes both sides from the same
+     * answer, said nothing, which is what made it read as a ghost.
+     *
+     * Two labels are driven rather than one, because a label that sorts last
+     * never reproduced it and a fix asserted only against that would pass
+     * without doing anything. The third case adds a label and does not save it:
+     * a comparison loose enough to end the false warning must not be so loose
+     * that it stops noticing a real change.
+     */
+  },
+  {
     name: 'validate-status-check',
     what: 'the Validate status says what it checked, beside the button that checks it',
     needs: ['workspace'],
