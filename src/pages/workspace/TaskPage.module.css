@@ -214,6 +214,40 @@
   color: var(--color-danger);
 }
 
+/* ---- What has been said to it and not yet read ---- */
+
+/*
+  Quieter than the box above it. This is the standing state of something already
+  sent rather than anything to do, and it empties itself: a message the agent has
+  read is in the log below under the name of whoever said it, and drops off here.
+*/
+.pending {
+  margin: 0;
+  padding: 0 var(--space-16) var(--space-14);
+  list-style: none;
+}
+
+.pendingLine {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding: var(--space-4) 0;
+}
+
+.pendingBody {
+  min-width: 0;
+  font-size: var(--text-md);
+  color: var(--color-text-body);
+  overflow-wrap: anywhere;
+}
+
+.pendingState {
+  flex: 0 0 auto;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
 /* ---- The log ---- */
 
 .line {
