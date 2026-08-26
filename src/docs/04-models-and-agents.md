@@ -374,6 +374,15 @@ task and started another with a better prompt. It is not an interruption: a turn
 takes as long as it takes, and until the agent gets to your message the page says
 it has not been read.
 
+A task can also **draw**. Where the workspace has chosen a text-to-image model —
+the **Text-to-image** picker on its settings page, the same one the chat's
+picture button uses — an agent working a task is offered a tool that draws from
+a description, and every picture it draws is shown under the task's outcome.
+That holds whichever way the task ended: one that drew and then ran out of turns
+still shows what it drew, because it was still paid for. Where no such model has
+been chosen, the tool is not offered at all and the agent is never told it could
+have drawn.
+
 A task ends in one of four ways. It says it is **done**, and its summary is the
 last thing it writes. It **stops to ask** — a question, or permission for a
 capability — and waits for you rather than guessing; answer it and it carries on

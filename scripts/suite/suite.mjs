@@ -1803,6 +1803,34 @@ export const TESTS = [
      */
   },
   {
+    name: 'task-picture-check',
+    what: 'a picture a task drew, drawn in its outcome card rather than named in it',
+    needs: ['workspace'],
+    /*
+     * Issue #283, the interface half. The server half is `TaskPictureTest`,
+     * seven tests on both engines over a stub on the loopback address: which
+     * task is offered the drawing tool, where the bytes go, what the outcome
+     * comes back as, and what happens when the provider will not draw.
+     *
+     * What that cannot say is whether anybody sees a picture. An outcome is
+     * text and always has been, so the whole difference between working and
+     * broken is whether the markdown is rendered, whether the bytes behind it
+     * load - `naturalWidth`, not the presence of an `<img>`, because a broken
+     * picture is an `<img>` too - and whether a picture a thousand pixels wide
+     * stays inside a card that is not.
+     *
+     * The task is fabricated in the browser, which is the opposite of what
+     * `image-model-check` had to do next door and is why this one runs in CI.
+     * There the drawing happens on the server from a mutation a button makes,
+     * so a stub in the page would have been a check of the stub; here the
+     * drawing happens inside a turn of an agent that has to decide to draw and
+     * call a tool, which needs a model that answers and is `task-live-check`'s
+     * territory. Every step of getting the picture into the outcome is already
+     * pinned on the server. What is left is one screen given one answer, so the
+     * answer is supplied.
+     */
+  },
+  {
     name: 'task-live-check',
     what: 'a task watched while it runs and thinks, lines arriving on a page nobody reloaded, and the same account afterwards',
     needs: ['workspace'],
