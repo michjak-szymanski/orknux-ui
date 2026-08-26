@@ -58,9 +58,14 @@ export interface MarkdownProps {
    *
    * On for the manual, where a screenshot of a 1440-wide application is drawn
    * into a column half that width and the labels it was taken to show cannot be
-   * read (issue #217). Off elsewhere by default: what a model writes rarely
-   * carries a picture, and an issue's own attachments are looked at through the
-   * viewer the attachment list opens, which can step between them.
+   * read (issue #217). On for a task's outcome too, and for the same reason
+   * rather than for a new one: since #283 a task can draw, and what it drew is
+   * the thing that was asked for, arriving in a card narrower than the picture.
+   *
+   * Off elsewhere by default. A chat's own drawing does not need it — the
+   * answer bubble is the width of the conversation and the composer is right
+   * there to ask for another — and an issue's attachments are looked at through
+   * the viewer the attachment list opens, which can step between them.
    */
   zoomImages?: boolean;
 }

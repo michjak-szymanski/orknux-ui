@@ -467,7 +467,14 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
               </div>
               {task.outcome !== null && (
                 <div className={styles.said}>
-                  <Markdown>{task.outcome}</Markdown>
+                  {/*
+                   * Zoomable, unlike everywhere else a model's words are drawn.
+                   * A task can draw a picture (#283) and the server shows every
+                   * one it drew here, so this is the one place in the interface
+                   * where what a model produced is a picture rather than an
+                   * illustration of prose - in a card narrower than the picture.
+                   */}
+                  <Markdown zoomImages>{task.outcome}</Markdown>
                 </div>
               )}
             </section>

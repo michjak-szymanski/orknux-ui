@@ -366,6 +366,15 @@ back. You do not have to reload it — the log is followed as it is written, and
 the block being written is the one that is open. Tool calls arrive folded, so a
 long run reads as a list of what was done rather than as a wall.
 
+A task can also **draw**. Where the workspace has chosen a text-to-image model —
+the **Text-to-image** picker on its settings page, the same one the chat's
+picture button uses — an agent working a task is offered a tool that draws from
+a description, and every picture it draws is shown under the task's outcome.
+That holds whichever way the task ended: one that drew and then ran out of turns
+still shows what it drew, because it was still paid for. Where no such model has
+been chosen, the tool is not offered at all and the agent is never told it could
+have drawn.
+
 A task ends in one of four ways. It says it is **done**, and its summary is the
 last thing it writes. It **stops to ask** — a question, or permission for a
 capability — and waits for you rather than guessing; answer it and it carries on
