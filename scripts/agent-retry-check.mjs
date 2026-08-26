@@ -25,6 +25,22 @@ const hasWhenItFails = await page.getByText('When it fails', { exact: true }).co
 console.log(`Retries shown: ${hasRetries > 0}`);
 console.log(`When it fails shown: ${hasWhenItFails > 0}`);
 
+/*
+ * Measured from the switch being off, whatever the fixture arrived with.
+ *
+ * This read the node as it found it and pressed the switch once, which was the
+ * same thing for as long as the seeded node had no failure branch. It has one
+ * now - the editor is photographed for the manual and a node with one door is
+ * a poor picture - so the single press was turning the branch *off* and the
+ * second handle went away instead of appearing. Nothing here is saved, so
+ * putting the draft into a known state costs the fixture nothing.
+ */
+const handling = page.locator('label:has-text("Handle it here") input[type="checkbox"]');
+if (await handling.isChecked()) {
+  await handling.uncheck();
+  await page.waitForTimeout(900);
+}
+
 const handlesBefore = await page.locator('.react-flow__node.selected .react-flow__handle-right, .react-flow__node.selected .react-flow__handle-bottom').count();
 
 await page.getByText('Handle it here', { exact: true }).click();

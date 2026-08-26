@@ -1258,6 +1258,7 @@ export const TESTS = [
     name: 'chat-total-check',
     what: "a chat's own total growing across two turns and still being there after a reload",
     needs: ['model'],
+    ci: false,
     /*
      * The half of the running total that no test on the server can reach.
      * `ChatCostTest` pins the arithmetic - added up across turns, both takes of

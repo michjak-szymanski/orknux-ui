@@ -1814,7 +1814,7 @@ export const PL: Record<string, string> = {
   "How this page keeps up": "Jak ta strona nadąża",
   "Each step is sent as it is recorded, so nothing here is waiting on a refresh. If the connection drops the page comes back and asks for whatever it missed by the last line it holds, which is why a task left open overnight catches up rather than redrawing. A finished task reads exactly the same, from the same record.": "Każdy krok wysyłany jest w chwili zapisania, więc nic tutaj nie czeka na odświeżenie. Jeśli połączenie padnie, strona wraca i prosi o to, co ją ominęło, podając ostatni wiersz, jaki ma — dlatego zadanie zostawione otwarte na noc nadrabia zaległości, zamiast rysować się od nowa. Zakończone zadanie czyta się dokładnie tak samo, z tego samego zapisu.",
   "Returned": "Zwróciło",
-  "It came back with nothing.": "Wróciło z niczym.",
+  "Came back with nothing.": "Wróciło z niczym.",
 
   // --- what the model thought, and a lookup that could not be made ---------
   "Continuing an LLM session — what is said here is written into it": "Kontynuuje sesję LLM — to, co tu napisane, trafia do niej",

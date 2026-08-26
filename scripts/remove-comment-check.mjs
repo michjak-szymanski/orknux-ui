@@ -30,7 +30,7 @@
  * It files its own issue and deletes it at the end, and sweeps what an earlier
  * killed run left behind, so nothing anybody else's check reads is touched.
  */
-import { BASE, WORKSPACE, open, record, check, drawn, shot, finish } from './suite/harness.mjs';
+import { BASE, USER, WORKSPACE, open, record, check, drawn, shot, finish } from './suite/harness.mjs';
 
 const stamp = Date.now();
 const TITLE = `zz Scratch comment removal ${stamp}`;
@@ -140,7 +140,7 @@ check(
   'the question does not repeat what the comment said',
   `the question repeats the comment: ${JSON.stringify(said.replace(/\s+/g, ' ').slice(0, 200))}`,
 );
-record(asks && said.includes('alice'), 'and it names who wrote it, so the question can still be answered');
+record(asks && said.includes(USER), 'and it names who wrote it, so the question can still be answered');
 
 await dialog.locator('button', { hasText: /^Cancel$/ }).click();
 await page.waitForTimeout(400);
@@ -210,7 +210,7 @@ record(read.workspaceIssue.comments[0]?.content === KEPT, 'which is the one that
 
 const removal = read.issueHistory.entries.find((entry) => entry.kind === 'COMMENT_REMOVED');
 record(removal !== undefined, 'the history carries a COMMENT_REMOVED entry');
-record(removal?.actor === 'alice' && removal?.was === 'alice', 'naming who took it and whose it was');
+record(removal?.actor === USER && removal?.was === USER, 'naming who took it and whose it was');
 record(removal?.said === null || removal?.said === undefined, 'and carrying no text at all');
 
 /*

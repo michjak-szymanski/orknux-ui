@@ -114,6 +114,7 @@ const LISTS = [
   { file: 'AgentsPage.tsx', path: '/agents', title: 'Agents', unit: 'agents', column: 'Agent' },
   { file: 'WorkspaceObjectsPage.tsx', path: '/objects', title: 'Objects', unit: 'objects', column: 'Name' },
   { file: 'WorkspaceToolsPage.tsx', path: '/tools', title: 'Tools', unit: 'tools', column: 'Name' },
+  { file: 'WorkspaceTasksPage.tsx', path: '/tasks', title: 'Tasks', unit: 'tasks', column: 'Task' },
   { file: 'WorkspaceSessionsPage.tsx', path: '/sessions', title: 'Sessions', unit: 'sessions', column: 'Session' },
   {
     file: 'WorkspaceAuditPage.tsx',

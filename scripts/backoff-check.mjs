@@ -9,8 +9,12 @@
  * - which is the only part of the panel nobody could work out for themselves.
  *
  * Then it saves, reloads, and reads the boxes again, so the round trip is
- * measured rather than assumed. It puts the node back to one attempt afterwards,
- * which is what it was.
+ * measured rather than assumed. It puts the node back to whatever it arrived
+ * with afterwards, which is not always one attempt: the node this drives is the
+ * one the manual photographs, and it was given a retry policy of its own so the
+ * picture shows something. So the dead-field assertions below set one attempt
+ * first rather than assuming it, and the last thing this does is hand the node
+ * back as it found it.
  */
 import { BASE, WORKSPACE, WORKFLOW, open, record, finish } from './suite/harness.mjs';
 
@@ -50,6 +54,23 @@ async function save() {
 }
 
 await openTheAgent();
+
+/** What the node arrived with, so the same thing can be handed back at the end. */
+const arrived = {
+  attempts: await attempts().inputValue(),
+  wait: await initialWait().inputValue(),
+  multiplier: await multiplier().inputValue(),
+  more: (await maximumWait().isVisible())
+    ? {
+        maximum: await maximumWait().inputValue(),
+        jitter: await jitter().inputValue(),
+        budget: await budget().inputValue(),
+      }
+    : null,
+};
+
+// One attempt, which is the state the three assertions under this are about.
+if (arrived.attempts !== '') await type(attempts, '');
 
 // Everything past the attempt count describes the gap between two attempts, and
 // with one attempt there is no gap for any of it to describe.
@@ -113,8 +134,24 @@ record(
   `the whole backoff survives a save: ${JSON.stringify({ ...kept, ...keptMore })}`,
 );
 
-// Back to one attempt, which is where this node started.
-await type(attempts, '');
+/*
+ * Back to what was on the node when this opened it. Attempts first: with one
+ * attempt the two boxes under it are dead, and a dead box cannot be typed into.
+ */
+await type(attempts, arrived.attempts);
+if (arrived.attempts !== '') {
+  await type(initialWait, arrived.wait);
+  await type(multiplier, arrived.multiplier);
+  if (arrived.more !== null) {
+    if (!(await maximumWait().isVisible())) {
+      await more().click();
+      await page.waitForTimeout(300);
+    }
+    if (await maximumWait().isEnabled()) await type(maximumWait, arrived.more.maximum);
+    await type(jitter, arrived.more.jitter);
+    await type(budget, arrived.more.budget);
+  }
+}
 await save();
 
 await finish(browser);

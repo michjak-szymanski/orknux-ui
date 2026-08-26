@@ -106,6 +106,17 @@ const typed = async () => ((await titleBox.count()) === 0 ? '' : titleBox.inputV
 
 const MINE = new RegExp(`/workspace/${WORKSPACE}/issues/new$`);
 const THEIRS = new RegExp(`/workspace/${elsewhere.id}/issues$`);
+/*
+ * And where a switch made from the *form* lands, which is not the same place.
+ *
+ * It was the list, and #234 is that it should not be: `.../issues/new` is where
+ * filing one begins rather than a particular issue, so somebody halfway through
+ * writing one and moving workspace meant to go on writing one, not to be put in
+ * front of everybody else's. Nothing is carried across - the guard has already
+ * asked, and the words belong to the workspace they were written in, which the
+ * two assertions under each of these say.
+ */
+const THEIR_FORM = new RegExp(`/workspace/${elsewhere.id}/issues/new$`);
 
 async function openForm(text) {
   await page.goto(`${BASE}/workspace/${WORKSPACE}/issues/new`, { waitUntil: 'domcontentloaded' });
@@ -131,7 +142,7 @@ async function switchTo(workspaceId) {
 if (await openForm()) {
   await switchTo(elsewhere.id);
   record((await asking()) === false, 'untouched: switching workspace asks nothing');
-  record(THEIRS.test(page.url()), `untouched: and lands on the other workspace's issues (${page.url()})`);
+  record(THEIR_FORM.test(page.url()), `untouched: and lands on the other workspace's form (${page.url()})`);
 }
 
 /* ------------------------------------------------- half written, and asked */
@@ -157,7 +168,7 @@ if (await openForm(`${MARK} never filed`)) {
   record(await asking(), 'leave: asked again');
   await press('Leave');
   await page.waitForTimeout(1800);
-  record(THEIRS.test(page.url()), `leave: the switch went through (${page.url()})`);
+  record(THEIR_FORM.test(page.url()), `leave: the switch went through (${page.url()})`);
   record(
     (await held(WORKSPACE)).every((one) => !one.title.includes('never filed')) &&
       (await held(elsewhere.id)).length === 0,
@@ -172,7 +183,7 @@ if (await openForm(`${MARK} kept on the way out`)) {
   record(await asking(), 'save & leave: asked');
   await press('Save & Leave');
   await page.waitForTimeout(5000);
-  record(THEIRS.test(page.url()), `save & leave: the switch went through (${page.url()})`);
+  record(THEIR_FORM.test(page.url()), `save & leave: the switch went through (${page.url()})`);
   record(
     (await held(WORKSPACE)).some((one) => one.title.includes('kept on the way out')),
     'save & leave: and the issue was filed in the workspace it was written in',

@@ -65,9 +65,14 @@ const SCREENS = [
         query: 'query Models(',
         nothing: { data: { models: [] } },
         what: 'models in this workspace',
-        // One catalogue, two fields, so two lines say so and two say it failed.
-        notes: 2,
-        empty: ['No transcription model has been added yet.', 'No speech model has been added yet.'],
+        // One catalogue, three fields, so three lines say so and three say it
+        // failed: what hears, what speaks, and what draws.
+        notes: 3,
+        empty: [
+          'No transcription model has been added yet.',
+          'No speech model has been added yet.',
+          'No image model has been added yet.',
+        ],
       },
     ],
   },

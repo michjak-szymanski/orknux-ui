@@ -158,13 +158,31 @@ check(
   `the issue still read: ${side.replace(/\s+/g, ' ').slice(0, 120)}`,
 );
 
-// The button is gone while something is going: two people looking at the same
-// stalled issue must not put two agents on it.
-check(
-  (await page.locator('[data-testid="issue-start-ai"]').count()) === 0,
-  'the button is not offered a second time while a task is going',
-  'Start by AI was still offered while a task was already working on the issue',
-);
+/*
+ * The button is gone while something is going: two people looking at the same
+ * stalled issue must not put two agents on it.
+ *
+ * Asked only while the task really is going. The agent here is given a model
+ * that cannot answer, so the task fails - and on a machine quick enough it has
+ * already failed by the time this line runs, which is when the button is
+ * *supposed* to be back: a task that ended leaves the issue where it is, and
+ * starting another is the reader's to do. So the link says which of the two
+ * happened and the assertion follows it, rather than reading a correct page as
+ * a failure because the run was fast.
+ */
+if (said.startsWith('Working on it')) {
+  check(
+    (await page.locator('[data-testid="issue-start-ai"]').count()) === 0,
+    'the button is not offered a second time while a task is going',
+    'Start by AI was still offered while a task was already working on the issue',
+  );
+} else {
+  check(
+    (await page.locator('[data-testid="issue-start-ai"]').count()) === 1,
+    `the task ended before this line, and the button is back for another go ("${said}")`,
+    `the task ended ("${said}") and Start by AI did not come back`,
+  );
+}
 
 await page.screenshot({ path: shot('issue-start-by-ai-check.png'), fullPage: true });
 

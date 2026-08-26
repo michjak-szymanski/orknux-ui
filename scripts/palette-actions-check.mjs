@@ -12,7 +12,23 @@
  * it lands on the page that starts one. The last is the one that matters: a row
  * in a list is not a feature until it goes somewhere.
  */
+import { readFileSync } from 'node:fs';
+
 import { BASE, WORKSPACE, open, record, finish } from './suite/harness.mjs';
+
+/**
+ * The verbs, read off the one list the palette reads them off.
+ *
+ * Told apart from the destinations by name rather than by shape. It was "the
+ * label starts with Create" for as long as every action was a Create; the
+ * fourth one is called *Start a task*, which is a verb the palette draws with
+ * the same plus as the other three and this check counted as a page. Asking
+ * `navigation.ts` costs a file read and cannot go stale: a page that carries an
+ * `action` is an action here for the same reason it is one there.
+ */
+const VERBS = new Set(
+  [...readFileSync('src/navigation.ts', 'utf8').matchAll(/action: \{ label: t\('([^']+)'/g)].map((one) => one[1]),
+);
 
 const BOX = 'input[aria-label="Quick actions"]';
 
@@ -82,14 +98,21 @@ const create = resting.find((row) => row.label.toLowerCase() === 'create issue')
 record(resting.length > 0, `the palette offers ${resting.length} rows before anything is typed`);
 record(create !== undefined, 'Create issue is one of them, without having to know to type it');
 /*
- * The pages are still most of the list. There are three actions and a dozen
- * screens, so a resting palette that is all verbs would have taken away the
- * thing this box was built for.
+ * The pages have not been crowded out. A resting palette that is all verbs
+ * would have taken away the thing this box was built for.
+ *
+ * It read "more than half" when there were three actions and a dozen screens.
+ * There are five now - *Start a task* is the newest - and the resting list is
+ * ten rows with every action offered before any page, so five and five is what
+ * the design produces and the old wording made a correct palette fail. The
+ * property worth keeping is the one this measures: the verbs may not outnumber
+ * the places. A sixth action is what would trip it, which is the moment to
+ * decide whether ten rows is still the right number.
  */
-const destinations = resting.filter((row) => !row.label.toLowerCase().startsWith('create'));
+const destinations = resting.filter((row) => !VERBS.has(row.label));
 record(
-  destinations.length > resting.length / 2,
-  `the pages are still most of it (${destinations.length} of ${resting.length} rows)`,
+  destinations.length >= resting.length - destinations.length,
+  `the verbs have not crowded out the pages (${destinations.length} of ${resting.length} rows)`,
 );
 
 /*

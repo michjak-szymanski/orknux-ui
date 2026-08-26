@@ -217,9 +217,17 @@ async function shown(selector) {
       (node.textContent ?? '').replace(/\s+/g, ' ').trim(),
     );
     const picker = card?.querySelector('#workspace-memory-against') ?? null;
-    const save = [...(card?.querySelectorAll('button') ?? [])].find((node) =>
-      (node.textContent ?? '').trim().startsWith('Sav'),
-    );
+    /*
+     * The card's own save, by its whole name. Anything beginning "Sav" was the
+     * only save in either card until the workspace one grew a second control
+     * with a Save of its own - the turns a task may take - which is drawn above
+     * this one and is never disabled, so the refusal below read as a save that
+     * had stayed on. Both cards spell theirs the same way, listening or not.
+     */
+    const save = [...(card?.querySelectorAll('button') ?? [])].find((node) => {
+      const said = (node.textContent ?? '').trim();
+      return said === 'Save Changes' || said === 'Saving…';
+    });
     return {
       value: slider.value,
       disabled: slider.disabled,
@@ -345,7 +353,13 @@ async function drag(selector, to, past = false) {
 }
 
 async function save() {
-  await page.locator('section:has(#workspace-memory-share) button:has-text("Save")').click();
+  /*
+   * The card's own save, by its whole name. `has-text` is a substring, and the
+   * card grew a second control with a Save of its own - the turns a task may
+   * take - so "Save" now matches two buttons in this section and Playwright
+   * refuses to guess. The one this check means is the one under the slider.
+   */
+  await page.locator('section:has(#workspace-memory-share) button:text-is("Save Changes")').click();
   await page.waitForTimeout(2000);
 }
 

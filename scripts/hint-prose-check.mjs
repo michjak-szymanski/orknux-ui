@@ -207,6 +207,12 @@ const IN_THE_OPEN = [
     why: 'drawn only while the recorder is listening, which is the state the control is in. What each shortcut is for moved behind its own (?)',
   },
   {
+    file: 'src/pages/preferences/PreferencesPage.tsx',
+    says: 'would fire while typing. Hold Ctrl, Alt, Shift or Cmd with it',
+    because: 'status',
+    why: 'the other arm of the line above: what was just pressed cannot be a shortcut, said while the recorder is still listening for one that can. Four shortcuts are recorded the same way and draw the same sentence',
+  },
+  {
     file: 'src/pages/workspace/WorkspaceIssuePage.tsx',
     says: '. The next one is ready.',
     because: 'status',
@@ -387,6 +393,12 @@ const IN_THE_OPEN = [
     says: 'here, and the stored answer is the one in force.',
     because: 'status',
     why: 'which of the environment and the stored setting is winning right now, said only where they differ',
+  },
+  {
+    file: 'src/pages/admin/AdminSettingsPage.tsx',
+    says: 'and this switch agrees with it. What is stored here takes effect',
+    because: 'status',
+    why: "the other arm of the same line: the environment and the stored answer agree, and this is when a change to it starts counting. The scanner records whichever arm reads longest, so this one was invisible until it grew the sentence about the next scrape",
   },
 
   // ---- A reading of what a form is looking at ----------------------------

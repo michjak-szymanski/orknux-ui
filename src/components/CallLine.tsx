@@ -147,7 +147,7 @@ export function CallLine({ actor, content, result, failed = false, when, folded 
         <>
           <p className={styles.label}>{failed ? t('Could not be run') : t('Returned')}</p>
           {got.text.trim() === '' ? (
-            <p className={styles.note}>{t('It came back with nothing.')}</p>
+            <p className={styles.note}>{t('Came back with nothing.')}</p>
           ) : (
             <Folding text={got.text} what="what came back" />
           )}
