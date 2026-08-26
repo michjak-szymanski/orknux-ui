@@ -366,6 +366,14 @@ back. You do not have to reload it — the log is followed as it is written, and
 the block being written is the one that is open. Tool calls arrive folded, so a
 long run reads as a list of what was done rather than as a wall.
 
+You can also say something to a task while it is working. **Say something** on
+its page takes a message and the agent reads it at the top of its next turn, as
+the newest word on what you want — so a report being written as prose becomes a
+table because you said so half way through, rather than because you stopped the
+task and started another with a better prompt. It is not an interruption: a turn
+takes as long as it takes, and until the agent gets to your message the page says
+it has not been read.
+
 A task ends in one of four ways. It says it is **done**, and its summary is the
 last thing it writes. It **stops to ask** — a question, or permission for a
 capability — and waits for you rather than guessing; answer it and it carries on

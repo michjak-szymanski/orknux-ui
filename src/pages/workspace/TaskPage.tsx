@@ -11,6 +11,7 @@ import {
   fetchTask,
   openRequest,
   refuseTaskRequest,
+  sendTaskMessage,
   stopTask,
   TASK_STATUS_LABEL,
   watchTask,
@@ -104,6 +105,9 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
   const [answer, setAnswer] = useState('');
   const [deciding, setDeciding] = useState(false);
   const [decideError, setDecideError] = useState<string | null>(null);
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [watching, setWatching] = useState<TaskWatchState>('live');
 
   /**
@@ -171,6 +175,8 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
 
   const waiting = task === null ? null : openRequest(task);
   const over = task !== null && OVER.includes(task.status);
+  /** What has been said to it and not yet put in front of the agent. */
+  const unread = task === null ? [] : task.messages.filter((one) => one.readAt === null);
 
   async function decide(what: () => Promise<Task>) {
     if (deciding) return;
@@ -183,6 +189,34 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
       setDecideError(cause instanceof Error ? cause.message : t('That could not be done.'));
     } finally {
       setDeciding(false);
+    }
+  }
+
+  /**
+   * Says something to a task that nobody stopped.
+   *
+   * Its own handler rather than [decide]'s, and its own error beside it, for one
+   * reason: on a parked task both boxes are on screen at once. Sharing the
+   * refusal would print "that could not be done" under the question the agent
+   * asked when what failed was a message about something else entirely, and
+   * sharing the clearing would empty a half-typed answer.
+   *
+   * What was typed survives a refusal. Somebody whose message was refused
+   * because the task finished a second earlier has somewhere else to put those
+   * words, and retyping them is a second chance to lose them.
+   */
+  async function say() {
+    const words = message.trim();
+    if (sending || task === null || words === '') return;
+    setSending(true);
+    setSendError(null);
+    try {
+      setTask(await sendTaskMessage(task.id, words));
+      setMessage('');
+    } catch (cause: unknown) {
+      setSendError(cause instanceof Error ? cause.message : t('That could not be said.'));
+    } finally {
+      setSending(false);
     }
   }
 
@@ -379,6 +413,77 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
               {decideError !== null && (
                 <p className={styles.startError} role="alert">
                   {decideError}
+                </p>
+              )}
+            </section>
+          )}
+
+          {/*
+            Saying something to a task nobody stopped.
+
+            Under what it is waiting for and above what it is doing, which is
+            where it belongs in the order of the page: a parked task has one
+            thing somebody must decide and this is not it, and a message is
+            about the work below rather than about the prompt above.
+
+            Offered while the task is going and not afterwards, because there is
+            no next turn to read it on - the server refuses one either way, and
+            a box that takes words nothing will ever read is worse than no box.
+          */}
+          {!over && (
+            <section className={styles.card} data-testid="task-message">
+              <div className={styles.cardHead}>
+                <span className={styles.labelWithHint}>
+                  <span className={styles.label}>{t('Say something')}</span>
+                  <FieldHint label={t('Talking to a task while it works')}>
+                    {t('The agent reads this at the top of its next turn, as the newest word on what is wanted, and carries on from there — so it can change what is being produced without the task being stopped and started again. Nothing is interrupted: a message sent while the model is thinking waits for that turn to end.')}
+                  </FieldHint>
+                </span>
+              </div>
+              <div className={styles.askingRow}>
+                <input
+                  className={styles.answer}
+                  type="text"
+                  data-testid="task-message-box"
+                  placeholder={t('Change what it is doing…')}
+                  aria-label={t('Say something to the task')}
+                  value={message}
+                  onChange={(event) => setMessage(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') void say();
+                  }}
+                />
+                <button
+                  type="button"
+                  className={styles.approve}
+                  disabled={sending || message.trim() === ''}
+                  onClick={() => void say()}
+                >{t('Send')}</button>
+              </div>
+
+              {/*
+                What has been said and not yet read, which is the state of the
+                thing being looked at rather than an explanation of it. A
+                message is read at a turn boundary and a turn is minutes, so a
+                page that drew it as delivered the moment it was sent would be
+                telling somebody their correction had landed when it had not.
+                Once it is read it is in the log below, under their name, and
+                drops off here.
+              */}
+              {unread.length > 0 && (
+                <ul className={styles.pending} data-testid="task-message-pending">
+                  {unread.map((one) => (
+                    <li key={one.id} className={styles.pendingLine}>
+                      <span className={styles.pendingBody}>{one.body}</span>
+                      <span className={styles.pendingState}>{t('not read yet')}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {sendError !== null && (
+                <p className={styles.startError} role="alert">
+                  {sendError}
                 </p>
               )}
             </section>

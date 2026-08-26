@@ -1836,6 +1836,45 @@ export const TESTS = [
      */
   },
   {
+    name: 'task-message-check',
+    what: 'a message typed at a task while it works, read on the next turn, and the work finishing in the shape it asked for',
+    needs: ['workspace'],
+    ci: false,
+    /*
+     * Issue #280. The third thing a person can do to a task, after answering
+     * what it asked and stopping it: change what is wanted while the work is
+     * going on, without stopping it and starting a new one with a better
+     * prompt.
+     *
+     * `ci: false` for exactly the reason `task-live-check` next door is, and
+     * measured the same way: a model pointed at `.invalid` fails a task in
+     * forty milliseconds, so a check written against one would be typing into a
+     * page that had finished before it loaded. There would be no *while*, which
+     * is the whole of what this check is about.
+     * `scripts/suite/message-stub.py` is a model that spends twenty-four
+     * seconds on its first round and calls `task_done` on the round the message
+     * reaches it. It cannot be stubbed in the browser: what is being checked is
+     * that words typed into a page reach a model the *server* is talking to,
+     * and a stub in the page would be a check of the stub.
+     *
+     * Six assertions, and the last two are the ones that would catch a build
+     * that had recorded the message beautifully and never shown it to anybody.
+     * The message has to reach the *model* - the stub only ever finishes on a
+     * round that carries it, and says so in its summary - and the box has to be
+     * absent once the task is over, because a box that takes words nothing will
+     * ever read is worse than no box. In between, the page has to stop drawing
+     * the message as unread without reloading, which is what says the live view
+     * learnt about messages rather than only about statuses.
+     *
+     * Run it by hand:
+     *
+     *   python scripts/suite/message-stub.py 8199
+     *   node scripts/suite/run.mjs --only task-message-check
+     *
+     * Where the stub is, as the server reaches it, goes in ORKNUX_MESSAGE_STUB.
+     */
+  },
+  {
     name: 'issue-start-by-ai-check',
     what: 'Start by AI on an agent-assigned issue, and the link from it to the task',
     needs: ['workspace'],

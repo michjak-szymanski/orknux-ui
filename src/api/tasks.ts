@@ -41,6 +41,29 @@ export interface TaskRequest {
   decidedAt: string | null;
 }
 
+/**
+ * Something a person said to a task while it was working.
+ *
+ * The other direction from a request. A request is the agent stopping to ask and
+ * somebody answering; this is nobody having asked - the work is going, and
+ * whoever is watching it wants it shaped differently.
+ */
+export interface TaskMessage {
+  id: string;
+  saidBy: string;
+  body: string;
+  sentAt: string;
+  /**
+   * When the agent was shown it, and null while it has not been.
+   *
+   * The field this page has to draw. A message is read at the top of the next
+   * turn, so one sent while the model is mid-turn sits unread for as long as
+   * that turn takes - and telling somebody their correction had landed when it
+   * had not is the one thing this box must not do.
+   */
+  readAt: string | null;
+}
+
 export interface TaskGrant {
   id: string;
   capability: TaskCapability;
@@ -83,6 +106,7 @@ export interface Task {
   endedBecause: string | null;
   requests: TaskRequest[];
   grants: TaskGrant[];
+  messages: TaskMessage[];
 }
 
 export interface TaskPage {
@@ -158,12 +182,15 @@ const REQUEST_FIELDS =
 
 const GRANT_FIELDS = 'id capability subject grantedBy grantedAt';
 
+const MESSAGE_FIELDS = 'id saidBy body sentAt readAt';
+
 const TASK_FIELDS = `
   id workspaceId title prompt agentId agentName modelId status sessionId issueId
   createdBy createdAt startedAt finishedAt
   turnsSpent turnsAllowed workedSeconds secondsAllowed waitingUntil outcome endedBecause
   requests { ${REQUEST_FIELDS} }
   grants { ${GRANT_FIELDS} }
+  messages { ${MESSAGE_FIELDS} }
 `;
 
 export async function fetchTasks(
@@ -279,6 +306,21 @@ export async function answerTaskRequest(id: string, said: string): Promise<Task>
     { id, said },
   );
   return data.answerTaskRequest;
+}
+
+/**
+ * Says something to a task that is still working.
+ *
+ * Not instant, and the returned task says so: the agent reads it at the top of
+ * its next turn, so the message comes back with `readAt` null until that turn
+ * begins. Refused on a task that has already ended.
+ */
+export async function sendTaskMessage(id: string, said: string): Promise<Task> {
+  const data = await graphql<{ sendTaskMessage: Task }>(
+    `mutation ($id: ID!, $said: String!) { sendTaskMessage(id: $id, said: $said) { ${TASK_FIELDS} } }`,
+    { id, said },
+  );
+  return data.sendTaskMessage;
 }
 
 export async function stopTask(id: string): Promise<Task> {
