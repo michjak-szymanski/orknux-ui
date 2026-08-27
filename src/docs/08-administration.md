@@ -597,7 +597,12 @@ two hours idle and its directory removed - which also catches the ones a
 previous process would have swept had it lived. A command that has not finished
 in ten minutes is stopped and says so, and says plainly that the process may
 still be running, because closing a channel does not kill one. Output past
-256 KiB is cut and says so. A non-zero exit is a result rather than a failure:
+256 KiB has its **middle** removed rather than its end - the beginning and the
+end both survive, and a line in the gap says how many bytes went. That way round
+because the answer is at one end or the other and almost never in between: a
+build prints its banners and its downloads first and `cannot find symbol` last,
+and an assistant handed only the beginning cannot tell a build that failed from
+one whose output stopped. A non-zero exit is a result rather than a failure:
 `grep` finding nothing exits 1, and an assistant told "that failed" would
 apologise for a search that worked.
 
