@@ -1205,10 +1205,15 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         </div>
 
         {/*
-          What draws a picture in a chat. The third of the trio, and only image
-          models are offered for the reason the other two give: a chat model
-          handed a description writes about the picture rather than drawing one,
-          and there is no endpoint on it that would.
+          What draws a picture in a chat or a task. The third of the trio, and
+          only image models are offered for the reason the other two give: a chat
+          model handed a description writes about the picture rather than drawing
+          one, and there is no endpoint on it that would.
+
+          It used to arm a button beside the chat composer. #294 replaced that
+          with a tool an agent calls, so what this now decides is whether an
+          agent is offered the tool at all - where there is nothing to draw with,
+          no model is told it could have drawn.
         */}
         <div className={styles.field}>
           <span className={styles.labelWithHint}>
@@ -1216,7 +1221,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
               {t('Text-to-image Model')}
             </label>
             <FieldHint label={t('Text-to-image Model')}>
-              {t('A picture button appears in the chat composer, and what is typed there is drawn rather than answered. The picture is kept as an attachment on the chat, so it is still there when the chat is opened again. OpenAI, Azure OpenAI and any server speaking their image API can draw; Anthropic and Ollama have no image endpoint and are refused with a sentence rather than called.')}
+              {t('An agent answering a chat, and one working a task, can draw a picture when asked for one. The picture is kept as an attachment, so it is still there when the chat is opened again. Choosing nothing here means no agent is offered the tool at all. OpenAI, Azure OpenAI and any server speaking their image API can draw; Anthropic and Ollama have no image endpoint and are refused with a sentence rather than called.')}
             </FieldHint>
           </span>
           <div className={styles.inputWrapper}>
@@ -1227,7 +1232,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
               onChange={(event) => void draw(event.target.value)}
               disabled={workspace === null}
             >
-              <option value="">{t('None — the picture button is not offered')}</option>
+              <option value="">{t('None — no agent is offered the drawing tool')}</option>
               {models
                 .filter((model) => model.kind === 'IMAGE')
                 .map((model) => (
