@@ -139,6 +139,18 @@ const readPage = () =>
       live: block?.getAttribute('data-live') ?? '',
       open: block?.querySelector('button')?.getAttribute('aria-expanded') ?? '',
       elapsed: block?.querySelector('[data-testid="thinking-elapsed"]')?.textContent?.trim() ?? '',
+      label: block?.querySelector('button')?.textContent?.trim() ?? '',
+      /*
+        Whether the round's answer is on the page yet.
+
+        Asked as "is there an AGENT line" rather than off the line count,
+        because that count is not a count of lines: a spoken line draws a
+        `data-kind` on its row and another on the word that says who spoke, so
+        every one of them counts twice. It is the right number to compare with
+        itself, which is all the growth assertions do with it, and the wrong
+        number to compare with a threshold.
+      */
+      answered: document.querySelector('[data-testid="task-log"] [data-kind="AGENT"]') !== null,
       reasoning: block?.querySelector('pre')?.textContent?.length ?? 0,
     };
   });
@@ -293,9 +305,39 @@ let ended = null;
  */
 let grewWhileGoing = false;
 
+/**
+ * And whether the reasoning stopped before the answer was written.
+ *
+ * Issue #290, noted in this loop rather than waited for in one of its own so
+ * that it costs the check no time and cannot eat the window the assertion above
+ * is measuring.
+ *
+ * Nothing used to close a round's reasoning except a tool call or the end of
+ * the turn, so a model that thought for ten seconds and then wrote for two
+ * minutes left the block open for the whole two minutes: counting up, labelled
+ * *Thinking*, and holding the reasoning wherever the last flush had left it -
+ * which is a sentence that stops in the middle. It was read as the live view
+ * having stopped delivering; it was the record having nothing more to deliver.
+ *
+ * The discriminating condition is that the answer is not on the page yet. A
+ * block closed only by the end of the turn is closed *after* the answer has
+ * been written down, so this can never be true of one; `reasoning-stub.py`
+ * writes its answer over ten seconds so there is a stretch where it can be.
+ */
+let settledBeforeTheAnswer = null;
+
 for (let look = 0; look < 600 && ended === null; look += 1) {
   const held = await readPage();
   if (held.lines > drawnAtFirst && !OVER.includes(held.state)) grewWhileGoing = true;
+  if (
+    settledBeforeTheAnswer === null &&
+    held.thinking &&
+    held.live === 'false' &&
+    !held.answered &&
+    !OVER.includes(held.state)
+  ) {
+    settledBeforeTheAnswer = held;
+  }
   if (OVER.includes(held.state)) {
     ended = held.state;
     break;
@@ -324,6 +366,15 @@ check(
   grewWhileGoing,
   `a line arrived on the open page while the task was still running: ${drawnAtFirst} drawn, then more before it ended`,
   `nothing arrived while the task was running: the page held ${drawnAtFirst} lines throughout`,
+);
+
+check(
+  settledBeforeTheAnswer !== null,
+  `the thinking stopped saying it was arriving before the answer was written: ` +
+    `${JSON.stringify(settledBeforeTheAnswer?.label ?? '')} on a task still reading ` +
+    `"${settledBeforeTheAnswer?.state ?? ''}"`,
+  'the block went on claiming to be arriving for the whole of the answer and stopped only once the ' +
+    'turn was over, which is what somebody watching reads as the page having frozen',
 );
 
 check(
