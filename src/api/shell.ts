@@ -33,6 +33,20 @@ export interface Shell {
    */
   hostKey: string | null;
   enabled: boolean;
+  /**
+   * How long one command on this machine may run, in seconds, or null when it
+   * has none of its own and runs on `defaultCommandTimeoutSeconds`.
+   */
+  commandTimeoutSeconds: number | null;
+  /** How much of a command's output this machine keeps, per stream, in bytes. */
+  maxOutputBytes: number | null;
+  /**
+   * What a shell with no limit of its own runs on. From the server for the same
+   * reason `account` is: the number lives in that installation's configuration
+   * and nothing here could work it out.
+   */
+  defaultCommandTimeoutSeconds: number;
+  defaultMaxOutputBytes: number;
   status: ShellStatus;
   lastCheckMessage: string | null;
   lastCheckedAt: string | null;
@@ -52,6 +66,13 @@ export interface ShellInput {
   privateKey?: string | null;
   keyPassphrase?: string | null;
   enabled?: boolean;
+  /**
+   * Null or absent means "use the installation's own limit" - the same rule as
+   * `username` and not the key's, because a timeout is not a secret and the
+   * form always has the current value to send back.
+   */
+  commandTimeoutSeconds?: number | null;
+  maxOutputBytes?: number | null;
   /** Ticked after a machine is rebuilt; the only way past a key mismatch. */
   forgetHostKey?: boolean;
 }
@@ -72,6 +93,7 @@ export function shellStatusLabel(status: ShellStatus): string {
 
 const SHELL_FIELDS =
   'id name host port username account privateKeySet passphraseSet hostKey enabled status ' +
+  'commandTimeoutSeconds maxOutputBytes defaultCommandTimeoutSeconds defaultMaxOutputBytes ' +
   'lastCheckMessage lastCheckedAt createdAt lastModifiedAt';
 
 const SHELLS_QUERY = `

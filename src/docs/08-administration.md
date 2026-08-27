@@ -595,11 +595,19 @@ directory on the far side, and each command opens its own connection, so a
 restart loses a socket and nothing else. A session nobody closed is swept after
 two hours idle and its directory removed - which also catches the ones a
 previous process would have swept had it lived. A command that has not finished
-in a minute is stopped and says so, and says plainly that the process may still
-be running, because closing a channel does not kill one. Output past 64 KiB is
-cut and says so. A non-zero exit is a result rather than a failure: `grep`
-finding nothing exits 1, and an assistant told "that failed" would apologise for
-a search that worked.
+in ten minutes is stopped and says so, and says plainly that the process may
+still be running, because closing a channel does not kill one. Output past
+256 KiB is cut and says so. A non-zero exit is a result rather than a failure:
+`grep` finding nothing exits 1, and an assistant told "that failed" would
+apologise for a search that worked.
+
+Those two numbers are the installation's, and a machine can be given its own
+under **Limits** on its page. A box built to compile things wants longer and
+more than a switch that answers `show interfaces` does - the first build on a
+machine that has cached nothing is minutes rather than seconds, and a build that
+fails says a great deal more than one that works. Left empty, a machine runs on
+whatever the installation says, so changing that afterwards moves every machine
+that never asked for anything different.
 
 **Every command an agent runs is in the workspace's audit log**, under the
 agent's own name, with what it exited with.

@@ -1784,6 +1784,36 @@ export const TESTS = [
     // and ORKNUX_BARE_WORKSPACE.
   },
 
+  {
+    name: 'shell-limits-check',
+    what: "a machine's own command timeout and output allowance, typed on its page and emptied again",
+    needs: ['session'],
+    /*
+     * Both numbers governed every command an agent ran and both lived only in
+     * configuration - so an installation that wanted a build machine allowed
+     * more than a minute had to be redeployed to say so, and the shipped minute
+     * was a failure the agent could not have caused and could not fix.
+     *
+     * The assertion that earns it a place is the emptying. An empty box means
+     * "whatever the installation says" and has to store null, because that is
+     * what makes changing the installation's number afterwards still move every
+     * machine that never asked for anything else - and both of the obvious
+     * mistakes pass a screenshot. A form that sent absent for an empty box
+     * would leave the old number stored, because absent means "unchanged" for
+     * the private key two fields above it; a form that sent zero would store a
+     * timeout no command survives. So the value is read back off the server
+     * rather than off the page.
+     *
+     * The other half no screen shows: the output box is kibibytes and the
+     * column is bytes, and a page that stored what it displayed would cut a
+     * build machine's allowance to a kilobyte while showing 1024 either way.
+     *
+     * 'session' rather than 'workspace' - a shell belongs to the installation
+     * and not to a team. It makes one pointed at 127.0.0.1 with no key, which
+     * nothing ever connects to, and removes it at both ends of the run.
+     */
+  },
+
   // --- tasks -----------------------------------------------------------------
   {
     name: 'task-check',
