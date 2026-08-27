@@ -718,6 +718,13 @@ export const PL: Record<string, string> = {
   "Consult this rule earlier": "Sprawdzaj tę regułę wcześniej",
   "Consult this rule later": "Sprawdzaj tę regułę później",
   "Forget the host key": "Zapomnij klucz hosta",
+  // --- a shell's own limits -----------------------------------------------
+  "Limits": "Ograniczenia",
+  "Command timeout (seconds)": "Limit czasu polecenia (sekundy)",
+  "Output kept (KiB)": "Zachowywane wyjście (KiB)",
+  "Installation default": "Domyślna wartość instalacji",
+  "How long one command may run before its channel is closed and it comes back as timed out. A first build on a machine that has cached nothing takes minutes, not seconds. Leave it empty to use the limit this installation sets.": "Jak długo jedno polecenie może działać, zanim jego kanał zostanie zamknięty, a odpowiedź powie, że upłynął limit czasu. Pierwsza kompilacja na maszynie, która niczego nie ma w pamięci podręcznej, trwa minuty, nie sekundy. Zostaw puste, aby użyć limitu tej instalacji.",
+  "How much of what a command prints is kept, per stream, before the rest is dropped and the answer says it was cut. Everything kept is read by a model, so a machine that only ever reports on itself wants less than one that builds. Leave it empty to use the limit this installation sets.": "Ile z tego, co wypisuje polecenie, jest zachowywane dla każdego strumienia, zanim reszta zostanie odrzucona, a odpowiedź powie, że została ucięta. Wszystko, co zachowane, czyta model, więc maszyna, która tylko raportuje o sobie, potrzebuje mniej niż taka, która kompiluje. Zostaw puste, aby użyć limitu tej instalacji.",
   "Remove the stored key": "Usuń zapisany klucz",
   "Remove the stored password": "Usuń zapisane hasło",
   "Also add to existing workspaces": "Dodaj też do istniejących przestrzeni roboczych",

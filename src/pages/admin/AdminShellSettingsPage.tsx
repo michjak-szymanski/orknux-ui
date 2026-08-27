@@ -19,6 +19,34 @@ export interface AdminShellSettingsPageProps {
   onSignOut?: () => void;
 }
 
+/** Bytes to a kibibyte. The box is in KiB; the wire is in bytes. */
+const KIB = 1024;
+
+/*
+ * What the server will take, so the form can refuse the same numbers rather
+ * than posting them and rendering the refusal. The server is still the one that
+ * decides - these are the bounds written into ShellService, repeated here only
+ * so that a spinner has ends and a typo is caught under the field it was made
+ * in.
+ */
+const MAX_TIMEOUT_SECONDS = 86_400;
+const MAX_OUTPUT_KIB = 16 * 1024;
+
+/**
+ * Whether a limit box holds something this can send.
+ *
+ * Empty passes, and that is the point of the function: an empty limit is not an
+ * unfinished form, it is somebody saying "whatever this installation says".
+ * Anything else has to be a whole number of seconds or kibibytes within range,
+ * because a fraction of a second and a hundredth of a kibibyte are not things a
+ * timeout or a buffer can be.
+ */
+function whole(text: string, most: number): boolean {
+  if (text.trim() === '') return true;
+  const value = Number(text);
+  return Number.isInteger(value) && value >= 1 && value <= most;
+}
+
 /**
  * One machine: written here for the first time, or edited here afterwards.
  *
@@ -60,6 +88,15 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
   const [passphrase, setPassphrase] = useState('');
   const [clearKey, setClearKey] = useState(false);
   const [forgetHostKey, setForgetHostKey] = useState(false);
+  /*
+   * Both limits are held as the text in the box rather than as numbers, because
+   * empty is a value here and not a missing one: it is how somebody says "use
+   * whatever this installation says", and it is the only way they could say it.
+   * A number state would have to spell that as null and then spell null back as
+   * an empty box, which is the same thing twice with a chance to disagree.
+   */
+  const [commandTimeout, setCommandTimeout] = useState('');
+  const [outputKept, setOutputKept] = useState('');
 
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +118,11 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
         setHost(found.host);
         setPort(String(found.port));
         setUsername(found.username ?? '');
+        setCommandTimeout(found.commandTimeoutSeconds === null ? '' : String(found.commandTimeoutSeconds));
+        // Kibibytes in the box and bytes on the wire. Nothing here ever writes
+        // a byte count that is not a whole number of them, so the trip back is
+        // exact rather than rounded to something nobody typed.
+        setOutputKept(found.maxOutputBytes === null ? '' : String(Math.round(found.maxOutputBytes / KIB)));
       })
       .catch((cause: unknown) => {
         if (current) setLoadError(cause instanceof Error ? cause.message : t('Could not load the shell.'));
@@ -101,7 +143,10 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
     host.trim() !== '' &&
     Number.isInteger(portNumber) &&
     portNumber > 0 &&
-    portNumber < 65536;
+    portNumber < 65536 &&
+    // Empty is a valid answer for either limit; a number that is not one is not.
+    whole(commandTimeout, MAX_TIMEOUT_SECONDS) &&
+    whole(outputKept, MAX_OUTPUT_KIB);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -129,6 +174,15 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
          * account, so clearing one is sayable.
          */
         username: username.trim(),
+        /*
+         * Null rather than left out when the box is empty, and it means the
+         * installation's own limit. Absent would mean the same thing to the
+         * server - unlike the key below, where absent has to keep meaning
+         * "unchanged" - but saying it plainly is what makes clearing one
+         * something the screen actually did rather than something it forgot.
+         */
+        commandTimeoutSeconds: commandTimeout.trim() === '' ? null : Number(commandTimeout),
+        maxOutputBytes: outputKept.trim() === '' ? null : Number(outputKept) * KIB,
         ...(key === undefined ? {} : { privateKey: key }),
         ...(secret === undefined ? {} : { keyPassphrase: secret }),
         ...(forgetHostKey ? { forgetHostKey: true } : {}),
@@ -388,6 +442,72 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
                 </FieldHint>
               </span>
             )}
+          </section>
+
+          {/*
+            The two numbers that decide what an agent can do here, and they used
+            to live only in this installation's configuration. A container built
+            to compile things and a router that answers `show interfaces` want
+            opposite answers to both, so they are asked per machine - and an
+            empty box keeps meaning what the installation says, which is what
+            makes changing that number afterwards move every machine that never
+            asked for anything else.
+          */}
+          <section className={styles.card}>
+            <h2 className={styles.cardTitle}>{t('Limits')}</h2>
+            <div className={styles.divider} />
+
+            <div className={styles.fieldRow}>
+              <div className={styles.field}>
+                <span className={styles.labelWithHint}>
+                  <label className={styles.label} htmlFor="shell-timeout">
+                    {t('Command timeout (seconds)')}
+                  </label>
+                  <FieldHint label={t('Command timeout (seconds)')}>
+                    {t('How long one command may run before its channel is closed and it comes back as timed out. A first build on a machine that has cached nothing takes minutes, not seconds. Leave it empty to use the limit this installation sets.')}
+                  </FieldHint>
+                </span>
+                <input
+                  id="shell-timeout"
+                  name="shellCommandTimeout"
+                  className={styles.input}
+                  type="number"
+                  min={1}
+                  max={MAX_TIMEOUT_SECONDS}
+                  placeholder={
+                    shell === null ? t('Installation default') : String(shell.defaultCommandTimeoutSeconds)
+                  }
+                  value={commandTimeout}
+                  onChange={(event) => setCommandTimeout(event.target.value)}
+                />
+              </div>
+
+              <div className={styles.field}>
+                <span className={styles.labelWithHint}>
+                  <label className={styles.label} htmlFor="shell-output">
+                    {t('Output kept (KiB)')}
+                  </label>
+                  <FieldHint label={t('Output kept (KiB)')}>
+                    {t('How much of what a command prints is kept, per stream, before the rest is dropped and the answer says it was cut. Everything kept is read by a model, so a machine that only ever reports on itself wants less than one that builds. Leave it empty to use the limit this installation sets.')}
+                  </FieldHint>
+                </span>
+                <input
+                  id="shell-output"
+                  name="shellMaxOutput"
+                  className={styles.input}
+                  type="number"
+                  min={1}
+                  max={MAX_OUTPUT_KIB}
+                  placeholder={
+                    shell === null
+                      ? t('Installation default')
+                      : String(Math.round(shell.defaultMaxOutputBytes / KIB))
+                  }
+                  value={outputKept}
+                  onChange={(event) => setOutputKept(event.target.value)}
+                />
+              </div>
+            </div>
           </section>
 
           <div className={styles.footer}>
