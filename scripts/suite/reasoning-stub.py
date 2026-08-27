@@ -45,6 +45,16 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 THINK_SECONDS = 12.0
 THINK_FRAMES = 24
 
+# And how long the first round spends *writing*, once it has stopped thinking.
+#
+# The stretch a model spends composing a long answer is the one issue #290 was
+# reported from: a task asked for a thousand words thinks for a few seconds and
+# then writes for minutes, and for the whole of that the reasoning is over and
+# nothing has been said yet. Written in one frame, as this was, that stretch has
+# no duration at all and the check below could not have looked at it.
+WRITE_SECONDS = 10.0
+WRITE_FRAMES = 20
+
 REASONING = (
     "Let me work out what this task is asking for. It wants a report of what "
     "happened last week, so the first thing to do is find out which runs there "
@@ -103,9 +113,13 @@ class Thinks(BaseHTTPRequestHandler):
                 },
             }]}}]})
         else:
-            self.frame({"choices": [{"delta": {
-                "content": "I have read last week's runs and three of them failed.",
-            }}]})
+            # Written a piece at a time, over seconds, with no more reasoning at
+            # all - which is the shape that catches a thinking block still
+            # claiming to be arriving while the model has moved on to answering.
+            said = "I have read last week's runs and three of them failed. " * 8
+            for piece in pieces(said, WRITE_FRAMES):
+                self.frame({"choices": [{"delta": {"content": piece}}]})
+                time.sleep(WRITE_SECONDS / WRITE_FRAMES)
 
         self.frame({"choices": [{"delta": {}}], "usage": {"prompt_tokens": 40, "completion_tokens": 20}})
         self.write("data: [DONE]\n\n")
