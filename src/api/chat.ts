@@ -153,27 +153,6 @@ export interface ChatAnswer extends ChatSpend {
   answer: ChatMessage;
 }
 
-/**
- * What was drawn, and what it cost.
- *
- * Not a [ChatSpend]: an image model reports no tokens, so the two counts on that
- * would be a pair of noughts that read as "the provider charged for nothing"
- * rather than "there is nothing of that kind to report". What it does have is a
- * price per picture, and `cost` is null where the model carries none — nothing
- * recorded is not nothing spent.
- */
-export interface ChatPicture {
-  /** The attachment the picture was filed as; `/api/attachments/{id}` serves it. */
-  attachmentId: string;
-  /** What was asked for, trimmed. */
-  prompt: string;
-  /** The line written into the chat as the answer: a markdown image. */
-  said: string;
-  /** How long the provider took to draw it. */
-  millis: number;
-  cost: number | null;
-}
-
 const SESSION_FIELDS =
   'id workspaceId title pinned modelId modelName createdAt lastMessageAt agentId agentName llmSessionId ' +
   'spentInputTokens spentOutputTokens spentPictures';
@@ -306,26 +285,6 @@ export interface ChatCall {
   result: string | null;
   /** Whether the tool could not be run at all. Meaningless while running. */
   failed: boolean;
-}
-
-/**
- * Draws a picture from a description, and puts it in the chat.
- *
- * A door of its own rather than a flag on the send above, because it is a
- * different model at a different endpoint. What comes back is the id of the
- * attachment the picture was filed as; the chat is re-read afterwards, since the
- * exchange the server wrote into the history is the record of it.
- */
-export async function drawChatPicture(chatId: string, prompt: string): Promise<ChatPicture> {
-  const data = await graphql<{ drawChatPicture: ChatPicture }>(
-    `mutation DrawChatPicture($chatId: ID!, $prompt: String!) {
-       drawChatPicture(chatId: $chatId, prompt: $prompt) {
-         attachmentId prompt said millis cost
-       }
-     }`,
-    { chatId, prompt },
-  );
-  return data.drawChatPicture;
 }
 
 /** What a streaming send reports as it goes. */

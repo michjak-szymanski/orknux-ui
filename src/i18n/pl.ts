@@ -1863,17 +1863,11 @@ export const PL: Record<string, string> = {
   "for": "przez",
 
   // --- drawing a picture -------------------------------------------------------
-  "Draw": "Narysuj",
-  "Drawing…": "Rysowanie…",
-  "Draw a picture instead": "Zamiast tego narysuj obraz",
-  "Send this as a message": "Wyślij to jako wiadomość",
-  "Describe a picture to draw...": "Opisz obraz do narysowania...",
-  "The picture could not be drawn.": "Nie udało się narysować obrazu.",
   "This picture is gone.": "Tego obrazu już nie ma.",
   "Text-to-image Model": "Model tekstu na obraz",
-  "None — the picture button is not offered": "Brak — przycisk obrazu nie jest oferowany",
+  "None — no agent is offered the drawing tool": "Brak — żaden agent nie dostaje narzędzia do rysowania",
   "No image model has been added yet. Add one under Models, pointing at whatever draws.": "Nie dodano jeszcze żadnego modelu obrazu. Dodaj go w Modelach, wskazując to, co rysuje.",
-  "A picture button appears in the chat composer, and what is typed there is drawn rather than answered. The picture is kept as an attachment on the chat, so it is still there when the chat is opened again. OpenAI, Azure OpenAI and any server speaking their image API can draw; Anthropic and Ollama have no image endpoint and are refused with a sentence rather than called.": "W polu wiadomości czatu pojawia się przycisk obrazu, a to, co się w nim wpisze, zostaje narysowane zamiast doczekać się odpowiedzi. Obraz przechowywany jest jako załącznik czatu, więc jest tam nadal po ponownym otwarciu rozmowy. Rysować potrafią OpenAI, Azure OpenAI i każdy serwer mówiący ich API obrazów; Anthropic i Ollama nie mają punktu końcowego obrazów i są odrzucane zdaniem, a nie wywoływane.",
+  "An agent answering a chat, and one working a task, can draw a picture when asked for one. The picture is kept as an attachment, so it is still there when the chat is opened again. Choosing nothing here means no agent is offered the tool at all. OpenAI, Azure OpenAI and any server speaking their image API can draw; Anthropic and Ollama have no image endpoint and are refused with a sentence rather than called.": "Agent odpowiadający w czacie i agent pracujący nad zadaniem mogą narysować obraz, gdy ktoś o niego poprosi. Obraz przechowywany jest jako załącznik, więc jest tam nadal po ponownym otwarciu rozmowy. Nic tu nie wybrane oznacza, że żaden agent nie dostaje tego narzędzia. Rysować potrafią OpenAI, Azure OpenAI i każdy serwer mówiący ich API obrazów; Anthropic i Ollama nie mają punktu końcowego obrazów i są odrzucane zdaniem, a nie wywoływane.",
 
   // --- what a picture costs ------------------------------------------------------
   "Price": "Cena",
