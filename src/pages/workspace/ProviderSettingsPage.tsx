@@ -41,6 +41,11 @@ const PROVIDER_TYPES: ProviderType[] = [
 ];
 
 /** The versions Azure OpenAI is commonly pinned to; the field still accepts any. */
+// Offered, not imposed. Azure ships a new API version every few months and a
+// model released after this list was written is only reachable on one that is
+// not in it - so these are suggestions on a field that takes anything, and the
+// provider column has always been free text. A closed list here was the whole
+// reason a new deployment answered 404 with no way to say otherwise.
 const API_VERSIONS = ['2024-06-01', '2024-08-01-preview', '2024-10-21', '2025-01-01-preview'];
 
 const DEFAULT_SCOPE = 'https://cognitiveservices.azure.com/.default';
@@ -462,21 +467,20 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
                   <label className={styles.label} htmlFor="api-version">
                     API Version <span className={styles.required}>*</span>
                   </label>
-                  <div className={styles.selectWrapper}>
-                    <select
-                      id="api-version"
-                      className={`${styles.input} ${styles.select}`}
-                      value={apiVersion}
-                      onChange={(event) => setApiVersion(event.target.value)}
-                    >
-                      {API_VERSIONS.map((version) => (
-                        <option key={version} value={version}>
-                          {version}
-                        </option>
-                      ))}
-                    </select>
-                    <img className={styles.chevron} src={chevronDown12Icon} alt="" width={12} height={12} />
-                  </div>
+                  <input
+                    id="api-version"
+                    className={`${styles.input} ${styles.inputMono}`}
+                    list="api-versions"
+                    value={apiVersion}
+                    onChange={(event) => setApiVersion(event.target.value)}
+                    placeholder={API_VERSIONS[API_VERSIONS.length - 1]}
+                    required
+                  />
+                  <datalist id="api-versions">
+                    {API_VERSIONS.map((version) => (
+                      <option key={version} value={version} />
+                    ))}
+                  </datalist>
                 </div>
               )}
             </div>
