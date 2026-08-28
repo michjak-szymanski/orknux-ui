@@ -45,10 +45,35 @@ export function loadWorkspaces(size: number): Promise<Workspace[]> {
   return pending;
 }
 
+/** Told when the list changes, so a selector already on screen can catch up. */
+type Listener = () => void;
+
+const listeners = new Set<Listener>();
+
+/**
+ * Asks to be told when the list changes, and hands back the way to stop asking.
+ *
+ * The cache alone was not enough. Dropping it makes the *next* mount fetch
+ * again, and the case that matters has no next mount: the admin screen creates
+ * a workspace without navigating anywhere, so the selector that is already on
+ * screen kept the list it fetched when the page opened — which, on the very
+ * first workspace, was empty. The selector draws nothing when its list holds no
+ * workspace matching the one selected, so creating the first workspace left the
+ * box missing until somebody reloaded the tab.
+ */
+export function onWorkspacesChanged(listener: Listener): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
 /**
  * Drops the cache, for when the list is known to have changed — a workspace
- * created, renamed or deleted. The next mount fetches again.
+ * created, renamed or deleted. The next mount fetches again, and anything
+ * already mounted is told to.
  */
 export function forgetWorkspaces(): void {
   cached = null;
+  listeners.forEach((listener) => listener());
 }

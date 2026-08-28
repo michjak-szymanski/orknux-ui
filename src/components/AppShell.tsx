@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import type { Workspace } from '../api/workspaces';
-import { cachedWorkspaces, loadWorkspaces } from '../session/workspaces';
+import { cachedWorkspaces, loadWorkspaces, onWorkspacesChanged } from '../session/workspaces';
 import bookIcon from '../assets/book.svg';
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
 import doorOpenIcon from '../assets/door-open.svg';
@@ -594,11 +594,19 @@ function WorkspaceSwitcher({ workspacePath }: { workspacePath?: string }) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>(() => cachedWorkspaces() ?? []);
 
   useEffect(() => {
-    loadWorkspaces(WORKSPACE_LOOKUP)
-      .then(setWorkspaces)
-      // A list that cannot be fetched is a selector that is not drawn, not an
-      // error over somebody's page.
-      .catch(() => undefined);
+    const read = () =>
+      loadWorkspaces(WORKSPACE_LOOKUP)
+        .then(setWorkspaces)
+        // A list that cannot be fetched is a selector that is not drawn, not an
+        // error over somebody's page.
+        .catch(() => undefined);
+
+    read();
+    // And again whenever the list is known to have changed. A workspace created
+    // from the admin screen navigates nowhere, so without this the selector
+    // keeps whatever it fetched when the page opened - on the first workspace,
+    // nothing, which is a selector that never appears.
+    return onWorkspacesChanged(read);
   }, []);
 
   const selectedId = workspacePath?.split('/').pop() ?? '';
