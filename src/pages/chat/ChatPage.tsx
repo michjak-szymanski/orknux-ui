@@ -1109,7 +1109,7 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
    * `at`. Matched rather than appended blind, because a round may make several
    * calls and nothing promises the first one to answer is the first one made.
    */
-  function watchWorking(): Pick<ChatStreamHandlers, 'onThinking' | 'onCall' | 'onCalled'> {
+  function watchWorking(): Pick<ChatStreamHandlers, 'onThinking' | 'onDrew' | 'onCall' | 'onCalled'> {
     return {
       onThinking: (piece) => {
         // Mirrored into a ref as well as into state, because `onDone` has to
@@ -1118,6 +1118,28 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
         thinkingSoFar.current += piece;
         setWorking((held) => ({ ...held, thinking: held.thinking + piece }));
       },
+      /*
+       * A drawn picture is put in front of the answer being written, because
+       * that is where the server put it: the thread holds an assistant turn
+       * with the markdown, written the moment the picture was drawn. Inserted
+       * before the message still being streamed so that a reload shows the same
+       * order it was shown in live - the picture, then what the model said
+       * about it.
+       */
+      onDrew: (markdown) =>
+        setMessages((present) => {
+          const at = present.length - 1;
+          const drawn = {
+            role: 'assistant' as const,
+            content: markdown,
+            actor: null,
+            takes: [],
+            thinking: null,
+            thinkingMillis: null,
+          };
+          if (at < 0) return [...present, drawn];
+          return [...present.slice(0, at), drawn, present[at]];
+        }),
       onCall: (call) =>
         setWorking((held) => ({ ...held, calls: [...held.calls, { ...call, result: null, failed: false }] })),
       onCalled: (answer) =>

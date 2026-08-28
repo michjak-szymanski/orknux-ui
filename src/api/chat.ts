@@ -305,6 +305,15 @@ export interface ChatStreamHandlers {
    */
   onThinking: (text: string) => void;
   /** A lookup, the moment the agent makes it and before its tool has run. */
+  /**
+   * A picture the round drew, as the markdown that shows it.
+   *
+   * Its own frame rather than part of the answer: the picture is written into
+   * the thread the moment it is drawn, and the model is told not to repeat the
+   * link - so without this the chat showed a round that talked about a picture
+   * and did not show one until the page was reloaded.
+   */
+  onDrew: (markdown: string) => void;
   onCall: (call: { at: number; tool: string; arguments: string }) => void;
   /** And what that lookup gave back. */
   onCalled: (answer: { at: number; result: string; failed: boolean }) => void;
@@ -406,11 +415,13 @@ async function read(response: Response, handlers: ChatStreamHandlers): Promise<v
       outputTokens?: number;
       cost?: number | null;
       reason?: string;
+      markdown?: string;
     }>(frame);
     if (payload === null) return;
 
     if (frame.event === 'chunk' && payload.text !== undefined) handlers.onChunk(payload.text);
     else if (frame.event === 'thinking' && payload.text !== undefined) handlers.onThinking(payload.text);
+    else if (frame.event === 'drew' && payload.markdown !== undefined) handlers.onDrew(payload.markdown);
     else if (frame.event === 'call' && payload.at !== undefined) {
       handlers.onCall({
         at: payload.at,
