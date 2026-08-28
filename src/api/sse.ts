@@ -70,6 +70,20 @@ export async function readEventStream(
 }
 
 /**
+ * Whether this failure is the page having stopped the request itself.
+ *
+ * A stream that is aborted rejects — at the `fetch`, or at the next `read()` if
+ * it had already started arriving — and it rejects the same way a network that
+ * dropped does. The difference matters at every call site: a dropped stream is
+ * something to put on the screen in red, and a stream somebody stopped on
+ * purpose is not news. Told apart by the name rather than by the message, which
+ * is a sentence each browser writes for itself.
+ */
+export function givenUp(cause: unknown): boolean {
+  return cause instanceof DOMException && cause.name === 'AbortError';
+}
+
+/**
  * The sentence out of a refusal, where there is one.
  *
  * The streaming endpoints are the only ones here that are not GraphQL, so a

@@ -892,6 +892,32 @@ export const TESTS = [
      */
   },
   {
+    name: 'chat-interrupt-check',
+    what: 'stopping a turn really stops it: the request is aborted, not merely stopped being listened to',
+    needs: ['workspace'],
+    /*
+     * Issue #299. The circle put the panel back to Listening and left the
+     * request open, so the model went on writing an answer nobody would hear
+     * and every word of it was charged for - and the next thing said raced a
+     * turn that had never ended. Everything on screen said it had stopped,
+     * which is why nothing caught it: the only place the bug is visible is the
+     * request.
+     *
+     * So the assertions are made off the request rather than off the screen.
+     * The stream is stubbed to open and then say nothing, which is the state
+     * somebody is in when they decide they have heard enough, and what is
+     * counted is the signal firing and the body being cancelled - the second
+     * being what closes the connection and therefore what the server can read
+     * as nobody being left. Both doors are driven, the composer's Stop and the
+     * circle, because two interruptions that disagree are two bugs waiting.
+     *
+     * No microphone is granted, deliberately. A turn typed into the composer
+     * while the panel is open is handed to the panel and answered by it exactly
+     * as a spoken one is, and a fake device would decide for itself when a turn
+     * began.
+     */
+  },
+  {
     name: 'voice-queue-check',
     what: 'what is said or typed while voice mode is busy: held, shown, and sent when the turn comes round',
     needs: ['workspace'],

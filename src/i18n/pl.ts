@@ -1679,6 +1679,7 @@ export const PL: Record<string, string> = {
   "Stop and transcribe": "Zatrzymaj i zapisz jako tekst",
   "Stop speaking and listen": "Przestań mówić i słuchaj",
   "Stop this turn and listen": "Zakończ tę turę i słuchaj",
+  "Stop this answer": "Zatrzymaj tę odpowiedź",
   "Tap the circle to cut in.": "Dotknij kółka, aby wejść w słowo.",
   "Reading it…": "Czytam…",
 

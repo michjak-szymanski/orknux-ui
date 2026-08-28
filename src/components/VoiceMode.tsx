@@ -71,8 +71,14 @@ export interface VoiceModeProps {
    * Reading only starts on the whole answer means the pause between a question
    * and the first word is however long the model takes to finish - and a long
    * answer makes that pause longer, which is exactly backwards.
+   *
+   * `signal` is this turn's, and it is aborted when the turn is cut short. It
+   * has to reach the request rather than be checked around it: this panel used
+   * to stop listening to an answer and leave the model writing it, which is a
+   * turn still in flight when the next thing is said - and a bill for every
+   * word of an answer nobody heard. Issue #299.
    */
-  onSay: (text: string, onProgress: (soFar: string) => void) => Promise<string>;
+  onSay: (text: string, onProgress: (soFar: string) => void, signal: AbortSignal) => Promise<string>;
   onClose: () => void;
   /**
    * Told whenever listening becomes thinking becomes speaking.
@@ -314,6 +320,16 @@ export function VoiceMode({
   const turn = useRef(0);
   /** The reading of the current answer, and the only thing that can stop it. */
   const reading = useRef<Reading | null>(null);
+  /**
+   * The request this turn is being answered by, so cutting in can end it.
+   *
+   * Beside `reading` rather than folded into it, because the two stop different
+   * halves of the same turn: one is the sound already being made and the other
+   * is the answer still being written. Stopping only the first is what this
+   * panel did, and it is why the model went on thinking for a question that had
+   * been abandoned.
+   */
+  const asking = useRef<AbortController | null>(null);
   /** The one message waiting for its turn, in a ref for the reason `busy` is. */
   const queued = useRef<Said | null>(null);
   /**
@@ -370,6 +386,11 @@ export function VoiceMode({
       setPhase('thinking');
 
       reading.current?.stop();
+      // Whatever the last turn was still asking, in case it ended without
+      // saying so. A turn is only ever answered by one request.
+      asking.current?.abort();
+      const asked = new AbortController();
+      asking.current = asked;
       const say = readAloud(
         workspaceId,
         {
@@ -389,21 +410,32 @@ export function VoiceMode({
 
       void (async () => {
         try {
-          const answer = await sender.current(starting.text, (soFar) => {
-            if (!live.current || mine !== turn.current) return;
-            say.push(soFar, false);
-          });
+          const answer = await sender.current(
+            starting.text,
+            (soFar) => {
+              if (!live.current || mine !== turn.current) return;
+              say.push(soFar, false);
+            },
+            asked.signal,
+          );
           if (!live.current || mine !== turn.current) return;
           // Whatever is left, punctuated or not: the end of an answer often is
           // not a sentence. An answer that was empty ends the turn here too.
           say.push(answer, true);
         } catch (cause: unknown) {
           if (!live.current || mine !== turn.current) return;
+          // A turn somebody cut short did not fail, so nothing is said about
+          // it. The panel is already listening again — that is what the press
+          // asked for — and a red line under it would report the interruption
+          // as a fault.
+          if (asked.signal.aborted) return;
           setError(cause instanceof Error ? cause.message : t('That turn did not work.'));
           say.stop();
           // A turn that failed is not a reason to stop listening — the next one
           // may be fine, and the alternative is a panel that sits there dead.
           nextTurn.current();
+        } finally {
+          if (asking.current === asked) asking.current = null;
         }
       })();
     },
@@ -614,6 +646,10 @@ export function VoiceMode({
       queued.current = null;
       reading.current?.stop();
       reading.current = null;
+      // Walking away from the page mid-sentence stops the model too. It is the
+      // same abandonment as pressing the circle, made by leaving instead.
+      asking.current?.abort();
+      asking.current = null;
       release();
     };
   }, [listen, release]);
@@ -648,6 +684,15 @@ export function VoiceMode({
       turn.current += 1;
       reading.current?.stop();
       reading.current = null;
+      /*
+       * And the answer still being written, which is the half that used to
+       * survive this. Moving the turn stops this panel listening to it; it does
+       * nothing whatever to the model, which went on composing an answer nobody
+       * would hear and went on charging for it — and the next thing said then
+       * raced a turn that had never ended. Issue #299.
+       */
+      asking.current?.abort();
+      asking.current = null;
       queued.current = null;
       setWaiting(null);
       busy.current = false;
