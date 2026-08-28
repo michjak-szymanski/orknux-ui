@@ -363,6 +363,23 @@ export const TESTS = [
     needs: ['session'],
   },
   {
+    name: 'task-sweep-check',
+    what: 'how long a stuck task waits: typed, saved, reloaded, zero refused, and absent on Temporal',
+    needs: ['session'],
+    /*
+     * Issue #297. The retention check's shape against the field beside it, plus
+     * the half that field has no equivalent of: the control is offered only
+     * where the inline engine is running, and an installation on Temporal is
+     * not shown it at all.
+     *
+     * That branch is driven by answering `taskSweepConfigurable` with false on
+     * the way to the page. It changes what is drawn and nothing that is stored,
+     * which is what makes it a fair reading of the other installation rather
+     * than a second fixture nobody deploys - the alternative being a Temporal
+     * server, for a boolean.
+     */
+  },
+  {
     name: 'component-history-check',
     what: "a tool's versions and a workflow's publications: browsed, read, restored",
     needs: ['workspace'],
@@ -506,7 +523,7 @@ export const TESTS = [
 
   {
     name: 'chat-selector-check',
-    what: 'the model picker is drawn at its full width, and the link out goes where the name says',
+    what: 'the picker above a chat is drawn at its full width, and the link out goes where the name says',
     needs: ['workspace'],
     /*
      * Issue #219. The picker is 560px and was drawn 92px - it kept
@@ -517,6 +534,25 @@ export const TESTS = [
      * panel, and this had both. The link the same report asked for is followed
      * rather than counted - one that is present and points at the wrong row is
      * the thing a "there is a link" assertion would miss.
+     */
+  },
+
+  {
+    name: 'model-agent-check',
+    what: 'a chat model on the Models screen becomes an agent in one press, granted nothing',
+    needs: ['workspace'],
+    /*
+     * The other half of issue #295. Taking the bare model away closed the short
+     * path for "I have just added a model - does it work?", and this is the
+     * path put back.
+     *
+     * Four assertions rather than one, and each is a different way the shortcut
+     * could be a mistake instead of a convenience: it is offered only on a model
+     * that can hold a conversation, it lands on the agent rather than in a chat,
+     * it names the agent after the model without colliding, and it grants it
+     * nothing. The last is read off the API rather than the page, because it is
+     * the one that matters most and the settings screen draws an ungranted agent
+     * and an unloaded page identically.
      */
   },
 
@@ -987,6 +1023,43 @@ export const TESTS = [
      * frame that forgot one is a form with no way out in half the places it is
      * shown. It makes one MCP server to name and removes it; the agent is never
      * saved.
+     */
+  },
+  {
+    name: 'workspace-selector-check',
+    what: 'a workspace created from the admin screen reaching the selector without a reload',
+    needs: ['workspace'],
+    /*
+     * Issue #302, reported as the selector never appearing after the first
+     * workspace was made. Dropping the cached list was already done on a create
+     * and was not enough: it makes the next mount fetch again, and creating
+     * from the admin screen navigates nowhere, so the selector already on
+     * screen kept the list it had at page load - empty, on a fresh install -
+     * and it draws nothing when no workspace in its list is the selected one.
+     *
+     * The reported case cannot be staged against a fixture that has
+     * workspaces, so the same defect is staged one along: make one, and it has
+     * to appear without a reload. A reload afterwards is the control.
+     */
+  },
+  {
+    name: 'workflow-jump-check',
+    what: "the way from a workflow's settings through to its graph",
+    needs: ['workflow'],
+    /*
+     * Issue #304, and the same complaint as every other jump check: a workflow
+     * is two pages, and the settings page pointed at neither the editor nor
+     * anything else, so reaching the graph meant going back to the list and
+     * finding the row again.
+     *
+     * Same tab, which is where this differs from `agent-jump-check`. Those
+     * marks are references - go and read what this tool does - and open beside
+     * a half-edited form rather than throwing it away. This is the other half
+     * of the thing already open, and a workflow that ended up in two tabs of
+     * itself is worse than the walk it saves.
+     *
+     * It presses the link rather than reading its href, because a link to a
+     * route that draws nothing has a perfectly good href.
      */
   },
   {

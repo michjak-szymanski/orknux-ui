@@ -714,6 +714,16 @@ export const PL: Record<string, string> = {
   "How long to wait, in seconds": "Ile czekać, w sekundach",
   "How long versions are kept": "Jak długo przechowywane są wersje",
   "How many days of component history to keep": "Ile dni historii komponentów przechowywać",
+  // --- the net under a task that was never started ------------------------
+  "Queued tasks": "Zadania w kolejce",
+  "How long before a stuck task is picked up":
+    "Po jakim czasie zablokowane zadanie zostanie podjęte",
+  "How many minutes a task may wait before it is picked up":
+    "Ile minut zadanie może czekać, zanim zostanie podjęte",
+  "Save how long before a stuck task is picked up":
+    "Zapisz, po jakim czasie zablokowane zadanie zostanie podjęte",
+  "A task is written down and then handed to a worker, and that hand-over can be lost — a restart at the wrong moment, or a pool with nothing free to take it. Something looks on this interval and hands over anything that has been waiting longer, so a task cannot sit unstarted for ever. A task a worker already has is never handed over twice, whatever this says. Five minutes unless ORKNUX_TASK_SWEEP_MINUTES says otherwise; the next pass reads it, so no restart is needed.":
+    "Zadanie jest zapisywane, a potem przekazywane pracownikowi, i to przekazanie można zgubić — restart w złym momencie albo pula, w której nic nie jest wolne. Coś zagląda w tym odstępie i przekazuje wszystko, co czeka dłużej, więc zadanie nie zostanie nierozpoczęte na zawsze. Zadanie, które pracownik już ma, nigdy nie jest przekazywane dwa razy, cokolwiek tu ustawiono. Pięć minut, chyba że ORKNUX_TASK_SWEEP_MINUTES mówi inaczej; kolejny przebieg to odczyta, więc restart nie jest potrzebny.",
   "Seconds between condition checks": "Sekundy między sprawdzeniami warunku",
   "Consult this rule earlier": "Sprawdzaj tę regułę wcześniej",
   "Consult this rule later": "Sprawdzaj tę regułę później",
@@ -1076,6 +1086,8 @@ export const PL: Record<string, string> = {
   "Could not apply the change.": "Nie udało się zastosować zmiany.",
   "Could not change the comment.": "Nie udało się zmienić komentarza.",
   "Could not change the model.": "Nie udało się zmienić modelu.",
+  "Could not make an agent on that model.": "Nie udało się utworzyć agenta na tym modelu.",
+  "Make an agent on this model": "Utwórz agenta na tym modelu",
   "Could not change the rule.": "Nie udało się zmienić reguły.",
   "Could not change the shell.": "Nie udało się zmienić powłoki.",
   "Could not change the skill.": "Nie udało się zmienić umiejętności.",
@@ -1574,7 +1586,9 @@ export const PL: Record<string, string> = {
 
   // --- an empty list -------------------------------------------------------
   "No agents in this workspace yet.": "W tej przestrzeni roboczej nie ma jeszcze agentów.",
-  "No models in this workspace yet.": "W tej przestrzeni roboczej nie ma jeszcze modeli.",
+  "No agent to chat with": "Nie ma agenta do rozmowy",
+  "This workspace has no agent to chat with yet.": "Ta przestrzeń robocza nie ma jeszcze agenta do rozmowy.",
+  "A chat is held with an agent: it brings the model that answers, the instructions it works under, the skills and tools it has been granted, and what it is allowed to remember. There is nothing else to hold one with.": "Rozmowę prowadzi się z agentem: to on wnosi model, który odpowiada, instrukcje, według których pracuje, przyznane mu umiejętności i narzędzia oraz to, co wolno mu pamiętać. Nie ma nic innego, z czym można by ją prowadzić.",
   "No skill catalogs in this workspace yet.": "W tej przestrzeni roboczej nie ma jeszcze katalogów umiejętności.",
   "No tools in this workspace yet.": "W tej przestrzeni roboczej nie ma jeszcze narzędzi.",
   "No objects yet.": "Jeszcze żadnych obiektów.",
@@ -1745,11 +1759,12 @@ export const PL: Record<string, string> = {
   "Nothing opened yet.": "Jeszcze nic nie otwarto.",
   "None yet.": "Jeszcze żadnych.",
   "Not checked yet.": "Jeszcze niesprawdzone.",
-  "Agent or model": "Agent albo model",
   "a model": "model",
   "An agent given a problem, working at it until it is done": "Agent, który dostaje problem i pracuje nad nim, aż go rozwiąże",
   "A task is an agent working on its own: it is given a problem, it uses its tools until it decides it is done, and everything it does is written down as it happens. Type what you want into the box above and choose who is to do it. Tasks also start from elsewhere in the product, and those appear on this list too.": "Zadanie to agent pracujący samodzielnie: dostaje problem, używa swoich narzędzi, aż uzna, że skończył, a wszystko, co robi, jest zapisywane na bieżąco. Wpisz w polu powyżej, czego oczekujesz, i wybierz, kto ma to zrobić. Zadania rozpoczynają się też w innych miejscach produktu i one również trafiają na tę listę.",
-  "An agent brings its own instructions, skills and grants, and those grants are the whole of what the task may reach. A bare model brings none of that: it starts with nothing and has to ask for everything, which is the safer place to start and the slower one.": "Agent wnosi własne instrukcje, umiejętności i uprawnienia, a te uprawnienia są wszystkim, do czego zadanie może sięgnąć. Sam model nie wnosi nic z tego: zaczyna bez niczego i o wszystko musi prosić, co jest bezpieczniejszym punktem wyjścia i wolniejszym.",
+  "An agent brings its own instructions, skills and grants, and those grants are the whole of what the task may reach.": "Agent wnosi własne instrukcje, umiejętności i uprawnienia, a te uprawnienia są wszystkim, do czego zadanie może sięgnąć.",
+  "This workspace has no agent that can work yet.": "Ta przestrzeń robocza nie ma jeszcze agenta, który mógłby pracować.",
+  "Add an agent": "Dodaj agenta",
   "What you want done, in your own words. The agent works on its own from here: it uses the tools it has been granted, writes down what it is doing as it goes, and stops when it says it is finished. If it needs something it was not given, or the prompt does not say how the result should reach you, it stops and asks — and you are told. Say where the result should end up and you save it a question.": "Czego oczekujesz, własnymi słowami. Dalej agent pracuje sam: używa przyznanych mu narzędzi, na bieżąco zapisuje, co robi, i zatrzymuje się, gdy uzna, że skończył. Jeśli potrzebuje czegoś, czego mu nie dano, albo polecenie nie mówi, jak wynik ma do Ciebie trafić, zatrzymuje się i pyta — a Ty dostajesz o tym wiadomość. Napisz, gdzie ma wylądować wynik, a oszczędzisz mu pytania.",
   "Write a report of last week's failed runs and put it in the shared drive.": "Napisz raport o nieudanych uruchomieniach z zeszłego tygodnia i umieść go na dysku współdzielonym.",
   "Turns": "Tury",

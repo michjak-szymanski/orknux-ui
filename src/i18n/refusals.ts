@@ -183,6 +183,7 @@ const PL: Record<string, string> = {
     'Ta zmienna należy do innej przestrzeni roboczej, więc nagłówek „{name}” nie może jej odczytać.',
   AttachmentTooLarge: '„{name}” jest większy niż {limitMb} MB, ile może mieć załącznik',
   AttachmentsDisabled: 'Załączniki są wyłączone w tej instalacji',
+  ChatAgentMissing: 'Ta przestrzeń robocza nie ma agenta do rozmowy; najpierw dodaj jednego',
   ChatDisabled: 'Czat jest wyłączony w tej instalacji',
   ChatMessageEmpty: 'Nie ma czego wysłać',
   ChatModelNotChosen: 'Ten czat nie ma modelu, który mógłby odpowiedzieć; wybierz najpierw jeden',
@@ -214,6 +215,10 @@ const PL: Record<string, string> = {
     'Klucz sesji ma najwyżej tyle znaków, ile pozwala limit — wliczając prefiks — a ten ma {length}',
   RetentionOutOfRange: '{days} to nie jest liczba dni, przez jaką da się przechowywać historię.',
   RevisionNotRestorable: '„{name}” nie jest tu edytowalne, więc nie da się przywrócić jego wersji',
+  TaskSweepIntervalOutOfRange:
+    '{minutes} to nie jest liczba minut, przez jaką zadanie może czekać w kolejce.',
+  TaskSweepNotConfigurable:
+    'Ta instalacja prowadzi zadania na Temporalu, gdzie czas oczekiwania zadania w kolejce nie jest ustawiany tutaj',
   TriggerConnectionRequired: 'Wyzwalacz połączenia przychodzącego potrzebuje połączenia i zdarzenia',
   TriggerPayloadInvalid:
     'Ładunek musi być obiektem JSON, żeby jego pola dały się odczytać jako wejście',
