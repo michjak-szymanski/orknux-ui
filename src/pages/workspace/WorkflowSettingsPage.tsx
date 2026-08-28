@@ -104,7 +104,18 @@ export function WorkflowSettingsPage({ session, onSignOut }: WorkflowSettingsPag
           <span className={styles.crumbSeparator}>/</span>
           <span className={styles.crumbCurrent}>{workflow?.name ?? '…'}</span>
         </p>
-        <h1 className={styles.pageTitle}>{t('Workflow Settings')}</h1>
+        <div className={styles.titleRow}>
+          <h1 className={styles.pageTitle}>{t('Workflow Settings')}</h1>
+          {/* The two halves of a workflow are its settings and its graph, and
+              getting from here to the graph meant going back to the list and
+              finding the row again. */}
+          <Link
+            className={styles.ghost}
+            to={`/workspace/${workspaceId}/workflows/${workflowId}/editor`}
+          >
+            {t('Open Editor')}
+          </Link>
+        </div>
       </header>
 
       {loadError !== null ? (
