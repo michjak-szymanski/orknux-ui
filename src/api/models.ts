@@ -1,7 +1,8 @@
 import { graphql } from './client';
 import { t } from '../i18n';
 
-export type ProviderType = 'OPENAI' | 'ANTHROPIC' | 'AZURE_OPENAI' | 'OLLAMA' | 'CUSTOM';
+/** What the endpoint speaks, not who answers there: anything OpenAI-shaped is OPENAI. */
+export type ProviderType = 'OPENAI' | 'ANTHROPIC' | 'AZURE_OPENAI' | 'OLLAMA';
 export type ProviderAuthMethod = 'API_KEY' | 'ENTRA_ID';
 /** CONNECTED only once a check reached the provider: a stored key is not a working one. */
 export type ProviderStatus = 'NOT_CONFIGURED' | 'NOT_CHECKED' | 'CONNECTED' | 'FAILED';
@@ -347,8 +348,6 @@ export function providerTypeLabel(type: ProviderType): string {
       return t('Azure OpenAI');
     case 'OLLAMA':
       return 'Ollama';
-    case 'CUSTOM':
-      return 'Custom';
   }
 }
 

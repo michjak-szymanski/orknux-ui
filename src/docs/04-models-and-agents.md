@@ -26,17 +26,19 @@ on. Usage over time is charted on the model's own page.
 ![A provider on its own page: where it is, how it authenticates, and what it
 said when it was last asked](/screens/model-provider.png)
 
-A provider has a **type** of its own, and there are five: **OpenAI**,
-**Anthropic**, **Azure OpenAI**, **Ollama** and **Custom**. It decides how the
-address is built and how the key is sent rather than which company answers, so
-anything speaking the OpenAI shape at an address of its own is a **Custom**
-provider. That is how Google's models are reached: the endpoint is
+A provider has a **type** of its own, and there are four: **OpenAI**,
+**Anthropic**, **Azure OpenAI** and **Ollama**. It decides how the address is
+built and how the key is sent rather than which company answers, so anything
+speaking the OpenAI shape at an address of its own is an **OpenAI** provider
+with that address typed into its endpoint. That is how Google's models are
+reached: the endpoint is
 `https://generativelanguage.googleapis.com/v1beta/openai` with a Gemini key, and
 the model list, chat, streaming and tool calls all behave. There is no Google
-type. The one that used to be here sent the header Google's own API wants to
-addresses that API does not have, so it could not work either way round;
-providers stored as it became Custom providers on upgrade, endpoint and key
-untouched.
+type, and there is no **Custom** one either. Custom said only that we had not
+heard of the service, which sounded like a promise to speak whatever it speaks
+and sent an OpenAI request every time; providers stored as it are OpenAI
+providers on upgrade, endpoint and key untouched, and nothing about the calls
+they make has changed.
 
 **Ollama** takes the address the daemon listens on — `http://localhost:11434`,
 which is where an operator naturally points it. Its OpenAI-compatible half lives

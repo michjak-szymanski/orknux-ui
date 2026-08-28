@@ -32,12 +32,16 @@ export interface ProviderSettingsPageProps {
   onSignOut?: () => void;
 }
 
+// The type says what the endpoint speaks, not who is answering at it, which is
+// why there is no entry here for a provider we have not heard of. Anything that
+// speaks the OpenAI shape at an address of its own - a local server, a gateway,
+// Google's OpenAI-compatible surface - is OpenAI with its own endpoint typed
+// below, and that is exactly what the "Custom" this replaces was sending.
 const PROVIDER_TYPES: ProviderType[] = [
   'OPENAI',
   'ANTHROPIC',
   'AZURE_OPENAI',
   'OLLAMA',
-  'CUSTOM',
 ];
 
 /** The versions Azure OpenAI is commonly pinned to; the field still accepts any. */
@@ -64,8 +68,6 @@ function endpointHint(type: ProviderType): string {
       // `/v1/models` and `/v1/chat/completions`. The bare port serves Ollama's
       // own API at `/api/...` and 404s on both of those.
       return 'http://localhost:11434/v1';
-    case 'CUSTOM':
-      return 'https://…';
   }
 }
 
