@@ -61,6 +61,7 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
    */
   const [contextWindow, setContextWindow] = useState('');
   const [maxOutput, setMaxOutput] = useState('');
+  const [voice, setVoice] = useState('');
   const [imageCost, setImageCost] = useState('');
   const [windowError, setWindowError] = useState<string | null>(null);
   const [windowSaved, setWindowSaved] = useState(false);
@@ -99,6 +100,7 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
     setModel(found);
     setContextWindow(found.contextWindow === null ? '' : String(found.contextWindow));
     setMaxOutput(found.maxOutput === null ? '' : String(found.maxOutput));
+    setVoice(found.voice ?? '');
     setImageCost(found.imageCostPerImage === null ? '' : String(found.imageCostPerImage));
     setTokenLimit(found.tokenLimit === null ? '' : String(found.tokenLimit));
     setResetInterval(found.resetInterval);
@@ -123,6 +125,15 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
    * mistyped price permanent.
    */
   const draws = model?.kind === 'IMAGE';
+
+  /**
+   * A speech model reads in a voice, and this is where it is changed.
+   *
+   * The same gap the context window had: a field the create dialog offers and
+   * the model's own page does not, so the only way to correct a voice was to
+   * delete the model and make it again.
+   */
+  const reads = model?.kind === 'SPEECH';
 
   /**
    * The window and the reserved answer, saved.
@@ -150,7 +161,7 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
           maxOutput: toNumber(maxOutput),
           inputCostPerMillion: model.inputCostPerMillion,
           outputCostPerMillion: model.outputCostPerMillion,
-          voice: model.voice,
+          voice: reads ? (voice.trim() === '' ? null : voice.trim()) : model.voice,
           // Sent back whatever it was, for the reason above: this mutation
           // replaces a model's details rather than patching them, so a field
           // this card does not show is a field left out and therefore cleared.
@@ -347,6 +358,23 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
                 />
               </div>
                 </>
+              )}
+              {reads && (
+                <div className={styles.field}>
+                  <span className={styles.labelWithHint}>
+                    <label className={styles.label} htmlFor="model-voice">{t('Voice')}</label>
+                    <FieldHint label={t('Voice')}>
+                      {t('Which voice reads. The names belong to the provider: OpenAI knows alloy and nova, a self-hosted reader knows the voice pack it loaded. Left empty, alloy is sent, which a reader that has never heard of it refuses.')}
+                    </FieldHint>
+                  </span>
+                  <input
+                    id="model-voice"
+                    className={`${styles.input} ${styles.inputMono}`}
+                    value={voice}
+                    onChange={(event) => setVoice(event.target.value)}
+                    placeholder="alloy"
+                  />
+                </div>
               )}
             </div>
 

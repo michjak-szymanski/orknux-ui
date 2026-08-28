@@ -483,8 +483,10 @@ export function ModelDialog({ open, workspaceId, providers, onClose, onCreated }
               <span className={styles.labelWithHint}>
                 <label className={styles.label} htmlFor="model-voice">{t('Voice')}</label>
                 <FieldHint label={t('Voice')}>
-                  Left empty sends no voice at all, which is what a server with a single built-in one
-                  wants. OpenAI requires one — <code>alloy</code>, <code>nova</code> and the rest.
+                  The names belong to the provider — OpenAI knows <code>alloy</code> and
+                  <code>nova</code>, a self-hosted reader knows the voice pack it loaded. Left
+                  empty, <code>alloy</code> is sent, which a reader that has never heard of it
+                  refuses.
                 </FieldHint>
               </span>
               <div className={styles.inputWrapper}>
