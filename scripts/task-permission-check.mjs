@@ -87,7 +87,13 @@ await gql(`mutation($id: ID!, $input: UpdateAgentInput!) { updateAgent(id: $id, 
 await page.goto(`${BASE}/workspace/${WORKSPACE}/tasks`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('h1:text("Tasks")', { timeout: 20_000 });
 await page.locator('#task-prompt').fill(PROMPT);
-await page.locator('#task-worker').selectOption(`agent:${agent.id}`);
+/*
+ * The agent, by its own id. It used to be `agent:${id}`, because the picker
+ * offered agents and models together and the prefix said which half an option
+ * came from; issue #295 took the models out of it, so what is left is an agent
+ * list and an option is an agent.
+ */
+await page.locator('#task-worker').selectOption(String(agent.id));
 await page.locator('button:text("Start")').click();
 await page.waitForURL(/\/tasks\/\d+$/, { timeout: 20_000 });
 const taskId = page.url().split('/').pop();

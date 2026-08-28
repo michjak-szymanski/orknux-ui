@@ -40,18 +40,27 @@ import { BASE, WORKSPACE, open, record, drawn, shot, finish } from './suite/harn
 
 const { browser, page, graphql } = await open({ viewport: { width: 1440, height: 900 } });
 
-const { models } = await graphql(`query ($w: ID!) { models(workspaceId: $w) { id name enabled kind } }`, {
-  w: WORKSPACE,
-});
-const model = models.find((one) => one.enabled && one.kind === 'CHAT');
-if (model === undefined) {
-  record(false, `workspace ${WORKSPACE} has an active chat model to answer with`);
+/*
+ * An agent to answer with, rather than a model. Issue #295 took `modelId` off
+ * `StartChatInput` - a chat is opened on an agent, and the model behind that
+ * agent is what answers and what the totals below are the arithmetic of. The
+ * precondition is therefore the same precondition in the new shape: something
+ * switched on, with a model. Which agent it is does not matter, because what is
+ * asserted is that a number grows and is kept rather than what it grew to.
+ */
+const { workspaceAgents } = await graphql(
+  `query ($w: ID!) { workspaceAgents(workspaceId: $w, page: 0, size: 50) { content { id name enabled modelId } } }`,
+  { w: WORKSPACE },
+);
+const agent = workspaceAgents.content.find((one) => one.enabled && one.modelId !== null);
+if (agent === undefined) {
+  record(false, `workspace ${WORKSPACE} has an active agent with a model to answer with`);
   await finish(browser);
 }
 
 const start = async (title) => {
   const { startChat } = await graphql(`mutation ($input: StartChatInput!) { startChat(input: $input) { id } }`, {
-    input: { workspaceId: WORKSPACE, title, modelId: model.id },
+    input: { workspaceId: WORKSPACE, title, agentId: agent.id },
   });
   return String(startChat.id);
 };

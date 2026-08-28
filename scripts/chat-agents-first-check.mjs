@@ -1,24 +1,30 @@
 /**
- * Issue #249: the picker above a chat offers agents first.
+ * Issue #295: the picker above a chat offers agents, and nothing else.
  *
- * It opened on Models, always, whatever the chat was talking to. Two things
- * were wrong with that and only one of them is the issue. The issue is the
- * order: what somebody chats to here is nearly always an agent — it brings its
- * instructions, its skills and its tools with it and supplies a model anyway —
- * so opening on the bare models offered the raw material ahead of the thing
- * made out of it. The other is that a chat already handed to an agent opened on
- * the half its own choice was not in, so the one entry worth seeing — the
- * ticked one — was a tab away.
+ * This file used to be issue #249's, which put agents *first* — the tabs read
+ * Agents then Models, and which of the two opened followed what the chat was
+ * already pointed at. The argument for that ordering was that what somebody
+ * chats to is nearly always an agent: it brings its instructions, its skills and
+ * its tools with it and supplies a model anyway, so opening on the bare models
+ * offered the raw material ahead of the thing made out of it.
  *
- * So there are two assertions and they are not the same assertion. The tabs are
- * in a fixed order, Agents then Models, whatever the chat holds; which of them
- * *opens* follows the chat, and defaults to Agents. A fix that only reordered
- * the tabs would pass the first and fail the second.
+ * #295 finished that argument. A bare model is an agent with the instructions,
+ * the skills, the grants and the memory taken off, and putting it in a tab
+ * beside the agents said it was the other half of a choice. There was no choice.
+ * So the Models tab is gone, and with it the two mutations that moved a chat
+ * back onto a bare model.
  *
- * The chat with an agent in it is made here rather than seeded: what it points
- * at is the whole of what this measures, and a check that reads whichever chat
- * happened to be first is a check that measures whatever somebody last left
- * open.
+ * What is measured here is therefore the absence of a control, which is a thing
+ * worth measuring carefully: a check that only looked for the agents would have
+ * passed for the whole time the Models tab was there beside them. So the
+ * assertions are that the agents are offered, that there is no tab strip at all,
+ * and — read off the schema rather than the screen, because that is where a
+ * removal either happened or did not — that neither `chooseChatModel` nor a null
+ * `chooseChatAgent` is still a call anybody can make.
+ *
+ * The chat it reads is made by this check and deleted again. What a chat is
+ * pointed at is the whole of what this measures, and reading whichever chat
+ * happened to be first would measure whatever somebody last left open.
  */
 import { BASE, WORKSPACE, open, record, drawn, finish } from './suite/harness.mjs';
 
@@ -29,107 +35,83 @@ const { workspaceAgents } = await graphql(
   { w: WORKSPACE },
 );
 const agent = workspaceAgents.content.find((one) => one.enabled && one.modelId !== null);
-const { models } = await graphql(`query ($w: ID!) { models(workspaceId: $w) { id name enabled kind } }`, {
-  w: WORKSPACE,
-});
-const model = models.find((one) => one.enabled && one.kind === 'CHAT');
 
-if (agent === undefined || model === undefined) {
-  record(false, `workspace ${WORKSPACE} has both an active agent with a model and a chat model to pick`);
+if (agent === undefined) {
+  record(false, `workspace ${WORKSPACE} has an active agent with a model to chat to`);
   await finish(browser);
 }
 
-/** A chat of this check's own, so what it is pointed at is not somebody else's doing. */
-async function chatOn(what) {
-  const { startChat } = await graphql(
-    `mutation ($input: StartChatInput!) { startChat(input: $input) { id } }`,
-    { input: { workspaceId: WORKSPACE, title: `zz agents-first ${Date.now()}`, modelId: model.id } },
-  );
-  if (what === 'agent') {
-    await graphql(`mutation ($id: ID!, $a: ID!) { chooseChatAgent(id: $id, agentId: $a) { id } }`, {
-      id: startChat.id,
-      a: agent.id,
-    });
-  }
-  return startChat.id;
-}
+/* ------------------------------------------------------- what is on screen */
 
-const made = [];
+const { startChat } = await graphql(
+  `mutation ($input: StartChatInput!) { startChat(input: $input) { id } }`,
+  { input: { workspaceId: WORKSPACE, title: `zz agents-only ${Date.now()}`, agentId: agent.id } },
+);
 
-/** Opens the picker on a chat and says what it is showing. */
-async function pickerOn(chatId) {
-  await page.goto(`${BASE}/chat/${chatId}`, { waitUntil: 'domcontentloaded' });
-  if (!(await drawn(page, 'the chat'))) return null;
+await page.goto(`${BASE}/chat/${startChat.id}`, { waitUntil: 'domcontentloaded' });
+if (await drawn(page, 'the chat')) {
   await page.locator('#chat-composer').waitFor({ state: 'visible', timeout: 20_000 });
 
   const button = page.locator('h1').first().locator('..').locator('button[aria-expanded]').first();
   await button.click();
   await page.waitForTimeout(400);
 
-  return page.evaluate(() => {
-    const tabs = [...document.querySelectorAll('[role="tab"]')].map((tab) => ({
-      label: (tab.textContent ?? '').trim(),
-      chosen: tab.getAttribute('aria-selected') === 'true',
-    }));
-    const entries = [...document.querySelectorAll('[class*="_pickerEntry"]')].map((entry) =>
-      (entry.textContent ?? '').trim(),
-    );
-    return { tabs, entries };
+  const picker = await page.evaluate(() => {
+    const box = document.querySelector('[class*="_picker"]');
+    return {
+      tabs: [...document.querySelectorAll('[role="tab"]')].map((tab) => (tab.textContent ?? '').trim()),
+      entries: [...document.querySelectorAll('[class*="_pickerEntry"]')].map((entry) =>
+        (entry.textContent ?? '').trim(),
+      ),
+      opened: box !== null,
+    };
   });
-}
 
-/* ----------------------------------------------- a chat handed to an agent */
-
-const onAgent = await chatOn('agent');
-made.push(onAgent);
-const withAgent = await pickerOn(onAgent);
-
-if (withAgent !== null) {
+  record(picker.opened, 'the picker opens');
   record(
-    withAgent.tabs[0]?.label === 'Agents',
-    `Agents is the first tab (the tabs read ${withAgent.tabs.map((tab) => tab.label).join(', ')})`,
-  );
-  record(
-    withAgent.tabs.find((tab) => tab.chosen)?.label === 'Agents',
-    `and the picker opens on it (it opened on ${withAgent.tabs.find((tab) => tab.chosen)?.label})`,
-  );
-  record(
-    withAgent.entries.some((entry) => entry.startsWith(agent.name)),
-    `the agent this chat is handed to is in the list that opened (looking for ${JSON.stringify(agent.name)})`,
-  );
-}
-
-/* -------------------------------------------- and one on a bare model */
-
-const onModel = await chatOn('model');
-made.push(onModel);
-const withModel = await pickerOn(onModel);
-
-if (withModel !== null) {
-  record(
-    withModel.tabs[0]?.label === 'Agents',
-    'Agents is still the first tab on a chat talking to a bare model',
+    picker.entries.some((entry) => entry.startsWith(agent.name)),
+    `the agent this chat is on is in the list (looking for ${JSON.stringify(agent.name)})`,
   );
   /*
-   * The exception, and the reason this is two assertions rather than one:
-   * a chat pointed at a model opens on the half its own choice is in, or the
-   * ticked entry is somewhere nobody is looking.
+   * No tab strip at all, rather than one tab. A picker showing a lone "Agents"
+   * tab would pass an assertion that Agents is first and would still be drawing
+   * a choice between one thing and nothing.
    */
   record(
-    withModel.tabs.find((tab) => tab.chosen)?.label === 'Models',
-    `but the one that opens is Models, where the ticked entry is (it opened on ${
-      withModel.tabs.find((tab) => tab.chosen)?.label
-    })`,
-  );
-  record(
-    withModel.entries.some((entry) => entry.startsWith(model.name)),
-    `the model this chat is talking to is in the list that opened (looking for ${JSON.stringify(model.name)})`,
+    picker.tabs.length === 0,
+    `there are no tabs to choose a half with (found ${picker.tabs.length}: ${picker.tabs.join(', ')})`,
   );
 }
 
-/* Nothing this check made is left behind for the next one to read. */
-for (const id of made) {
-  await graphql(`mutation ($id: ID!) { deleteChat(id: $id) }`, { id }).catch(() => undefined);
+/* ------------------------------------------------- and what the API refuses */
+
+/** Whether the server rejected a document, and with a message naming what. */
+async function refused(document, variables) {
+  try {
+    await graphql(document, variables);
+    return null;
+  } catch (cause) {
+    return cause instanceof Error ? cause.message : String(cause);
+  }
 }
+
+const modelDoor = await refused(`mutation ($id: ID!) { chooseChatModel(id: $id, modelId: null) { id } }`, {
+  id: startChat.id,
+});
+record(
+  modelDoor !== null && modelDoor.includes('chooseChatModel'),
+  `chooseChatModel is not a mutation any more (the server said ${JSON.stringify(modelDoor)})`,
+);
+
+const nullDoor = await refused(`mutation ($id: ID!) { chooseChatAgent(id: $id, agentId: null) { id } }`, {
+  id: startChat.id,
+});
+record(
+  nullDoor !== null,
+  `and a chat cannot be handed back to a bare model (the server said ${JSON.stringify(nullDoor)})`,
+);
+
+/* Nothing this check made is left behind for the next one to read. */
+await graphql(`mutation ($id: ID!) { deleteChat(id: $id) }`, { id: startChat.id }).catch(() => undefined);
 
 await finish(browser);

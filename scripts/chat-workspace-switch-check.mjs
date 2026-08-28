@@ -35,8 +35,46 @@ const { createWorkspace } = await graphql(
   { input: { name: ELSEWHERE } },
 );
 const other = String(createWorkspace.id);
+
+/*
+ * And somebody in it to hold a conversation.
+ *
+ * Issue #295 made a chat something that is opened on an agent or not opened at
+ * all, and a workspace made a line ago has no agent, no model and no provider —
+ * so the one line that used to be enough here is now three. None of them is
+ * ever asked anything: what this check reads is a title in the sidebar, so the
+ * provider is pointed at a name that cannot resolve and nothing here goes near
+ * a network. All of it goes when the workspace does, at the end.
+ */
+const { createModelProvider: elsewhereProvider } = await graphql(
+  `mutation ($input: CreateModelProviderInput!) { createModelProvider(input: $input) { id } }`,
+  {
+    input: {
+      workspaceId: other,
+      name: `zz suite - nowhere ${STAMP}`,
+      endpoint: 'http://nowhere.invalid',
+      secret: 'sk-scratch',
+    },
+  },
+);
+const { createModel: elsewhereModel } = await graphql(
+  `mutation ($input: CreateModelInput!) { createModel(input: $input) { id } }`,
+  {
+    input: {
+      providerId: elsewhereProvider.id,
+      name: `zz suite - nowhere ${STAMP}`,
+      modelId: 'scratch',
+      kind: 'CHAT',
+    },
+  },
+);
+const { createAgentForModel: elsewhereAgent } = await graphql(
+  `mutation ($m: ID!) { createAgentForModel(modelId: $m) { id name } }`,
+  { m: elsewhereModel.id },
+);
+
 await graphql(`mutation ($input: StartChatInput!) { startChat(input: $input) { id } }`, {
-  input: { workspaceId: other, title: SAID_THERE },
+  input: { workspaceId: other, title: SAID_THERE, agentId: elsewhereAgent.id },
 });
 
 const { chatSessions } = await graphql(`query ($w: ID!) { chatSessions(workspaceId: $w) { id title } }`, {

@@ -1392,11 +1392,24 @@ const CHATS = [
     say: 'A customer says they cannot log in. What should I check first, in order, and why that order?',
   },
 ];
+/*
+ * Both of them handed to the support responder.
+ *
+ * They used to be started on the chat model itself, which issue #295 removed:
+ * `StartChatInput` takes an agent now, and a workspace with no agent that could
+ * answer refuses to open a chat at all. The responder is the right one to hand
+ * them to rather than merely the nearest - it is the agent these two
+ * conversations are about, it stands on the same model they used to name, and
+ * the picture the manual takes of a chat now has a name in its title row that
+ * somebody can go and look up. Both agents are made further up this file, so by
+ * the time this runs the workspace has what the rest of the suite assumes: an
+ * agent that is switched on and has a model behind it.
+ */
 let chats = 0;
 for (const chat of CHATS) {
   try {
     const { startChat } = await gql('mutation($input: StartChatInput!) { startChat(input: $input) { id title } }', {
-      input: { workspaceId: ws, title: chat.title, modelId: chatModel.id },
+      input: { workspaceId: ws, title: chat.title, agentId: responder.id },
     });
     await gql('mutation($id: ID!, $text: String!) { sendChatMessage(id: $id, text: $text) { __typename } }', {
       id: startChat.id,

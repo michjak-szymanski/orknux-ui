@@ -5,7 +5,6 @@ import type { FormEvent, KeyboardEvent } from 'react';
 import {
   CALL_ROLE,
   chooseChatAgent,
-  chooseChatModel,
   deleteChat,
   fetchChatMessages,
   fetchChatSessions,
@@ -33,12 +32,10 @@ import type { Attachment } from '../../api/attachments';
 import { AttachmentViewer } from '../../components/AttachmentViewer';
 import { CallLine } from '../../components/CallLine';
 import { Thinking } from '../../components/Thinking';
-import { answers, fetchModels } from '../../api/models';
 import { CHUNKING_DEFAULT, readAloud } from '../../components/readAloud';
 import type { Reading, SpeechChunking } from '../../components/readAloud';
 import { transcribe } from '../../api/transcription';
 import { fetchWorkspace } from '../../api/workspaces';
-import type { Model } from '../../api/models';
 import { fetchWorkspaceAgents } from '../../api/agents';
 import type { Agent } from '../../api/agents';
 import type { SessionUser } from '../../api/session';
@@ -82,18 +79,6 @@ export interface ChatPageProps {
 
 /** How many workspaces to look at when deciding which one to chat in. */
 const WORKSPACE_LOOKUP = 100;
-
-/**
- * Which half of the model picker is showing.
- *
- * Agents come first, in the tabs and as the one that opens (issue #249). What
- * somebody chats to here is nearly always an agent — it brings its instructions,
- * its skills and its tools with it, and it supplies a model anyway — so opening
- * on the bare models was offering the raw material ahead of the thing made out
- * of it. The exception is a chat already pointed at a bare model, which opens on
- * Models so that what is answering now is the entry under the pointer.
- */
-type PickerTab = 'models' | 'agents';
 
 /**
  * What the answer being written now has thought and looked up.
@@ -207,7 +192,6 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
-  const [pickerTab, setPickerTab] = useState<PickerTab>('agents');
   const [pickerSearch, setPickerSearch] = useState('');
 
   const [draft, setDraft] = useState('');
@@ -432,24 +416,36 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
   }, [workspaceId, loadSessions]);
 
   /*
-   * What the chat can be pointed at. Both used to end `.catch(() => setX([]))`,
-   * which meant a server that had gone away left a picker saying this workspace
-   * has no models - the one sentence guaranteed to be wrong, since the chat on
-   * screen was already speaking to one.
+   * What the chat can be pointed at.
+   *
+   * The models were fetched beside this and are not any more: a chat is pointed
+   * at an agent, and the agent brings its model (issue #295). The model's *name*
+   * is still shown for a chat that was started on a bare model, but that comes
+   * off the chat itself as `modelName` rather than out of a list.
+   *
+   * A catalogue rather than a plain fetch, and it matters here more than it did.
+   * It used to end `.catch(() => setAgents([]))`, which meant a server that had
+   * gone away left a picker saying this workspace has no agents - and that
+   * sentence now carries "add one" behind it, so getting it wrong sends somebody
+   * off to build an agent they already have.
    */
-  const modelCatalogue = useCatalogue(
-    'models in this workspace',
-    () => fetchModels(workspaceId ?? ''),
-    [workspaceId],
-    { skip: workspaceId === null },
-  );
+  /**
+   * Whether the agents have actually been counted, as opposed to not asked for
+   * yet.
+   *
+   * `loading` cannot answer this on its own. It starts false while the workspace
+   * is still being worked out, and there is one render between the workspace
+   * arriving and the effect setting it true - one frame in which an empty list
+   * is indistinguishable from a counted one. That frame is enough to flash "No
+   * agent to chat with" across the top of a workspace that has a dozen.
+   */
+  const [counted, setCounted] = useState(false);
   const agentCatalogue = useCatalogue<Agent>(
     'agents in this workspace',
     async () => (await fetchWorkspaceAgents(workspaceId ?? '', 0, 100)).content,
     [workspaceId],
-    { skip: workspaceId === null },
+    { skip: workspaceId === null, onLoaded: () => setCounted(true) },
   );
-  const models: Model[] = modelCatalogue.items;
   const agents: Agent[] = agentCatalogue.items;
 
   /*
@@ -766,16 +762,16 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
 
   const pickerEntries = useMemo(() => {
     const needle = pickerSearch.trim().toLowerCase();
-    const entries =
-      pickerTab === 'models'
-        ? models
-            // A chat talks to a chat model. The audio kinds hear and read
-            // instead, and picking one here would be a chat that cannot answer.
-            .filter(answers)
-            .map((model) => ({ id: model.id, label: model.name, enabled: model.enabled }))
-        : agents.map((agent) => ({ id: agent.id, label: agent.name, enabled: agent.enabled }));
+    // An agent with no model chosen cannot answer, so it is offered switched
+    // off rather than left out: somebody looking for it should find it and be
+    // told why it will not do, not wonder where it went.
+    const entries = agents.map((agent) => ({
+      id: agent.id,
+      label: agent.name,
+      enabled: agent.enabled && agent.modelId !== null,
+    }));
     return needle === '' ? entries : entries.filter((entry) => entry.label.toLowerCase().includes(needle));
-  }, [pickerTab, models, agents, pickerSearch]);
+  }, [agents, pickerSearch]);
 
   async function guard(work: () => Promise<void>) {
     setError(null);
@@ -797,6 +793,27 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
       await loadSessions(created.id);
     });
   }
+
+  /**
+   * Whether there is anything here to chat to.
+   *
+   * A workspace with no usable agent is a workspace where a chat cannot be
+   * started, which is a state this page did not have before issue #295: a bare
+   * model used to be there whatever else was, so a workspace with a model could
+   * always hold a conversation. The server refuses it now, and the button is
+   * stopped short of that refusal so nobody presses it to find out.
+   *
+   * True only where the list actually arrived and had nothing usable in it.
+   * Every other way of holding no agents is a different thing: not asked for
+   * yet, still being asked for, or asked for and refused. An empty list now
+   * carries "add one" behind it, so reading a server that has gone away as an
+   * empty workspace would send somebody off to build an agent they already have,
+   * and would take the button away while they did.
+   */
+  const noAgents =
+    counted &&
+    agentCatalogue.failure === null &&
+    !agents.some((one) => one.enabled && one.modelId !== null);
 
   /**
    * Closes the composer's microphone, wherever the closing came from.
@@ -1329,15 +1346,17 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
   }
 
   /**
-   * Both tabs land here: what the picker offers is who answers next, and an
-   * agent answers by supplying its own model, so the two are the same choice
-   * made in two ways.
+   * What the picker offers is who answers next, and an agent answers by
+   * supplying its own model, so choosing one settles both.
+   *
+   * One call where there used to be two. `chooseChatModel` was the other, and
+   * it took the agent off and left the model — a chat on a bare model made in
+   * one press, which is the thing issue #295 removed.
    */
   async function handleChoose(id: string) {
     if (currentId === null) return;
     await guard(async () => {
-      if (pickerTab === 'agents') await chooseChatAgent(currentId, id);
-      else await chooseChatModel(currentId, id);
+      await chooseChatAgent(currentId, id);
       await loadSessions(currentId);
     });
     setPickerOpen(false);
@@ -1421,8 +1440,9 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
         type="button"
         className={styles.collapsedAction}
         onClick={() => void handleNew()}
+        disabled={noAgents}
         aria-label={t('New chat')}
-        title={t('New chat')}
+        title={noAgents ? t('This workspace has no agent to chat with yet.') : t('New chat')}
       >
         <img src={plusIcon} alt="" width={14} height={14} />
       </button>
@@ -1443,7 +1463,13 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
     <div className={styles.sidebar}>
       <div className={styles.sidebarHeader}>
         <span className={styles.sidebarTitle}>{t('User Chats')}</span>
-        <button type="button" className={styles.newButton} onClick={() => void handleNew()}>{t('+ New')}</button>
+        <button
+          type="button"
+          className={styles.newButton}
+          onClick={() => void handleNew()}
+          disabled={noAgents}
+          title={noAgents ? t('This workspace has no agent to chat with yet.') : undefined}
+        >{t('+ New')}</button>
       </div>
 
       <div className={styles.searchBox}>
@@ -1644,18 +1670,36 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
       {current === null ? (
         <div className={styles.empty}>
           {errorBanner}
-          <p className={styles.emptyTitle}>{t('No chat open')}</p>
+          <p className={styles.emptyTitle}>{noAgents ? t('No agent to chat with') : t('No chat open')}</p>
           {/*
             The way out stays in the open; what a chat *is* goes behind the (?).
+
+            Two ways out, because there are now two reasons to be here. A
+            workspace with no usable agent is a workspace where "+ New" does
+            nothing, and that is a state issue #295 created — a bare model used
+            to be there whatever else was. Telling somebody to press a button
+            that is switched off is worse than telling them nothing, so the
+            sentence names what is missing and links to where it is made.
           */}
-          <p className={styles.emptyNote}>
-            <span className={styles.labelWithHint}>
-              Start one with <strong>{t('+ New')}</strong>.
-              <FieldHint label={t('No chat open')}>
-                {t('Each chat is a conversation of its own, kept the same way a workflow run keeps the thread its agents share.')}
-              </FieldHint>
-            </span>
-          </p>
+          {noAgents ? (
+            <p className={styles.emptyNote}>
+              <span className={styles.labelWithHint}>
+                <Link to={`/workspace/${workspaceId}/agents`}>{t('Add an agent')}</Link>
+                <FieldHint label={t('No agent to chat with')}>
+                  {t('A chat is held with an agent: it brings the model that answers, the instructions it works under, the skills and tools it has been granted, and what it is allowed to remember. There is nothing else to hold one with.')}
+                </FieldHint>
+              </span>
+            </p>
+          ) : (
+            <p className={styles.emptyNote}>
+              <span className={styles.labelWithHint}>
+                Start one with <strong>{t('+ New')}</strong>.
+                <FieldHint label={t('No chat open')}>
+                  {t('Each chat is a conversation of its own, kept the same way a workflow run keeps the thread its agents share.')}
+                </FieldHint>
+              </span>
+            </p>
+          )}
         </div>
       ) : (
         <div className={styles.chatRow}>
@@ -1676,30 +1720,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
               <button
                 type="button"
                 className={styles.modelButton}
-                onClick={() => {
-                  const opening = !pickerOpen;
-                  setPickerOpen(opening);
-                  /*
-                    Agents first, unless this chat is on a bare model — then
-                    Models, so the entry that is already ticked is the one under
-                    the pointer rather than one tab away.
-
-                    Untouched by issue #273, deliberately. It looked like the
-                    place to fix "a new chat never opens on Agents", because a
-                    new chat used to be handed a bare model whatever anybody had
-                    been talking to, so this test was true every time. But the
-                    rule here was never the fault: it is about showing the
-                    ticked entry, and it was right about a chat that really was
-                    on a bare model. What was wrong was what the chat was
-                    pointed at, and that is fixed where it was decided —
-                    `ChatService.lastUsed`. A new chat now inherits the agent,
-                    so `agentId` is set, so this opens on Agents by the rule it
-                    already had.
-                  */
-                  if (opening) {
-                    setPickerTab(current.agentId === null && current.modelId !== null ? 'models' : 'agents');
-                  }
-                }}
+                onClick={() => setPickerOpen(!pickerOpen)}
                 aria-expanded={pickerOpen}
               >
                 <span className={current.modelName === null ? styles.modelUnset : styles.modelName}>
@@ -1708,6 +1729,24 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                 <img src={chevronDown12Icon} alt="" width={12} height={12} />
               </button>
 
+              {/*
+                One list, and it is agents.
+
+                It used to be two tabs, Agents then Models, with agents first
+                (issue #249) on the argument that what somebody chats to is
+                nearly always an agent: it brings its instructions, its skills
+                and its tools with it, and it supplies a model anyway, so
+                offering the bare models put the raw material ahead of the thing
+                made out of it.
+
+                Issue #295 finished that argument by taking the second half
+                away. A bare model is that same agent with the instructions, the
+                skills, the grants and the memory taken off, and a tab beside
+                them said it was the other half of a choice. A chat that is
+                already on one keeps working, and the button above still shows
+                its model's name — read off the chat as `modelName`, not out of
+                a list — so what this offers is the agents it could be handed to.
+              */}
               {pickerOpen && (
                 <div className={styles.picker}>
                   <div className={styles.pickerSearch}>
@@ -1721,24 +1760,6 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                       autoFocus
                     />
                   </div>
-                  {/* Agents first: what a chat is usually pointed at, and the
-                      thing a bare model is the raw material for (issue #249). */}
-                  <div className={styles.pickerTabs} role="tablist">
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={pickerTab === 'agents'}
-                      className={pickerTab === 'agents' ? styles.pickerTabActive : styles.pickerTab}
-                      onClick={() => setPickerTab('agents')}
-                    >{t('Agents')}</button>
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={pickerTab === 'models'}
-                      className={pickerTab === 'models' ? styles.pickerTabActive : styles.pickerTab}
-                      onClick={() => setPickerTab('models')}
-                    >{t('Models')}</button>
-                  </div>
                   <div className={styles.pickerList}>
                     {/*
                       Three things the list can have nothing in it for, and they
@@ -1746,29 +1767,23 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                       failed, or what was typed above matches none of them.
                     */}
                     <CatalogueNote
-                      catalogue={pickerTab === 'models' ? modelCatalogue : agentCatalogue}
+                      catalogue={agentCatalogue}
                       className={styles.pickerEmpty}
-                      empty={
-                        pickerTab === 'models'
-                          ? t('No models in this workspace yet.')
-                          : t('No agents in this workspace yet.')
-                      }
+                      empty={t('No agents in this workspace yet.')}
                     />
-                    {pickerEntries.length === 0 &&
-                      (pickerTab === 'models' ? models.length > 0 : agents.length > 0) && (
-                        <p className={styles.pickerEmpty}>{t('Nothing by that name.')}</p>
-                      )}
+                    {pickerEntries.length === 0 && agents.length > 0 && (
+                      <p className={styles.pickerEmpty}>{t('Nothing by that name.')}</p>
+                    )}
                     {pickerEntries.map((entry) => (
                       <button
                         key={entry.id}
                         type="button"
                         className={
-                          entry.id === (pickerTab === 'agents' ? current.agentId : current.modelId)
-                            ? styles.pickerEntryCurrent
-                            : styles.pickerEntry
+                          entry.id === current.agentId ? styles.pickerEntryCurrent : styles.pickerEntry
                         }
-                        // An agent with no model cannot answer; the server says so
-                        // too, but there is no reason to offer it as a choice.
+                        // An agent switched off, or with no model chosen, cannot
+                        // answer; the server says so too, but there is no reason
+                        // to offer it as a choice.
                         disabled={!entry.enabled}
                         title={entry.enabled ? undefined : t('Not active')}
                         onClick={() => void handleChoose(entry.id)}

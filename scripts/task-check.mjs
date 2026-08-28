@@ -17,7 +17,9 @@
  *
  * It builds its own model and cleans up after itself: the seeded fixture has no
  * model on a database built from nothing, and a check that borrows whatever
- * happens to be there says a different thing on every installation.
+ * happens to be there says a different thing on every installation. Since issue
+ * #295 it builds an agent on that model as well, because a task is given to an
+ * agent and there is no longer a bare model in the picker to give it to.
  */
 import { BASE, WORKSPACE, open, check, shot, finish } from './suite/harness.mjs';
 
@@ -44,6 +46,7 @@ const before = await gql(
   `query($workspaceId: ID!) {
      workspaceTasks(workspaceId: $workspaceId, page: 0, size: 200) { content { id title status } }
      modelProviders(workspaceId: $workspaceId) { id name }
+     workspaceAgents(workspaceId: $workspaceId, page: 0, size: 200) { content { id name } }
    }`,
   { workspaceId: WORKSPACE },
 );
@@ -57,6 +60,16 @@ for (const old of before.workspaceTasks.content.filter((row) => row.title.starts
 for (const old of before.modelProviders.filter((row) => row.name.startsWith('zzScratchTaskProvider'))) {
   await gql(`mutation($id: ID!) { removeModelProvider(id: $id) }`, { id: old.id }).catch(() => undefined);
   console.log(`swept provider ${old.name} (#${old.id}) from an earlier run`);
+}
+/*
+ * And the agent, which is named after the model it was made from and so carries
+ * the model's prefix rather than its own. Taking the provider away does not take
+ * it with it, and an agent left standing on a model that is gone is exactly the
+ * kind of debris the next run would then choose from.
+ */
+for (const old of before.workspaceAgents.content.filter((row) => row.name.startsWith('zzScratchTaskModel'))) {
+  await gql(`mutation($id: ID!) { deleteAgent(id: $id) }`, { id: old.id }).catch(() => undefined);
+  console.log(`swept agent ${old.name} (#${old.id}) from an earlier run`);
 }
 
 // A model that cannot answer, which is all this check needs one to be.
@@ -80,6 +93,20 @@ const model = (
 ).createModel;
 console.log(`made ${MODEL} (#${model.id}) for the task to be given`);
 
+/*
+ * And an agent standing on it, because that is what a task is given now.
+ * Issue #295 made `agentId` required and took the bare model out of the picker,
+ * so the option this check chooses below is an agent rather than a model.
+ * `createAgentForModel` is the one press the Models screen offers for exactly
+ * this: an agent named after the model, granted nothing. Granted nothing is
+ * what is wanted here - nothing in this check is ever answered, and an agent
+ * carrying tools would be a larger fixture saying the same thing.
+ */
+const worker = (
+  await gql(`mutation($m: ID!) { createAgentForModel(modelId: $m) { id name } }`, { m: model.id })
+).createAgentForModel;
+console.log(`made agent ${worker.name} (#${worker.id}) to be given it`);
+
 // --- the page, and the one control it exists for ----------------------------
 
 await page.goto(`${BASE}/workspace/${WORKSPACE}/tasks`, { waitUntil: 'domcontentloaded' });
@@ -93,11 +120,11 @@ check(
 );
 
 await page.locator('#task-prompt').fill(PROMPT);
-await page.locator('#task-worker').selectOption(`model:${model.id}`);
+await page.locator('#task-worker').selectOption(String(worker.id));
 check(
   await start.isEnabled(),
   'Start is offered once there is a prompt and somebody to do it',
-  'Start stayed refused with a prompt and a model chosen',
+  'Start stayed refused with a prompt and an agent chosen',
 );
 
 await start.click();
@@ -182,6 +209,7 @@ await page.screenshot({ path: shot('task-check.png'), fullPage: true });
 // --- put it back the way it was ---------------------------------------------
 
 await gql(`mutation($id: ID!) { deleteTask(id: $id) }`, { id: taskId }).catch(() => undefined);
+await gql(`mutation($id: ID!) { deleteAgent(id: $id) }`, { id: worker.id }).catch(() => undefined);
 await gql(`mutation($id: ID!) { removeModelProvider(id: $id) }`, { id: provider.id }).catch(() => undefined);
 
 await finish(browser);

@@ -129,6 +129,12 @@ const CREATE_AGENT_MUTATION = `
   }
 `;
 
+const CREATE_AGENT_FOR_MODEL_MUTATION = `
+  mutation CreateAgentForModel($modelId: ID!) {
+    createAgentForModel(modelId: $modelId) { ${AGENT_FIELDS} }
+  }
+`;
+
 const UPDATE_AGENT_MUTATION = `
   mutation UpdateAgent($id: ID!, $input: UpdateAgentInput!) {
     updateAgent(id: $id, input: $input) { ${AGENT_FIELDS} }
@@ -181,6 +187,23 @@ export async function createAgent(input: {
 }): Promise<Agent> {
   const data = await graphql<{ createAgent: Agent }>(CREATE_AGENT_MUTATION, { input });
   return data.createAgent;
+}
+
+/**
+ * Makes an agent out of a model, in one press, from the Models screen.
+ *
+ * Named after the model, and where that name is taken, the same with a number
+ * after it. Granted nothing at all - granting is what the agent's settings page
+ * is for, and this is the bare agent you then dress. It is not a bare *model*:
+ * it has a name, a page, a prompt it can be given, memory, and somewhere for
+ * every grant to go.
+ */
+export async function createAgentForModel(modelId: string): Promise<Agent> {
+  const data = await graphql<{ createAgentForModel: Agent }>(
+    CREATE_AGENT_FOR_MODEL_MUTATION,
+    { modelId },
+  );
+  return data.createAgentForModel;
 }
 
 export async function updateAgent(

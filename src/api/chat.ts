@@ -187,7 +187,13 @@ export async function fetchChatMessages(id: string): Promise<ChatMessage[]> {
 }
 
 /**
- * Opens a chat.
+ * Opens a chat, on an agent.
+ *
+ * `agentId` is where a `modelId` used to be. Left out - which is what the
+ * sidebar's "+ New" sends - the server opens it on whichever agent this person
+ * last talked to in this workspace, or on the workspace's first usable agent
+ * where they have talked to none. A workspace with no agent at all refuses with
+ * `ChatAgentMissing`, and the screen says to add one.
  *
  * `llmSessionId` is the session it continues, when it was opened from one: what
  * was already said there comes back as the chat's first messages, and what is
@@ -197,12 +203,12 @@ export async function fetchChatMessages(id: string): Promise<ChatMessage[]> {
 export async function startChat(
   workspaceId: string,
   title?: string,
-  modelId?: string,
+  agentId?: string,
   llmSessionId?: string,
 ): Promise<ChatSession> {
   const data = await graphql<{ startChat: ChatSession }>(
     `mutation StartChat($input: StartChatInput!) { startChat(input: $input) { ${SESSION_FIELDS} } }`,
-    { input: { workspaceId, title, modelId, llmSessionId } },
+    { input: { workspaceId, title, agentId, llmSessionId } },
   );
   return data.startChat;
 }
@@ -225,25 +231,23 @@ export async function setChatPinned(id: string, pinned: boolean): Promise<ChatSe
   return data.setChatPinned;
 }
 
-/** Hands the chat to an agent; null hands it back to a bare model. */
-export async function chooseChatAgent(id: string, agentId: string | null): Promise<ChatSession> {
+/**
+ * Hands the chat to one of the workspace's agents.
+ *
+ * One way only, and there is no `chooseChatModel` beside it any more. Both used
+ * to take the agent off and leave the model, which is a chat on a bare model
+ * made in one press - and a chat on a bare model is no longer something this
+ * product makes. The ones that already exist still open, still render and still
+ * answer, and this is how one of them stops being one.
+ */
+export async function chooseChatAgent(id: string, agentId: string): Promise<ChatSession> {
   const data = await graphql<{ chooseChatAgent: ChatSession }>(
-    `mutation ChooseChatAgent($id: ID!, $agentId: ID) {
+    `mutation ChooseChatAgent($id: ID!, $agentId: ID!) {
        chooseChatAgent(id: $id, agentId: $agentId) { ${SESSION_FIELDS} }
      }`,
     { id, agentId },
   );
   return data.chooseChatAgent;
-}
-
-export async function chooseChatModel(id: string, modelId: string | null): Promise<ChatSession> {
-  const data = await graphql<{ chooseChatModel: ChatSession }>(
-    `mutation ChooseChatModel($id: ID!, $modelId: ID) {
-       chooseChatModel(id: $id, modelId: $modelId) { ${SESSION_FIELDS} }
-     }`,
-    { id, modelId },
-  );
-  return data.chooseChatModel;
 }
 
 export async function deleteChat(id: string): Promise<boolean> {

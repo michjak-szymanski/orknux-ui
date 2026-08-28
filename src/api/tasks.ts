@@ -232,9 +232,15 @@ export async function fetchTask(id: string): Promise<Task | null> {
 export async function startTask(input: {
   workspaceId: string;
   prompt: string;
+  /**
+   * The agent to do it.
+   *
+   * Required. It used to be optional, and leaving it out meant a bare model -
+   * an agent with no tools, no skills, no grants and no instructions, set to a
+   * job that is defined by doing.
+   */
+  agentId: string;
   title?: string;
-  agentId?: string | null;
-  modelId?: string | null;
   issueId?: string | null;
 }): Promise<Task> {
   const data = await graphql<{ startTask: Task }>(
@@ -244,8 +250,7 @@ export async function startTask(input: {
         workspaceId: input.workspaceId,
         prompt: input.prompt,
         title: input.title ?? null,
-        agentId: input.agentId ?? null,
-        modelId: input.modelId ?? null,
+        agentId: input.agentId,
         issueId: input.issueId ?? null,
       },
     },

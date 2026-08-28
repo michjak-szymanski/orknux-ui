@@ -3,8 +3,6 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { fetchWorkspaceAgents } from '../../api/agents';
 import type { Agent } from '../../api/agents';
-import { fetchModels } from '../../api/models';
-import type { Model } from '../../api/models';
 import type { SessionUser } from '../../api/session';
 import { startTask, fetchTasks, openRequest, TASK_STATUSES, TASK_STATUS_LABEL } from '../../api/tasks';
 import type { TaskPage, TaskStatus } from '../../api/tasks';
@@ -31,18 +29,6 @@ const PAGE_SIZE = 12;
 const AGENTS = 200;
 
 /**
- * Who is to do it, as one field.
- *
- * An agent and a model are the two answers to one question, so they are one
- * control rather than two that can both be filled in. The value carries which
- * of the two it is, because the ids are from different tables and 7 alone does
- * not say which 7.
- */
-function workerValue(kind: 'agent' | 'model', id: string): string {
-  return `${kind}:${id}`;
-}
-
-/**
  * Tasks: an agent given a problem and left to work at it.
  *
  * The form is at the top rather than behind a button because starting one is
@@ -59,8 +45,7 @@ export function WorkspaceTasksPage({ session, onSignOut }: WorkspaceTasksPagePro
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [models, setModels] = useState<Model[]>([]);
+  const [agents, setAgents] = useState<Agent[] | null>(null);
   const [prompt, setPrompt] = useState('');
   const [worker, setWorker] = useState('');
   const [starting, setStarting] = useState(false);
@@ -93,14 +78,20 @@ export function WorkspaceTasksPage({ session, onSignOut }: WorkspaceTasksPagePro
   useEffect(() => {
     if (workspaceId === '') return;
     let current = true;
+    /*
+     * Only agents that could actually work: switched on, and with a model
+     * chosen. The models list used to be fetched beside this one and offered as
+     * the other half of the choice - see the label below for why it is not.
+     *
+     * Null on failure rather than an empty list, and null until it arrives. It
+     * used to end `.catch(() => undefined)`, which left the list empty - and
+     * empty now means "add an agent", so a server that had gone away would send
+     * somebody off to build an agent they already have. Neither the note nor the
+     * disabled select is drawn while the answer is unknown.
+     */
     void fetchWorkspaceAgents(workspaceId, 0, AGENTS)
       .then((found) => {
-        if (current) setAgents(found.content.filter((one) => one.enabled));
-      })
-      .catch(() => undefined);
-    void fetchModels(workspaceId)
-      .then((found) => {
-        if (current) setModels(found.filter((one) => one.enabled && one.kind === 'CHAT'));
+        if (current) setAgents(found.content.filter((one) => one.enabled && one.modelId !== null));
       })
       .catch(() => undefined);
     return () => {
@@ -113,14 +104,8 @@ export function WorkspaceTasksPage({ session, onSignOut }: WorkspaceTasksPagePro
     if (said === '' || worker === '' || starting) return;
     setStarting(true);
     setStartError(null);
-    const [kind, id] = worker.split(':');
     try {
-      const made = await startTask({
-        workspaceId,
-        prompt: said,
-        agentId: kind === 'agent' ? id : null,
-        modelId: kind === 'model' ? id : null,
-      });
+      const made = await startTask({ workspaceId, prompt: said, agentId: worker });
       setPrompt('');
       navigate(`/workspace/${workspaceId}/tasks/${made.id}`);
     } catch (cause: unknown) {
@@ -166,9 +151,9 @@ export function WorkspaceTasksPage({ session, onSignOut }: WorkspaceTasksPagePro
         <div className={styles.starterRow}>
           <label className={styles.label} htmlFor="task-worker">
             <span className={styles.labelWithHint}>
-              {t('Agent or model')}
-              <FieldHint label={t('Agent or model')}>
-                {t('An agent brings its own instructions, skills and grants, and those grants are the whole of what the task may reach. A bare model brings none of that: it starts with nothing and has to ask for everything, which is the safer place to start and the slower one.')}
+              {t('Agent')}
+              <FieldHint label={t('Agent')}>
+                {t('An agent brings its own instructions, skills and grants, and those grants are the whole of what the task may reach.')}
               </FieldHint>
             </span>
           </label>
@@ -178,26 +163,14 @@ export function WorkspaceTasksPage({ session, onSignOut }: WorkspaceTasksPagePro
               className={styles.select}
               value={worker}
               onChange={(event) => setWorker(event.target.value)}
+              disabled={agents !== null && agents.length === 0}
             >
               <option value="">{t('Choose…')}</option>
-              {agents.length > 0 && (
-                <optgroup label={t('Agents')}>
-                  {agents.map((one) => (
-                    <option key={`agent-${one.id}`} value={workerValue('agent', one.id)}>
-                      {one.name}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-              {models.length > 0 && (
-                <optgroup label={t('Models')}>
-                  {models.map((one) => (
-                    <option key={`model-${one.id}`} value={workerValue('model', one.id)}>
-                      {one.providerName} · {one.name}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
+              {(agents ?? []).map((one) => (
+                <option key={one.id} value={one.id}>
+                  {one.name}
+                </option>
+              ))}
             </select>
             <img src={chevronDown12Icon} alt="" width={12} height={12} />
           </span>
@@ -211,6 +184,19 @@ export function WorkspaceTasksPage({ session, onSignOut }: WorkspaceTasksPagePro
             {starting ? 'Starting…' : 'Start'}
           </button>
         </div>
+
+        {/*
+          A workspace with no agent is a workspace where nothing can be started,
+          which is a state this page did not have before issue #295: a bare model
+          used to fill the gap. So it says what is missing and offers the way,
+          rather than leaving an empty dropdown to be puzzled over.
+        */}
+        {agents !== null && agents.length === 0 && (
+          <p className={styles.startError}>
+            {t('This workspace has no agent that can work yet.')}{' '}
+            <Link to={`/workspace/${workspaceId}/agents`}>{t('Add an agent')}</Link>
+          </p>
+        )}
 
         {startError !== null && (
           <p className={styles.startError} role="alert">

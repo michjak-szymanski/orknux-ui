@@ -73,6 +73,7 @@ const before = await graphql(
   `query ($workspaceId: ID!) {
      workspaceTasks(workspaceId: $workspaceId, page: 0, size: 200) { content { id title status } }
      modelProviders(workspaceId: $workspaceId) { id name }
+     workspaceAgents(workspaceId: $workspaceId, page: 0, size: 200) { content { id name } }
    }`,
   { workspaceId: WORKSPACE },
 );
@@ -86,6 +87,16 @@ for (const old of before.workspaceTasks.content.filter((row) => row.title.starts
 for (const old of before.modelProviders.filter((row) => row.name.startsWith('zzScratchSayProvider'))) {
   await graphql(`mutation ($id: ID!) { removeModelProvider(id: $id) }`, { id: old.id }).catch(() => undefined);
   console.log(`swept provider ${old.name} (#${old.id}) from an earlier run`);
+}
+/*
+ * And the agent, which is named after the model it was made from and so carries
+ * the model's prefix rather than a prefix of its own. Taking the provider away
+ * does not take it with it, and an agent standing on a model that is gone is
+ * exactly the debris the picker would then be offering.
+ */
+for (const old of before.workspaceAgents.content.filter((row) => row.name.startsWith('zzScratchSayModel'))) {
+  await graphql(`mutation ($id: ID!) { deleteAgent(id: $id) }`, { id: old.id }).catch(() => undefined);
+  console.log(`swept agent ${old.name} (#${old.id}) from an earlier run`);
 }
 
 // A model that takes its time, which is what this check needs one to be. It
@@ -102,6 +113,19 @@ const model = (
   })
 ).createModel;
 console.log(`made ${MODEL} (#${model.id}) pointed at ${STUB}`);
+
+/*
+ * And an agent standing on it, because that is what a task is given now. Issue
+ * #295 made `agentId` required and took the bare model out of the picker, so
+ * the option chosen below is an agent rather than a model.
+ * `createAgentForModel` makes one named after the model and granted nothing,
+ * which is what this wants: the stub decides how long the first round lasts and
+ * an agent carrying tools would put rounds of its own in front of it.
+ */
+const worker = (
+  await graphql(`mutation ($m: ID!) { createAgentForModel(modelId: $m) { id name } }`, { m: model.id })
+).createAgentForModel;
+console.log(`made agent ${worker.name} (#${worker.id}) to be given the task`);
 
 /**
  * Everything this check reads off the page, in one evaluate.
@@ -130,7 +154,7 @@ const readPage = () =>
 await page.goto(`${BASE}/workspace/${WORKSPACE}/tasks`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('h1:text("Tasks")', { timeout: 20_000 });
 await page.locator('#task-prompt').fill(PROMPT);
-await page.locator('#task-worker').selectOption(`model:${model.id}`);
+await page.locator('#task-worker').selectOption(String(worker.id));
 await page.locator('button:text("Start")').click();
 await page.waitForURL(/\/tasks\/\d+$/, { timeout: 20_000 });
 const taskId = page.url().split('/').pop();
@@ -245,6 +269,7 @@ await page.screenshot({ path: shot('task-message-done.png'), fullPage: true });
 
 await graphql(`mutation ($id: ID!) { stopTask(id: $id) { id } }`, { id: taskId }).catch(() => undefined);
 await graphql(`mutation ($id: ID!) { deleteTask(id: $id) }`, { id: taskId }).catch(() => undefined);
+await graphql(`mutation ($id: ID!) { deleteAgent(id: $id) }`, { id: worker.id }).catch(() => undefined);
 await graphql(`mutation ($id: ID!) { removeModelProvider(id: $id) }`, { id: provider.id }).catch(() => undefined);
 
 await finish(browser);

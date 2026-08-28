@@ -115,12 +115,16 @@ if (measured !== null) {
 await page.screenshot({ path: shot('chat-selector.png'), clip: { x: 0, y: 0, width: 1440, height: 420 } });
 
 /*
- * The other tab, because it holds the longer names. A workspace has a handful
- * of models and dozens of agents, and an agent is called whatever somebody
- * called it - so if a name is going to run out of the panel it is one of these.
+ * The entries, because they hold the longer names. A workspace has dozens of
+ * agents and an agent is called whatever somebody called it, so if a name is
+ * going to run out of the panel it is one of these.
+ *
+ * There was a tab to press to reach them: the picker had Agents beside Models
+ * and opened on whichever half the chat's own choice was in. Issue #295 took
+ * the bare model away and the tab strip went with it - the picker lists agents
+ * and nothing else - so this measures the list that is already open. What is
+ * asserted about it has not changed.
  */
-await page.locator('[role="tab"]', { hasText: /^Agents$/ }).click();
-await page.waitForTimeout(400);
 const agents = await page.evaluate(() => {
   const picker = document.querySelector('[class*="_picker_"]');
   const panel = picker.getBoundingClientRect();

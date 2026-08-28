@@ -9,8 +9,10 @@ import {
   setModelEnabled,
 } from '../../api/models';
 import type { Model, ModelProvider, ProviderStatus } from '../../api/models';
+import { createAgentForModel } from '../../api/agents';
 import type { SessionUser } from '../../api/session';
 import settingsIcon from '../../assets/settings-14.svg';
+import userPlusIcon from '../../assets/user-plus.svg';
 import toggleOffIcon from '../../assets/toggle-off.svg';
 import toggleOnIcon from '../../assets/toggle-on.svg';
 import { AppShell } from '../../components/AppShell';
@@ -46,6 +48,8 @@ export function WorkspaceModelsPage({ session, onSignOut }: WorkspaceModelsPageP
   const [models, setModels] = useState<Model[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [addingModel, setAddingModel] = useState(false);
+  /** Which model an agent is being made on, so the row cannot be pressed twice. */
+  const [makingAgentOn, setMakingAgentOn] = useState<string | null>(null);
 
   const load = useCallback(() => {
     if (workspaceId === '') return;
@@ -70,6 +74,34 @@ export function WorkspaceModelsPage({ session, onSignOut }: WorkspaceModelsPageP
       load();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t('Could not change the model.'));
+    }
+  }
+
+  /**
+   * Makes an agent on this model and goes to it.
+   *
+   * The short way to find out whether a model that was just added actually
+   * works. It used to be shorter: open a chat, pick the model, type. Issue #295
+   * took the bare model away, and the path that replaced it — build an agent by
+   * hand, name it, choose its model, save it, chat to it — was long enough that
+   * it was worth one press instead.
+   *
+   * It lands on the agent's page rather than in a chat. What was made is an
+   * agent, its name was derived rather than chosen, and it has been granted
+   * nothing — all three are things to look at before talking to it. A chat
+   * would also mean a new conversation in the sidebar every time somebody
+   * checked a model, which is litter nobody asked for.
+   */
+  async function makeAgent(model: Model) {
+    if (makingAgentOn !== null) return;
+    setMakingAgentOn(model.id);
+    setError(null);
+    try {
+      const made = await createAgentForModel(model.id);
+      navigate(`/workspace/${workspaceId}/agents/${made.id}/settings`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t('Could not make an agent on that model.'));
+      setMakingAgentOn(null);
     }
   }
 
@@ -244,6 +276,27 @@ export function WorkspaceModelsPage({ session, onSignOut }: WorkspaceModelsPageP
             </span>
             <span className={styles.colGrow} />
             <span className={styles.colActions}>
+              {/*
+                Only on a model that could hold a conversation. An agent on a
+                transcription model is an agent that fails on its first message,
+                and the server refuses one — a button that is there to be
+                refused is a worse button than one that is not there.
+              */}
+              {model.kind === 'CHAT' && (
+                <button
+                  type="button"
+                  className={styles.rowAction}
+                  disabled={makingAgentOn !== null}
+                  aria-label={`Make an agent on ${model.name}`}
+                  title={t('Make an agent on this model')}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void makeAgent(model);
+                  }}
+                >
+                  <img src={userPlusIcon} alt="" width={14} height={14} />
+                </button>
+              )}
               <Link
                 className={styles.rowAction}
                 to={`/workspace/${workspaceId}/models/${model.id}`}

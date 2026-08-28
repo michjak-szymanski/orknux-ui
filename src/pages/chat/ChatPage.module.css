@@ -42,6 +42,28 @@
   border-color: var(--color-accent-brand);
 }
 
+/*
+ * Switched off where the workspace has no agent to chat with, since issue #295.
+ * It has to look switched off as well as be it: the empty pane beside it says
+ * to add an agent, and a button that still reads as pressable invites the press
+ * that sentence exists to prevent.
+ */
+.newButton:disabled,
+.collapsedAction:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.newButton:disabled:hover {
+  border-color: var(--color-border);
+}
+
+.collapsedAction:disabled:hover {
+  background: none;
+  border-color: transparent;
+  opacity: 0.4;
+}
+
 .searchBox,
 .pickerSearch {
   display: flex;
