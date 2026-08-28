@@ -20,6 +20,7 @@ import {
   tokenCount,
 } from '../../api/chat';
 import type { ChatCall, ChatMessage, ChatSession, ChatSpend, ChatStreamHandlers } from '../../api/chat';
+import { givenUp } from '../../api/sse';
 import { fetchInstallationSettings } from '../../api/installation';
 import {
   attachmentUrl,
@@ -196,6 +197,19 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
 
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  /**
+   * The request answering the turn in flight, so it can be stopped.
+   *
+   * A ref rather than state because nothing on the screen is drawn from it —
+   * `sending` is what the composer reads — and because the handler that aborts
+   * it has to reach the one that is running now rather than the one that was
+   * running when its closure was made.
+   *
+   * Every door into the model puts its controller here: a typed send, a spoken
+   * turn, and asking for the answer again. One at a time, because a chat only
+   * ever has one answer being written.
+   */
+  const asking = useRef<AbortController | null>(null);
   /**
    * What the last answer took and cost; the log shows it under the model's name.
    *
@@ -1007,7 +1021,11 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
    * question, then nothing at all, then a whole answer — and the one screen
    * saying the model was working was the one nobody was looking at.
    */
-  async function handleVoiceTurn(text: string, onProgress: (soFar: string) => void): Promise<string> {
+  async function handleVoiceTurn(
+    text: string,
+    onProgress: (soFar: string) => void,
+    signal: AbortSignal,
+  ): Promise<string> {
     if (currentId === null) return '';
 
     // What the composer had attached when this was typed, if it was typed and
@@ -1029,6 +1047,14 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
 
     let answer = '';
     let failure: string | null = null;
+    /*
+     * The panel owns a spoken turn and therefore owns the stopping of it, so
+     * the signal it hands down is the one that goes to the server rather than a
+     * second one made here. What the composer's own Stop is for is the turn it
+     * started itself; in voice mode the composer draws no Stop, because the
+     * circle beside it is that control and two of them would be two ways to
+     * cut in that disagreed about what a turn is.
+     */
     try {
       await streamChatMessage(
         currentId,
@@ -1055,6 +1081,7 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
           },
         },
         going,
+        signal,
       );
       if (failure !== null) throw new Error(failure);
       if (going.length > 0) {
@@ -1195,6 +1222,8 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
     // The answer grows in place as it arrives, so the empty assistant turn is
     // appended first and each piece lands on the end of it.
     setMessages((present) => [...present, { role: 'assistant', content: '', actor: null, takes: [], thinking: null, thinkingMillis: null }]);
+    const asked = new AbortController();
+    asking.current = asked;
     try {
       let failure: string | null = null;
       await streamChatMessage(
@@ -1215,6 +1244,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
           },
         },
         going.map((file) => file.id),
+        asked.signal,
       );
       if (failure !== null) throw new Error(failure);
       // The send tied them to the chat, so this only reads back what is there.
@@ -1225,10 +1255,16 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
       }
       await loadSessions(currentId);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t('The model did not answer.'));
+      // Stopped on purpose is not a failure and is not reported as one. What is
+      // still read back is the history, because the server keeps nothing of an
+      // answer it was told to abandon - so the half sentence on screen is not
+      // what this chat says, and leaving it there would be the screen inventing
+      // a turn.
+      if (!givenUp(cause)) setError(cause instanceof Error ? cause.message : t('The model did not answer.'));
       // What the server kept is the truth about what was said.
       fetchChatMessages(currentId).then(setMessages).catch(() => undefined);
     } finally {
+      if (asking.current === asked) asking.current = null;
       setSending(false);
     }
   }
@@ -1270,6 +1306,8 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
       return rest;
     });
 
+    const asked = new AbortController();
+    asking.current = asked;
     try {
       let failure: string | null = null;
       await regenerateChatAnswer(currentId, {
@@ -1285,17 +1323,36 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
         onError: (reason) => {
           failure = reason;
         },
-      });
+      }, asked.signal);
       if (failure !== null) throw new Error(failure);
       await loadSessions(currentId);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t('The model did not answer.'));
+      if (!givenUp(cause)) setError(cause instanceof Error ? cause.message : t('The model did not answer.'));
       // The server puts the answer back when it could not give another, so what
       // it holds is the truth about what this chat says.
       fetchChatMessages(currentId).then(setMessages).catch(() => undefined);
     } finally {
+      if (asking.current === asked) asking.current = null;
       setSending(false);
     }
+  }
+
+  /**
+   * Stops the turn in flight, from the composer.
+   *
+   * The same interruption the circle in voice mode makes, and it has to be the
+   * same one: the two would otherwise disagree about what stopping means, with
+   * one of them ending the model call and the other only looking away. What it
+   * reaches is the request, so the server sees the connection close and hangs
+   * up on the provider — see `ReaderWatch`. Issue #299.
+   *
+   * The answer written so far is not kept. The server does not write an
+   * abandoned answer to the history, and the log is re-read as this unwinds, so
+   * what stays on screen is what the chat actually holds.
+   */
+  function handleStop() {
+    asking.current?.abort();
+    asking.current = null;
   }
 
   function handleComposerKey(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -2621,6 +2678,23 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                     </button>
                   )}
                 </>
+              )}
+              {/*
+                Offered only while there is a turn to stop, and only where this
+                composer is the thing that started it: in voice mode the circle
+                beside this is the control that cuts in, and a second one here
+                would be two buttons with one job disagreeing about what a turn
+                is.
+              */}
+              {sending && !voice && (
+                <button
+                  type="button"
+                  className={styles.stopButton}
+                  onClick={handleStop}
+                  title={t('Stop this answer')}
+                >
+                  {t('Stop')}
+                </button>
               )}
               <button
                 type="submit"

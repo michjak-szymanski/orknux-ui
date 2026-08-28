@@ -1262,6 +1262,32 @@ button.attachmentName {
   }
 }
 
+/*
+ * Stopping the turn in flight, beside the button that started it.
+ *
+ * Beside rather than instead of: the send button says whether the model is
+ * waiting or answering, which is the one place the screen reports that, and a
+ * control that took its place would take the reading with it. Drawn quietly,
+ * because it is offered on every turn and is wanted on very few.
+ */
+.stopButton {
+  flex-shrink: 0;
+  padding: var(--space-6) var(--space-12);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font-family: inherit;
+  font-weight: 500;
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.stopButton:hover {
+  border-color: var(--color-accent-brand);
+  color: var(--color-text-primary);
+}
+
 .sendButton {
   flex-shrink: 0;
   padding: var(--space-6) var(--space-12);

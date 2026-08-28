@@ -331,12 +331,24 @@ export async function streamChatMessage(
    * not have seen.
    */
   attachmentIds: string[] = [],
+  /**
+   * How this turn is given up on part way through.
+   *
+   * Handed to `fetch` rather than merely watched by the caller, because
+   * ignoring an answer is not the same as stopping it: the model goes on
+   * writing, the tokens go on being charged for, and the next thing said races
+   * a turn that is still in flight. Aborting closes the connection, and the
+   * server has been taught to read that as nobody being left to answer — see
+   * `ReaderWatch` on the other side of it. Issue #299.
+   */
+  signal?: AbortSignal,
 ): Promise<void> {
   const response = await fetch(`/api/chats/${id}/stream`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'same-origin',
     body: JSON.stringify({ text, attachmentIds }),
+    signal,
   });
   await read(response, handlers);
 }
@@ -349,10 +361,16 @@ export async function streamChatMessage(
  * which is the model or agent that produced it, unless the picker has been
  * moved since.
  */
-export async function regenerateChatAnswer(id: string, handlers: ChatStreamHandlers): Promise<void> {
+export async function regenerateChatAnswer(
+  id: string,
+  handlers: ChatStreamHandlers,
+  /** The same handle a send takes, and stopping this stops the model too. */
+  signal?: AbortSignal,
+): Promise<void> {
   const response = await fetch(`/api/chats/${id}/regenerate`, {
     method: 'POST',
     credentials: 'same-origin',
+    signal,
   });
   await read(response, handlers);
 }
