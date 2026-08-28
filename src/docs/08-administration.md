@@ -296,6 +296,31 @@ the page says as much where the two disagree. Between a day and ten years, and
 there is no off — a history nobody keeps is a different decision from a short
 one, and it would want a switch of its own rather than a zero in this box.
 
+### How long before a stuck task is picked up
+
+A task is written down and then handed to a worker, and that hand-over can be
+lost — a restart in the moment between the two, or a pool with nothing free to
+take it. The task then says Queued and nothing looks at it again. **How long a
+task may sit like that before something picks it up is set here**, and it is
+five minutes until somebody changes it.
+
+The same number is how often the looking happens, so a task that is genuinely
+stuck is started again within about twice it. It is not what makes this safe: a
+task a worker already has is never handed over a second time, whatever this
+says, and the interval only decides how long a lost one is left. Between a
+minute and a day — below a minute buys nothing, since a task leaves Queued as
+soon as a worker reads its row.
+
+`ORKNUX_TASK_SWEEP_MINUTES` is what a fresh installation starts at, and a stored
+answer takes over from there, as with the retention above. The next pass reads
+it, so a change needs no restart.
+
+**This field is not on the screen of an installation running Temporal.** There a
+task is a durable workflow, the looking still happens and starts the workflow
+again where there is none running, and how long it waits comes from the
+configuration file: recovering a stuck task is Temporal's business, and a number
+this screen could change would be claiming otherwise.
+
 ## Monitoring
 
 ![Monitoring: the health of the service and everything it needs to be up](/screens/monitoring.png)

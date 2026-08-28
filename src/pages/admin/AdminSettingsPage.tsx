@@ -6,6 +6,7 @@ import {
   setChatEnabled,
   setMetricsAnonymous,
   setRevisionRetentionDays,
+  setTaskSweepMinutes,
 } from '../../api/installation';
 import type { InstallationSettings } from '../../api/installation';
 import type { SessionUser } from '../../api/session';
@@ -47,12 +48,15 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
    * one without saving an empty string on the way through.
    */
   const [retention, setRetention] = useState('');
+  /** The same, for the interval box: a half-typed number is not a setting. */
+  const [sweep, setSweep] = useState('');
 
   useEffect(() => {
     fetchInstallationSettings()
       .then((held) => {
         setSettings(held);
         setRetention(String(held.revisionRetentionDays));
+        setSweep(String(held.taskSweepMinutes));
       })
       .catch((cause: unknown) => {
         setError(cause instanceof Error ? cause.message : t('Could not read the settings.'));
@@ -70,6 +74,7 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
       const held = await change();
       setSettings(held);
       setRetention(String(held.revisionRetentionDays));
+      setSweep(String(held.taskSweepMinutes));
       // The shell reads the same settings to decide whether to offer the Chat
       // tab, so it is told rather than left showing a link to a page that is off.
       forgetInstallation();
@@ -328,6 +333,61 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
                 {settings.revisionRetentionDaysConfigured} days, but an administrator stored{' '}
                 {settings.revisionRetentionDays} here, and the stored answer is the one in force.
               </p>
+            )}
+
+            {/*
+              Drawn only where it can do anything. An installation running
+              Temporal recovers a stuck task through Temporal, and the interval
+              comes from the configuration file there — so this is not a switch
+              turned off, it is a decision that is not this screen's to take,
+              and a greyed-out box would only invite somebody to wonder why.
+            */}
+            {settings.taskSweepConfigurable && (
+              <>
+                <h2 className={styles.sectionHeading}>{t('Queued tasks')}</h2>
+
+                <div className={styles.setting}>
+                  <div className={styles.settingText}>
+                    <span className={styles.labelWithHint}>
+                      <p className={styles.settingLabel}>{t('How long before a stuck task is picked up')}</p>
+                      <FieldHint label={t('How long before a stuck task is picked up')}>
+                        {t('A task is written down and then handed to a worker, and that hand-over can be lost — a restart at the wrong moment, or a pool with nothing free to take it. Something looks on this interval and hands over anything that has been waiting longer, so a task cannot sit unstarted for ever. A task a worker already has is never handed over twice, whatever this says. Five minutes unless ORKNUX_TASK_SWEEP_MINUTES says otherwise; the next pass reads it, so no restart is needed.')}
+                      </FieldHint>
+                    </span>
+                  </div>
+                  <div className={styles.retention}>
+                    <input
+                      id="task-sweep-minutes"
+                      name="taskSweepMinutes"
+                      className={styles.input}
+                      type="number"
+                      min={1}
+                      max={1440}
+                      value={sweep}
+                      onChange={(event) => setSweep(event.target.value)}
+                      disabled={busy}
+                      aria-label={t('How many minutes a task may wait before it is picked up')}
+                    />
+                    <span className={styles.retentionUnit}>{t('minutes')}</span>
+                    <button
+                      type="button"
+                      className={styles.primaryButton}
+                      onClick={() => void save(() => setTaskSweepMinutes(Number(sweep)))}
+                      disabled={
+                        busy || sweep.trim() === '' || Number(sweep) === settings.taskSweepMinutes
+                      }
+                      /*
+                        Named for what it saves. There are two Saves on this
+                        page now, and two controls that answer to the same word
+                        are two controls a screen reader cannot tell apart —
+                        nor, it turns out, could the retention check, which
+                        asks for the button called Save.
+                      */
+                      aria-label={t('Save how long before a stuck task is picked up')}
+                    >{t('Save')}</button>
+                  </div>
+                </div>
+              </>
             )}
 
             {saved && <p className={styles.saved}>{t('Saved.')}</p>}

@@ -40,12 +40,33 @@ export interface InstallationSettings {
   revisionRetentionDays: number;
   /** What a fresh installation would keep: ORKNUX_REVISION_RETENTION_DAYS. */
   revisionRetentionDaysConfigured: number;
+  /**
+   * How many minutes a task may sit queued before something hands it over
+   * again.
+   *
+   * The net under the hand-over. A task whose start was lost — to a process
+   * killed at the wrong moment, or a workflow that could not run — would
+   * otherwise say Queued for ever. Five minutes unless somebody has said
+   * otherwise.
+   */
+  taskSweepMinutes: number;
+  /** What a fresh installation would wait: ORKNUX_TASK_SWEEP_MINUTES. */
+  taskSweepMinutesConfigured: number;
+  /**
+   * False where the installation runs Temporal, and the field is not offered.
+   *
+   * A `configurable` flag like `chatConfigurable`, and the fact behind it is
+   * which engine carries tasks. The sweep runs either way; what is not an
+   * administrator's decision on Temporal is how long it waits.
+   */
+  taskSweepConfigurable: boolean;
 }
 
 const FIELDS =
   'attachmentsEnabled attachmentsConfigurable attachmentStorage attachmentLocation attachmentMaxFileSizeMb ' +
   'chatEnabled chatConfigurable metricsAnonymous metricsAnonymousConfigured ' +
-  'revisionRetentionDays revisionRetentionDaysConfigured';
+  'revisionRetentionDays revisionRetentionDaysConfigured ' +
+  'taskSweepMinutes taskSweepMinutesConfigured taskSweepConfigurable';
 
 export async function fetchInstallationSettings(): Promise<InstallationSettings> {
   const data = await graphql<{ installationSettings: InstallationSettings }>(
@@ -104,4 +125,23 @@ export async function setRevisionRetentionDays(days: number): Promise<Installati
     { days },
   );
   return data.setRevisionRetentionDays;
+}
+
+/**
+ * How long a task may sit queued before something hands it over again.
+ *
+ * Between 1 and 1440 minutes; anything else is refused with a message saying
+ * so. Administrators only, and recorded in the audit log. The sweep reads it
+ * on every pass, so it takes effect without a restart — and it is refused
+ * outright on an installation running Temporal, which is why the field is
+ * drawn only when `taskSweepConfigurable` is true.
+ */
+export async function setTaskSweepMinutes(minutes: number): Promise<InstallationSettings> {
+  const data = await graphql<{ setTaskSweepMinutes: InstallationSettings }>(
+    `mutation SetTaskSweepMinutes($minutes: Int!) {
+       setTaskSweepMinutes(minutes: $minutes) { ${FIELDS} }
+     }`,
+    { minutes },
+  );
+  return data.setTaskSweepMinutes;
 }
