@@ -1095,7 +1095,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                 .filter(answers)
                 .map((model) => (
                   <option key={model.id} value={model.id}>
-                    {model.modelId}
+                    {model.name}
                   </option>
                 ))}
             </select>
@@ -1136,7 +1136,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                 .filter((model) => model.kind === 'TRANSCRIPTION')
                 .map((model) => (
                   <option key={model.id} value={model.id}>
-                    {model.modelId}
+                    {model.name}
                   </option>
                 ))}
             </select>
@@ -1186,7 +1186,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                 .filter((model) => model.kind === 'SPEECH')
                 .map((model) => (
                   <option key={model.id} value={model.id}>
-                    {model.modelId}
+                    {model.name}
                   </option>
                 ))}
             </select>
@@ -1237,7 +1237,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                 .filter((model) => model.kind === 'IMAGE')
                 .map((model) => (
                   <option key={model.id} value={model.id}>
-                    {model.modelId}
+                    {model.name}
                   </option>
                 ))}
             </select>
@@ -1495,7 +1495,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                 .filter((model) => model.kind === 'CHAT')
                 .map((model) => (
                   <option key={model.id} value={model.id}>
-                    {model.modelId}
+                    {model.name}
                   </option>
                 ))}
             </select>
