@@ -145,4 +145,73 @@ record(
 );
 record(emptied.overflow === 'hidden', `and it stops offering a scrollbar (overflow-y is "${emptied.overflow}")`);
 
+/* ------------------------------------------- and with a conversation above it */
+
+/*
+ * Issue #307: the same growth, on a chat that already has something in it.
+ *
+ * Everything above runs on whatever `/chat` opens on, which on a fresh
+ * installation is an empty conversation - and empty is the one case where this
+ * bug does not show. With turns on screen the log is tall, and while the shell
+ * was not pinned to the window the column simply got taller than the window
+ * instead of the log giving up its room: the page scrolled, and the send panel
+ * went below the fold. That is what was reported, and every assertion above
+ * passed throughout.
+ *
+ * The turns are fabricated rather than said, because saying anything needs a
+ * model and this check has never needed one - `chatMessages` is answered here
+ * and nothing else is touched.
+ */
+await page.route('**/graphql', async (route) => {
+  const body = route.request().postData() ?? '';
+  if (!body.includes('chatMessages')) return route.continue();
+  const said = Array.from({ length: 24 }, (_, at) => ({
+    role: at % 2 === 0 ? 'user' : 'assistant',
+    content: `Turn ${at}. ` + 'Something long enough to take a line of its own. '.repeat(3),
+    actor: null,
+    // A list, and never null: the page maps over it without asking.
+    takes: [],
+    thinking: null,
+    thinkingMillis: null,
+  }));
+  return route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ data: { chatMessages: said } }),
+  });
+});
+
+await page.reload({ waitUntil: 'domcontentloaded' });
+await composer.waitFor({ state: 'visible', timeout: 20_000 });
+await page.waitForTimeout(900);
+
+const filled = await turns();
+record(filled > 0, `the conversation has turns in it to be pushed off by (${filled})`);
+
+await composer.click();
+for (let line = 0; line < 60; line += 1) {
+  await page.keyboard.type('x');
+  await page.keyboard.press('Shift+Enter');
+  await page.waitForTimeout(15);
+}
+await page.waitForTimeout(400);
+
+const crowded = await read();
+const scrolled = await page.evaluate(() => Math.round(window.scrollY));
+const grown = await page.evaluate(
+  () => document.documentElement.scrollHeight - window.innerHeight,
+);
+
+record(
+  crowded.headerBottom > 0,
+  `the title bar is still on screen with a conversation under it (its bottom is at ${crowded.headerBottom}px)`,
+);
+record(
+  grown <= 1,
+  `and the page did not grow taller than the window, which is what hides the send panel (${grown}px over)`,
+);
+record(scrolled === 0, `so nothing had to be scrolled to reach the composer (scrollY is ${scrolled})`);
+
+await page.screenshot({ path: shot('composer-growth-crowded.png') });
+
 await finish(browser);

@@ -211,8 +211,22 @@ export function AppShell({
 
   useDocumentTitle(title, pathname);
 
+  /*
+   * Pinned to the window for both kinds of page that own their own scrolling.
+   *
+   * `scrollContent` scrolls inside the content and `fills` hides what does not
+   * fit, and neither can do anything unless the frame around them stops at the
+   * window's edge: without `shellFixed` the flex chain simply gets taller, as
+   * the rule itself says. Issue #307 is what that looks like from outside - the
+   * chat composer grows a line at a time, and with a conversation already on
+   * screen the column ends up taller than the window, so the page scrolls and
+   * the send panel goes below the fold. It is only visible on a chat with
+   * something in it, which is why an empty installation looks fine.
+   */
+  const pinned = scrollContent || fills;
+
   return (
-    <div className={scrollContent ? `${styles.shell} ${styles.shellFixed}` : styles.shell}>
+    <div className={pinned ? `${styles.shell} ${styles.shellFixed}` : styles.shell}>
       {/*
         That this installation asks nobody to sign in, on every page rather than
         on one screen somebody might not open.
