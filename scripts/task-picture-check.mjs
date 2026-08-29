@@ -106,6 +106,15 @@ const task = {
   endedBecause: 'finished',
   requests: [],
   grants: [],
+  /*
+   * Empty, but it has to be here. The page reads `task.messages.filter(...)`
+   * to count what has not been read yet, and a fabricated task missing the
+   * field throws during render - which draws nothing at all, so this check
+   * reported an empty <body> rather than anything about a picture. The field
+   * arrived with #281; the server has always answered it non-null, so only a
+   * stub written before it can be short of one.
+   */
+  messages: [],
 };
 
 const { browser, page } = await open({ viewport: { width: 1440, height: 1000 } });
