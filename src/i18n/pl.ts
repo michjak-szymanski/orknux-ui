@@ -480,6 +480,11 @@ export const PL: Record<string, string> = {
   "Active Credentials": "Aktywne poświadczenia",
   "API Key": "Klucz API",
   "API Endpoint": "Punkt końcowy API",
+  "Automatic checks": "Automatyczne sprawdzanie",
+  "Off for an endpoint that is only sometimes running; Test Connection still works, and so do the chats and tasks that use it.":
+    "Wyłącz dla punktu końcowego, który działa tylko czasami; przycisk sprawdzania nadal działa, tak samo jak czaty i zadania, które go używają.",
+  "Checked every few minutes": "Sprawdzany co kilka minut",
+  "Checked only when asked": "Sprawdzany tylko na żądanie",
   "App-Level Token": "Token poziomu aplikacji",
   "Bot token": "Token bota",
   "Application (client) ID": "Identyfikator aplikacji (klienta)",

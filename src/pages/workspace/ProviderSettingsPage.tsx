@@ -15,6 +15,8 @@ import {
 import type { ModelProvider, ProviderAuthMethod, ProviderType } from '../../api/models';
 import type { SessionUser } from '../../api/session';
 import chevronDown12Icon from '../../assets/chevron-down-12.svg';
+import toggleOffIcon from '../../assets/toggle-off.svg';
+import toggleOnIcon from '../../assets/toggle-on.svg';
 import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
 import { FieldHint } from '../../components/FieldHint';
@@ -92,6 +94,12 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
   const [tenantId, setTenantId] = useState('');
   const [clientId, setClientId] = useState('');
   const [scope, setScope] = useState(DEFAULT_SCOPE);
+  /*
+   * On for a new provider, which is what somebody adding one wants: it is
+   * checked as soon as it is saved and the screen says whether it answered.
+   * Turning it off is the deliberate act, so it is never the starting state.
+   */
+  const [checkEnabled, setCheckEnabled] = useState(true);
   /**
    * The one secret this provider has, whatever it is called this minute.
    *
@@ -147,6 +155,10 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
   useEffect(() => {
     if (providerId === undefined) return;
     if (provider === null || provider.status !== 'NOT_CHECKED') return;
+    // Nothing is coming: the save publishes the same event, and the monitor
+    // skips a provider whose checking is off. Polling for it would be five
+    // requests for an answer nobody is going to send.
+    if (!provider.checkEnabled) return;
 
     let tries = 0;
     const timer = setInterval(() => {
@@ -180,6 +192,7 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
     setTenantId(found.tenantId ?? '');
     setClientId(found.clientId ?? '');
     setScope(found.scope ?? DEFAULT_SCOPE);
+    setCheckEnabled(found.checkEnabled);
     key.reset({ stored: found.secretSet, variable: found.secretVariableId });
   }
 
@@ -278,6 +291,7 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
       tenantId: entra ? tenantId.trim() || null : null,
       clientId: entra ? clientId.trim() || null : null,
       scope: entra ? scope.trim() || null : null,
+      checkEnabled,
     };
   }
 
@@ -515,6 +529,47 @@ export function ProviderSettingsPage({ session, onSignOut }: ProviderSettingsPag
                 </div>
               </div>
             )}
+
+            {/*
+              In the card that holds the address, because it is about the
+              address: what it governs is who this application calls on a timer,
+              and the endpoint above is what would be called.
+            */}
+            <div className={styles.fieldRow}>
+              <div className={styles.field}>
+                <span className={styles.labelWithHint}>
+                  <span className={styles.label} id="provider-check-label">{t('Automatic checks')}</span>
+                  <FieldHint label={t('Automatic checks')}>
+                    {t('Off for an endpoint that is only sometimes running; Test Connection still works, and so do the chats and tasks that use it.')}
+                  </FieldHint>
+                </span>
+                <span className={styles.statusRow}>
+                  <button
+                    type="button"
+                    className={styles.toggle}
+                    onClick={() => {
+                      setCheckEnabled(!checkEnabled);
+                      setSaved(false);
+                    }}
+                    role="switch"
+                    aria-checked={checkEnabled}
+                    aria-labelledby="provider-check-label"
+                    data-testid="provider-check-toggle"
+                  >
+                    <img
+                      src={checkEnabled ? toggleOnIcon : toggleOffIcon}
+                      alt=""
+                      width={36}
+                      height={20}
+                      data-keeps-colour
+                    />
+                  </button>
+                  <span className={checkEnabled ? styles.checkOn : styles.checkOff}>
+                    {checkEnabled ? t('Checked every few minutes') : t('Checked only when asked')}
+                  </span>
+                </span>
+              </div>
+            </div>
           </section>
 
           <section className={styles.card}>

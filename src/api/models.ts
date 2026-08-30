@@ -46,6 +46,13 @@ export interface ModelProvider {
   tenantId: string | null;
   clientId: string | null;
   scope: string | null;
+  /**
+   * Whether the timed sweep calls this provider. False is a provider nobody
+   * wants polled — a model server that is only sometimes running — and it is
+   * why the status beside it may stay "Not checked". Test Connection ignores
+   * it, and so does every chat and task the provider serves.
+   */
+  checkEnabled: boolean;
   status: ProviderStatus;
   lastCheckMessage: string | null;
   lastCheckedAt: string | null;
@@ -136,7 +143,7 @@ export interface ModelUsage {
 
 const PROVIDER_FIELDS =
   'id workspaceId name type endpoint authMethod apiVersion deploymentName region tenantId clientId scope ' +
-  'status lastCheckMessage lastCheckedAt secretSet ' +
+  'checkEnabled status lastCheckMessage lastCheckedAt secretSet ' +
   'secretVariableId secretVariableName secretVariableCatalog secretVariableMissing';
 const MODEL_FIELDS =
   'id providerId workspaceId providerName name modelId kind contextWindow maxOutput enabled ' +
@@ -221,6 +228,8 @@ export interface ProviderInput {
   tenantId?: string | null;
   clientId?: string | null;
   scope?: string | null;
+  /** Whether the timed sweep may call it. The button is not governed by this. */
+  checkEnabled?: boolean;
 }
 
 export async function createProvider(

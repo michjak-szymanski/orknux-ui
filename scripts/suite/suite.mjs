@@ -1726,6 +1726,29 @@ export const TESTS = [
      */
   },
   {
+    name: 'provider-check-switch-check',
+    what: 'a provider can be told the timed sweep is not to call it, and the button still can',
+    needs: ['workspace'],
+    /*
+     * The sweep asks every configured provider every few minutes, which is
+     * right for one an installation pays for and wrong for the endpoint
+     * somebody keeps against a box that is only sometimes running: there it is
+     * a failed row and a connection refused in the log every five minutes for a
+     * state nobody thinks is wrong.
+     *
+     * `ProviderCheckSwitchTest` proves what the sweep does with the switch.
+     * This proves somebody can reach it: the control on the provider's page,
+     * pressed, saved, and read back off the server rather than off the screen -
+     * because a toggle that paints itself and sends nothing is indistinguishable
+     * from a working one until the page is reloaded, which is what this does
+     * after every move. It also presses Test Connection with the switch off,
+     * since a switch that stopped the button too would be a different feature.
+     *
+     * Its own provider, under a scratch name, pointed at a port nothing listens
+     * on - which is the case it exists for - and removed at both ends.
+     */
+  },
+  {
     name: 'provider-credential-check',
     what: "a provider's key is its own or a workspace secret it reads, and the two do not spill into each other",
     needs: ['workspace'],

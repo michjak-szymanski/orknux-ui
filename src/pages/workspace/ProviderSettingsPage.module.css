@@ -348,3 +348,35 @@
   color: var(--color-text-primary);
   cursor: pointer;
 }
+
+/* ---- Automatic checks ---- */
+
+/*
+ * A switch and the words for what it is currently doing, on one line - the same
+ * arrangement the Models screen uses for a model being active, because it is the
+ * same kind of control and a second arrangement for it would be a second thing
+ * to learn.
+ */
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.toggle {
+  composes: iconButton from '../../styles/iconButton.module.css';
+}
+
+.checkOn {
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+}
+
+/*
+ * Not painted as a failure. A provider nobody polls is a deliberate setting,
+ * and red here would say the opposite of what the switch was pressed for.
+ */
+.checkOff {
+  font-size: var(--text-base);
+  color: var(--color-text-muted);
+}
