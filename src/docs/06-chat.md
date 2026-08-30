@@ -12,16 +12,25 @@ composer beneath](/screens/chat.png)
 
 ## Choosing what answers
 
-The dropdown above the composer picks what answers. Agents are the half it
-opens on, because an agent brings the conversation its instructions, skills and
-tools and supplies a model of its own; the Models tab beside it is the bare
-models, and a chat already pointed at one opens there instead. A new chat starts
-on the workspace's default so there is always something to talk to.
+The dropdown above the composer picks which agent answers, and an agent is the
+only thing that can. A bare model used to sit beside them as though it were a
+peer, and it never was: it is an agent with the instructions, skills, tools,
+grants and memory taken off. A workspace with no agent in it says so and offers
+the way to add one, rather than quietly filling the gap with a model. Chats
+started on a model before this still open, still render and still answer, and
+can be handed to an agent whenever you want.
 
 Beside the name is the arrow that leaves a box, the same one every field naming
-a definition carries: it opens whatever is answering — the agent, or the model —
-in a tab of its own, so a question about what the thing is set to does not cost
-you the conversation.
+a definition carries: it opens the agent in a tab of its own, so a question about
+what it is set to does not cost you the conversation.
+
+**Ask for a diagram and you get one.** Where the workspace has chosen a
+text-to-image model, the agent is offered a tool that draws from a description
+— so a picture is something you ask for in the conversation rather than a mode
+you switch the composer into and retype the description in. What it draws is
+filed as an attachment on the chat and appears in the thread as it is drawn, so
+it is still there when you come back to it. A workspace with no image model
+chosen offers no such tool, and the agent is never told it could have drawn.
 
 Switching workspace from the corner leaves you in the chat rather than taking
 you to the new workspace's workflows: the conversations listed on the left are
@@ -112,7 +121,12 @@ saved, in a sentence naming what is allowed.
 
 Tapping the circle interrupts: while it is thinking or speaking, it drops that
 turn and listens; while it is listening, it takes what you have said so far as
-the whole turn.
+the whole turn. Dropping the turn stops the model as well as the listening —
+the request is aborted and the server hangs up on the provider, so nothing goes
+on being written and charged for after you have said you are not interested. An
+answer that was stopped is not written to the history: the chat keeps your
+question and no answer, rather than half a sentence attributed to the model.
+**Stop** beside the send button does the same for a typed turn.
 
 **The microphone does not close between turns.** Anything said while the model
 is thinking or the answer is being read is held rather than lost, and is sent

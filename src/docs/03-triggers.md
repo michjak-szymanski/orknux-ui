@@ -110,6 +110,26 @@ is not a thing found by guessing - and an integration whose credential has
 expired is owed the difference between "you are not who you say" and "there is
 nothing here".
 
+### GitHub and Microsoft Teams
+
+Neither is a connection type, and neither needs a release of this application to
+support. Both are **plugins** — `plugins/github/github.js` and
+`plugins/teams/teams.js`, loaded on the Plugins screen — sitting in front of a
+webhook trigger and checking the signature the sender puts on every delivery.
+A host that changes its signature scheme is a new version of that file.
+
+For GitHub: load the plugin, point its `webhookSecret` at one of the workspace's
+variables, and give the trigger's URL to the repository. Pull requests, review
+comments and pushes then start workflows, and the plugin names what arrived so a
+condition can tell one from another.
+
+Teams is the same shape with one thing to know: it has no equivalent of Slack's
+socket, so the receiving half needs this installation to be reachable from
+Microsoft. A message starts a workflow by way of a Teams outgoing webhook aimed
+at a webhook trigger; answering is an HTTP request action against Graph, and the
+Graph token lives in a workspace variable that has to be refreshed about hourly.
+Each plugin's README has the setup.
+
 ## What a trigger runs
 
 A trigger starts the workflow's **published** copy. Editing and saving a graph

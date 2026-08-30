@@ -88,6 +88,16 @@ says so in words about the variable, on its row and on its page. That is
 deliberate. A provider that cannot read its key fails a check exactly the way an
 unreachable one does, and "check the endpoint" is the wrong afternoon.
 
+Every configured provider is asked the same question every few minutes, so that
+"Connected" means today rather than the day somebody last pressed the button.
+That is right for a provider you pay for and wrong for an endpoint that is only
+sometimes running — a model server on a laptop, a box started for an afternoon —
+where being off is the normal state and the sweep leaves a failed row and a
+connection refused in the log every five minutes. **Automatic checks** on the
+provider's page turns that off for that provider alone. It stops the timer and
+nothing else: **Test Connection** still runs, and so does every chat and task
+that uses the provider.
+
 A model's own page carries the two numbers that decide how much can be put in
 front of it: its **Context Window**, which is how much it reads at once, and its
 **Max Output**, which is the most it will write in one answer. Both are in
@@ -369,17 +379,36 @@ the block being written is the one that is open. Tool calls arrive folded, so a
 long run reads as a list of what was done rather than as a wall.
 
 You can also say something to a task while it is working. **Say something** on
-its page takes a message and the agent reads it at the top of its next turn, as
-the newest word on what you want — so a report being written as prose becomes a
-table because you said so half way through, rather than because you stopped the
-task and started another with a better prompt. It is not an interruption: a turn
-takes as long as it takes, and until the agent gets to your message the page says
-it has not been read.
+its page takes a message, and the agent picks it up between the tools it is
+running — so a report being written as prose becomes a table because you said so
+half way through, rather than because you stopped the task and started another
+with a better prompt. It reaches the agent within seconds rather than at the end
+of the turn, and a task cannot finish while something you said is still unread:
+an agent that tries to wrap up with a message above it gets another turn with
+your words in front of it instead. Until it has been read the page says so, and
+what was never read stays on the page afterwards saying that, rather than
+disappearing.
+
+**A task that has ended is not finished with you.** The same box stays on its
+page reading **Carry on**, and what you type there sets that task working again
+— the same task, on the same log, so the agent still has the poem it wrote, the
+pictures it drew and the files it read. "Make the third stanza shorter" is this
+piece of work continued, and starting a new task instead means explaining the
+whole job to an agent that has just done it. The turn and time allowances start
+again from your settings as they stand, so a task that stopped *because* it ran
+out of turns can still be asked for more, and the summary it wrote is replaced by
+the next one, with what it said still in the log.
+
+The page follows the work as it happens and needs no refresh, but a connection
+can stop without saying so — and from where you are sitting that looks exactly
+like a model thinking for four minutes. **Auto** beside the live indicator sets
+an interval to re-read the task at, Off by default, and it is the same setting
+the Executions and Audit screens use.
 
 A task can also **draw**. Where the workspace has chosen a text-to-image model —
-the **Text-to-image** picker on its settings page, the same one the chat's
-picture button uses — an agent working a task is offered a tool that draws from
-a description, and every picture it draws is shown under the task's outcome.
+the **Text-to-image** picker on its settings page, the same one a chat agent
+draws with — an agent working a task is offered a tool that draws from a
+description, and every picture it draws is shown under the task's outcome.
 That holds whichever way the task ended: one that drew and then ran out of turns
 still shows what it drew, because it was still paid for. Where no such model has
 been chosen, the tool is not offered at all and the agent is never told it could
