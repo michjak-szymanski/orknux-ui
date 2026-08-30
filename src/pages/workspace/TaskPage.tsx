@@ -213,6 +213,7 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
    * polling.
    */
   const sessionId = task?.sessionId ?? null;
+  const running = task !== null && !OVER.includes(task.status);
   useEffect(() => {
     if (taskId === '' || loading || sessionId === null) return;
     return watchTask(taskId, cursor.current, {
@@ -220,7 +221,18 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
       onTask: setTask,
       onWatching: setWatching,
     });
-  }, [taskId, loading, sessionId]);
+    /*
+     * `running` is in here and nothing else new is, for one case: a finished
+     * task asked to carry on. The server sets it working again and the answer
+     * to that mutation is the task, so the page knows before any stream does -
+     * and the stream that was open had already ended, because the task had. Key
+     * it on the task alone and the page would sit on a task that is working
+     * with nothing arriving until somebody reloaded.
+     *
+     * It is a boolean over the status rather than the status itself, which
+     * changes on every park and unpark and would reconnect for each.
+     */
+  }, [taskId, loading, sessionId, running]);
 
   const waiting = task === null ? null : openRequest(task);
   const over = task !== null && OVER.includes(task.status);
@@ -260,6 +272,9 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
     setSending(true);
     setSendError(null);
     try {
+      // The answer is the task as it now stands, which for a finished one is a
+      // task that is working again - so the page turns back into the live view
+      // without being reloaded, and the effect below reopens the stream.
       setTask(await sendTaskMessage(task.id, words));
       setMessage('');
     } catch (cause: unknown) {
@@ -475,35 +490,39 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
             thing somebody must decide and this is not it, and a message is
             about the work below rather than about the prompt above.
 
-            The box is offered while the task is going and not afterwards -
-            the server refuses a message to a task that is over, and a box that
-            takes words nothing will ever read is worse than no box.
+            Offered whether the task is going or over, and it means something
+            different in each - which is why the words change and the control
+            does not.
 
-            What is *said* outlives that. A message that was never read stays on
-            screen after the task ends, because the alternative is what happened
-            on task 30: somebody's correction disappeared with the card, leaving
-            no sign anywhere that they had ever typed it. A task that finished
-            normally cannot have one - the loop reads what is waiting before it
-            lets task_done through - so this is the failed, the stopped, and the
-            one that ran out of turns.
+            While it works it changes what is being produced. Afterwards it sets
+            the task going again on the same session, so "make the third stanza
+            shorter" is this piece of work continued rather than a new task that
+            has to be told the whole job by somebody who just watched it be
+            done. The box used to be hidden here, and starting again from
+            nothing was the only route.
+
+            What was said outlives either. A message that was never read stays
+            on screen after the task ends, because the alternative is what
+            happened on task 30: somebody's correction disappeared with the card
+            and left no sign anywhere that it had been typed.
           */}
-          {(!over || unread.length > 0) && (
-            <section className={styles.card} data-testid="task-message">
+          <section className={styles.card} data-testid="task-message">
               <div className={styles.cardHead}>
                 <span className={styles.labelWithHint}>
-                  <span className={styles.label}>{over ? t('Said while it worked') : t('Say something')}</span>
-                  <FieldHint label={t('Talking to a task while it works')}>
-                    {t('The agent picks this up between the tools it is running, so a correction reaches it within seconds rather than at the end of the turn, and a task cannot finish while something said to it is still unread.')}
+                  <span className={styles.label}>{over ? t('Ask it to carry on') : t('Say something')}</span>
+                  <FieldHint label={over ? t('Asking a finished task for more') : t('Talking to a task while it works')}>
+                    {over
+                      ? t('It starts working again on the same task, with everything it already knows — the turn and time allowances start over, and the outcome it wrote is replaced by the next one.')
+                      : t('The agent picks this up between the tools it is running, so a correction reaches it within seconds rather than at the end of the turn, and a task cannot finish while something said to it is still unread.')}
                   </FieldHint>
                 </span>
               </div>
-              {!over && (
               <div className={styles.askingRow}>
                 <input
                   className={styles.answer}
                   type="text"
                   data-testid="task-message-box"
-                  placeholder={t('Change what it is doing…')}
+                  placeholder={over ? t('Ask for a change…') : t('Change what it is doing…')}
                   aria-label={t('Say something to the task')}
                   value={message}
                   onChange={(event) => setMessage(event.target.value)}
@@ -511,14 +530,16 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
                     if (event.key === 'Enter') void say();
                   }}
                 />
+                {/* The word says what pressing it does, which on a task that is
+                    over is not "send" - it sets the work going again. */}
                 <button
                   type="button"
                   className={styles.approve}
+                  data-testid="task-message-send"
                   disabled={sending || message.trim() === ''}
                   onClick={() => void say()}
-                >{t('Send')}</button>
+                >{over ? t('Carry on') : t('Send')}</button>
               </div>
-              )}
 
               {/*
                 What has been said and not yet read, which is the state of the
@@ -551,8 +572,7 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
                   {sendError}
                 </p>
               )}
-            </section>
-          )}
+          </section>
 
           <section className={styles.card} data-testid="task-log">
             <div className={styles.cardHead}>

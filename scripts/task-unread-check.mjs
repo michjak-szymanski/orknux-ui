@@ -10,19 +10,21 @@
  * installation, and it is the half of #280 that made the other half look like a
  * bug rather than a limit.
  *
- * The two rules this pins are deliberately not the same rule:
+ * What was said stays, marked as never read. It is the only record that it
+ * happened, and it is the state of the thing being looked at rather than an
+ * explanation of it.
  *
- *   - **The box goes.** A task that has ended will read nothing, the server
- *     refuses a message to one, and a box that takes words nothing will ever
- *     read is worse than no box.
- *   - **What was said stays**, marked as never read. It is the only record that
- *     it happened, and it is the state of the thing being looked at rather than
- *     an explanation of it.
+ * The box stays too, and says something else. #312 made a message to a finished
+ * task set it working again, so the control that used to be hidden here is the
+ * way back in - "Carry on" rather than "Send", against a task that has ended.
+ * That pairing is the thing worth pinning: a page that offered the box with the
+ * word "Send" on it would be promising a message to a task, when what pressing
+ * it does is start the work again.
  *
- * A task that finished normally cannot have one - `TaskLoop` reads what is
- * waiting before it lets `task_done` through, which `TaskLoopTest` pins - so
- * this is the shape that survives: the task that failed, was stopped, or ran out
- * of turns with something still unread.
+ * A task that finished normally cannot carry an unread message - `TaskLoop`
+ * reads what is waiting before it lets `task_done` through, which `TaskLoopTest`
+ * pins - so the shape here is the one that survives: the task that failed, was
+ * stopped, or ran out of turns with something still unread.
  *
  * Fabricated in the browser, as `task-picture-check` fabricates its own and for
  * the same reason. Producing this state for real means a task that fails at the
@@ -93,6 +95,7 @@ const read = () =>
       typing: card?.querySelector('input') != null,
       lines: pending?.querySelectorAll('li').length ?? 0,
       said: pending?.textContent ?? '',
+      button: document.querySelector('[data-testid="task-message-send"]')?.textContent?.trim() ?? '',
       body: document.body.innerText,
     };
   });
@@ -101,8 +104,12 @@ const over = await read();
 
 record(over.card, 'a message that was never read is still on the page after the task ended');
 record(
-  !over.typing,
-  'and the box is gone, because a task that has ended will read nothing typed into it',
+  over.typing,
+  'and the box is still offered, because a task that has ended can be asked to carry on',
+);
+record(
+  /Carry on|Kontynuuj/.test(over.button),
+  `and it says what pressing it does, which is not "Send" ("${over.button}")`,
 );
 record(over.lines === 1, `what was said is listed, once (${over.lines})`);
 record(over.said.includes(SAID), `in the words it was typed in ("${SAID}")`);
@@ -117,13 +124,14 @@ record(
 
 await page.screenshot({ path: shot('task-unread.png') });
 
-/* ---------------------------------------- and nothing left over when it was read */
+/* --------------------------------------- and nothing listed once it was read */
 
 /*
- * The other half of the same rule, on the same page. A task that ended with
- * everything read has nothing to show and no box either, so the card is absent
- * altogether - which is what stops this becoming an empty panel on every
- * finished task anybody opens.
+ * The list is the part that is conditional, not the card. A task that ended with
+ * everything read has nothing to show and still has the way back in, so what
+ * goes is the line and not the box - otherwise every finished task would carry a
+ * standing note about a message that was delivered exactly as it should have
+ * been.
  */
 task.messages = [{ ...task.messages[0], readAt: new Date().toISOString() }];
 await page.reload({ waitUntil: 'domcontentloaded' });
@@ -131,6 +139,7 @@ await drawn(page, 'the task page again');
 await page.waitForTimeout(900);
 
 const settled = await read();
-record(!settled.card, 'a task that ended with everything read shows no card at all');
+record(settled.lines === 0, `nothing is listed once it was read (${settled.lines})`);
+record(settled.typing, 'and the way back into the task is still there');
 
 await finish(browser);

@@ -1749,7 +1749,12 @@ export const PL: Record<string, string> = {
   "It returned nothing.": "Nic nie zwróciło.",
   "It could not be run.": "Nie udało się tego uruchomić.",
   "Answer the task": "Odpowiedz zadaniu",
-  "Said while it worked": "Powiedziane w trakcie pracy",
+  "Ask it to carry on": "Poproś, żeby kontynuowało",
+  "Asking a finished task for more": "Prośba o więcej do zakończonego zadania",
+  "It starts working again on the same task, with everything it already knows — the turn and time allowances start over, and the outcome it wrote is replaced by the next one.":
+    "Zaczyna pracować od nowa nad tym samym zadaniem, ze wszystkim, co już wie — limity tur i czasu liczone są od zera, a napisane podsumowanie zastępuje kolejne.",
+  "Ask for a change…": "Poproś o zmianę…",
+  "Carry on": "Kontynuuj",
   "never read — the task ended first": "nigdy nie przeczytane — zadanie skończyło się wcześniej",
   "Say something": "Powiedz coś",
   "Say something to the task": "Powiedz coś zadaniu",

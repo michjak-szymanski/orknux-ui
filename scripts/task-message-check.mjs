@@ -143,6 +143,7 @@ const readPage = () =>
       box: box !== null,
       typing: box?.querySelector('input') !== null && box?.querySelector('input') !== undefined,
       pending: pending?.querySelectorAll('li').length ?? 0,
+      button: document.querySelector('[data-testid="task-message-send"]')?.textContent?.trim() ?? '',
       said: pending?.textContent ?? '',
       log: document.querySelector('[data-testid="task-log"]')?.textContent ?? '',
       outcome: document.querySelector('[data-testid="task-outcome"]')?.textContent ?? '',
@@ -258,19 +259,26 @@ check(
 
 await page.waitForSelector('[data-testid="task-outcome"]', { timeout: 30_000 }).catch(() => undefined);
 const over = await readPage();
-check(
-  !over.typing && !over.box,
-  'the box is not offered on a task that has ended',
-  'the box is still offered on a task that has ended, where nothing would ever read what is typed',
-);
 /*
- * Both, because they are two rules now. The input goes when the task is over -
- * nothing would read it - while the card itself stays for as long as it has
- * something unread to show, which on a task that ended normally is never: the
- * loop reads what is waiting before it lets task_done through. A build where
- * that guard had gone would leave a message on this screen, and `over.box`
- * alone would be what noticed.
+ * The box is still there, and it means something else now.
+ *
+ * This used to assert it was gone: a task that had ended would read nothing, so
+ * a box that took words was worse than no box. #312 changed what pressing it
+ * does - a message to a finished task sets it working again on the same session
+ * - so the control is the way back in rather than a promise nothing would keep,
+ * and what is asserted is that the *word on it* changed with the meaning.
+ * "Send" against a task that has ended would be the old lie in a new place.
  */
+check(
+  over.typing && /Carry on|Kontynuuj/.test(over.button),
+  `a task that has ended offers the way back into it, named for what it does ("${over.button}")`,
+  `a task that has ended does not offer the way back into it, or mislabels it ("${over.button}")`,
+);
+check(
+  over.pending === 0,
+  'and nothing is left listed as unread, because the loop reads what is waiting before it finishes',
+  'a message is still listed as unread on a task that finished, which the loop should have read first',
+);
 await page.screenshot({ path: shot('task-message-done.png'), fullPage: true });
 
 // --- put it back the way it was ---------------------------------------------
