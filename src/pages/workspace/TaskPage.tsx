@@ -20,6 +20,7 @@ import {
 import type { Task, TaskStep, TaskWatchState } from '../../api/tasks';
 import { timeAgo } from '../../api/tools';
 import { AppShell } from '../../components/AppShell';
+import { AutoRefresh } from '../../components/AutoRefresh';
 import { CallLine } from '../../components/CallLine';
 import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
@@ -67,9 +68,18 @@ const OVER: Task['status'][] = ['DONE', 'FAILED', 'STOPPED'];
  * A session view rather than a table that reloads. Each step appears when it
  * happens, a tool call is named the moment it is made and fills in with what
  * came back when the tool answers, and the state — working, needs you, done,
- * failed — is on the page the instant it changes. There is no refresh control,
- * and its absence is the feature: an interval somebody has to choose is either
- * too slow to read as live or a query every five seconds for an hour.
+ * failed — is on the page the instant it changes. Nothing here waits on a
+ * refresh, and for as long as the stream is up nothing needs one.
+ *
+ * **The timer is the fallback, not the mechanism.** A stream can stop without
+ * saying so — a proxy that idles a connection out, a laptop that slept, a
+ * network that came back on a different address — and what that looks like from
+ * the reader's side is a task that has simply gone quiet, which is also what a
+ * model thinking for four minutes looks like. So the same interval control the
+ * run and audit screens carry is offered here, defaulting to Off and sharing
+ * their setting. It asks the two queries the page opened with; it does not
+ * touch the connection, and it is not offered on a task that has finished,
+ * which cannot change again.
  *
  * **And it reads the same afterwards.** Nothing here is kept only in the
  * stream. What is drawn is the task's LLM session, which every agent in this
@@ -119,9 +129,24 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
    */
   const cursor = useRef('0');
 
-  const load = useCallback(async () => {
-    if (taskId === '') return;
-    setLoading(true);
+  /** One tick at a time, so a slow answer does not have another sent after it. */
+  const pulling = useRef(false);
+
+  /**
+   * The task and the tail of its log, fetched.
+   *
+   * @param afresh whether what arrives replaces what is held or is merged into
+   *   it. Opening a task replaces — the lines on screen belong to whichever task
+   *   was open before, and keeping them would draw two tasks as one. A refresh
+   *   merges, because the stream is writing into the same list at the same time
+   *   and a replacement drops whatever arrived between the fetch going out and
+   *   its answer coming back. For the same reason the cursor only ever moves
+   *   forward here: a fetch that answers late must not wind following back to
+   *   where the page was a moment ago and replay it.
+   */
+  const pull = useCallback(async (afresh: boolean) => {
+    if (taskId === '' || pulling.current) return;
+    pulling.current = true;
     try {
       const found = await fetchTask(taskId);
       setTask(found);
@@ -134,21 +159,45 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
           ascending: false,
         });
         const lines = [...page.content].reverse();
-        setLog(lines);
-        cursor.current = lines.reduce(
+        setLog((held) => (afresh ? lines : lines.reduce(merged, held)));
+        const newest = lines.reduce(
           (highest, line) => (Number(line.id) > Number(highest) ? line.id : highest),
           '0',
         );
-      } else {
+        if (afresh || Number(newest) > Number(cursor.current)) cursor.current = newest;
+      } else if (afresh) {
         setLog([]);
         cursor.current = '0';
       }
     } catch (cause: unknown) {
       setError(cause instanceof Error ? cause.message : t('Could not load the task.'));
     } finally {
-      setLoading(false);
+      pulling.current = false;
     }
   }, [taskId]);
+
+  const load = useCallback(async () => {
+    if (taskId === '') return;
+    setLoading(true);
+    try {
+      await pull(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [taskId, pull]);
+
+  /**
+   * The timer's road in, which is [pull] and deliberately not [load].
+   *
+   * `load` raises the loading flag, and the effect that follows the task is
+   * keyed on that flag — so wiring the timer to it would tear the connection
+   * down and open another one every few seconds, which is the one shape worse
+   * than polling. This leaves the stream where it is and asks the same two
+   * queries beside it.
+   */
+  const refresh = useCallback(() => {
+    void pull(false);
+  }, [pull]);
 
   useEffect(() => {
     void load();
@@ -500,8 +549,15 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
                 >
                   {over ? WATCHING_LABEL.ended : WATCHING_LABEL[watching]}
                 </span>
+                {/*
+                  Beside the word that says whether the stream is up, because
+                  that is what it is a fallback for. A task that is over is not
+                  going to change again, so the control goes rather than sitting
+                  there offering to ask about it every five seconds.
+                */}
+                {!over && <AutoRefresh onRefresh={refresh} busy={loading} />}
                 <FieldHint label={t('How this page keeps up')}>
-                  {t('Each step is sent as it is recorded, so nothing here is waiting on a refresh. If the connection drops the page comes back and asks for whatever it missed by the last line it holds, which is why a task left open overnight catches up rather than redrawing. A finished task reads exactly the same, from the same record.')}
+                  {t('Each step is sent as it is recorded, so nothing here waits on a refresh. If the connection drops the page comes back and asks for whatever it missed. Set an interval beside this for a stream that has gone quiet without saying so, and to keep a long task in view. A finished task reads the same, from the same record.')}
                 </FieldHint>
                 <span className={styles.muted} data-testid="task-log-count">
                   {log.length} lines

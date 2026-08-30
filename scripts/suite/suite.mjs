@@ -1955,6 +1955,29 @@ export const TESTS = [
      */
   },
   {
+    name: 'task-refresh-check',
+    what: 'the task page offers an interval to refresh at, and choosing one does not reopen its stream',
+    needs: ['workspace'],
+    /*
+     * The page is a session view - steps arrive on a stream as they are
+     * recorded - so a timer here is the fallback for that stream stopping
+     * without saying so, which from the reader's side is indistinguishable from
+     * a model thinking for four minutes.
+     *
+     * Two of the three assertions are ordinary: Off is the default, and a
+     * chosen interval really does ask again, counted at the wire. The third is
+     * why this file exists. The obvious wiring points the timer at the page's
+     * own loader, which raises the loading flag, and the effect that follows
+     * the task is keyed on that flag - so every tick tears the connection down
+     * and opens another. Nothing on screen shows it; the requests to
+     * /api/tasks/{id}/stream do, and they are what is counted.
+     *
+     * The task and the stream are both answered in the browser: a task that is
+     * genuinely running needs a model, and a stream that stayed open would pass
+     * the third assertion by accident.
+     */
+  },
+  {
     name: 'task-picture-check',
     what: 'a picture a task drew, drawn in its outcome card rather than named in it',
     needs: ['workspace'],
