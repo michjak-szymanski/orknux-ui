@@ -259,10 +259,18 @@ check(
 await page.waitForSelector('[data-testid="task-outcome"]', { timeout: 30_000 }).catch(() => undefined);
 const over = await readPage();
 check(
-  !over.box,
+  !over.typing && !over.box,
   'the box is not offered on a task that has ended',
   'the box is still offered on a task that has ended, where nothing would ever read what is typed',
 );
+/*
+ * Both, because they are two rules now. The input goes when the task is over -
+ * nothing would read it - while the card itself stays for as long as it has
+ * something unread to show, which on a task that ended normally is never: the
+ * loop reads what is waiting before it lets task_done through. A build where
+ * that guard had gone would leave a message on this screen, and `over.box`
+ * alone would be what noticed.
+ */
 await page.screenshot({ path: shot('task-message-done.png'), fullPage: true });
 
 // --- put it back the way it was ---------------------------------------------

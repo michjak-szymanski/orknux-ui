@@ -1749,6 +1749,8 @@ export const PL: Record<string, string> = {
   "It returned nothing.": "Nic nie zwróciło.",
   "It could not be run.": "Nie udało się tego uruchomić.",
   "Answer the task": "Odpowiedz zadaniu",
+  "Said while it worked": "Powiedziane w trakcie pracy",
+  "never read — the task ended first": "nigdy nie przeczytane — zadanie skończyło się wcześniej",
   "Say something": "Powiedz coś",
   "Say something to the task": "Powiedz coś zadaniu",
   "Change what it is doing…": "Zmień to, co robi…",
@@ -1756,7 +1758,8 @@ export const PL: Record<string, string> = {
   "not read yet": "jeszcze nieprzeczytane",
   "That could not be said.": "Nie udało się tego powiedzieć.",
   "Talking to a task while it works": "Rozmowa z zadaniem w trakcie pracy",
-  "The agent reads this at the top of its next turn, as the newest word on what is wanted, and carries on from there — so it can change what is being produced without the task being stopped and started again. Nothing is interrupted: a message sent while the model is thinking waits for that turn to end.": "Agent czyta to na początku swojej następnej tury jako najnowsze słowo o tym, czego oczekujesz, i pracuje dalej od tego miejsca — dzięki temu możesz zmienić powstający wynik bez zatrzymywania zadania i zaczynania go od nowa. Nic nie zostaje przerwane: wiadomość wysłana, gdy model myśli, czeka na koniec tej tury.",
+  "The agent picks this up between the tools it is running, so a correction reaches it within seconds rather than at the end of the turn, and a task cannot finish while something said to it is still unread.":
+    "Agent odbiera to pomiędzy narzędziami, które uruchamia, więc poprawka dociera do niego w ciągu sekund, a nie na końcu tury, i zadanie nie może się zakończyć, dopóki coś do niego powiedzianego pozostaje nieprzeczytane.",
   "Answer it…": "Odpowiedz…",
   "Granted for this task": "Przyznane dla tego zadania",
   "Nothing has happened yet.": "Jeszcze nic się nie wydarzyło.",

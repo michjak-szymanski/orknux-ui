@@ -2058,6 +2058,32 @@ export const TESTS = [
      */
   },
   {
+    name: 'task-unread-check',
+    what: 'a message a task never read is still on its page after the task ended, and the box is not',
+    needs: ['workspace'],
+    /*
+     * The half of #280 that made the other half look like a bug rather than a
+     * limit. The whole "Say something" card - the box and the list of what had
+     * been said and not yet read - was drawn only while the task was running,
+     * so a correction typed seconds before the task ended disappeared with the
+     * card and left no sign anywhere that it had been typed. The row was still
+     * in the database, unread, and the only way to learn that was to ask the
+     * API.
+     *
+     * Two rules, and they are not the same rule: the box goes, because a task
+     * that has ended will read nothing and the server refuses a message to one;
+     * what was said stays, marked as never read, because it is the only record
+     * that it happened. A task that finished normally cannot have one - the
+     * loop reads what is waiting before it lets task_done through - so the
+     * shape checked here is the one that survives: stopped, or failed, with
+     * something unread.
+     *
+     * The task is answered in the browser. Producing this for real means a task
+     * that ends at the exact moment somebody types, which is not something a
+     * check can arrange.
+     */
+  },
+  {
     name: 'task-message-check',
     what: 'a message typed at a task while it works, read on the next turn, and the work finishing in the shape it asked for',
     needs: ['workspace'],

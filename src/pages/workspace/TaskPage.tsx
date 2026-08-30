@@ -475,20 +475,29 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
             thing somebody must decide and this is not it, and a message is
             about the work below rather than about the prompt above.
 
-            Offered while the task is going and not afterwards, because there is
-            no next turn to read it on - the server refuses one either way, and
-            a box that takes words nothing will ever read is worse than no box.
+            The box is offered while the task is going and not afterwards -
+            the server refuses a message to a task that is over, and a box that
+            takes words nothing will ever read is worse than no box.
+
+            What is *said* outlives that. A message that was never read stays on
+            screen after the task ends, because the alternative is what happened
+            on task 30: somebody's correction disappeared with the card, leaving
+            no sign anywhere that they had ever typed it. A task that finished
+            normally cannot have one - the loop reads what is waiting before it
+            lets task_done through - so this is the failed, the stopped, and the
+            one that ran out of turns.
           */}
-          {!over && (
+          {(!over || unread.length > 0) && (
             <section className={styles.card} data-testid="task-message">
               <div className={styles.cardHead}>
                 <span className={styles.labelWithHint}>
-                  <span className={styles.label}>{t('Say something')}</span>
+                  <span className={styles.label}>{over ? t('Said while it worked') : t('Say something')}</span>
                   <FieldHint label={t('Talking to a task while it works')}>
-                    {t('The agent reads this at the top of its next turn, as the newest word on what is wanted, and carries on from there — so it can change what is being produced without the task being stopped and started again. Nothing is interrupted: a message sent while the model is thinking waits for that turn to end.')}
+                    {t('The agent picks this up between the tools it is running, so a correction reaches it within seconds rather than at the end of the turn, and a task cannot finish while something said to it is still unread.')}
                   </FieldHint>
                 </span>
               </div>
+              {!over && (
               <div className={styles.askingRow}>
                 <input
                   className={styles.answer}
@@ -509,22 +518,29 @@ export function TaskPage({ session, onSignOut }: TaskPageProps) {
                   onClick={() => void say()}
                 >{t('Send')}</button>
               </div>
+              )}
 
               {/*
                 What has been said and not yet read, which is the state of the
                 thing being looked at rather than an explanation of it. A
-                message is read at a turn boundary and a turn is minutes, so a
-                page that drew it as delivered the moment it was sent would be
+                message is read at a turn boundary or when the agent tries to
+                finish, whichever comes first, and a turn is minutes - so a page
+                that drew it as delivered the moment it was sent would be
                 telling somebody their correction had landed when it had not.
                 Once it is read it is in the log below, under their name, and
                 drops off here.
+
+                On a task that is over it is the record that it never landed at
+                all, which is the one thing worth saying about it.
               */}
               {unread.length > 0 && (
                 <ul className={styles.pending} data-testid="task-message-pending">
                   {unread.map((one) => (
                     <li key={one.id} className={styles.pendingLine}>
                       <span className={styles.pendingBody}>{one.body}</span>
-                      <span className={styles.pendingState}>{t('not read yet')}</span>
+                      <span className={styles.pendingState}>
+                        {over ? t('never read — the task ended first') : t('not read yet')}
+                      </span>
                     </li>
                   ))}
                 </ul>
