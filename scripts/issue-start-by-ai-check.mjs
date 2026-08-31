@@ -169,18 +169,30 @@ check(
  * starting another is the reader's to do. So the link says which of the two
  * happened and the assertion follows it, rather than reading a correct page as
  * a failure because the run was fast.
+ *
+ * Both read in one pass, which is the whole point of doing it that way. Asking
+ * the link and then asking the button is two moments, and the task can end in
+ * between: the link says "Working on it", the task fails, the button correctly
+ * comes back, and the assertion chosen at the first moment is applied to the
+ * second. That is a check failing on a page that was right both times, and it
+ * is what the v0.9.5 run hit.
  */
-if (said.startsWith('Working on it')) {
+const going = await page.evaluate(() => ({
+  said: document.querySelector('[data-testid="issue-task-link"]')?.textContent?.trim() ?? '',
+  buttons: document.querySelectorAll('[data-testid="issue-start-ai"]').length,
+}));
+
+if (going.said.startsWith('Working on it')) {
   check(
-    (await page.locator('[data-testid="issue-start-ai"]').count()) === 0,
+    going.buttons === 0,
     'the button is not offered a second time while a task is going',
     'Start by AI was still offered while a task was already working on the issue',
   );
 } else {
   check(
-    (await page.locator('[data-testid="issue-start-ai"]').count()) === 1,
-    `the task ended before this line, and the button is back for another go ("${said}")`,
-    `the task ended ("${said}") and Start by AI did not come back`,
+    going.buttons === 1,
+    `the task ended before this line, and the button is back for another go ("${going.said}")`,
+    `the task ended ("${going.said}") and Start by AI did not come back`,
   );
 }
 
