@@ -151,6 +151,23 @@ export const TESTS = [
      */
   },
   {
+    name: 'mcp-check-button-check',
+    what: 'the Check button on an MCP server, and whether its reason names what failed',
+    needs: ['workspace'],
+    /*
+     * Issue #315. There was no way to ask an MCP server whether it was there,
+     * and every way a handshake could fail arrived as the same eight words - so
+     * a check that only asserted the row went red would pass against the
+     * behaviour this replaces. What it reads is the sentence: the server is
+     * pointed at a port nothing answers on, and the reason has to name it.
+     *
+     * 'workspace' rather than 'fixture': it creates its own MCP server row and
+     * removes it again. It needs no model, opens no agent and runs nothing -
+     * the address is loopback port 9, so the connection is refused at once
+     * rather than held until a timeout.
+     */
+  },
+  {
     name: 'session-edge-check',
     what: "a session's line drawn as a dependency, against a flow line in the same graph",
     needs: ['workspace'],

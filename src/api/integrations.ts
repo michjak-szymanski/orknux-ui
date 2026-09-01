@@ -89,6 +89,15 @@ export interface McpServer {
   secretVariableMissing: boolean;
 }
 
+/** What pressing Check on an MCP server found. */
+export interface McpServerCheck {
+  reachable: boolean;
+  /** One sentence: what worked, or which part did not and what the server said. */
+  detail: string;
+  /** How many tools it offered, on a check that got that far. */
+  tools: number | null;
+}
+
 const CONNECTION_FIELDS = 'id name type url';
 const WORKSPACE_CONNECTION_FIELDS =
   'id workspaceId name type url urlOverride effectiveUrl authType headers { name value } inherited secretSet ' +
@@ -175,6 +184,12 @@ const REVEAL_CONNECTION_MUTATION = `
 const REVEAL_CONNECTION_APP_TOKEN_MUTATION = `
   mutation RevealWorkspaceConnectionAppToken($id: ID!) {
     revealWorkspaceConnectionAppToken(id: $id)
+  }
+`;
+
+const CHECK_MCP_SERVER_MUTATION = `
+  mutation CheckMcpServer($id: ID!) {
+    checkMcpServer(id: $id) { reachable detail tools }
   }
 `;
 
@@ -537,6 +552,17 @@ export async function fetchSlackSuggestions(
 export async function fetchMcpServers(workspaceId: string): Promise<McpServer[]> {
   const data = await graphql<{ mcpServers: McpServer[] }>(MCP_SERVERS_QUERY, { workspaceId });
   return data.mcpServers;
+}
+
+/**
+ * Opens a handshake and asks the server for its tools.
+ *
+ * The same two calls an agent makes, so what comes back is what an agent would
+ * find — which is the only reason a check is worth pressing.
+ */
+export async function checkMcpServer(id: string): Promise<McpServerCheck> {
+  const data = await graphql<{ checkMcpServer: McpServerCheck }>(CHECK_MCP_SERVER_MUTATION, { id });
+  return data.checkMcpServer;
 }
 
 export async function fetchMcpServer(id: string): Promise<McpServer | null> {

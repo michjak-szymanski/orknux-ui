@@ -4,12 +4,13 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import {
   authTypeLabel,
+  checkMcpServer,
   fetchMcpServer,
   removeMcpServer,
   revealMcpServerSecret,
   updateMcpServer,
 } from '../../api/integrations';
-import type { AuthType, HttpHeader, McpServer } from '../../api/integrations';
+import type { AuthType, HttpHeader, McpServer, McpServerCheck } from '../../api/integrations';
 import type { SessionUser } from '../../api/session';
 import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import penIcon from '../../assets/pen.svg';
@@ -54,6 +55,16 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  /**
+   * What the last check found, and whether one is running.
+   *
+   * Not persisted, and deliberately: unlike a connection, whose status is a row
+   * a monitor keeps up to date, this is the answer to a question somebody just
+   * asked. A remembered verdict from an hour ago is worse than none, because it
+   * reads as current.
+   */
+  const [check, setCheck] = useState<McpServerCheck | null>(null);
+  const [checking, setChecking] = useState(false);
 
   useEffect(() => {
     if (serverId === '') return;
@@ -160,6 +171,32 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
       setSaveError(cause instanceof Error ? cause.message : t('Could not save the server.'));
     } finally {
       setSaving(false);
+    }
+  }
+
+  /**
+   * Asks the server whether it is there, and says what it answered.
+   *
+   * What is checked is what is stored, not what is on the screen: a check of an
+   * address somebody has typed but not saved would tell them about a server
+   * that does not exist yet. Saving first is the ordinary thing to do, and the
+   * result says which one it asked.
+   */
+  async function handleCheck() {
+    setChecking(true);
+    setCheck(null);
+    try {
+      setCheck(await checkMcpServer(serverId));
+    } catch (cause) {
+      // A check that could not be made is not a server that is unreachable, but
+      // to the person waiting it fails the same way and must still say something.
+      setCheck({
+        reachable: false,
+        detail: cause instanceof Error ? cause.message : t('The check could not be made.'),
+        tools: null,
+      });
+    } finally {
+      setChecking(false);
     }
   }
 
@@ -288,6 +325,44 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
             <hr className={styles.divider} />
 
             <HeaderRowsEditor headers={headers} onChange={setHeaders} />
+
+            <hr className={styles.divider} />
+
+            {/*
+              Whether this server actually answers.
+
+              The same vocabulary a connection's status uses, because it is the
+              same question and somebody who has read one row should not have to
+              learn a second way of saying it. What differs is that this one is
+              asked rather than kept: there is no monitor behind an MCP server,
+              so the dot is grey until somebody presses the button.
+
+              The detail is clipped to one line, as a connection's is, with the
+              whole of it on hover - a server that refuses can answer with a
+              paragraph, and a paragraph in this row would push the button off
+              the screen.
+            */}
+            <div className={styles.statusRow}>
+              <span
+                className={`${styles.statusDot} ${
+                  check === null ? styles.statusIdle : check.reachable ? styles.statusConnected : styles.statusFailed
+                }`}
+              />
+              <span className={styles.statusLabel}>
+                {check === null ? t('Not checked') : check.reachable ? t('Connected') : t('Failed')}
+              </span>
+              <span className={styles.statusDetail} title={check?.detail ?? undefined}>
+                {check?.detail ?? t('Ask the server whether it answers, and what it offers.')}
+              </span>
+              <button
+                type="button"
+                className={styles.testButton}
+                onClick={() => void handleCheck()}
+                disabled={checking}
+              >
+                {checking ? t('Checking…') : t('Check')}
+              </button>
+            </div>
 
             {saveError !== null && (
               <p className={styles.error} role="alert">
