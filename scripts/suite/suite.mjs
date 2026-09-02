@@ -1522,6 +1522,29 @@ export const TESTS = [
      */
   },
   {
+    name: 'issue-filters-back-check',
+    what: 'the way out of an issue returns to the list somebody was on, filters and all',
+    needs: ['workspace'],
+    /*
+     * Issue #317. The filters live in the address on purpose - that is what
+     * makes "the open p1 ones" a link rather than a sentence - but every way
+     * out of an issue named the list by its bare address, so filtering a
+     * tracker down and opening one of the results put you back at Open, newest
+     * first with the filtering to do again.
+     *
+     * The two assertions worth the check are the count and the refresh. The
+     * count, because the seeded issue is on the unfiltered list too: finding it
+     * proves the page drew and nothing more, and only ten rows against two says
+     * which list came back. The refresh, because the filters ride on the
+     * history entry rather than in the issue's own URL - an issue's address is
+     * what people paste to each other - and an entry that did not survive a
+     * reload would be a fix that held until somebody pressed F5.
+     *
+     * The last phase is the half a fix could quietly break: an issue opened by
+     * its own address still has an arrow, and it goes to the bare list.
+     */
+  },
+  {
     name: 'delete-issue-check',
     what: 'the trash asks before it deletes, and the issue is really gone after',
     needs: ['workspace'],

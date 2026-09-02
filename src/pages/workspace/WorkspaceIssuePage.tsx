@@ -295,12 +295,30 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
    * once it has been shown, because a refusal describes the moment of filing
    * and a page reloaded an hour later should not still be reporting it.
    */
+  /**
+   * The list this issue was opened from, with the filters that were on it.
+   *
+   * Somebody filtering a tracker down to the four issues they care about and
+   * opening one of them is not asking to be put back at Open, newest first
+   * when they leave it — but that is where every way out of this page went,
+   * because each of them names the list by its bare address. The filters ride
+   * along on the history entry instead of in this page's own URL: an issue's
+   * address is what people paste to each other, and two links to one issue
+   * that differ by somebody else's filters are two links that look like two
+   * pages. Empty for an issue arrived at any other way, which is the bare list
+   * this always went to. Issue #317.
+   */
+  const cameFrom = (arrivedWith as { from?: string } | null)?.from ?? '';
+  const issueList = `/workspace/${workspaceId}/issues${cameFrom}`;
+
   const trouble = (arrivedWith as { linkTrouble?: string } | null)?.linkTrouble ?? null;
   useEffect(() => {
     if (trouble === null) return;
     setError(trouble);
-    navigate(pathname, { replace: true, state: null });
-  }, [trouble, pathname, navigate]);
+    // The way back survives; only the refusal is taken off, which is the one
+    // thing on this entry that describes a moment rather than a place.
+    navigate(pathname, { replace: true, state: cameFrom === '' ? null : { from: cameFrom } });
+  }, [trouble, pathname, cameFrom, navigate]);
 
   useEffect(() => {
     if (creating) return;
@@ -557,7 +575,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
    */
   const guard = useLeaveGuard({
     unsaved,
-    backTo: `/workspace/${workspaceId}/issues`,
+    backTo: issueList,
     save: () => save(false),
   });
 
@@ -938,7 +956,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
         <section className={styles.card}>
           <header className={styles.header}>
             <div className={styles.titleRow}>
-              <BackLink to={`/workspace/${workspaceId}/issues`} label={t('Issues')} />
+              <BackLink to={issueList} label={t('Issues')} />
               {!creating && <span className={styles.number}>#{issue?.number}</span>}
               <input
                 className={styles.titleInput}
@@ -1736,7 +1754,7 @@ function Issue({ session, onSignOut }: WorkspaceIssuePageProps) {
         onClose={() => setDeleting(null)}
         onDeleted={() => {
           setDeleting(null);
-          navigate(`/workspace/${workspaceId}/issues`);
+          navigate(issueList);
         }}
       />
 

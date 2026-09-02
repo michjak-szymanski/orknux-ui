@@ -138,6 +138,15 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
   const order = (params.get('order') as IssueOrder | null) ?? 'NUMBER';
   const ascending = params.get('dir') === 'asc';
   const [typed, setTyped] = useState(search);
+  /**
+   * This list as a query string, to hand to the pages opened from it.
+   *
+   * Built from the address rather than from the eight things read out of it
+   * above, so a filter added later is carried without anybody remembering to
+   * add it here. Empty when nothing is filtered, which is what makes appending
+   * it to a path safe.
+   */
+  const filters = params.toString() === '' ? '' : `?${params.toString()}`;
 
   /**
    * Writes the filters back into the address.
@@ -442,6 +451,19 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
                 key={issue.id}
                 className={styles.row}
                 to={`/workspace/${workspaceId}/issues/${issue.number}`}
+                /*
+                 * The filters go with the click, so the arrow back comes back
+                 * to this list rather than to Open, newest first.
+                 *
+                 * On the history entry rather than in the address of the issue
+                 * itself: an issue's URL is the thing people paste to each
+                 * other, and hanging somebody else's filters off it would make
+                 * two links to the same issue look like two different pages.
+                 * Carried on the state react-router keeps in history, which is
+                 * why a reload of the issue still knows the way back. Issue
+                 * #317.
+                 */
+                state={{ from: filters }}
               >
                 <span className={styles.rowMain}>
                   <span className={styles.rowTitle}>
