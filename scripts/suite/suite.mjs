@@ -965,6 +965,29 @@ export const TESTS = [
      */
   },
   {
+    name: 'voice-regenerate-check',
+    what: 'asking for the answer again, in voice mode, and hearing the one that comes back',
+    needs: ['workspace'],
+    /*
+     * Issue #314. The composer and the panel were two doors into the model and
+     * only one of them was wired to the mouth: a conversation held out loud
+     * went silent at exactly the press that says the last answer was not good
+     * enough, because nothing in the panel had been told a turn was happening.
+     *
+     * The two assertions worth the whole check are the ones no screenshot
+     * reaches. That the *second* answer is what is read - the stubbed answers
+     * are two different sentences, and what the speech model was handed is
+     * compared against them, so reading the first one again fails here. And
+     * that exactly one regenerate leaves and no second message is sent to the
+     * chat, which is the difference between going through the panel and going
+     * round it.
+     *
+     * The microphone speaks once and then stops, unlike the one in
+     * `voice-queue-check`: the press is made in the quiet after the first turn,
+     * and a device still talking would take that quiet for a turn of its own.
+     */
+  },
+  {
     name: 'spoken-answer-check',
     what: 'the speaker under an answer reads what it renders to, a sentence at a time',
     needs: ['workspace'],

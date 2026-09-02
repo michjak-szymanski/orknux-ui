@@ -1309,24 +1309,24 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
     const at = messages.length - 1;
     if (messages[at]?.role !== 'assistant') return;
 
+    /*
+     * In voice mode the panel owns the turn, and asking again is a turn.
+     *
+     * Handed over for the reason a typed send is — see `handleSend` — and with
+     * the consequence that matters here: the second answer is read aloud. It
+     * was not, because nothing in the panel had been told a turn was happening,
+     * so a conversation being held out loud went silent at exactly the press
+     * that says the last answer was not good enough. Issue #314.
+     */
+    if (voice && voiceControls.current !== null) {
+      setError(null);
+      voiceControls.current.again();
+      return;
+    }
+
     setSending(true);
     setError(null);
-    setLastSpend(null);
-    // A second answer does its own thinking and its own lookups, and the first
-    // one's would read as this one's.
-    setWorking(NOTHING_YET);
-    thinkingSoFar.current = '';
-    setMessages((present) => {
-      const grown = [...present];
-      const last = grown.length - 1;
-      grown[last] = { ...grown[last], content: '', takes: [...grown[last].takes, grown[last].content] };
-      return grown;
-    });
-    // Back to the newest, because the newest is the one being written now.
-    setTakeAt((held) => {
-      const { [at]: _dropped, ...rest } = held;
-      return rest;
-    });
+    anotherTake(at);
 
     const asked = new AbortController();
     asking.current = asked;
@@ -1357,6 +1357,110 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
       if (asking.current === asked) asking.current = null;
       setSending(false);
     }
+  }
+
+  /**
+   * Makes room on the last row for the take about to be written.
+   *
+   * The answer being replaced is not lost: it goes where every earlier take of
+   * an answer goes — into the row's own history, one press from being read
+   * again — and it goes there before anything is asked, so the log never stops
+   * holding it even while the new one is being written. The row is put back to
+   * showing the newest take, because the newest is the one being written now.
+   *
+   * Written once because both doors into a second take want exactly this: the
+   * button under the answer, and the same button pressed with the voice panel
+   * open. Two copies would be two places for the history to stop being kept.
+   */
+  function anotherTake(at: number) {
+    setLastSpend(null);
+    // A second answer does its own thinking and its own lookups, and the first
+    // one's would read as this one's.
+    setWorking(NOTHING_YET);
+    thinkingSoFar.current = '';
+    setMessages((present) => {
+      const grown = [...present];
+      const last = grown.length - 1;
+      grown[last] = { ...grown[last], content: '', takes: [...grown[last].takes, grown[last].content] };
+      return grown;
+    });
+    setTakeAt((held) => {
+      const { [at]: _dropped, ...rest } = held;
+      return rest;
+    });
+  }
+
+  /**
+   * Asking for the last answer again, with the voice panel driving it.
+   *
+   * The mirror of `handleVoiceTurn` for the one turn that sends nothing, and it
+   * is a separate door for the same reason that one is: the panel owns when a
+   * turn starts, when it may be cut short and when the next may begin, and it
+   * needs the finished answer back to read the tail of it aloud.
+   *
+   * A failure is thrown rather than shown here. The panel is what is on screen
+   * during a spoken turn, and it draws the fault and goes back to listening —
+   * an error written under the composer instead would be a red line on the half
+   * nobody is looking at.
+   */
+  async function handleVoiceAgain(
+    onProgress: (soFar: string) => void,
+    signal: AbortSignal,
+  ): Promise<string> {
+    if (currentId === null) return '';
+    const at = messages.length - 1;
+    if (messages[at]?.role !== 'assistant') return '';
+
+    setError(null);
+    setSending(true);
+    anotherTake(at);
+
+    let answer = '';
+    let failure: string | null = null;
+    try {
+      await regenerateChatAnswer(currentId, {
+        onChunk: (piece) => {
+          answer += piece;
+          setMessages((present) => {
+            const grown = [...present];
+            const last = grown.length - 1;
+            grown[last] = { ...grown[last], content: grown[last].content + piece };
+            return grown;
+          });
+          // How much of the answer there is, not the piece: what the panel has
+          // to work out is how much of it it has already read.
+          onProgress(answer);
+        },
+        ...watchWorking(),
+        onDone: (spend) => keepThinkingOnAnswer(spend),
+        onError: (reason) => {
+          failure = reason;
+        },
+      }, signal);
+      if (failure !== null) throw new Error(failure);
+      await loadSessions(currentId);
+    } catch (cause) {
+      /*
+       * The server puts the answer back when it could not give another, so what
+       * it holds is the truth about what this chat says.
+       *
+       * Not on a turn somebody cut short, though. Cutting in is how the next
+       * turn starts, so by the time a re-read of the log came back it would be
+       * the log as it was one turn ago — written over the answer already being
+       * spoken.
+       */
+      if (!signal.aborted) fetchChatMessages(currentId).then(setMessages).catch(() => undefined);
+      throw cause;
+    } finally {
+      /*
+       * Same reason as above. A second take is cut short *by* the next turn
+       * starting - that is what the button does - and the turn now running has
+       * already said it is sending. Clearing it here would clear that, and the
+       * *Waiting for Gemma…* under the turn would go out while it was waiting.
+       */
+      if (!signal.aborted) setSending(false);
+    }
+    return answer;
   }
 
   /**
@@ -2735,6 +2839,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
             turnTaking={turnTaking}
             chunking={chunking}
             onSay={handleVoiceTurn}
+            onAgain={handleVoiceAgain}
             onPhase={setVoicePhase}
             onClose={() => setVoice(false)}
           />

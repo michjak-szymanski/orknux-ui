@@ -79,6 +79,15 @@ export interface VoiceModeProps {
    * word of an answer nobody heard. Issue #299.
    */
   onSay: (text: string, onProgress: (soFar: string) => void, signal: AbortSignal) => Promise<string>;
+  /**
+   * Asks the last question again and resolves with the second answer.
+   *
+   * The same contract as `onSay` minus the text, because there is no new text:
+   * what is being asked for is another take on the question already in the
+   * chat. Optional, so a panel opened somewhere with nothing to ask again is
+   * simply never asked to.
+   */
+  onAgain?: (onProgress: (soFar: string) => void, signal: AbortSignal) => Promise<string>;
   onClose: () => void;
   /**
    * Told whenever listening becomes thinking becomes speaking.
@@ -104,6 +113,15 @@ export interface VoiceModeHandle {
    * listening for a turn that has already been taken.
    */
   say: (text: string) => void;
+  /**
+   * Asks for the last answer again, from outside this panel.
+   *
+   * Cuts in rather than queues, which is the difference between this and `say`:
+   * somebody pressing *answer again* on the answer being read to them has
+   * decided about that answer, and finishing the reading of the one they have
+   * just rejected is not what the press asked for.
+   */
+  again: () => void;
 }
 
 /**
@@ -225,6 +243,15 @@ const HEARING: MediaTrackConstraints = {
 interface Said {
   text: string;
   spoken: boolean;
+  /**
+   * The same question again rather than a new one.
+   *
+   * Nothing is sent for one of these: the question has not changed, so there is
+   * no text to send and none to show. What runs is the asking-again the page
+   * hands down, and everything after it — the reading, the phases, going back
+   * to listening — is a turn like any other.
+   */
+  again?: boolean;
 }
 
 export function VoiceMode({
@@ -232,6 +259,7 @@ export function VoiceMode({
   turnTaking,
   chunking = CHUNKING_DEFAULT,
   onSay,
+  onAgain,
   onClose,
   onPhase,
   ref,
@@ -276,6 +304,11 @@ export function VoiceMode({
   useEffect(() => {
     sender.current = onSay;
   }, [onSay]);
+  /** Asking again, held in a ref for the reason the sender above is. */
+  const againSender = useRef(onAgain);
+  useEffect(() => {
+    againSender.current = onAgain;
+  }, [onAgain]);
   /*
    * What the workspace decided, held in a ref for the reason the sender above
    * is.
@@ -381,7 +414,9 @@ export function VoiceMode({
       if (!live.current) return;
       const mine = (turn.current += 1);
       busy.current = true;
-      setSaid(starting);
+      // A second take is an answer to the question already showing, so what was
+      // heard stays on screen rather than being replaced by an empty line.
+      if (!starting.again) setSaid(starting);
       setError(null);
       setPhase('thinking');
 
@@ -410,14 +445,19 @@ export function VoiceMode({
 
       void (async () => {
         try {
-          const answer = await sender.current(
-            starting.text,
-            (soFar) => {
-              if (!live.current || mine !== turn.current) return;
-              say.push(soFar, false);
-            },
-            asked.signal,
-          );
+          const watch = (soFar: string) => {
+            if (!live.current || mine !== turn.current) return;
+            say.push(soFar, false);
+          };
+          /*
+           * Asking again is the same turn with a different door into the model.
+           * Everything either one resolves with is read, phased and followed by
+           * the next turn identically, which is the point: a second take that
+           * arrived in silence is the whole of issue #314.
+           */
+          const answer = starting.again
+            ? await (againSender.current?.(watch, asked.signal) ?? Promise.resolve(''))
+            : await sender.current(starting.text, watch, asked.signal);
           if (!live.current || mine !== turn.current) return;
           // Whatever is left, punctuated or not: the end of an answer often is
           // not a sentence. An answer that was empty ends the turn here too.
@@ -670,38 +710,58 @@ export function VoiceMode({
     onPhase?.(phase);
   }, [phase, onPhase]);
 
-  useImperativeHandle(ref, () => ({ interrupt, say }));
+  useImperativeHandle(ref, () => ({ interrupt, again, say }));
+
+  /**
+   * Lets go of everything the turn in flight is holding.
+   *
+   * The turn moves, so a clip already asked for and a chunk still arriving
+   * belong to a turn nobody is listening to any more. The microphone is not
+   * touched: it has been open the whole time, and restarting it here would cut
+   * off the first words of whatever this was done in order to say.
+   *
+   * The answer still being written goes with it, which is the half that used to
+   * survive this. Moving the turn stops this panel listening to it; it does
+   * nothing whatever to the model, which went on composing an answer nobody
+   * would hear and went on charging for it — and the next thing said then raced
+   * a turn that had never ended. Issue #299.
+   *
+   * What happens next is the caller's: listening again, or another turn.
+   */
+  function drop() {
+    turn.current += 1;
+    reading.current?.stop();
+    reading.current = null;
+    asking.current?.abort();
+    asking.current = null;
+    queued.current = null;
+    setWaiting(null);
+    busy.current = false;
+  }
 
   function interrupt() {
     if (phase === 'speaking' || phase === 'thinking') {
-      /*
-       * The turn moves, so a clip already asked for and a chunk still arriving
-       * belong to a turn nobody is listening to any more. The microphone is not
-       * touched: it has been open the whole time, and restarting it here would
-       * cut off the first words of whatever this press was made in order to
-       * say.
-       */
-      turn.current += 1;
-      reading.current?.stop();
-      reading.current = null;
-      /*
-       * And the answer still being written, which is the half that used to
-       * survive this. Moving the turn stops this panel listening to it; it does
-       * nothing whatever to the model, which went on composing an answer nobody
-       * would hear and went on charging for it — and the next thing said then
-       * raced a turn that had never ended. Issue #299.
-       */
-      asking.current?.abort();
-      asking.current = null;
-      queued.current = null;
-      setWaiting(null);
-      busy.current = false;
+      drop();
       setPhase('listening');
       return;
     }
     // Only a recorder that is actually running can be stopped; a second press
     // while the first one is still ending would otherwise throw.
     if (recorder.current?.state === 'recording') recorder.current.stop();
+  }
+
+  /*
+   * Cutting in on whatever is happening, rather than waiting behind it.
+   *
+   * A press of *answer again* is made on an answer somebody has just heard
+   * enough of, so reading the rest of it first would be finishing the sentence
+   * they pressed the button to stop. Nothing is queued for the same reason: it
+   * is this answer they want replaced, not the one after it.
+   */
+  function again() {
+    if (againSender.current === undefined) return;
+    drop();
+    begin({ text: '', spoken: false, again: true });
   }
 
   function say(text: string) {
