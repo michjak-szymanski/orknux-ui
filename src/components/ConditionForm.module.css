@@ -18,3 +18,45 @@
   gap: var(--space-6);
   min-width: 0;
 }
+
+/*
+ * What a function condition passes, one row per parameter the function declares.
+ *
+ * Its own layout here rather than in the styles contract the form is handed,
+ * because the two callers - a dialog and a settings card - want this the same
+ * way, and a class each would be two stylesheets to keep in step for one row.
+ */
+.arguments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+  margin-top: var(--space-12);
+}
+
+.argumentRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+/*
+ * The parameter's name, which is the function's and not editable. Fixed width
+ * so a list of them reads as a column rather than as ragged pairs, and
+ * monospace because it is an identifier.
+ */
+.argumentName {
+  flex: 0 0 132px;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Narrow: it holds one of two words, and the box beside it is where the typing is. */
+.argumentMode {
+  flex: 0 0 116px;
+}

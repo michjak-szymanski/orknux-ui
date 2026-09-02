@@ -16,6 +16,19 @@ export type ConditionProperty =
 
 export type ConditionCheck = 'IN_LIST' | 'EQUALS' | 'CONTAINS' | 'MATCHES' | 'BETWEEN' | 'WORKSPACEMATE';
 
+/**
+ * One argument a function condition passes.
+ *
+ * The same three fields a node's mapping has, because it is the same decision: a
+ * value written in, or the name of a field the run is carrying, and which of the
+ * two it is.
+ */
+export interface ConditionArgument {
+  name: string;
+  expression: string;
+  mode: 'VALUE' | 'REFERENCE';
+}
+
 export interface Condition {
   id: string;
   workspaceId: string;
@@ -28,6 +41,8 @@ export interface Condition {
   functionId: string | null;
   functionName: string | null;
   values: string[];
+  /** What a function condition passes, one per parameter, in the function's order. */
+  arguments: ConditionArgument[];
   members: string[];
   memberNames: string[];
   /** What it asks, in words; the server reads it off the definition. */
@@ -39,6 +54,7 @@ export interface Condition {
 const CONDITION_FIELDS = `
   id workspaceId name type typeLabel property check negate
   functionId functionName values members memberNames description icon
+  arguments { name expression mode }
 `;
 
 const WORKSPACE_CONDITIONS_QUERY = `
@@ -105,6 +121,8 @@ export interface ConditionInput {
   negate?: boolean;
   functionId?: string | null;
   values?: string[];
+  /** What a function condition passes. Absent leaves what is stored alone. */
+  arguments?: ConditionArgument[];
   members?: string[];
 }
 

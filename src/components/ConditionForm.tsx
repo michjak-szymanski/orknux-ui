@@ -17,7 +17,13 @@ import {
   updateCondition,
   valuesLabel,
 } from '../api/conditions';
-import type { Condition, ConditionCheck, ConditionProperty, ConditionType } from '../api/conditions';
+import type {
+  Condition,
+  ConditionArgument,
+  ConditionCheck,
+  ConditionProperty,
+  ConditionType,
+} from '../api/conditions';
 import {
   NEW_FUNCTION,
   NEW_FUNCTION_NAME,
@@ -180,6 +186,20 @@ export function ConditionForm({
    */
   const [newFunctionName, setNewFunctionName] = useState(NEW_FUNCTION_NAME);
   const [values, setValues] = useState<string[]>(condition?.values ?? []);
+  /**
+   * What this condition passes to its function, one per parameter.
+   *
+   * Keyed by parameter name rather than held as a list, because the list is the
+   * function's: the rows on screen are whatever the chosen function declares,
+   * and a stored argument for a parameter that has since been renamed should
+   * fall out rather than be shown against the wrong row. Issue #316.
+   *
+   * Empty is what every condition written before this holds, and it means what
+   * it always meant - the function is handed what the run is carrying.
+   */
+  const [passed, setPassed] = useState<Record<string, ConditionArgument>>(() =>
+    Object.fromEntries((condition?.arguments ?? []).map((one) => [one.name, one])),
+  );
   const [members, setMembers] = useState<string[]>(condition?.members ?? []);
   const [draftValue, setDraftValue] = useState('');
   const [icon, setIcon] = useState<string | null>(condition?.icon ?? null);
@@ -250,6 +270,21 @@ export function ConditionForm({
   );
 
   const functions: WorkspaceFunction[] = functionCatalogue.items;
+
+  /**
+   * The parameters of the function this condition calls, which is what the rows
+   * below are.
+   *
+   * Read off the catalogue rather than stored on the condition: the function's
+   * signature is the function's, and a list kept here would be a second copy of
+   * it going stale the moment somebody edits the function. Empty until one is
+   * chosen, and empty for a function that takes nothing - both of which draw no
+   * rows, which is the right answer for each.
+   */
+  const declared = useMemo(
+    () => functions.find((held) => held.id === functionId)?.params ?? [],
+    [functions, functionId],
+  );
   const others: Condition[] = otherCatalogue.items;
 
   const isComposite = composite(type);
@@ -382,6 +417,20 @@ export function ConditionForm({
         check: isComposite || type === 'FUNCTION' ? null : check,
         negate,
         functionId: type === 'FUNCTION' ? chosen : null,
+        /*
+         * Only what the chosen function actually declares, in its own order. An
+         * argument left over from a function this condition used to call is not
+         * sent: it would be stored against a parameter that no longer exists and
+         * would come back as a row nobody could see.
+         */
+        arguments:
+          type === 'FUNCTION'
+            ? declared.map((param) => ({
+                name: param.name,
+                expression: passed[param.name]?.expression ?? '',
+                mode: passed[param.name]?.mode ?? 'VALUE',
+              }))
+            : [],
         values: isComposite || type === 'FUNCTION' ? [] : values,
         members: isComposite ? members : [],
         icon,
@@ -554,6 +603,75 @@ export function ConditionForm({
                 create={NEW_FUNCTION_ROW}
                 failure={functionCatalogue.failure}
               />
+              {/*
+                One row per parameter the chosen function declares.
+
+                The list is the function's rather than the condition's: a
+                condition that asks "is this the first reply" needs the thread
+                and the connection it arrived on, and those are fields of the run
+                - so each row is a value written in or a reference to one of
+                them, which is the same choice a node's parameter offers.
+                Issue #316.
+
+                Nothing filled in is not an empty argument: a condition passing
+                none is handed what the run is carrying, which is what every
+                condition did before this existed.
+              */}
+              {declared.length > 0 && (
+                <div className={own.arguments}>
+                  <span className={styles.label}>{t('Passed to it')}</span>
+                  {declared.map((param) => (
+                    <div className={own.argumentRow} key={param.name}>
+                      <span className={own.argumentName} title={`${param.name}: ${param.type.toLowerCase()}`}>
+                        {param.name}
+                      </span>
+                      <select
+                        className={`${styles.input} ${own.argumentMode}`}
+                        aria-label={`How ${param.name} is filled in`}
+                        value={passed[param.name]?.mode ?? 'VALUE'}
+                        onChange={(event) =>
+                          setPassed((held) => ({
+                            ...held,
+                            [param.name]: {
+                              name: param.name,
+                              expression: held[param.name]?.expression ?? '',
+                              mode: event.target.value as ConditionArgument['mode'],
+                            },
+                          }))
+                        }
+                      >
+                        <option value="VALUE">{t('Value')}</option>
+                        <option value="REFERENCE">{t('Reference')}</option>
+                      </select>
+                      <input
+                        className={`${styles.input} ${styles.inputMono}`}
+                        type="text"
+                        aria-label={`What ${param.name} is`}
+                        placeholder={
+                          (passed[param.name]?.mode ?? 'VALUE') === 'REFERENCE'
+                            ? t('threadTs')
+                            : t('a written value')
+                        }
+                        value={passed[param.name]?.expression ?? ''}
+                        onChange={(event) =>
+                          setPassed((held) => ({
+                            ...held,
+                            [param.name]: {
+                              name: param.name,
+                              expression: event.target.value,
+                              mode: held[param.name]?.mode ?? 'VALUE',
+                            },
+                          }))
+                        }
+                      />
+                    </div>
+                  ))}
+                  <p className={styles.fieldHint}>
+                    {t("A reference reads a field the run is carrying — a trigger's channel, its thread, the connection it arrived on. Leave them all empty and the function is handed the whole of what the run carries, as it was before.")}
+                  </p>
+                </div>
+              )}
+
               {functionId === NEW_FUNCTION && (
                 <>
                   <div className={styles.inputWrapper}>
