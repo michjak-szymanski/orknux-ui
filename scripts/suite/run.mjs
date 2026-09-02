@@ -5,6 +5,9 @@
  *   docker exec orknux-ui-dev-1 node scripts/suite/run.mjs --only turn-check,bend-check
  *   docker exec orknux-ui-dev-1 node scripts/suite/run.mjs --needs workflow
  *   docker exec orknux-ui-dev-1 node scripts/suite/run.mjs --ci
+ *   docker exec orknux-ui-dev-1 node scripts/suite/run.mjs --fail-fast
+ *   docker exec orknux-ui-dev-1 node scripts/suite/run.mjs --in-order
+ *   docker exec orknux-ui-dev-1 node scripts/suite/run.mjs --any-workspace
  *
  * Each check is a process of its own rather than a function called in this one.
  * That is deliberate and it is what makes the timeout below mean anything: a
@@ -48,10 +51,11 @@
  * ---------------------------------------------------------------------------
  */
 import { spawn } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { TESTS, inCi } from './suite.mjs';
+import { fixtureTrouble } from './fixture-check.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SCRIPTS = resolve(HERE, '..');
@@ -66,6 +70,21 @@ const ROOT = resolve(SCRIPTS, '..');
 const TIMEOUT = Number(process.env.ORKNUX_SUITE_TIMEOUT ?? 240_000);
 
 const RESULTS = process.env.ORKNUX_SUITE_RESULTS ?? resolve(SCRIPTS, 'suite/results');
+
+/**
+ * What each check took last time, so the cheap ones can go first.
+ *
+ * Recorded rather than declared. A number written into `suite.mjs` is a number
+ * that was true once and drifts silently afterwards, and the ordering it buys
+ * is not worth a second thing to keep up to date; what a run already knows is
+ * how long every check took, so it writes that down and the next run reads it.
+ *
+ * A check with no entry - a new one, or a first run - is treated as expensive
+ * and goes last, which is the safe way round: an unknown check that turns out
+ * to be cheap costs one run of bad ordering, and one assumed cheap would hold
+ * up the first answer, which is the whole point of the ordering.
+ */
+const TIMINGS = resolve(RESULTS, 'timings.json');
 
 /* ------------------------------------------------------------------ choosing */
 
@@ -106,6 +125,59 @@ if (argv.includes('--list')) {
 
 if (chosen.length === 0) {
   console.error('Nothing to run.');
+  process.exit(2);
+}
+
+/* ------------------------------------------------------------------ ordering */
+
+/**
+ * Cheapest first, so a broken build says so in a minute rather than in forty.
+ *
+ * The checks used to run in declaration order, which is the order somebody
+ * wrote them in and has nothing to do with what they cost - so a break a
+ * nine-second check would have caught could surface half an hour in, behind a
+ * two-minute one waiting on a model. Issue #308.
+ *
+ * Ties keep declaration order, which is what `sort` being stable gives, so a
+ * fresh checkout with no timings runs exactly as it always did.
+ *
+ * `--in-order` puts it back for the run where the order itself matters: reading
+ * a full log against the file, or reproducing a run somebody else described.
+ */
+let timings = {};
+try {
+  timings = JSON.parse(readFileSync(TIMINGS, 'utf8'));
+} catch {
+  // No file yet, which is a first run and not a problem.
+}
+
+const inOrder = argv.includes('--in-order');
+if (!inOrder) {
+  chosen = [...chosen].sort((one, two) => (timings[one.name] ?? Infinity) - (timings[two.name] ?? Infinity));
+}
+
+/**
+ * Stop at the first failure.
+ *
+ * For the question "is this build broken at all", which is most of the times
+ * this is run by hand and none of the times it is run in CI - there the whole
+ * list is the report, and stopping early would hide the other four things that
+ * are also wrong.
+ */
+const failFast = argv.includes('--fail-fast');
+
+/* ------------------------------------------------------------------- fixture */
+
+/*
+ * Asked before anything is spawned, because the answer decides whether running
+ * at all means anything. A suite pointed at the wrong workspace does not fail -
+ * it passes vacuously on empty pages - so being told in five seconds is worth
+ * more than every check this could have started in the meantime.
+ */
+const trouble = argv.includes('--any-workspace') ? null : await fixtureTrouble();
+if (trouble !== null) {
+  console.error(trouble.join('\n'));
+  console.error('If the checks you are running build their own fixture, --any-workspace says so.');
   process.exit(2);
 }
 
@@ -169,6 +241,7 @@ function run(test) {
 console.log(`${chosen.length} checks against ${process.env.ORKNUX_UI_URL ?? 'http://localhost:5173'}\n`);
 
 const done = [];
+let stoppedAt = null;
 for (const test of chosen) {
   const result = await run(test);
   done.push(result);
@@ -182,6 +255,10 @@ for (const test of chosen) {
         .map((line) => `      | ${line}`)
         .join('\n'),
     );
+    if (failFast) {
+      stoppedAt = test.name;
+      break;
+    }
   }
 }
 
@@ -226,7 +303,29 @@ const xml = [
 mkdirSync(RESULTS, { recursive: true });
 writeFileSync(resolve(RESULTS, 'junit.xml'), xml);
 
+/*
+ * What this run cost, for the next one to order by.
+ *
+ * Merged into what was already there rather than replacing it, because a run
+ * with `--only` or `--ci` knows about a handful of checks, and knowing nothing
+ * about the rest is not the same as their being fast. A killed check is written
+ * down too, at the timeout it was killed at: it is the most expensive thing
+ * here and it going last is right.
+ */
+writeFileSync(
+  resolve(RESULTS, 'timings.json'),
+  `${JSON.stringify(
+    { ...timings, ...Object.fromEntries(done.map((result) => [result.test.name, result.took])) },
+    null,
+    1,
+  )}\n`,
+);
+
 console.log(`\n${done.length - failed.length} of ${done.length} passed.`);
+const skipped = chosen.length - done.length;
+if (skipped > 0) {
+  console.log(`Stopped at ${stoppedAt}: ${skipped} not run. Drop --fail-fast for the whole list.`);
+}
 if (failed.length > 0) console.log(`Failed: ${failed.map((result) => result.test.name).join(', ')}`);
 console.log(`Report: ${resolve(RESULTS, 'junit.xml')}`);
 
