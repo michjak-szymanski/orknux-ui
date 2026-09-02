@@ -139,3 +139,60 @@ export async function deleteProxyRule(id: string): Promise<boolean> {
   const data = await graphql<{ deleteProxyRule: boolean }>(DELETE_PROXY_RULE_MUTATION, { id });
   return data.deleteProxyRule;
 }
+
+/**
+ * One certificate authority this installation trusts, beyond the ones the JVM
+ * came with.
+ *
+ * Nothing here is masked, unlike a proxy's password. A certificate authority's
+ * certificate is what a server hands every client that connects; the key that
+ * signs with it is the secret, and it never reaches this. Being able to read
+ * back which authority was added is the point of the screen.
+ */
+export interface TrustedCertificate {
+  id: string;
+  /** What an administrator called it. PEM blocks are base64 and all look alike. */
+  name: string;
+  pem: string;
+  /** What the certificate says about itself, read once when it was added. */
+  subject: string;
+  expiresAt: string | null;
+  addedAt: string;
+  addedBy: string;
+  /** Already run out, so the row can say so rather than quietly not working. */
+  expired: boolean;
+}
+
+const CERTIFICATE_FIELDS = 'id name pem subject expiresAt addedAt addedBy expired';
+
+const TRUSTED_CERTIFICATES_QUERY = `
+  query TrustedCertificates { trustedCertificates { ${CERTIFICATE_FIELDS} } }
+`;
+
+const TRUST_CERTIFICATE_MUTATION = `
+  mutation TrustCertificate($name: String!, $pem: String!) {
+    trustCertificate(name: $name, pem: $pem) { ${CERTIFICATE_FIELDS} }
+  }
+`;
+
+const UNTRUST_CERTIFICATE_MUTATION = `
+  mutation UntrustCertificate($id: ID!) { untrustCertificate(id: $id) }
+`;
+
+export async function fetchTrustedCertificates(): Promise<TrustedCertificate[]> {
+  const data = await graphql<{ trustedCertificates: TrustedCertificate[] }>(TRUSTED_CERTIFICATES_QUERY);
+  return data.trustedCertificates;
+}
+
+export async function trustCertificate(name: string, pem: string): Promise<TrustedCertificate> {
+  const data = await graphql<{ trustCertificate: TrustedCertificate }>(TRUST_CERTIFICATE_MUTATION, {
+    name,
+    pem,
+  });
+  return data.trustCertificate;
+}
+
+export async function untrustCertificate(id: string): Promise<boolean> {
+  const data = await graphql<{ untrustCertificate: boolean }>(UNTRUST_CERTIFICATE_MUTATION, { id });
+  return data.untrustCertificate;
+}

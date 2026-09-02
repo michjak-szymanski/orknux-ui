@@ -13,6 +13,12 @@ import plusIcon from '../../assets/plus.svg';
 import settingsIcon from '../../assets/settings.svg';
 import toggleOffIcon from '../../assets/toggle-off.svg';
 import toggleOnIcon from '../../assets/toggle-on.svg';
+import {
+  fetchTrustedCertificates,
+  trustCertificate,
+  untrustCertificate,
+} from '../../api/networking';
+import type { TrustedCertificate } from '../../api/networking';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { AppShell } from '../../components/AppShell';
 import { FieldHint } from '../../components/FieldHint';
@@ -66,6 +72,63 @@ export function AdminNetworkingPage({ session, onSignOut }: AdminNetworkingPageP
   }, []);
 
   useEffect(load, [load]);
+
+  /* --------------------------------------------------- certificate authorities */
+
+  /**
+   * What this installation trusts on the way out, beyond the JVM's own roots.
+   *
+   * Here rather than on a server's own page because it is one decision for the
+   * whole installation: an authority trusted to reach one MCP server is trusted
+   * by every outbound connection this server makes, and a list spread across
+   * whichever workspaces happened to paste one in is a list nobody can read.
+   * Issue #322.
+   */
+  const [certificates, setCertificates] = useState<TrustedCertificate[] | null>(null);
+  const [certificateName, setCertificateName] = useState('');
+  const [pem, setPem] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [certificateError, setCertificateError] = useState<string | null>(null);
+
+  const loadCertificates = useCallback(() => {
+    fetchTrustedCertificates()
+      .then(setCertificates)
+      .catch((cause: unknown) => {
+        setCertificates([]);
+        setCertificateError(
+          cause instanceof Error ? cause.message : t('Could not read what this installation trusts.'),
+        );
+      });
+  }, []);
+
+  useEffect(loadCertificates, [loadCertificates]);
+
+  async function trust(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (adding || certificateName.trim() === '' || pem.trim() === '') return;
+    setAdding(true);
+    setCertificateError(null);
+    try {
+      await trustCertificate(certificateName.trim(), pem.trim());
+      setCertificateName('');
+      setPem('');
+      loadCertificates();
+    } catch (cause) {
+      setCertificateError(cause instanceof Error ? cause.message : t('That could not be trusted.'));
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function untrust(certificate: TrustedCertificate) {
+    setCertificateError(null);
+    try {
+      await untrustCertificate(certificate.id);
+      loadCertificates();
+    } catch (cause) {
+      setCertificateError(cause instanceof Error ? cause.message : t('That could not be removed.'));
+    }
+  }
 
   async function toggle(rule: ProxyRule) {
     if (busy) return;
@@ -314,6 +377,101 @@ export function AdminNetworkingPage({ session, onSignOut }: AdminNetworkingPageP
             )}
           </div>
         )}
+      </section>
+
+      <section className={styles.card} aria-label={t('Certificate authorities')}>
+        <h2 className={styles.testTitle}>
+          <span className={styles.titleWithHint}>
+            {t('Certificate authorities')}
+            <FieldHint label={t('Certificate authorities')}>
+              <p>
+                For anything this installation has to reach that is behind a private authority or a
+                self-signed certificate &mdash; an MCP server inside your own network is the usual
+                case. Paste the authority&apos;s certificate in PEM and it is trusted{' '}
+                <strong>as well as</strong> the ones this installation already trusts, never instead
+                of them, so nothing that works today stops.
+              </p>
+              <p>
+                Everything else about TLS is unchanged: the hostname is still checked, the chain
+                still has to build, and an expired certificate is still expired. There is no
+                &ldquo;trust everything&rdquo; here, deliberately.
+              </p>
+              <p>
+                It is not a secret. This is what the server hands every client that connects; the
+                key that signs with it is the secret, and it never comes here.
+              </p>
+            </FieldHint>
+          </span>
+        </h2>
+
+        {certificates === null ? (
+          <Loader />
+        ) : certificates.length === 0 ? (
+          <p className={styles.subtitle}>
+            {t('Nothing beyond the authorities this installation came with.')}
+          </p>
+        ) : (
+          <ul className={styles.certificateList}>
+            {certificates.map((certificate) => (
+              <li className={styles.certificateRow} key={certificate.id}>
+                <span className={styles.certificateText}>
+                  <span className={styles.certificateName}>{certificate.name}</span>
+                  <span className={styles.certificateSubject}>{certificate.subject}</span>
+                  {/*
+                    An expired authority is still on the list and still does
+                    nothing, which is exactly the state somebody would spend an
+                    afternoon on. Said on the row rather than left to be worked
+                    out from a date.
+                  */}
+                  <span className={certificate.expired ? styles.certificateExpired : styles.certificateWhen}>
+                    {certificate.expired
+                      ? `Expired ${certificate.expiresAt ?? ''} — it is trusted and will not work`
+                      : `Added by ${certificate.addedBy}${
+                          certificate.expiresAt === null ? '' : `, good until ${certificate.expiresAt}`
+                        }`}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  className={styles.certificateRemove}
+                  onClick={() => void untrust(certificate)}
+                  aria-label={`Stop trusting ${certificate.name}`}
+                >
+                  {t('Remove')}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <form className={styles.certificateForm} onSubmit={trust}>
+          <input
+            className={styles.testInput}
+            type="text"
+            placeholder={t('What to call it')}
+            value={certificateName}
+            onChange={(event) => setCertificateName(event.target.value)}
+            aria-label={t('Name for the certificate authority')}
+          />
+          <textarea
+            className={styles.certificateInput}
+            rows={4}
+            spellCheck={false}
+            placeholder={'-----BEGIN CERTIFICATE-----'}
+            value={pem}
+            onChange={(event) => setPem(event.target.value)}
+            aria-label={t('The certificate, in PEM')}
+          />
+          <button
+            type="submit"
+            className={styles.testButton}
+            disabled={adding || certificateName.trim() === '' || pem.trim() === ''}
+          >
+            {adding ? 'Adding…' : 'Trust it'}
+          </button>
+        </form>
+
+        {certificateError !== null && <p className={styles.testWarning}>{certificateError}</p>}
       </section>
 
       <ProxyRuleDialog

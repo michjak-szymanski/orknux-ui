@@ -304,3 +304,116 @@
   color: var(--color-danger);
 }
 
+
+/* ---- The certificate authorities this installation trusts ---- */
+
+.certificateList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.certificateRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  padding: var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+
+.certificateText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.certificateName {
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+/*
+ * The distinguished name, which is long and is the thing that identifies the
+ * authority. Monospace so two that differ by one field can be told apart.
+ */
+.certificateSubject {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.certificateWhen {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/*
+ * An expired authority is still on the list and does nothing at all, which is
+ * exactly the state somebody would lose an afternoon to. It says so in the
+ * colour the rest of this page warns in.
+ */
+.certificateExpired {
+  font-size: var(--text-sm);
+  color: var(--color-amber);
+}
+
+.certificateRemove {
+  flex-shrink: 0;
+  padding: var(--space-6) var(--space-12);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-6);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.certificateRemove:hover {
+  border-color: var(--color-danger-border);
+  color: var(--color-danger);
+}
+
+.certificateForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+  margin-top: var(--space-12);
+}
+
+/*
+ * PEM is base64 in 64-character lines, so a proportional font makes it ragged
+ * and unreadable. It scrolls rather than growing, because a box that grew with
+ * the paste would push the button somebody is about to press off the screen.
+ */
+.certificateInput {
+  width: 100%;
+  min-height: 88px;
+  padding: var(--space-10) var(--space-12);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  line-height: 1.4;
+  color: var(--color-text-primary);
+  resize: vertical;
+}
+
+.certificateInput:focus {
+  border-color: var(--color-accent-brand);
+  outline: none;
+}
