@@ -151,6 +151,29 @@ export const TESTS = [
      */
   },
   {
+    name: 'mcp-used-by-check',
+    what: "an MCP server's page names the agents granted it, and says so when none are",
+    needs: ['workspace'],
+    /*
+     * Issue #318. An MCP server was one of the kinds nothing was allowed to ask
+     * "what uses this" about, on the grounds that nothing points at one - which
+     * was never true. An agent names a server in its grants, and removing the
+     * server takes that capability away from every agent holding it without
+     * asking, so the page had no way to warn about what a Remove would cost.
+     *
+     * Two agents exist in the fixture for the assertion that matters: one
+     * granted the server and one not. A panel that listed every agent in the
+     * workspace would satisfy a check that only looked for the right name, and
+     * the grant is matched by name rather than by id, so being loose about it is
+     * exactly the mistake available here.
+     *
+     * The empty case is read off the alert rather than off the words. Before
+     * this the question came back refused, and the refusal and the empty state
+     * both land in the panel's text - so a check matching on words alone passes
+     * on the refusal it was written to catch.
+     */
+  },
+  {
     name: 'mcp-check-button-check',
     what: 'the Check button on an MCP server, and whether its reason names what failed',
     needs: ['workspace'],

@@ -18,6 +18,7 @@ import { AppShell } from '../../components/AppShell';
 import { BackLink } from '../../components/BackLink';
 import { HeaderRowsEditor } from '../../components/HeaderRowsEditor';
 import { Loader } from '../../components/Loader';
+import { UsedBy } from '../../components/UsedBy';
 import { SecretField, useSecretField } from '../../components/SecretField';
 import type { SecretSource } from '../../components/SecretField';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
@@ -381,6 +382,19 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
               </button>
             </div>
           </form>
+
+          {/*
+            Which agents hold this, above the way to take it away.
+
+            An agent names a server in its grants and nothing on either page
+            said so, so removing one quietly took a capability off however many
+            agents had it - the removal un-grants without asking. This is the
+            list that has to be read before pressing Remove, which is why it
+            sits directly above it. Issue #318.
+          */}
+          <section className={styles.card}>
+            <UsedBy kind="MCP_SERVER" componentId={serverId} />
+          </section>
 
           <section className={`${styles.card} ${styles.dangerCard}`}>
             <h2 className={styles.dangerHeading}>{t('Danger Zone')}</h2>

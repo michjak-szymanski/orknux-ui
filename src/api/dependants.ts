@@ -4,10 +4,11 @@ import { t } from '../i18n';
 /**
  * What a dependency question is asked about, and what an answer may name.
  *
- * The server's vocabulary, spelled the same way. Four of these are only ever
- * answers - nothing in the product points at a workflow, a connection, an MCP
- * server or a model provider - so asking about one is refused rather than
- * answered with an empty list.
+ * The server's vocabulary, spelled the same way. Three of these are only ever
+ * answers - nothing in the product points at a workflow, a connection or a
+ * model provider - so asking about one is refused rather than answered with an
+ * empty list. An MCP server was a fourth until agents' grants were made
+ * askable; see issue #318.
  */
 export type DependencyKind =
   | 'OBJECT'
