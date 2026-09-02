@@ -429,6 +429,11 @@ export const PAGES = [
   /* Before the one with an id in it: `new` is a page, not a template called new. */
   { path: '/admin/templates/new', access: 'admin', goTo: false },
   { path: '/admin/templates/:templateId', access: 'admin', goTo: false },
+  /*
+   * One page for adding and for editing, so `new` is not an id here either -
+   * see the templates above, which do the same thing for the same reason.
+   */
+  { path: '/admin/networking/certificates/:certificateId', access: 'admin', goTo: false },
   {
     path: '/admin/networking',
     access: 'admin',

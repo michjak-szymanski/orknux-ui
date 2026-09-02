@@ -218,6 +218,30 @@ export const TESTS = [
      */
   },
   {
+    name: 'trusted-certificates-check',
+    what: 'the certificate authorities this installation trusts: the list, the page, and a bad paste',
+    needs: ['workspace'],
+    /*
+     * Issue #322. The first version of this screen was a panel with two unpadded
+     * boxes and a button reading "Trust it", and a paste that was not a
+     * certificate came back as an internal error.
+     *
+     * The padding is measured rather than looked at, because "it looks
+     * unfinished" is not something a check can be told - and it was the first
+     * thing anybody said about the old one.
+     *
+     * The refusal is the assertion worth the check. Java's own words for a bad
+     * paste are "No certificate data found", which is true and tells somebody
+     * who pasted a private key, a DER file or half a bundle nothing about which
+     * of those they did; the check insists on the sentence that names the
+     * remedy and on the absence of the word "error".
+     *
+     * The certificate is built in JavaScript - see `suite/selfsigned.mjs` - not
+     * because that is elegant but because the container these run in has
+     * neither keytool nor openssl, and a checked-in certificate expires.
+     */
+  },
+  {
     name: 'mcp-used-by-check',
     what: "an MCP server's page names the agents granted it, and says so when none are",
     needs: ['workspace'],

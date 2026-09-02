@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import type { FormEvent } from 'react';
 
 import {
@@ -13,11 +14,7 @@ import plusIcon from '../../assets/plus.svg';
 import settingsIcon from '../../assets/settings.svg';
 import toggleOffIcon from '../../assets/toggle-off.svg';
 import toggleOnIcon from '../../assets/toggle-on.svg';
-import {
-  fetchTrustedCertificates,
-  trustCertificate,
-  untrustCertificate,
-} from '../../api/networking';
+import { fetchTrustedCertificates } from '../../api/networking';
 import type { TrustedCertificate } from '../../api/networking';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { AppShell } from '../../components/AppShell';
@@ -46,6 +43,7 @@ export interface AdminNetworkingPageProps {
 export function AdminNetworkingPage({ session, onSignOut }: AdminNetworkingPageProps) {
   const [rules, setRules] = useState<ProxyRule[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // False when closed, true when adding, the rule itself when editing.
@@ -85,9 +83,6 @@ export function AdminNetworkingPage({ session, onSignOut }: AdminNetworkingPageP
    * Issue #322.
    */
   const [certificates, setCertificates] = useState<TrustedCertificate[] | null>(null);
-  const [certificateName, setCertificateName] = useState('');
-  const [pem, setPem] = useState('');
-  const [adding, setAdding] = useState(false);
   const [certificateError, setCertificateError] = useState<string | null>(null);
 
   const loadCertificates = useCallback(() => {
@@ -102,33 +97,6 @@ export function AdminNetworkingPage({ session, onSignOut }: AdminNetworkingPageP
   }, []);
 
   useEffect(loadCertificates, [loadCertificates]);
-
-  async function trust(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (adding || certificateName.trim() === '' || pem.trim() === '') return;
-    setAdding(true);
-    setCertificateError(null);
-    try {
-      await trustCertificate(certificateName.trim(), pem.trim());
-      setCertificateName('');
-      setPem('');
-      loadCertificates();
-    } catch (cause) {
-      setCertificateError(cause instanceof Error ? cause.message : t('That could not be trusted.'));
-    } finally {
-      setAdding(false);
-    }
-  }
-
-  async function untrust(certificate: TrustedCertificate) {
-    setCertificateError(null);
-    try {
-      await untrustCertificate(certificate.id);
-      loadCertificates();
-    } catch (cause) {
-      setCertificateError(cause instanceof Error ? cause.message : t('That could not be removed.'));
-    }
-  }
 
   async function toggle(rule: ProxyRule) {
     if (busy) return;
@@ -379,99 +347,92 @@ export function AdminNetworkingPage({ session, onSignOut }: AdminNetworkingPageP
         )}
       </section>
 
-      <section className={styles.card} aria-label={t('Certificate authorities')}>
-        <h2 className={styles.testTitle}>
-          <span className={styles.titleWithHint}>
-            {t('Certificate authorities')}
-            <FieldHint label={t('Certificate authorities')}>
-              <p>
-                For anything this installation has to reach that is behind a private authority or a
-                self-signed certificate &mdash; an MCP server inside your own network is the usual
-                case. Paste the authority&apos;s certificate in PEM and it is trusted{' '}
-                <strong>as well as</strong> the ones this installation already trusts, never instead
-                of them, so nothing that works today stops.
-              </p>
-              <p>
-                Everything else about TLS is unchanged: the hostname is still checked, the chain
-                still has to build, and an expired certificate is still expired. There is no
-                &ldquo;trust everything&rdquo; here, deliberately.
-              </p>
-              <p>
-                It is not a secret. This is what the server hands every client that connects; the
-                key that signs with it is the secret, and it never comes here.
-              </p>
-            </FieldHint>
-          </span>
-        </h2>
-
-        {certificates === null ? (
-          <Loader />
-        ) : certificates.length === 0 ? (
+      <header className={styles.titleBar}>
+        <div className={styles.titleBlock}>
+          <h2 className={styles.title}>
+            <span className={styles.titleWithHint}>
+              {t('Certificate authorities')}
+              <FieldHint label={t('Certificate authorities')}>
+                <p>
+                  For anything this installation has to reach that is behind a private authority or
+                  a self-signed certificate &mdash; an MCP server inside your own network is the
+                  usual case. An authority added here is trusted <strong>as well as</strong> the
+                  ones this installation already trusts, never instead of them, so nothing that
+                  works today stops.
+                </p>
+                <p>
+                  Everything else about TLS is unchanged: the hostname is still checked, the chain
+                  still has to build, and an expired certificate is still expired. There is no
+                  trust-everything switch here, deliberately.
+                </p>
+              </FieldHint>
+            </span>
+          </h2>
           <p className={styles.subtitle}>
+            {t('What this installation trusts on the way out, beyond the authorities it came with.')}
+          </p>
+        </div>
+        <button
+          type="button"
+          className={styles.addRule}
+          onClick={() => navigate('/admin/networking/certificates/new')}
+        >
+          <img src={plusIcon} alt="" width={14} height={14} />
+          {t('Add Certificate Authority')}
+        </button>
+      </header>
+
+      <section className={styles.card}>
+        <div className={styles.tableHeader}>
+          <div className={styles.colName}>{t('Name')}</div>
+          <div className={styles.colPattern}>{t('Subject')}</div>
+          <div className={styles.colProxy}>{t('Expires')}</div>
+          <div className={styles.colActions} />
+        </div>
+
+        {certificates === null && <p className={styles.notice}><Loader /></p>}
+        {certificateError !== null && (
+          <p className={`${styles.notice} ${styles.noticeError}`}>{certificateError}</p>
+        )}
+        {certificates !== null && certificates.length === 0 && (
+          <p className={styles.notice}>
             {t('Nothing beyond the authorities this installation came with.')}
           </p>
-        ) : (
-          <ul className={styles.certificateList}>
-            {certificates.map((certificate) => (
-              <li className={styles.certificateRow} key={certificate.id}>
-                <span className={styles.certificateText}>
-                  <span className={styles.certificateName}>{certificate.name}</span>
-                  <span className={styles.certificateSubject}>{certificate.subject}</span>
-                  {/*
-                    An expired authority is still on the list and still does
-                    nothing, which is exactly the state somebody would spend an
-                    afternoon on. Said on the row rather than left to be worked
-                    out from a date.
-                  */}
-                  <span className={certificate.expired ? styles.certificateExpired : styles.certificateWhen}>
-                    {certificate.expired
-                      ? `Expired ${certificate.expiresAt ?? ''} — it is trusted and will not work`
-                      : `Added by ${certificate.addedBy}${
-                          certificate.expiresAt === null ? '' : `, good until ${certificate.expiresAt}`
-                        }`}
-                  </span>
-                </span>
-                <button
-                  type="button"
-                  className={styles.certificateRemove}
-                  onClick={() => void untrust(certificate)}
-                  aria-label={`Stop trusting ${certificate.name}`}
-                >
-                  {t('Remove')}
-                </button>
-              </li>
-            ))}
-          </ul>
         )}
 
-        <form className={styles.certificateForm} onSubmit={trust}>
-          <input
-            className={styles.testInput}
-            type="text"
-            placeholder={t('What to call it')}
-            value={certificateName}
-            onChange={(event) => setCertificateName(event.target.value)}
-            aria-label={t('Name for the certificate authority')}
-          />
-          <textarea
-            className={styles.certificateInput}
-            rows={4}
-            spellCheck={false}
-            placeholder={'-----BEGIN CERTIFICATE-----'}
-            value={pem}
-            onChange={(event) => setPem(event.target.value)}
-            aria-label={t('The certificate, in PEM')}
-          />
-          <button
-            type="submit"
-            className={styles.testButton}
-            disabled={adding || certificateName.trim() === '' || pem.trim() === ''}
+        {(certificates ?? []).map((certificate) => (
+          <Link
+            className={styles.row}
+            key={certificate.id}
+            to={`/admin/networking/certificates/${certificate.id}`}
           >
-            {adding ? 'Adding…' : 'Trust it'}
-          </button>
-        </form>
-
-        {certificateError !== null && <p className={styles.testWarning}>{certificateError}</p>}
+            <div className={styles.colName}>
+              <span className={styles.name}>{certificate.name}</span>
+              <span className={styles.credentials}>added by {certificate.addedBy}</span>
+            </div>
+            <div className={styles.colPattern}>
+              <span className={styles.pattern} title={certificate.subject}>
+                {certificate.subject}
+              </span>
+            </div>
+            <div className={styles.colProxy}>
+              {/*
+                An expired authority is still on the list, still trusted, and
+                does nothing at all - which is exactly the state somebody would
+                lose an afternoon to. It says so rather than leaving a date to
+                be read.
+              */}
+              <span className={certificate.expired ? styles.expired : undefined}>
+                {certificate.expiresAt === null
+                  ? '—'
+                  : certificate.expired
+                    ? `Expired ${certificate.expiresAt.slice(0, 10)}`
+                    : certificate.expiresAt.slice(0, 10)}
+              </span>
+            </div>
+            <div className={styles.colActions} />
+          </Link>
+        ))}
       </section>
 
       <ProxyRuleDialog

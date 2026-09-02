@@ -196,3 +196,40 @@ export async function untrustCertificate(id: string): Promise<boolean> {
   const data = await graphql<{ untrustCertificate: boolean }>(UNTRUST_CERTIFICATE_MUTATION, { id });
   return data.untrustCertificate;
 }
+
+const TRUSTED_CERTIFICATE_QUERY = `
+  query TrustedCertificate($id: ID!) { trustedCertificate(id: $id) { ${CERTIFICATE_FIELDS} } }
+`;
+
+const UPDATE_CERTIFICATE_MUTATION = `
+  mutation UpdateTrustedCertificate($id: ID!, $name: String!, $pem: String!) {
+    updateTrustedCertificate(id: $id, name: $name, pem: $pem) { ${CERTIFICATE_FIELDS} }
+  }
+`;
+
+export async function fetchTrustedCertificate(id: string): Promise<TrustedCertificate | null> {
+  const data = await graphql<{ trustedCertificate: TrustedCertificate | null }>(
+    TRUSTED_CERTIFICATE_QUERY,
+    { id },
+  );
+  return data.trustedCertificate;
+}
+
+/**
+ * Renames one, replaces the certificate on it, or both.
+ *
+ * The same row rather than a delete and an add: an authority whose certificate
+ * was rotated is the same authority, and removing it and adding it back would
+ * lose the name it was given and the record of who put it there.
+ */
+export async function updateTrustedCertificate(
+  id: string,
+  name: string,
+  pem: string,
+): Promise<TrustedCertificate> {
+  const data = await graphql<{ updateTrustedCertificate: TrustedCertificate }>(
+    UPDATE_CERTIFICATE_MUTATION,
+    { id, name, pem },
+  );
+  return data.updateTrustedCertificate;
+}

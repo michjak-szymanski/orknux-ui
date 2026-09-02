@@ -7,6 +7,7 @@ import { AdminDoctorPage } from './pages/admin/AdminDoctorPage';
 import { AdminIntegrationsPage } from './pages/admin/AdminIntegrationsPage';
 import { AdminLibrariesPage } from './pages/admin/AdminLibrariesPage';
 import { AdminMonitoringPage } from './pages/admin/AdminMonitoringPage';
+import { AdminCertificatePage } from './pages/admin/AdminCertificatePage';
 import { AdminNetworkingPage } from './pages/admin/AdminNetworkingPage';
 import { AdminShellPage } from './pages/admin/AdminShellPage';
 import { AdminTemplatePage } from './pages/admin/AdminTemplatePage';
@@ -142,6 +143,15 @@ export const PAGE_ELEMENTS: Record<PagePath, PageElement> = {
   '/admin/templates/new': (session, onSignOut) => <AdminTemplatePage session={session} onSignOut={onSignOut} />,
   '/admin/templates/:templateId': (session, onSignOut) => (
     <AdminTemplatePage session={session} onSignOut={onSignOut} />
+  ),
+  /*
+   * One page for adding and for editing. `new` is not an id and is the one
+   * route that is not: the two want the same fields and the same explanation of
+   * what pasting an authority means, and two screens saying it would be two to
+   * keep in step.
+   */
+  '/admin/networking/certificates/:certificateId': (session, onSignOut) => (
+    <AdminCertificatePage session={session} onSignOut={onSignOut} />
   ),
   '/admin/networking': (session, onSignOut) => (
     <AdminNetworkingPage session={session} onSignOut={onSignOut} />
