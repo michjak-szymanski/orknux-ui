@@ -161,6 +161,26 @@
   color: var(--color-accent-brand);
 }
 
+/*
+ * The row that is not one of the definitions in the list.
+ *
+ * Set apart on purpose - a rule under it and a label in a different colour -
+ * because it is a different kind of answer from the rows below. "Custom" beside
+ * a list of saved shapes reads as one more saved shape unless it is marked, and
+ * the whole complaint behind issue #309 was a mode nobody could see was there.
+ * Amber rather than the brand colour, which the row above it already uses for
+ * making a new one: two pinned rows in one accent would be two things that look
+ * like the same thing.
+ */
+.optionPinned {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.optionPinned .optionLabel {
+  font-weight: 600;
+  color: var(--color-amber);
+}
+
 .option:hover {
   background: var(--color-surface-raised);
 }

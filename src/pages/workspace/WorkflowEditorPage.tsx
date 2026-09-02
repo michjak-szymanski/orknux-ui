@@ -4086,10 +4086,31 @@ Change the keystroke in Preferences.`}
                         )}
                       </span>
                     </span>
+                    {/*
+                      Custom is a row rather than the absence of one.
+
+                      A node with no saved shape holds fields of its own, which
+                      is a real mode with an editor of its own - and it was
+                      reachable only by never touching this control, since the
+                      list held one row per saved object and nothing else. So
+                      the mode looked like a field somebody had forgotten to
+                      fill in, and choosing a shape was one-way: there was no
+                      row to go back to. Naming it is the whole fix. Issue #309.
+
+                      Its value is the empty string, which is what no shape
+                      already is, so nothing about what is stored changes and a
+                      node drawn before this reads as Custom because that is
+                      what it is.
+                    */}
                     <DefinitionPicker
                       id="node-object"
                       value={draft.objectId ?? ''}
                       options={objects.map((shape) => ({ value: shape.id, label: shape.name }))}
+                      pinned={{
+                        value: '',
+                        label: t('Custom'),
+                        hint: t("Fields of this node's own, named here"),
+                      }}
                       onChoose={(chosen) => setDraft({ ...draft, objectId: chosen || null })}
                       placeholder={t('Choose a shape…')}
                       searchPlaceholder={t("Search objects…")}

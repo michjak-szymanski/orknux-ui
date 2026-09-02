@@ -151,6 +151,27 @@ export const TESTS = [
      */
   },
   {
+    name: 'object-custom-shape-check',
+    what: "the Object node's Custom shape: named in the picker, marked, and not a one-way choice",
+    needs: ['workspace'],
+    /*
+     * Issue #309. A node with no saved shape holds fields of its own - a real
+     * mode, with a fields editor that has been there all along - but the Shape
+     * picker held one row per saved object and nothing else. So the mode had no
+     * name on screen: an untouched node read *Choose a shape…*, which is what a
+     * control somebody forgot to fill in looks like.
+     *
+     * The last phase is the one that could not be done at all before, and it is
+     * the whole issue: choosing a saved shape was one-way, because there was no
+     * row to go back to. The fields editor appearing and disappearing with the
+     * choice is what says the two states are really different.
+     *
+     * A saved shape is made as well as the node, so "away and back" has
+     * somewhere to go: a check with only the custom state could not tell a
+     * picker that works from one that never changes.
+     */
+  },
+  {
     name: 'workflow-duplicate-check',
     what: 'duplicating a workflow: the copy holds the same graph, is a draft, and numbers itself',
     needs: ['workspace'],

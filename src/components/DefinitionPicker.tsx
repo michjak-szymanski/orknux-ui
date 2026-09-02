@@ -63,6 +63,24 @@ export interface DefinitionPickerProps {
    * form's business: holding a word until the form is saved, or opening a dialog.
    */
   create?: DefinitionOption | null;
+  /**
+   * A row for the state that is not one of the definitions in the list.
+   *
+   * The Object node's shape is the case it was made for. A node with no saved
+   * shape holds fields of its own, which is a real and useful mode - and it was
+   * reachable only by never touching this control, because the list held one
+   * row per saved object and nothing else. So the mode existed, had an editor
+   * of its own, and looked like a control somebody had forgotten to fill in;
+   * choosing a shape was also one-way, since there was no row to go back to.
+   * Issue #309.
+   *
+   * Pinned and never filtered, the way `create` is, and marked so it does not
+   * read as one more object in the catalogue. Its value is handed to `onChoose`
+   * like any other, and the closed box says its label while that value is what
+   * is held - so this state has a name on screen rather than being the absence
+   * of one.
+   */
+  pinned?: DefinitionOption | null;
   /** What the search box is called, where the field's own label is not enough. */
   ariaLabel?: string;
   disabled?: boolean;
@@ -108,6 +126,7 @@ export function DefinitionPicker({
   placeholder,
   searchPlaceholder = t('Type to search…'),
   create = null,
+  pinned = null,
   ariaLabel,
   disabled = false,
   failure = null,
@@ -136,11 +155,23 @@ export function DefinitionPicker({
    * because typing a name that matches nothing is exactly the moment somebody
    * wants to make it.
    */
-  const rows = useMemo(() => (create === null ? matching : [create, ...matching]), [create, matching]);
+  const rows = useMemo(
+    () => [...(create === null ? [] : [create]), ...(pinned === null ? [] : [pinned]), ...matching],
+    [create, pinned, matching],
+  );
+
+  /** How many rows are pinned above the list, so the styling can find them. */
+  const above = (create === null ? 0 : 1) + (pinned === null ? 0 : 1);
 
   const chosen = options.find((option) => option.value === value) ?? null;
   const chosenLabel =
-    chosen !== null ? chosen.label : create !== null && create.value === value ? create.label : null;
+    chosen !== null
+      ? chosen.label
+      : create !== null && create.value === value
+        ? create.label
+        : pinned !== null && pinned.value === value
+          ? pinned.label
+          : null;
 
   /*
    * Back to the top whenever the list changes under the cursor.
@@ -266,6 +297,7 @@ export function DefinitionPicker({
               className={[
                 styles.option,
                 create !== null && index === 0 ? styles.optionCreate : '',
+                pinned !== null && index === above - 1 ? styles.optionPinned : '',
                 index === at ? styles.optionAt : '',
               ]
                 .filter((name) => name !== '')
@@ -290,15 +322,15 @@ export function DefinitionPicker({
               }}
             >
               {/*
-                The row that makes a new one is never filtered, so marking it
-                would put a highlight on a word nobody searched for.
+                The pinned rows are never filtered, so marking them would put a
+                highlight on a word nobody searched for.
               */}
               <span className={styles.optionLabel}>
-                {create !== null && index === 0 ? row.label : <Marked text={row.label} needle={search} />}
+                {index < above ? row.label : <Marked text={row.label} needle={search} />}
               </span>
               {row.hint !== undefined && row.hint !== '' && (
                 <span className={styles.optionHint}>
-                  {create !== null && index === 0 ? row.hint : <Marked text={row.hint} needle={search} />}
+                  {index < above ? row.hint : <Marked text={row.hint} needle={search} />}
                 </span>
               )}
             </button>
