@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import type { PageOf } from '../../api/client';
 import type { SessionUser } from '../../api/session';
@@ -7,8 +7,9 @@ import { startExecution } from '../../api/executions';
 import { timeAgo } from '../../api/functions';
 import { fetchWorkspaces } from '../../api/workspaces';
 import type { Workspace } from '../../api/workspaces';
-import { fetchWorkspaceWorkflows, setWorkflowEnabled } from '../../api/workflows';
+import { duplicateWorkflow, fetchWorkspaceWorkflows, setWorkflowEnabled } from '../../api/workflows';
 import type { WorkflowOrder, WorkspaceWorkflow } from '../../api/workflows';
+import copyIcon from '../../assets/copy.svg';
 import settingsIcon from '../../assets/settings-14.svg';
 import toggleOffIcon from '../../assets/toggle-off.svg';
 import toggleOnIcon from '../../assets/toggle-on.svg';
@@ -108,7 +109,9 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [disabling, setDisabling] = useState<WorkspaceWorkflow | null>(null);
+  const navigate = useNavigate();
   const [running, setRunning] = useState<string | null>(null);
+  const [copying, setCopying] = useState<string | null>(null);
 
   /*
    * The order lives in the address, like the issue list's.
@@ -240,6 +243,31 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
       setError(cause instanceof Error ? cause.message : t('Could not start the run.'));
     } finally {
       setRunning(null);
+    }
+  }
+
+  /**
+   * Copies a workflow and opens the copy in the editor.
+   *
+   * Straight to the canvas, the way duplicating a function goes straight to the
+   * editor: a duplicate exists to be changed, and staying here would show a
+   * second row with a similar name and leave the change still to start.
+   *
+   * The copy is a draft whatever the original was, so a workflow with triggers
+   * on it is safe to press this on: an event runs the published copy, and this
+   * has never been published.
+   */
+  async function duplicate(workflow: WorkspaceWorkflow) {
+    if (copying !== null) return;
+    setCopying(workflow.id);
+    setError(null);
+    try {
+      const copy = await duplicateWorkflow(workflow.id);
+      navigate(`/workspace/${workspaceId}/workflows/${copy.workflowId}/editor`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : `Could not duplicate ${workflow.name}.`);
+    } finally {
+      setCopying(null);
     }
   }
 
@@ -393,6 +421,21 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
                   title={workflow.enabled ? 'Disable' : 'Enable'}
                 >
                   <img src={workflow.enabled ? toggleOnIcon : toggleOffIcon} alt="" width={36} height={20} data-keeps-colour />
+                </button>
+                {/*
+                  The assignment's id, unlike the three buttons after it: a
+                  duplicate lands in this workspace, and which workspace is
+                  exactly what the assignment says and the definition does not.
+                */}
+                <button
+                  type="button"
+                  className={styles.settings}
+                  onClick={() => void duplicate(workflow)}
+                  disabled={copying !== null}
+                  aria-label={`Duplicate ${workflow.name}`}
+                  title={`Duplicate ${workflow.name}`}
+                >
+                  <img src={copyIcon} alt="" width={14} height={14} />
                 </button>
                 {/*
                   The definition's id rather than the assignment's: what travels

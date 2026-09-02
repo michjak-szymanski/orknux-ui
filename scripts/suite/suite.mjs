@@ -151,6 +151,31 @@ export const TESTS = [
      */
   },
   {
+    name: 'workflow-duplicate-check',
+    what: 'duplicating a workflow: the copy holds the same graph, is a draft, and numbers itself',
+    needs: ['workspace'],
+    /*
+     * Issue #310. A workflow is the one thing here somebody edits while it is
+     * in use, so trying a change meant redrawing it node by node or editing the
+     * one that works.
+     *
+     * The fixture is two nodes and the edge between them for a reason: a
+     * workflow of one node is copied correctly by a duplicate that drops every
+     * edge, and "the copy holds the same graph" has to be a claim about
+     * something.
+     *
+     * The second press is the other one worth the check. Workflow names are
+     * unique across the installation, so a duplicate that simply appends
+     * *(copy)* works once and refuses on exactly the press somebody makes
+     * twice - and the copy has to be a draft whatever the original was, since
+     * an event runs the published copy and a duplicate of a live workflow that
+     * arrived published would be two workflows answering one trigger.
+     *
+     * The name carries a timestamp because `removeWorkflow` unassigns rather
+     * than deletes: the definition survives the sweep, and the name with it.
+     */
+  },
+  {
     name: 'mcp-used-by-check',
     what: "an MCP server's page names the agents granted it, and says so when none are",
     needs: ['workspace'],

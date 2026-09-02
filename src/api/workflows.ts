@@ -65,6 +65,12 @@ const CREATE_WORKFLOW_MUTATION = `
   }
 `;
 
+const DUPLICATE_WORKFLOW_MUTATION = `
+  mutation DuplicateWorkflow($id: ID!) {
+    duplicateWorkflow(id: $id) { ${WORKFLOW_FIELDS} }
+  }
+`;
+
 const UPDATE_WORKFLOW_MUTATION = `
   mutation UpdateWorkflow($id: ID!, $input: UpdateWorkflowInput!) {
     updateWorkflow(id: $id, input: $input) { ${WORKFLOW_FIELDS} }
@@ -122,6 +128,24 @@ export async function createWorkflow(input: {
 }): Promise<WorkspaceWorkflow> {
   const data = await graphql<{ createWorkflow: WorkspaceWorkflow }>(CREATE_WORKFLOW_MUTATION, { input });
   return data.createWorkflow;
+}
+
+/**
+ * The same workflow again, graph and all, in the same workspace.
+ *
+ * Asked of the server rather than assembled here, unlike a duplicated function:
+ * a function is one record and its copy is a create with somebody else's
+ * contents, while a workflow is a graph of nodes with settings, mappings and
+ * edges. Reassembling that from what this page happens to have fetched is a
+ * copy that silently loses whatever field nobody remembered to carry.
+ *
+ * The name is the server's: the original's with *(copy)* after it, numbered if
+ * that is taken. Names are unique across the installation, so the alternative
+ * is a button that refuses on the second press.
+ */
+export async function duplicateWorkflow(id: string): Promise<WorkspaceWorkflow> {
+  const data = await graphql<{ duplicateWorkflow: WorkspaceWorkflow }>(DUPLICATE_WORKFLOW_MUTATION, { id });
+  return data.duplicateWorkflow;
 }
 
 export async function setWorkflowEnabled(id: string, enabled: boolean): Promise<WorkspaceWorkflow> {
