@@ -172,6 +172,27 @@ export const TESTS = [
      */
   },
   {
+    name: 'signature-two-way-check',
+    what: "the function editor's signature edited from either side, and the two settling",
+    needs: ['workspace'],
+    /*
+     * Issue #321. The panel and the declaration are one signature with two
+     * controls and only one was listened to: the panel rewrote the code, the
+     * code moved nothing, and it is the panel that is saved - so typing the
+     * change into the code, which is what anybody writing code reaches for, left
+     * a function whose stored signature was whatever the panel still believed.
+     *
+     * The assertion worth the whole check is the last but one. A parser that
+     * reads a declaration correctly and a page that writes one correctly can
+     * still, together, never come to rest - so the check makes an edit and then
+     * watches for four seconds to see the two stop rather than chase each other.
+     *
+     * The code is driven through the rendered lines and `insertText`, not a
+     * model handle: the editor is deliberately not on `window`, and typing would
+     * measure Monaco's bracket closing rather than the page.
+     */
+  },
+  {
     name: 'workflow-duplicate-check',
     what: 'duplicating a workflow: the copy holds the same graph, is a draft, and numbers itself',
     needs: ['workspace'],

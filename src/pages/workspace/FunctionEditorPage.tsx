@@ -86,6 +86,16 @@ const FUNCTION_PAGE_SIZE = 100;
  * them, and dragging it here does not drag it there. The workflow editor keeps
  * where its lines have been pulled to the same way, for the same reason.
  */
+/**
+ * How long the typing has to stop before the declaration is read back.
+ *
+ * A declaration is half-written for most of the time somebody is writing one,
+ * and following each keystroke would put the parameters of every intermediate
+ * state into the panel. Long enough to be past a word, short enough that the
+ * panel does not feel stale.
+ */
+const DECLARATION_PAUSE_MS = 500;
+
 const SPLIT_KEY = 'orknux.function-editor.panel-width';
 
 /** What the panel is worth until somebody says otherwise - the width it always had. */
@@ -930,10 +940,68 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
     if (!creating && !panelMoved) return;
     setSource((current) => {
       const next = withParameters(current, declarations);
-      if (next !== current) setSaved(false);
+      if (next !== current) {
+        // Remembered so the effect below does not read this page's own rewrite
+        // back as somebody having edited the declaration by hand.
+        rewrote.current = next;
+        setSaved(false);
+      }
       return next;
     });
   }, [fn, creating, declarations, panelMoved]);
+
+  /**
+   * The declaration this page wrote into the code, so it is not read back as an
+   * edit.
+   *
+   * The two effects around it are one loop with two directions, and this is
+   * what stops it going round: the panel writes the declaration, the code is
+   * read for the declaration, and without a way to tell "what I just wrote"
+   * from "what somebody typed" each would keep answering the other.
+   */
+  const rewrote = useRef<string | null>(null);
+
+  /**
+   * The other direction: a declaration edited in the code moves the panel.
+   *
+   * The panel and the code are one signature with two controls, and only one of
+   * them was listened to. Editing a parameter in the panel rewrote the
+   * declaration, which is right; editing the declaration left the panel showing
+   * the old parameters, and it is the panel that is saved - so somebody who
+   * typed the change into the code, which is what anybody writing code reaches
+   * for, got a function whose stored signature was whatever the panel still
+   * believed. Issue #321.
+   *
+   * Read after a pause rather than on every keystroke. A declaration is
+   * half-written for most of the time somebody is typing one, and a panel that
+   * followed each keystroke would fill with the parameters of every
+   * intermediate state - `a`, `ab`, `abc` - and mark the page dirty for each.
+   *
+   * A declaration this cannot read leaves the panel alone rather than emptying
+   * it. Mid-edit is the ordinary reason for that, and throwing the parameters
+   * away because somebody deleted a bracket for a moment would be worse than
+   * the bug being fixed.
+   */
+  useEffect(() => {
+    if (fn === null && !creating) return;
+    if (source === rewrote.current) return;
+
+    const timer = window.setTimeout(() => {
+      const read = parametersOf(source, handed, objects, params);
+      if ('problem' in read) return;
+      if (sameParameters(declared(read.params), declared(params))) return;
+      setParams(read.params);
+      setSaved(false);
+    }, DECLARATION_PAUSE_MS);
+    return () => window.clearTimeout(timer);
+    /*
+     * On the source alone. `params` is what this compares against and would
+     * re-run this the moment it is set, which is the loop; `handed` and
+     * `objects` only decide how a parameter is described, and a change to one
+     * of those is not somebody editing the declaration.
+     */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [source, fn, creating]);
 
   /**
    * The stub a new function would say right now, given the panel as it stands.
