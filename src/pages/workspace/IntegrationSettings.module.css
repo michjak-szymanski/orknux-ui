@@ -150,6 +150,20 @@
   color: var(--color-text-muted);
 }
 
+/*
+ * The box a certificate is pasted into.
+ *
+ * Monospace and a fixed few lines: PEM is base64 in 64-character lines, so a
+ * proportional font makes it ragged and unreadable, and a box that grew with the
+ * paste would push the rest of the form off the screen for a field most servers
+ * leave empty. It scrolls instead.
+ */
+.certificate {
+  min-height: 88px;
+  resize: vertical;
+  line-height: 1.4;
+}
+
 .inputMono {
   font-family: var(--font-mono);
 }
