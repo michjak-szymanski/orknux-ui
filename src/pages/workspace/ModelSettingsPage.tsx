@@ -62,6 +62,7 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
   const [contextWindow, setContextWindow] = useState('');
   const [maxOutput, setMaxOutput] = useState('');
   const [voice, setVoice] = useState('');
+  const [skipEmptyLines, setSkipEmptyLines] = useState(false);
   const [imageCost, setImageCost] = useState('');
   const [windowError, setWindowError] = useState<string | null>(null);
   const [windowSaved, setWindowSaved] = useState(false);
@@ -101,6 +102,7 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
     setContextWindow(found.contextWindow === null ? '' : String(found.contextWindow));
     setMaxOutput(found.maxOutput === null ? '' : String(found.maxOutput));
     setVoice(found.voice ?? '');
+    setSkipEmptyLines(found.skipEmptyLines);
     setImageCost(found.imageCostPerImage === null ? '' : String(found.imageCostPerImage));
     setTokenLimit(found.tokenLimit === null ? '' : String(found.tokenLimit));
     setResetInterval(found.resetInterval);
@@ -162,6 +164,7 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
           inputCostPerMillion: model.inputCostPerMillion,
           outputCostPerMillion: model.outputCostPerMillion,
           voice: reads ? (voice.trim() === '' ? null : voice.trim()) : model.voice,
+          skipEmptyLines: reads ? skipEmptyLines : model.skipEmptyLines,
           // Sent back whatever it was, for the reason above: this mutation
           // replaces a model's details rather than patching them, so a field
           // this card does not show is a field left out and therefore cleared.
@@ -374,6 +377,28 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
                     onChange={(event) => setVoice(event.target.value)}
                     placeholder="alloy"
                   />
+                </div>
+              )}
+              {reads && (
+                <div className={styles.field}>
+                  <span className={styles.checkboxWithHint}>
+                    <label className={styles.checkboxField}>
+                      <input
+                        type="checkbox"
+                        checked={skipEmptyLines}
+                        onChange={(event) => setSkipEmptyLines(event.target.checked)}
+                      />
+                      <span>{t('Skip empty lines when reading')}</span>
+                    </label>
+                    {/*
+                      Beside the box, not inside its label: the (?) is a button,
+                      and a button inside a <label> would tick the box on its
+                      way to opening.
+                    */}
+                    <FieldHint label={t('Skip empty lines when reading')}>
+                      {t('A blank line is something the eye reads and the ear cannot, and readers differ on it: some pause far too long, some treat it as the end and clip what follows. Turn this on where yours does. It changes the text handed over, never where an answer is cut.')}
+                    </FieldHint>
+                  </span>
                 </div>
               )}
             </div>

@@ -99,6 +99,14 @@ export interface Model {
   /** Which voice a SPEECH model reads in; null sends none and takes the provider's. */
   voice: string | null;
   /**
+   * Whether a SPEECH model is handed text with its empty lines taken out.
+   *
+   * A blank line is a thing the eye reads and the ear cannot, and readers
+   * differ on what to do with one. It governs the text handed over, never
+   * where an answer is cut.
+   */
+  skipEmptyLines: boolean;
+  /**
    * What one picture costs on an IMAGE model; null means nobody recorded it.
    *
    * Not the same as free, and its own field for the reason the server's column
@@ -147,7 +155,7 @@ const PROVIDER_FIELDS =
   'secretVariableId secretVariableName secretVariableCatalog secretVariableMissing';
 const MODEL_FIELDS =
   'id providerId workspaceId providerName name modelId kind contextWindow maxOutput enabled ' +
-  'tokenLimit resetInterval requestsPerMinute inputCostPerMillion outputCostPerMillion voice ' +
+  'tokenLimit resetInterval requestsPerMinute inputCostPerMillion outputCostPerMillion voice skipEmptyLines ' +
   'imageCostPerImage';
 const USAGE_FIELDS =
   'modelId days from to empty requests inputTokens outputTokens totalTokens averageLatencyMillis ' +
@@ -290,6 +298,8 @@ export interface ModelDetailsInput {
   outputCostPerMillion?: number | null;
   /** Only asked for on a SPEECH model; null sends none and takes the provider's. */
   voice?: string | null;
+  /** Whether a SPEECH model is handed text with its empty lines taken out. */
+  skipEmptyLines?: boolean;
   /** Only asked for on an IMAGE model, which is billed per picture rather than per token. */
   imageCostPerImage?: number | null;
 }

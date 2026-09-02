@@ -303,6 +303,38 @@
   color: var(--color-text-secondary);
 }
 
+/*
+ * A field that is a box rather than a box to type in.
+ *
+ * The label is the sentence beside the tick, so there is no separate `.label`
+ * above it - and the (?) stands outside that label rather than inside it,
+ * because it is a button and a button inside a <label> ticks the box on its way
+ * to opening. Written here rather than shared: these are the same few lines the
+ * dialogs and the admin screens each keep, and a component for one checkbox is
+ * a component nobody would find.
+ */
+.checkboxWithHint {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-6);
+  /* Aligned with the boxes beside it, which have a label line above them. */
+  margin-top: var(--space-24);
+}
+
+.checkboxField {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.checkboxField input {
+  margin-top: 2px;
+  accent-color: var(--color-accent-brand);
+}
+
 /* A label and the (?) that explains it. */
 .labelWithHint {
   display: inline-flex;
