@@ -24,7 +24,6 @@ import type { SecretSource } from '../../components/SecretField';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { shellUser } from '../../session/user';
 import { useWorkspaceVariables } from './workspaceVariables';
-import { FieldHint } from '../../components/FieldHint';
 import styles from './IntegrationSettings.module.css';
 import { t } from '../../i18n';
 
@@ -44,15 +43,6 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
   const [address, setAddress] = useState('');
   const [authType, setAuthType] = useState<AuthType>('NONE');
   const [headers, setHeaders] = useState<HttpHeader[]>([]);
-  /**
-   * The certificate authority to trust for this server, as PEM.
-   *
-   * Held as plain state and drawn in full, unlike the credential: a certificate
-   * authority's certificate is what the server presents to every client, so
-   * there is nothing to mask - and masking it would hide the one thing somebody
-   * debugging a refused handshake wants to look at. Issue #322.
-   */
-  const [caCertificate, setCaCertificate] = useState('');
   /**
    * The credential: this server's own copy, or a workspace secret it reads.
    *
@@ -88,7 +78,6 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
         setServer(found);
         setName(found.name);
         setAddress(found.address);
-        setCaCertificate(found.caCertificate ?? '');
         setAuthType(found.authType);
         setHeaders(found.headers);
         secret.reset({ stored: found.secretSet, variable: found.secretVariableId });
@@ -174,14 +163,9 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
             ? { secretVariableId: sending.variable }
             : { secret: sending.value }),
         headers: headers.filter((header) => header.name.trim() !== ''),
-        // Always sent, because the box is always drawn: emptying it is how
-        // somebody stops trusting an authority, and a field left out would
-        // silently keep the old one.
-        caCertificate,
       });
       setServer(updated);
       setHeaders(updated.headers);
-      setCaCertificate(updated.caCertificate ?? '');
       secret.reset({ stored: updated.secretSet, variable: updated.secretVariableId });
       setSaved(true);
     } catch (cause) {
@@ -287,36 +271,6 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
                   value={address}
                   onChange={(event) => setAddress(event.target.value)}
                   required
-                />
-              </div>
-            </div>
-
-            <div className={styles.field}>
-              <span className={styles.labelWithHint}>
-                <label className={styles.label} htmlFor="server-ca">{t('Certificate authority')}</label>
-                <FieldHint label={t('Certificate authority')}>
-                  <p>
-                    For a server behind a private authority or a self-signed certificate. Paste the
-                    authority&apos;s certificate in PEM form and it is trusted <strong>as well as</strong> the
-                    ones this installation already trusts &mdash; never instead of them. The hostname is still
-                    checked and the chain still has to build.
-                  </p>
-                  <p>
-                    Leave it empty for a server with an ordinary certificate, which is most of them. It is not
-                    a secret: this is what the server hands every client that connects.
-                  </p>
-                </FieldHint>
-              </span>
-              <div className={styles.inputWrapper}>
-                <textarea
-                  id="server-ca"
-                  name="caCertificate"
-                  className={`${styles.input} ${styles.inputMono} ${styles.certificate}`}
-                  rows={4}
-                  spellCheck={false}
-                  placeholder={'-----BEGIN CERTIFICATE-----'}
-                  value={caCertificate}
-                  onChange={(event) => setCaCertificate(event.target.value)}
                 />
               </div>
             </div>

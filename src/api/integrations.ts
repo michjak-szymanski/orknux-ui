@@ -87,16 +87,6 @@ export interface McpServer {
   secretVariableCatalog: string | null;
   /** A reference pointing at nothing, which the field says rather than failing later. */
   secretVariableMissing: boolean;
-  /**
-   * A certificate authority to trust for this server, as PEM, or null.
-   *
-   * Not masked, unlike the credential beside it: a certificate authority's
-   * certificate is what the server hands every client that connects, so there is
-   * nothing here to protect - and hiding it would mean nobody could check which
-   * authority was pasted in, which is the question somebody debugging a refused
-   * handshake actually has.
-   */
-  caCertificate: string | null;
 }
 
 /** What pressing Check on an MCP server found. */
@@ -116,7 +106,7 @@ const WORKSPACE_CONNECTION_FIELDS =
   'smtpPort smtpUsername smtpFrom smtpSecurity status lastCheckMessage lastCheckedAt';
 const MCP_SERVER_FIELDS =
   'id workspaceId name address authType headers { name value } secretSet ' +
-  'secretVariableId secretVariableName secretVariableCatalog secretVariableMissing caCertificate';
+  'secretVariableId secretVariableName secretVariableCatalog secretVariableMissing';
 
 const CONNECTIONS_QUERY = `
   query Connections($page: Int!, $size: Int!) {
@@ -605,8 +595,6 @@ export async function updateMcpServer(
     /** Points the credential at a workspace secret, dropping any copy it held. Not with `secret`. */
     secretVariableId?: string;
     headers?: HttpHeader[];
-    /** A certificate authority to trust, as PEM. Omitted keeps it; empty clears it. */
-    caCertificate?: string;
   },
 ): Promise<McpServer> {
   const data = await graphql<{ updateMcpServer: McpServer }>(UPDATE_MCP_SERVER_MUTATION, { id, input });
