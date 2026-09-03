@@ -293,6 +293,12 @@ const IN_THE_OPEN = [
     why: 'empty, and what that means for traffic right now - not a definition of a rule',
   },
   {
+    file: 'src/pages/admin/AdminNetworkingPage.tsx',
+    says: 'Nothing beyond the authorities this installation came with.',
+    because: 'status',
+    why: 'empty, and what that means for a TLS handshake right now - the list is what this installation has added, and empty is not nothing trusted',
+  },
+  {
     file: 'src/pages/admin/AdminShellPage.tsx',
     says: 'No shells yet. Until there is one, an agent given the shells has nowhere to run.',
     because: 'status',

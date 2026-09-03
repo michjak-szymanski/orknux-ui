@@ -69,10 +69,12 @@
   color: var(--color-text-secondary);
 }
 
-.hint {
-  margin: 0;
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
+/* The label and the (?) beside it, on one line. */
+.labelWithHint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  min-width: 0;
 }
 
 .input {

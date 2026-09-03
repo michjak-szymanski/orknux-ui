@@ -396,10 +396,20 @@ if (WHEN !== 'before' && only === null) {
   if (connection !== null) {
     for (const kind of ['SMTP', 'SLACK']) {
       await page.route('**/graphql', async (route) => {
-        const answer = await route.fetch();
-        let body = await answer.text();
-        body = body.replace(/"type":"[A-Z_]+"/g, `"type":"${kind}"`);
-        await route.fulfill({ response: answer, body });
+        /*
+         * Guarded, because unrouting does not stop a request that is already in
+         * this handler: the route is handled out from under it and the fulfil
+         * below throws "Route is already handled", which is an uncaught rejection
+         * that took the whole run down after the assertions had passed.
+         */
+        try {
+          const answer = await route.fetch();
+          let body = await answer.text();
+          body = body.replace(/"type":"[A-Z_]+"/g, `"type":"${kind}"`);
+          await route.fulfill({ response: answer, body });
+        } catch {
+          // The page is done with; whatever this was is no longer being read.
+        }
       });
       await page.goto(`${BASE}${connection}`, { waitUntil: 'domcontentloaded' });
       await page.waitForTimeout(1800);

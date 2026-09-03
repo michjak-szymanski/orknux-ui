@@ -153,7 +153,12 @@ export function AdminCertificatePage({ session, onSignOut }: AdminCertificatePag
         <>
           <form className={styles.card} onSubmit={save}>
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="certificate-name">{t('Name')}</label>
+              <span className={styles.labelWithHint}>
+                <label className={styles.label} htmlFor="certificate-name">{t('Name')}</label>
+                <FieldHint label={t('Name')}>
+                  {t('What to call it here. A list of certificates is a list nobody can read; the name is how one is told from another.')}
+                </FieldHint>
+              </span>
               <input
                 id="certificate-name"
                 className={styles.input}
@@ -163,13 +168,15 @@ export function AdminCertificatePage({ session, onSignOut }: AdminCertificatePag
                 onChange={(event) => setName(event.target.value)}
                 required
               />
-              <p className={styles.hint}>
-                {t('What to call it here. A list of certificates is a list nobody can read; the name is how one is told from another.')}
-              </p>
             </div>
 
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="certificate-pem">{t('Certificate')}</label>
+              <span className={styles.labelWithHint}>
+                <label className={styles.label} htmlFor="certificate-pem">{t('Certificate')}</label>
+                <FieldHint label={t('Certificate')}>
+                  {t('PEM. A chain is allowed, and an internal authority usually is one.')}
+                </FieldHint>
+              </span>
               <textarea
                 id="certificate-pem"
                 className={styles.pem}
@@ -180,9 +187,6 @@ export function AdminCertificatePage({ session, onSignOut }: AdminCertificatePag
                 onChange={(event) => setPem(event.target.value)}
                 required
               />
-              <p className={styles.hint}>
-                {t('PEM. A chain is allowed, and an internal authority usually is one.')}
-              </p>
             </div>
 
             {(addedBy !== null || expiresAt !== null) && (
