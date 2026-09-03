@@ -773,7 +773,7 @@ export function argumentJson(type: ValueType, written: string): string {
   }
 }
 
-export const VALUE_TYPES: ValueType[] = ['STRING', 'NUMBER', 'BOOLEAN', 'OBJECT', 'MAP', 'ARRAY'];
+export const VALUE_TYPES: ValueType[] = ['STRING', 'NUMBER', 'BOOLEAN', 'OBJECT', 'MAP', 'ARRAY', 'CONNECTION'];
 
 /**
  * What a function may return, which includes returning nothing.
@@ -867,6 +867,15 @@ export function tsType(type: ValueType, objectName?: string | null): string {
       return 'Record<string, unknown>';
     case 'ARRAY':
       return 'unknown[]';
+    /*
+     * A connection reaches a function as its id, which is text on a payload and
+     * a number when it was typed in - so the annotation is both, under a name
+     * that says what it is for. Not a per-kind type: which Slack a workspace
+     * means is a question about a row, and the call that takes one refuses the
+     * wrong kind in a sentence.
+     */
+    case 'CONNECTION':
+      return 'OrknuxConnectionRef';
     default:
       return 'void';
   }

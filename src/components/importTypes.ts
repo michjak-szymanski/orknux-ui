@@ -171,4 +171,4 @@ function annotated(word: string): string {
 }
 
 /** The words a signature can hold that are types rather than an object's name. */
-const KNOWN: ValueType[] = ['STRING', 'NUMBER', 'BOOLEAN', 'OBJECT', 'MAP', 'ARRAY', 'NONE'];
+const KNOWN: ValueType[] = ['STRING', 'NUMBER', 'BOOLEAN', 'OBJECT', 'MAP', 'ARRAY', 'CONNECTION', 'NONE'];

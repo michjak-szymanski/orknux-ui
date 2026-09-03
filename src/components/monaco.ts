@@ -275,6 +275,17 @@ declare global {
 
   type SlackConnection = OrknuxConnection<'SLACK'>;
 
+  /**
+   * A connection, however it reached this function.
+   *
+   * A parameter typed as a connection is handed the id: a payload carries text,
+   * so a trigger publishes the one its event arrived on as a string, and a
+   * number is what somebody typing one in produces. Whole objects turn up too,
+   * from a plugin's settings. All three are the same connection and the call
+   * takes any of them.
+   */
+  type OrknuxConnectionRef = SlackConnection | number | string;
+
   type SlackThreadMessage = {
     /** Slack's own timestamp, which is also the message's id in its channel. */
     readonly ts: string;
@@ -321,7 +332,7 @@ declare global {
        *   count of the whole thread either way.
        */
       thread(
-        connection: SlackConnection | number,
+        connection: OrknuxConnectionRef,
         channel: string,
         threadTs: string,
         limit?: number,

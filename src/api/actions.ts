@@ -36,7 +36,16 @@ export type MessageTarget = 'CHANNEL' | 'USER';
  * `MAP` is keys and values with no defined shape, which is what `OBJECT` meant
  * before objects could be named.
  */
-export type ValueType = 'STRING' | 'NUMBER' | 'BOOLEAN' | 'OBJECT' | 'MAP' | 'ARRAY' | 'NONE';
+export type ValueType =
+  | 'STRING'
+  | 'NUMBER'
+  | 'BOOLEAN'
+  | 'OBJECT'
+  | 'MAP'
+  | 'ARRAY'
+  /** One of the workspace's connections; what crosses is its id. */
+  | 'CONNECTION'
+  | 'NONE';
 
 export interface ArgumentMapping {
   argument: string;
