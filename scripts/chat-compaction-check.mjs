@@ -8,19 +8,22 @@
  * three settings are on a screen at all, whether an empty box means off, and
  * what happens to somebody who types two numbers the server will not take.
  *
- * That last one is the reason this exists. The three numbers are saved together
- * behind one button, and a summary allowed to be as long as the conversation
- * that triggers it is refused rather than clamped. A refusal that arrived as
- * "internal error", or in a card other than the one being typed into, is the
- * failure mode this is watching for — the server's sentence names what to do
- * instead, and it is worth nothing if it is not drawn where the boxes are.
+ * That last one is the reason this exists. A summary allowed to be as long as
+ * the conversation that triggers it is refused rather than clamped, and a
+ * refusal that arrived as "internal error" is the failure mode this watches
+ * for — the server's sentence names what to do instead, and it is worth nothing
+ * if nobody sees it.
+ *
+ * The whole page is one draft with one Save at the foot of it, so that is what
+ * this presses and where it reads the refusal. It used to press the card's own,
+ * back when some cards had one and others saved as you typed.
  *
  * Four things:
  *
  *   the card       three fields, and empty is off - which is where the seeded
  *                  workspace starts
  *   a refusal      a summary as long as the threshold is refused *in words*,
- *                  beside the boxes, and nothing is saved
+ *                  beside the one Save this page has, and nothing is saved
  *   saving         a threshold, a length and a summariser land on the workspace
  *   turning it off  clearing the threshold clears the other two with it, rather
  *                  than leaving a model behind to surprise the next person who
@@ -82,14 +85,20 @@ record(
  */
 await threshold.fill('4000');
 await length.fill('4000');
-const save = page.locator('#compact-after').locator('xpath=ancestor::section[1]').locator('button:has-text("Save")');
+/*
+ * The page's Save, not the card's. Every setting on this page is a draft now and
+ * one button at the foot of it writes them all - there is no per-card Save left
+ * to press, which was the point of the change.
+ */
+const save = page.locator('button:has-text("Save Changes")').last();
 await save.click();
 
-const error = page.locator('#compact-after').locator('xpath=ancestor::section[1]').locator('[role="alert"]');
+// Beside the button rather than in the card, for the same reason.
+const error = page.locator('[role="alert"]').last();
 await error.waitFor({ state: 'visible', timeout: 20_000 });
 const said = (await error.innerText()).trim();
 
-record(said.length > 0, `a summary as long as the threshold is refused in the card being typed into ("${said}")`);
+record(said.length > 0, `a summary as long as the threshold is refused, in words, beside the Save ("${said}")`);
 record(
   !/internal|unexpected|error occurred|INTERNAL_ERROR/i.test(said),
   `and the refusal is a sentence rather than an internal error ("${said}")`,
@@ -175,11 +184,7 @@ const reopened = await page
 record(reopened === '4000', `what was saved is what the card shows when it is opened again (it shows "${reopened}")`);
 
 await page.locator('#compact-after').fill('');
-await page
-  .locator('#compact-after')
-  .locator('xpath=ancestor::section[1]')
-  .locator('button:has-text("Save")')
-  .click();
+await page.locator('button:has-text("Save Changes")').last().click();
 await page.waitForTimeout(1200);
 
 const cleared = (

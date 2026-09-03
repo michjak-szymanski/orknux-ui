@@ -382,3 +382,39 @@ select.input {
   flex: 1 1 0;
   min-width: 0;
 }
+
+/*
+ * One Save for the whole page, and it follows the reader down it.
+ *
+ * Sticky rather than sitting at the foot: this page is several screens long,
+ * and a button you have to scroll back to is a button people forget on the way
+ * out. It sits above the content it saves rather than over the last card, so
+ * nothing is ever hidden behind it.
+ */
+.pageActions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin-top: var(--space-8);
+  padding: var(--space-12) 0 var(--space-16);
+  background: linear-gradient(to top, var(--color-bg) 60%, transparent);
+}
+
+.pageActionsInner {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-12);
+  padding: var(--space-12) var(--space-16);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+}
+
+/* Whether there is anything to save, in the one place that can answer it. */
+.pageActionsNote {
+  margin: 0;
+  margin-right: auto;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}

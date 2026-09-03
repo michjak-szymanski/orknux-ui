@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import type { FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { fetchMemoryBudget } from '../../api/agents';
@@ -193,7 +192,6 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
   const hasChat = installation?.chatEnabled === true;
 
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
-  const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   /*
    * Which card the message above belongs to.
@@ -205,24 +203,10 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
    * Chat model says "Saved." three fields further up, in a card that may not
    * even be drawn.
    */
-  const [about, setAbout] = useState<'chat' | 'quick'>('chat');
 
-  /*
-   * Where that message is actually drawn.
-   *
-   * The card it belongs to, unless that card is not on the page - the workspace
-   * failing to load reports itself through the same state, and with chat off
-   * there would be no chat card to print it in. One card is always drawn, so
-   * anything with nowhere else to go goes there.
-   */
-  const messageIn = hasChat ? about : 'quick';
-
-  /** The General card's own draft, and its own saved and failed states. */
+  /** The name and description, drafted like everything else on the page. */
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [namingSaved, setNamingSaved] = useState(false);
-  const [namingError, setNamingError] = useState<string | null>(null);
-  const [naming, setNaming] = useState(false);
 
   /*
    * The kinds of thing this workspace files - issue #241.
@@ -258,16 +242,12 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
    */
   const [turns, setTurns] = useState('');
   /** What the server said about a number it would not take. */
-  const [turnsError, setTurnsError] = useState<string | null>(null);
   /** Whether that share may be saved at all, which is the bounds and nothing else. */
   const [verdict, setVerdict] = useState<SessionMemoryBudget | null>(null);
   /** Which model the figures are figures for; '' is none, and shows none. */
   const [against, setAgainst] = useState('');
   /** What the share would mean for that one model. */
   const [preview, setPreview] = useState<SessionMemoryBudget | null>(null);
-  const [memorySaved, setMemorySaved] = useState(false);
-  const [memoryError, setMemoryError] = useState<string | null>(null);
-  const [memorySaving, setMemorySaving] = useState(false);
 
   /*
    * The Voice card - issue #256.
@@ -294,9 +274,6 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
    * default until the workspace has been read, so the control never draws blank.
    */
   const [chunking, setChunking] = useState<SpeechChunking>(CHUNKING_DEFAULT);
-  const [voiceSaved, setVoiceSaved] = useState(false);
-  const [voiceError, setVoiceError] = useState<string | null>(null);
-  const [voiceSaving, setVoiceSaving] = useState(false);
 
   /*
    * The Compaction card - issue #286.
@@ -311,9 +288,55 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
   const [summaryTokens, setSummaryTokens] = useState('');
   /** Which model writes the summary; '' is the one the chat is held with. */
   const [summariser, setSummariser] = useState('');
-  const [compactionSaved, setCompactionSaved] = useState(false);
-  const [compactionError, setCompactionError] = useState<string | null>(null);
-  const [compactionSaving, setCompactionSaving] = useState(false);
+  /*
+   * One draft for the whole page, and one Save at the bottom of it.
+   *
+   * It used to be neither. Four cards had a Save Changes of their own, the task
+   * limit had a Save beside the box, and the six pickers saved the moment they
+   * were touched - so whether a change had been kept depended on which control
+   * it was, and the only way to know was to have learned the page. A settings
+   * page with a button on some sections and not others teaches nobody anything;
+   * it just leaves everyone pressing at random.
+   *
+   * So every control here is now a draft and nothing is written until the
+   * button at the foot of the page is pressed. Adding an issue type is the one
+   * exception and stays where it is: it makes a row rather than changing a
+   * setting, and a list that only filled in on Save would be a list you cannot
+   * see yourself building.
+   */
+  const [companion, setCompanion] = useState('');
+  const [transcription, setTranscription] = useState('');
+  const [speech, setSpeech] = useState('');
+  const [image, setImage] = useState('');
+  const [quickChat, setQuickChat] = useState('');
+  const [quickChatWrites, setQuickChatWrites] = useState(false);
+
+  /**
+   * Which settings the person actually touched.
+   *
+   * **Not "what differs from the workspace this page loaded".** That was the
+   * first version and it was wrong in a way a test caught within the hour: the
+   * snapshot is taken when the page opens, so a setting changed anywhere else
+   * while somebody had this page open was written back to what it used to be by
+   * a Save they pressed about something else entirely. One page saving a field
+   * nobody on it had touched is the worst kind of quiet.
+   *
+   * A control puts its own name in here when it is used, and only these are
+   * sent. What was never touched is never written, however stale the page has
+   * become.
+   */
+  const [touched, setTouched] = useState<ReadonlySet<string>>(new Set());
+
+  /** Marks one setting as this person's to save, and clears any stale "Saved.". */
+  function touch(what: string) {
+    setSavedAll(false);
+    setTouched((held) => (held.has(what) ? held : new Set(held).add(what)));
+  }
+
+  const [saving, setSaving] = useState(false);
+  const [savedAll, setSavedAll] = useState(false);
+  /** What the server refused, in its own words. Null while nothing has been. */
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (workspaceId === '') return;
@@ -328,6 +351,12 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         setOverRoom(inBox(found?.voiceSpeechOverRoomPercent ?? null, AS_IS));
         setUnattended(inBox(found?.voiceUnattendedMicrophoneMs ?? null, A_MINUTE));
         setChunking(found?.voiceSpeechChunking ?? CHUNKING_DEFAULT);
+        setCompanion(found?.companionModelId ?? '');
+        setTranscription(found?.transcriptionModelId ?? '');
+        setSpeech(found?.speechModelId ?? '');
+        setImage(found?.imageModelId ?? '');
+        setQuickChat(found?.quickChatModelId ?? '');
+        setQuickChatWrites(found?.quickChatMayWrite ?? false);
         setCompactAfter(found?.compactAfterTokens == null ? '' : String(found.compactAfterTokens));
         setSummaryTokens(found?.compactionSummaryTokens == null ? '' : String(found.compactionSummaryTokens));
         setSummariser(found?.compactionModelId ?? '');
@@ -442,215 +471,124 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
    */
   const refusal = verdict?.refusal ?? null;
 
-  /**
-   * The default agents here fall back to, saved.
-   *
-   * Null clears it, which is what the Default position sends, and puts every
-   * agent that sets nothing back on the built-in allowance.
-   */
-  async function remember() {
-    if (memorySaving || refusal !== null) return;
-
-    setMemorySaving(true);
-    setMemoryError(null);
-    setMemorySaved(false);
-    try {
-      const updated = await setWorkspaceDefaultMemoryShare(workspaceId, share);
-      setWorkspace(updated);
-      setShare(updated.defaultMemoryShare);
-      setTurns(updated.taskMaxTurns === null ? '' : String(updated.taskMaxTurns));
-      setMemorySaved(true);
-    } catch (cause) {
-      setMemoryError(cause instanceof Error ? cause.message : t('Could not save that.'));
-    } finally {
-      setMemorySaving(false);
-    }
-  }
+  /** Whether there is anything to save, which is whether anything was touched. */
+  const dirty = touched.size > 0;
 
   /**
-   * How a turn ends here, saved.
+   * Everything that has been changed, written in one press.
    *
-   * All three go on every call because that is what the mutation takes and what
-   * lets a box be emptied at all: null clears one, and a form that sent only
-   * what had changed would have no way to say "back to the default".
+   * Only what changed, and in this order: what a refusal is most likely to be
+   * about goes last, so a page with one bad number in it still saves the eight
+   * good ones. It stops at the first refusal and says so at the button, because
+   * carrying on past one would leave the page half saved and the message about
+   * a field nobody can see from there.
    *
-   * Whatever comes back is what the boxes then hold, so what is on screen after
-   * a save is what the workspace really has rather than what was typed at it.
-   * Nothing here judges a value first: the bounds are the server's and are
-   * stated in the sentence it refuses with, and a copy of them on this page
-   * would be a second opinion about what may be saved.
-   *
-   * Two calls behind one press, and in this order. Turn-taking is three numbers
-   * that are one decision and it is the half that can be refused, so a refusal
-   * stops before the chunking is written and the card is left saying no with
-   * nothing saved - rather than half saved, which is the state a reader of this
-   * page cannot see. They are two calls at all because they are two decisions:
-   * one about the half of a turn somebody else is talking and one about the
-   * half the model is, and nothing about either can contradict the other.
+   * The workspace that comes back from the last call is what the page then
+   * holds, and every draft is re-read from it - so what is on screen after a
+   * save is what the workspace really has rather than what was typed at it.
    */
-  async function listenLike() {
-    if (voiceSaving) return;
+  async function saveAll() {
+    if (saving) return;
 
-    setVoiceSaving(true);
-    setVoiceError(null);
-    setVoiceSaved(false);
+    setSaving(true);
+    setSaveError(null);
+    setSavedAll(false);
+
+    const held = workspace;
+    let latest = held;
     try {
-      await setWorkspaceVoiceTurnTaking(
-        workspaceId,
-        asStored(pause, A_SECOND),
-        asStored(overRoom, AS_IS),
-        asStored(unattended, A_MINUTE),
-      );
-      const updated = await setWorkspaceVoiceSpeechChunking(workspaceId, chunking);
-      setWorkspace(updated);
-      setPause(inBox(updated.voicePauseEndsTurnMs, A_SECOND));
-      setOverRoom(inBox(updated.voiceSpeechOverRoomPercent, AS_IS));
-      setUnattended(inBox(updated.voiceUnattendedMicrophoneMs, A_MINUTE));
-      setChunking(updated.voiceSpeechChunking);
-      setVoiceSaved(true);
-    } catch (cause) {
-      setVoiceError(cause instanceof Error ? cause.message : t('Could not save that.'));
-    } finally {
-      setVoiceSaving(false);
-    }
-  }
+      if (touched.has('name') && held?.administered === true) {
+        latest = await updateWorkspace(workspaceId, {
+          name: name.trim(),
+          description: description.trim() || undefined,
+        });
+      }
+      if (touched.has('share')) {
+        latest = await setWorkspaceDefaultMemoryShare(workspaceId, share);
+      }
+      const wantedTurns = turns.trim() === '' ? null : Number(turns);
+      if (touched.has('turns')) {
+        latest = await setWorkspaceTaskMaxTurns(workspaceId, wantedTurns);
+      }
 
-  /**
-   * The three compaction settings, saved together because they are one
-   * decision.
-   *
-   * Nothing here judges a number first. The server refuses a summary allowed to
-   * be as long as the conversation that triggers it, and says so in a sentence
-   * naming what to do instead; a copy of that rule on this page would be a
-   * second opinion about what may be saved, and the two would drift.
-   *
-   * An empty threshold clears the other two as well, because a summariser
-   * nothing calls and a length nothing is cut to are settings that do not exist
-   * - left behind, they would come back the day somebody typed a threshold and
-   * surprise them with a model they picked months ago.
-   */
-  async function compactAt() {
-    if (compactionSaving) return;
+      // The pickers. Empty is null everywhere here, and null is what takes the
+      // microphone, the speaker or the button away rather than falling back.
+      const asNull = (held2: string) => (held2 === '' ? null : held2);
+      if (touched.has('companion')) {
+        latest = await setWorkspaceCompanionModel(workspaceId, asNull(companion));
+      }
+      if (touched.has('transcription')) {
+        latest = await setWorkspaceTranscriptionModel(workspaceId, asNull(transcription));
+      }
+      if (touched.has('speech')) {
+        latest = await setWorkspaceSpeechModel(workspaceId, asNull(speech));
+      }
+      if (touched.has('image')) {
+        latest = await setWorkspaceImageModel(workspaceId, asNull(image));
+      }
+      if (touched.has('quickChat')) {
+        latest = await setWorkspaceQuickChatModel(workspaceId, asNull(quickChat));
+      }
+      if (touched.has('quickChatWrites')) {
+        latest = await setWorkspaceQuickChatWrites(workspaceId, quickChatWrites);
+      }
 
-    setCompactionSaving(true);
-    setCompactionError(null);
-    setCompactionSaved(false);
-    try {
+      if (touched.has('voice')) {
+        latest = await setWorkspaceVoiceTurnTaking(
+          workspaceId,
+          asStored(pause, A_SECOND),
+          asStored(overRoom, AS_IS),
+          asStored(unattended, A_MINUTE),
+        );
+      }
+      if (touched.has('chunking')) {
+        latest = await setWorkspaceVoiceSpeechChunking(workspaceId, chunking);
+      }
+
+      /*
+       * Last, because it is the one the server refuses most: a summary allowed
+       * to be as long as the conversation that triggers it compacts nothing.
+       */
       const threshold = compactAfter.trim() === '' ? null : Number(compactAfter);
-      const updated = await setWorkspaceCompaction(
-        workspaceId,
-        threshold,
-        threshold === null || summaryTokens.trim() === '' ? null : Number(summaryTokens),
-        threshold === null || summariser === '' ? null : summariser,
-      );
-      setWorkspace(updated);
-      setCompactAfter(updated.compactAfterTokens == null ? '' : String(updated.compactAfterTokens));
-      setSummaryTokens(updated.compactionSummaryTokens == null ? '' : String(updated.compactionSummaryTokens));
-      setSummariser(updated.compactionModelId ?? '');
-      setCompactionSaved(true);
-    } catch (cause) {
-      setCompactionError(cause instanceof Error ? cause.message : t('Could not save that.'));
-    } finally {
-      setCompactionSaving(false);
-    }
-  }
+      const summary = threshold === null || summaryTokens.trim() === '' ? null : Number(summaryTokens);
+      const writer = threshold === null || summariser === '' ? null : summariser;
+      if (touched.has('compaction')) {
+        latest = await setWorkspaceCompaction(workspaceId, threshold, summary, writer);
+      }
 
-  async function hear(modelId: string) {
-    setAbout('chat');
-    setError(null);
-    setSaved(false);
-    try {
-      // Empty takes the microphone away rather than falling back to a model
-      // that would answer the audio instead of transcribing it.
-      setWorkspace(await setWorkspaceTranscriptionModel(workspaceId, modelId === '' ? null : modelId));
-      setSaved(true);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t('Could not save that.'));
-    }
-  }
-
-  async function quick(modelId: string) {
-    setAbout('quick');
-    setError(null);
-    setSaved(false);
-    try {
-      // Empty takes the button away, rather than leaving one that opens onto
-      // an apology.
-      setWorkspace(await setWorkspaceQuickChatModel(workspaceId, modelId === '' ? null : modelId));
-      setSaved(true);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t('Could not save that.'));
-    }
-  }
-
-  async function writes(allowed: boolean) {
-    setAbout('quick');
-    setError(null);
-    setSaved(false);
-    try {
-      setWorkspace(await setWorkspaceQuickChatWrites(workspaceId, allowed));
-      setSaved(true);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t('Could not save that.'));
-    }
-  }
-
-  async function read(modelId: string) {
-    setAbout('chat');
-    setError(null);
-    setSaved(false);
-    try {
-      // Empty takes the speaker away rather than falling back to a model that
-      // would answer the text instead of reading it.
-      setWorkspace(await setWorkspaceSpeechModel(workspaceId, modelId === '' ? null : modelId));
-      setSaved(true);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t('Could not save that.'));
-    }
-  }
-
-  async function draw(modelId: string) {
-    setAbout('chat');
-    setError(null);
-    setSaved(false);
-    try {
-      // Empty takes the picture button out of the composer rather than falling
-      // back to a model that would write about the picture instead of drawing it.
-      setWorkspace(await setWorkspaceImageModel(workspaceId, modelId === '' ? null : modelId));
-      setSaved(true);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t('Could not save that.'));
-    }
-  }
-
-  /**
-   * The name and description, saved without either role list.
-   *
-   * Both are left out rather than sent back unchanged: this form never shows
-   * them, so it has nothing to say about them, and a mutation that posts a list
-   * it did not display is one bug away from clearing it.
-   */
-  async function rename(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (name.trim() === '' || naming) return;
-
-    setNaming(true);
-    setNamingError(null);
-    setNamingSaved(false);
-    try {
-      const updated = await updateWorkspace(workspaceId, {
-        name: name.trim(),
-        description: description.trim() || undefined,
-      });
-      // A rename has to reach the selector, which paints from the cached list.
+      if (latest != null) {
+        setWorkspace(latest);
+        rebuild(latest);
+      }
+      setTouched(new Set());
+      setSavedAll(true);
       forgetWorkspaces();
-      setWorkspace(updated);
-      setNamingSaved(true);
     } catch (cause) {
-      setNamingError(cause instanceof Error ? cause.message : t('Could not save the workspace.'));
+      setSaveError(cause instanceof Error ? cause.message : t('Could not save that.'));
     } finally {
-      setNaming(false);
+      setSaving(false);
     }
+  }
+
+  /** Every draft, put back to what the workspace holds. */
+  function rebuild(held: Workspace) {
+    setName(held.name);
+    setDescription(held.description ?? '');
+    setShare(held.defaultMemoryShare);
+    setTurns(held.taskMaxTurns === null ? '' : String(held.taskMaxTurns));
+    setCompanion(held.companionModelId ?? '');
+    setTranscription(held.transcriptionModelId ?? '');
+    setSpeech(held.speechModelId ?? '');
+    setImage(held.imageModelId ?? '');
+    setQuickChat(held.quickChatModelId ?? '');
+    setQuickChatWrites(held.quickChatMayWrite);
+    setPause(inBox(held.voicePauseEndsTurnMs, A_SECOND));
+    setOverRoom(inBox(held.voiceSpeechOverRoomPercent, AS_IS));
+    setUnattended(inBox(held.voiceUnattendedMicrophoneMs, A_MINUTE));
+    setChunking(held.voiceSpeechChunking);
+    setCompactAfter(held.compactAfterTokens == null ? '' : String(held.compactAfterTokens));
+    setSummaryTokens(held.compactionSummaryTokens == null ? '' : String(held.compactionSummaryTokens));
+    setSummariser(held.compactionModelId ?? '');
   }
 
   /*
@@ -672,19 +610,6 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       setTypeError(cause instanceof Error ? cause.message : t('Could not change the issue types.'));
     } finally {
       setTypeBusy(false);
-    }
-  }
-
-  async function choose(modelId: string) {
-    setAbout('chat');
-    setError(null);
-    setSaved(false);
-    try {
-      // Empty is "none", which switches those jobs off rather than guessing.
-      setWorkspace(await setWorkspaceCompanionModel(workspaceId, modelId === '' ? null : modelId));
-      setSaved(true);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t('Could not save that.'));
     }
   }
 
@@ -725,8 +650,15 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         The server decides the same thing again on the save; this only decides
         whether to offer it.
       */}
+      {/* A form still, so Enter in the name saves the page. */}
       {workspace?.administered === true && (
-        <form className={styles.card} onSubmit={rename}>
+        <form
+          className={styles.card}
+          onSubmit={(event) => {
+            event.preventDefault();
+            void saveAll();
+          }}
+        >
           <div className={styles.sectionTitle}>
             <span className={styles.labelWithHint}>
               <h2 className={styles.sectionHeading}>{t('General')}</h2>
@@ -750,7 +682,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                 className={`${styles.input} ${styles.prose}`}
                 type="text"
                 value={name}
-                onChange={(event) => setName(event.target.value)}
+                onChange={(event) => { touch('name'); setName(event.target.value); }}
                 required
               />
             </div>
@@ -765,23 +697,11 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                 id="workspace-description"
                 className={`${styles.input} ${styles.prose} ${styles.textarea}`}
                 value={description}
-                onChange={(event) => setDescription(event.target.value)}
+                onChange={(event) => { touch('name'); setDescription(event.target.value); }}
               />
             </div>
           </div>
 
-          {namingError !== null && (
-            <p className={styles.error} role="alert">
-              {namingError}
-            </p>
-          )}
-
-          <div className={styles.formActions}>
-            {namingSaved && namingError === null && <p className={styles.saved}>{t('Saved.')}</p>}
-            <button type="submit" className={styles.save} disabled={name.trim() === '' || naming}>
-              {naming ? t('Saving…') : t('Save Changes')}
-            </button>
-          </div>
         </form>
       )}
 
@@ -954,7 +874,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                 disabled={workspace === null}
                 onChange={(event) => {
                   const at = Number(event.target.value);
-                  setMemorySaved(false);
+                  touch('share');
                   setShare(at === DEFAULT_SHARE ? null : at);
                 }}
                 aria-valuetext={share === null ? 'Default' : `${share}%`}
@@ -1035,12 +955,6 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
           )}
         </div>
 
-        {memoryError !== null && (
-          <p className={styles.error} role="alert">
-            {memoryError}
-          </p>
-        )}
-
         {/*
           What a task here may spend, beside what an agent here remembers.
 
@@ -1069,51 +983,11 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
               max={200}
               placeholder={workspace === null ? '' : String(workspace.taskMaxTurnsDefault)}
               value={turns}
-              onChange={(event) => setTurns(event.target.value)}
+              onChange={(event) => { touch('turns'); setTurns(event.target.value); }}
             />
-            <button
-              type="button"
-              className={styles.save}
-              onClick={() =>
-                void setWorkspaceTaskMaxTurns(workspaceId, turns.trim() === '' ? null : Number(turns))
-                  .then((updated) => {
-                    setWorkspace(updated);
-                    setTurns(updated.taskMaxTurns === null ? '' : String(updated.taskMaxTurns));
-                    setTurnsError(null);
-                  })
-                  .catch((cause: unknown) => {
-                    setTurnsError(cause instanceof Error ? cause.message : t('It could not be saved.'));
-                  })
-              }
-              disabled={workspace === null}
-            >
-              {t('Save')}
-            </button>
           </div>
         </div>
 
-        {turnsError !== null && (
-          <p className={styles.error} role="alert">
-            {turnsError}
-          </p>
-        )}
-
-        <div className={styles.formActions}>
-          {memorySaved && memoryError === null && <p className={styles.saved}>{t('Saved.')}</p>}
-          {/*
-            A refused share stops the save here as well as at the server. Not
-            instead of: the mutation refuses it from the same calculation, and
-            this is only the card saying so before the press rather than after.
-          */}
-          <button
-            type="button"
-            className={styles.save}
-            onClick={() => void remember()}
-            disabled={workspace === null || memorySaving || refusal !== null}
-          >
-            {memorySaving ? t('Saving…') : t('Save Changes')}
-          </button>
-        </div>
       </section>
 
       {/*
@@ -1146,8 +1020,8 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             <select
               id="companion-model"
               className={`${styles.input} ${styles.select}`}
-              value={workspace?.companionModelId ?? ''}
-              onChange={(event) => void choose(event.target.value)}
+              value={companion}
+              onChange={(event) => { touch('companion'); setCompanion(event.target.value); }}
               disabled={workspace === null}
             >
               <option value="">{t('None — chats keep the name they were given')}</option>
@@ -1162,12 +1036,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             </select>
             <img src={chevronDown12Icon} alt="" width={12} height={12} />
           </div>
-          {messageIn === 'chat' && saved && <p className={styles.saved}>{t('Saved.')}</p>}
-          {messageIn === 'chat' && error !== null && (
-            <p className={styles.error} role="alert">
-              {error}
-            </p>
-          )}
+
         </div>
 
         {/*
@@ -1188,8 +1057,8 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             <select
               id="transcription-model"
               className={`${styles.input} ${styles.select}`}
-              value={workspace?.transcriptionModelId ?? ''}
-              onChange={(event) => void hear(event.target.value)}
+              value={transcription}
+              onChange={(event) => { touch('transcription'); setTranscription(event.target.value); }}
               disabled={workspace === null}
             >
               <option value="">{t('None — the microphone is not offered')}</option>
@@ -1238,8 +1107,8 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             <select
               id="speech-model"
               className={`${styles.input} ${styles.select}`}
-              value={workspace?.speechModelId ?? ''}
-              onChange={(event) => void read(event.target.value)}
+              value={speech}
+              onChange={(event) => { touch('speech'); setSpeech(event.target.value); }}
               disabled={workspace === null}
             >
               <option value="">{t('None — answers are not read aloud')}</option>
@@ -1289,8 +1158,8 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             <select
               id="image-model"
               className={`${styles.input} ${styles.select}`}
-              value={workspace?.imageModelId ?? ''}
-              onChange={(event) => void draw(event.target.value)}
+              value={image}
+              onChange={(event) => { touch('image'); setImage(event.target.value); }}
               disabled={workspace === null}
             >
               <option value="">{t('None — no agent is offered the drawing tool')}</option>
@@ -1375,7 +1244,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
               placeholder={`Default — ${inBox(VOICE_TURN_TAKING_DEFAULTS.pauseEndsTurnMs, A_SECOND)}`}
               disabled={workspace === null}
               onChange={(event) => {
-                setVoiceSaved(false);
+                touch('voice');
                 setPause(event.target.value);
               }}
             />
@@ -1403,7 +1272,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
               placeholder={`Default — ${inBox(VOICE_TURN_TAKING_DEFAULTS.speechOverRoomPercent, AS_IS)}`}
               disabled={workspace === null}
               onChange={(event) => {
-                setVoiceSaved(false);
+                touch('voice');
                 setOverRoom(event.target.value);
               }}
             />
@@ -1431,7 +1300,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
               placeholder={`Default — ${inBox(VOICE_TURN_TAKING_DEFAULTS.unattendedMicrophoneMs, A_MINUTE)}`}
               disabled={workspace === null}
               onChange={(event) => {
-                setVoiceSaved(false);
+                touch('voice');
                 setUnattended(event.target.value);
               }}
             />
@@ -1478,7 +1347,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
               value={chunking}
               disabled={workspace === null}
               onChange={(event) => {
-                setVoiceSaved(false);
+                touch('chunking');
                 setChunking(event.target.value as SpeechChunking);
               }}
             >
@@ -1495,23 +1364,6 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
           reporting that something was refused. Nothing on this page decides
           what may be saved, so this is the only place a bound is ever stated.
         */}
-        {voiceError !== null && (
-          <p className={styles.error} role="alert">
-            {voiceError}
-          </p>
-        )}
-
-        <div className={styles.formActions}>
-          {voiceSaved && voiceError === null && <p className={styles.saved}>{t('Saved.')}</p>}
-          <button
-            type="button"
-            className={styles.save}
-            onClick={() => void listenLike()}
-            disabled={workspace === null || voiceSaving}
-          >
-            {voiceSaving ? t('Saving…') : t('Save Changes')}
-          </button>
-        </div>
       </section>
       )}
 
@@ -1561,7 +1413,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
               placeholder={t('Empty — chats are never compacted')}
               disabled={workspace === null}
               onChange={(event) => {
-                setCompactionSaved(false);
+                touch('compaction');
                 setCompactAfter(event.target.value);
               }}
             />
@@ -1589,7 +1441,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
               placeholder={t('Default — 500')}
               disabled={workspace === null}
               onChange={(event) => {
-                setCompactionSaved(false);
+                touch('compaction');
                 setSummaryTokens(event.target.value);
               }}
             />
@@ -1618,7 +1470,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
               value={summariser}
               disabled={workspace === null}
               onChange={(event) => {
-                setCompactionSaved(false);
+                touch('compaction');
                 setSummariser(event.target.value);
               }}
             >
@@ -1633,24 +1485,6 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
           </div>
         </div>
 
-        {/* The server's sentence, which names what is allowed rather than that something was refused. */}
-        {compactionError !== null && (
-          <p className={styles.error} role="alert">
-            {compactionError}
-          </p>
-        )}
-
-        <div className={styles.formActions}>
-          {compactionSaved && compactionError === null && <p className={styles.saved}>{t('Saved.')}</p>}
-          <button
-            type="button"
-            className={styles.save}
-            onClick={() => void compactAt()}
-            disabled={workspace === null || compactionSaving}
-          >
-            {compactionSaving ? t('Saving…') : t('Save Changes')}
-          </button>
-        </div>
       </section>
       )}
 
@@ -1686,8 +1520,8 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             <select
               id="quick-chat-model"
               className={`${styles.input} ${styles.select}`}
-              value={workspace?.quickChatModelId ?? ''}
-              onChange={(event) => void quick(event.target.value)}
+              value={quickChat}
+              onChange={(event) => { touch('quickChat'); setQuickChat(event.target.value); }}
               disabled={workspace === null}
             >
               <option value="">{t('None — the AI button is not offered')}</option>
@@ -1707,13 +1541,13 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             a model nobody has chosen, is a setting for something that does not
             happen.
           */}
-          {workspace?.quickChatModelId != null && (
+          {quickChat !== '' && (
             <div className={styles.checkRowWithHint}>
               <label className={styles.checkRow}>
                 <input
                   type="checkbox"
-                  checked={workspace.quickChatMayWrite}
-                  onChange={(event) => void writes(event.target.checked)}
+                  checked={quickChatWrites}
+                  onChange={(event) => { touch('quickChatWrites'); setQuickChatWrites(event.target.checked); }}
                 />
                 <span>{t('Let it make changes')}</span>
               </label>
@@ -1733,15 +1567,41 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             </div>
           )}
 
-          {/* The same message the card above has, about this card's own saves. */}
-          {messageIn === 'quick' && saved && <p className={styles.saved}>{t('Saved.')}</p>}
-          {messageIn === 'quick' && error !== null && (
-            <p className={styles.error} role="alert">
-              {error}
-            </p>
-          )}
         </div>
       </section>
+
+      {/*
+        One Save, at the foot of the page, for everything above it.
+        
+        Sticky, because this page is long enough that the button would otherwise
+        be somewhere a reader has to remember to go back to - and a settings page
+        whose save is off screen while you are typing is one where changes get
+        left behind on the way out.
+
+        The refusal is drawn here rather than beside the field it is about, and
+        that is a real cost: the server names the setting in its sentence, which
+        is what makes it bearable. The alternative - a message in each card - is
+        what this page had, and the thing that made it unreadable.
+      */}
+      <div className={styles.pageActions}>
+        <div className={styles.pageActionsInner}>
+          {saveError !== null ? (
+            <p className={styles.error} role="alert">{saveError}</p>
+          ) : (
+            <p className={styles.pageActionsNote}>
+              {savedAll ? t('Saved.') : dirty ? t('Not saved yet.') : ''}
+            </p>
+          )}
+          <button
+            type="button"
+            className={styles.save}
+            onClick={() => void saveAll()}
+            disabled={workspace === null || saving || !dirty || refusal !== null}
+          >
+            {saving ? t('Saving…') : t('Save Changes')}
+          </button>
+        </div>
+      </div>
     </AppShell>
   );
 }

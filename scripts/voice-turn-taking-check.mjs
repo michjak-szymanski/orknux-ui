@@ -315,7 +315,16 @@ async function shown() {
     const paragraphs = [...(card?.querySelectorAll('p') ?? [])].map((node) =>
       (node.textContent ?? '').replace(/\s+/g, ' ').trim(),
     );
-    const alerts = [...(card?.querySelectorAll('[role="alert"]') ?? [])].map((node) =>
+    /*
+     * Read from the whole page rather than from the card. What a save left
+     * behind - "Saved.", or the server's refusal - is drawn once at the foot of
+     * the page now, beside the one button that writes any of this.
+     */
+    const said = [...document.querySelectorAll('[role="alert"]')].map((node) =>
+      (node.textContent ?? '').replace(/\s+/g, ' ').trim(),
+    );
+    const alerts = said;
+    const foot = [...document.querySelectorAll('p')].map((node) =>
       (node.textContent ?? '').replace(/\s+/g, ' ').trim(),
     );
     return {
@@ -324,7 +333,7 @@ async function shown() {
       overRoom: read('voice-over-room'),
       unattended: read('voice-unattended'),
       alerts,
-      saved: paragraphs.includes('Saved.'),
+      saved: foot.includes('Saved.'),
       // Everything in the open that is neither an alert nor the word a save
       // leaves behind. There should never be any: this card teaches behind the
       // (?) and prints nothing under a control.
@@ -393,8 +402,14 @@ async function type({ pause, overRoom, unattended }) {
   if (unattended !== undefined) await page.fill(BOXES.unattended, unattended);
 }
 
+/*
+ * The page's Save, not the card's. Every setting on this page is one draft now
+ * and one button at the foot of it writes them all - the card had its own back
+ * when some cards did and others saved as you typed, which is the thing that
+ * change removed.
+ */
 async function save() {
-  await page.locator('section:has(#voice-pause) button:has-text("Save")').click();
+  await page.locator('button:has-text("Save Changes")').last().click();
   await page.waitForTimeout(1_500);
 }
 

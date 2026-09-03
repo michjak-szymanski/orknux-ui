@@ -141,7 +141,10 @@ record(
 );
 
 await picker.selectOption(String(model.id));
-await page.waitForTimeout(700);
+// Chosen and then saved: this page holds a draft and writes it on one press at
+// the foot of it, rather than saving each picker as it is touched.
+await page.locator('button:has-text("Save Changes")').last().click();
+await page.waitForTimeout(1200);
 const saved = (await graphql(`query($id: ID!) { workspace(id: $id) { imageModelId } }`, { id: WORKSPACE }))
   .workspace.imageModelId;
 record(String(saved) === String(model.id), `choosing it on the card saves it (the workspace holds ${saved})`);

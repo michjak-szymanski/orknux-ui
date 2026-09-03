@@ -1498,3 +1498,26 @@ button.attachmentName {
   font-size: var(--text-xs);
   color: var(--color-text-muted);
 }
+
+/*
+ * What a chat says while it is being summarised.
+ *
+ * Part of the turn's working rather than a banner: it happens after Send and
+ * before a token of the answer, and it is the reason for the silence. It
+ * pulses, because a line that does not is a line that has finished.
+ */
+.compacting {
+  margin: 0 0 var(--space-8);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  animation: compactingPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes compactingPulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .compacting { animation: none; opacity: 0.8; }
+}

@@ -317,6 +317,22 @@ export interface ChatStreamHandlers {
   onCall: (call: { at: number; tool: string; arguments: string }) => void;
   /** And what that lookup gave back. */
   onCalled: (answer: { at: number; result: string; failed: boolean }) => void;
+  /**
+   * The chat is being summarised before this turn is sent.
+   *
+   * A long conversation goes quiet for as long as a model takes to read forty
+   * turns, and until this there was nothing on screen to say why — somebody
+   * pressed Send and watched nothing happen.
+   */
+  onCompacting?: () => void;
+  /**
+   * And what that came to: how many turns were replaced by the summary.
+   *
+   * Said out loud because compaction *throws messages away*. Doing that
+   * silently is the behaviour people remember as the product having lost their
+   * conversation.
+   */
+  onCompacted?: (held: { replaced: number; kept: number; tokens: number }) => void;
   onDone: (spend: ChatSpend) => void;
   onError: (reason: string) => void;
 }
@@ -416,12 +432,23 @@ async function read(response: Response, handlers: ChatStreamHandlers): Promise<v
       cost?: number | null;
       reason?: string;
       markdown?: string;
+      replaced?: number;
+      kept?: number;
+      tokens?: number;
     }>(frame);
     if (payload === null) return;
 
     if (frame.event === 'chunk' && payload.text !== undefined) handlers.onChunk(payload.text);
     else if (frame.event === 'thinking' && payload.text !== undefined) handlers.onThinking(payload.text);
     else if (frame.event === 'drew' && payload.markdown !== undefined) handlers.onDrew(payload.markdown);
+    else if (frame.event === 'compacting') handlers.onCompacting?.();
+    else if (frame.event === 'compacted' && payload.replaced !== undefined) {
+      handlers.onCompacted?.({
+        replaced: payload.replaced,
+        kept: payload.kept ?? 0,
+        tokens: payload.tokens ?? 0,
+      });
+    }
     else if (frame.event === 'call' && payload.at !== undefined) {
       handlers.onCall({
         at: payload.at,

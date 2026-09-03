@@ -355,14 +355,6 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
               <span className={styles.statusDetail} title={check?.detail ?? undefined}>
                 {check?.detail ?? t('Ask the server whether it answers, and what it offers.')}
               </span>
-              <button
-                type="button"
-                className={styles.testButton}
-                onClick={() => void handleCheck()}
-                disabled={checking}
-              >
-                {checking ? t('Checking…') : t('Check')}
-              </button>
             </div>
 
             {saveError !== null && (
@@ -371,8 +363,25 @@ export function McpServerSettingsPage({ session, onSignOut }: McpServerSettingsP
               </p>
             )}
 
+            {/*
+              Check beside Save rather than above it.
+              
+              They were on two rows and read as two decisions at two moments,
+              which is not what they are: one asks the server whether these
+              details work and the other keeps them, and anybody setting a server
+              up does both in the same breath. Check first because that is the
+              order it is done in.
+            */}
             <div className={styles.actionRow}>
               {saved && saveError === null && <p className={styles.savedNote}>{t('Saved.')}</p>}
+              <button
+                type="button"
+                className={styles.testButton}
+                onClick={() => void handleCheck()}
+                disabled={checking}
+              >
+                {checking ? t('Checking…') : t('Check')}
+              </button>
               <button
                 type="submit"
                 className={styles.save}

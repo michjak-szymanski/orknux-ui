@@ -92,13 +92,23 @@ interface Working {
   thinking: string;
   /** The lookups it made, in the order it made them. */
   calls: ChatCall[];
+  /**
+   * Whether the conversation is being summarised before this turn is sent.
+   *
+   * A chat over its compaction threshold goes quiet for as long as a model
+   * takes to read forty turns, with nothing on screen to say why — and "I
+   * pressed Send and nothing happened" is what that looks like from the other
+   * side. Issue #286.
+   */
+  compacting: boolean;
 }
 
 /** A turn that has done nothing yet, which is also what a new chat shows. */
-const NOTHING_YET: Working = { thinking: '', calls: [] };
+const NOTHING_YET: Working = { thinking: '', calls: [], compacting: false };
 
 /** Whether there is anything of the working to draw. */
-const anyWorking = (working: Working) => working.thinking.trim() !== '' || working.calls.length > 0;
+const anyWorking = (working: Working) =>
+  working.thinking.trim() !== '' || working.calls.length > 0 || working.compacting;
 
 /**
  * Chat.
@@ -1109,7 +1119,10 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
    * `at`. Matched rather than appended blind, because a round may make several
    * calls and nothing promises the first one to answer is the first one made.
    */
-  function watchWorking(): Pick<ChatStreamHandlers, 'onThinking' | 'onDrew' | 'onCall' | 'onCalled'> {
+  function watchWorking(): Pick<
+    ChatStreamHandlers,
+    'onThinking' | 'onDrew' | 'onCall' | 'onCalled' | 'onCompacting' | 'onCompacted'
+  > {
     return {
       onThinking: (piece) => {
         // Mirrored into a ref as well as into state, because `onDone` has to
@@ -1140,6 +1153,32 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
           if (at < 0) return [...present, drawn];
           return [...present.slice(0, at), drawn, present[at]];
         }),
+      onCompacting: () => setWorking((held) => ({ ...held, compacting: true })),
+      /*
+       * The summary is in the thread now and the messages it replaced are gone,
+       * so this is said where the conversation is rather than beside the answer:
+       * a line in the transcript, at the point the older turns used to be.
+       */
+      onCompacted: (held: { replaced: number; kept: number; tokens: number }) => {
+        setWorking((present) => ({ ...present, compacting: false }));
+        setMessages((present) => {
+          const at = present.length - 1;
+          const note = {
+            role: 'assistant' as const,
+            content:
+              held.replaced === 1
+                ? 'One earlier message was summarised to keep this chat inside its model’s window.'
+                : `${held.replaced} earlier messages were summarised to keep this chat inside its ` +
+                  `model’s window. The last ${held.kept} are unchanged.`,
+            actor: null,
+            takes: [],
+            thinking: null,
+            thinkingMillis: null,
+          };
+          if (at < 0) return [...present, note];
+          return [...present.slice(0, at), note, present[at]];
+        });
+      },
       onCall: (call) =>
         setWorking((held) => ({ ...held, calls: [...held.calls, { ...call, result: null, failed: false }] })),
       onCalled: (answer) =>
@@ -2319,9 +2358,21 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                       const live = index === messages.length - 1 && sending;
                       const thinking = live ? working.thinking : (message.thinking ?? '');
                       const calls = index === messages.length - 1 ? working.calls : [];
-                      if (thinking.trim() === '' && calls.length === 0) return null;
+                      /*
+                        Summarising is drawn here rather than beside the composer
+                        because it is part of this turn's working: it happens
+                        after Send and before a single token of the answer, and
+                        it is the reason for the silence.
+                      */
+                      const compacting = live && working.compacting;
+                      if (thinking.trim() === '' && calls.length === 0 && !compacting) return null;
                       return (
                         <div className={styles.working}>
+                          {compacting && (
+                            <p className={styles.compacting}>
+                              {t('Summarising the earlier part of this conversation…')}
+                            </p>
+                          )}
                           <Thinking
                             text={thinking}
                             live={live}
