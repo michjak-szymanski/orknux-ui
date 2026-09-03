@@ -6,7 +6,14 @@ import trash2Icon from '../assets/trash-2.svg';
 import styles from './Dialog.module.css';
 import { t } from '../i18n';
 
-export type ConfirmKind = 'disable' | 'remove' | 'discard' | 'deleteChat' | 'removeLibrary' | 'removeComment';
+export type ConfirmKind =
+  | 'disable'
+  | 'remove'
+  | 'discard'
+  | 'deleteChat'
+  | 'removeLibrary'
+  | 'bundleLibrary'
+  | 'removeComment';
 
 /**
  * Which kinds take something away rather than change its state.
@@ -107,6 +114,23 @@ export function ConfirmDialog({ subject, kind, detail, onClose, onConfirm }: Con
         </>
       ),
       button: submitting ? t('Removing…') : t('Remove'),
+    },
+    bundleLibrary: {
+      title: t('Bundle into one library'),
+      /*
+       * What is being agreed to, and it is not about safety - nothing has run
+       * and nothing is stored yet. It is about what the row will be: an
+       * artefact this installation assembled, which no registry published and
+       * nobody else can hash to the same thing. Issue #319.
+       */
+      message: (
+        <>
+          {name} is more than one file. They can be made into a single library, which is what a library has
+          to be — the files go in as they are, and what went in is listed on the row afterwards. It is not
+          the file anybody published, so nothing outside this installation can be compared with it.
+        </>
+      ),
+      button: submitting ? t('Bundling…') : t('Bundle them'),
     },
     removeComment: {
       title: t('Remove comment'),

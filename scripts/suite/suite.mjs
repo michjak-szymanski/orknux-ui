@@ -589,6 +589,31 @@ export const TESTS = [
   },
 
   {
+    name: 'library-bundle-check',
+    what: 'several files chosen at once, asked about, and made into one library',
+    needs: ['session'],
+    /*
+     * Issue #319. The server half is `LibraryBundleTest`, `LibraryBundleInstallTest`
+     * and the two upload tests in `ScriptLibraryTest`: the graph is walked, the
+     * bodies go in byte for byte, an ES module is refused by name, and what
+     * comes out runs in the sandbox.
+     *
+     * What is left for a browser is the half made of a person: that choosing
+     * several files does not quietly upload the first one, that the permission
+     * is asked rather than assumed, and that which file it is entered by is a
+     * control rather than a guess - a folder with no `index.js` is common, and
+     * the file a guess picked is the one that would run.
+     *
+     * The registry is not driven here. Installing a package reaches the real npm
+     * from the server, which is a network call in a browser check and somebody
+     * else's fixture; the stubbed registry in `LibraryBundleInstallTest` is
+     * where that half is measured.
+     *
+     * It removes what it made. A library left behind is one the next check finds
+     * in a list it was reading.
+     */
+  },
+  {
     name: 'chat-compaction-check',
     what: 'the card that turns chat compaction on, and the refusal it draws beside the boxes',
     needs: ['workspace'],

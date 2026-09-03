@@ -47,6 +47,14 @@ export interface ScriptLibrary {
   /** What its default export turned out to hold, read once when it was loaded. */
   members: LibraryMember[];
   /**
+   * What went into it, or null where it is one file.
+   *
+   * Null rather than a list of one: "this is the file" and "this is a bundle of
+   * one thing" are different claims, and only the first is true of an ordinary
+   * library.
+   */
+  bundledFrom: LibraryPart[] | null;
+  /**
    * Every function and tool that imports it, across every workspace.
    *
    * Empty on [fetchWorkspaceLibraries], which is not a claim that nothing uses
@@ -105,6 +113,46 @@ export interface LibraryRegistry {
   entry: string;
 }
 
+/**
+ * One thing that went into a bundle.
+ *
+ * `version` and `integrity` are null for a file somebody uploaded, which has
+ * neither: an upload has no provenance this installation can vouch for, and a
+ * blank where a version would be is the honest way to say so.
+ */
+export interface LibraryPart {
+  name: string;
+  version: string | null;
+  entry: string | null;
+  integrity: string | null;
+}
+
+/**
+ * What would go into a bundle, so somebody can say yes to it.
+ *
+ * `why` is the sentence the one-file install refused with, kept rather than
+ * reworded: it names the file and the specifier that made this more than one
+ * file, which is the part somebody who did not expect this needs.
+ */
+export interface LibraryBundlePlan {
+  spec: string;
+  why: string;
+  /** How many files would end up inside it - reached, rather than fetched. */
+  files: number;
+  parts: LibraryPart[];
+}
+
+/**
+ * What an install came to: the library, or the question it has to ask first.
+ *
+ * Exactly one of the two. A package that is one file installs and there is
+ * nothing to ask.
+ */
+export interface ScriptLibraryInstall {
+  installed: ScriptLibrary | null;
+  proposed: LibraryBundlePlan | null;
+}
+
 /** Whether this installation can fetch a package, and from where. */
 export interface LibraryRegistryStatus {
   configured: boolean;
@@ -145,6 +193,7 @@ const LIBRARY_FIELDS = `
   usedBy { ${DEPENDANT_FIELDS} }
   uploadedAt uploadedBy
   registry { packageName version url integrity entry }
+  bundledFrom { name version entry integrity }
 `;
 
 /** Everything loaded into the installation, with what imports it. Administrators. */
@@ -214,14 +263,57 @@ export async function fetchLibraryRegistry(): Promise<LibraryRegistryStatus> {
  * claimed — and each of those wants a different thing done about it, so none is
  * shortened on the way through.
  */
-export async function installScriptLibrary(spec: string): Promise<ScriptLibrary> {
-  const data = await graphql<{ installScriptLibrary: ScriptLibrary }>(
-    `mutation InstallScriptLibrary($spec: String!) {
-      installScriptLibrary(spec: $spec) { ${LIBRARY_FIELDS} }
+export async function installScriptLibrary(spec: string, bundle = false): Promise<ScriptLibraryInstall> {
+  const data = await graphql<{ installScriptLibrary: ScriptLibraryInstall }>(
+    `mutation InstallScriptLibrary($spec: String!, $bundle: Boolean) {
+      installScriptLibrary(spec: $spec, bundle: $bundle) {
+        installed { ${LIBRARY_FIELDS} }
+        proposed { spec why files parts { name version entry integrity } }
+      }
     }`,
-    { spec },
+    { spec, bundle },
   );
   return data.installScriptLibrary;
+}
+
+/**
+ * Several files, made into one library.
+ *
+ * Multipart for the reason `uploadLibrary` is: what crosses is files. What is
+ * different is `paths` - a browser sends a file's basename and nothing else, so
+ * a form that sent only the files would turn `lib/parse.js` into `parse.js` and
+ * `require('./lib/parse')` would answer nothing. Each file's path goes beside
+ * it, in the same order, and `webkitRelativePath` is where it comes from when a
+ * folder was chosen.
+ *
+ * `bundle` is the permission, and the server refuses more than one file without
+ * it. Not about safety - nothing runs until it is stored - but about what the
+ * row would be: a bundle is an artefact the server assembled rather than the
+ * file somebody chose.
+ */
+export async function bundleLibrary(
+  files: File[],
+  paths: string[],
+  entry: string,
+  key: string,
+  bundle: boolean,
+): Promise<{ id: string; key: string; files: number }> {
+  const form = new FormData();
+  files.forEach((file, at) => {
+    form.append('files', file, file.name);
+    form.append('paths', paths[at] ?? file.name);
+  });
+  form.append('entry', entry);
+  form.append('key', key);
+  form.append('bundle', String(bundle));
+
+  const answer = await fetch('/api/libraries/bundle', { method: 'POST', body: form, credentials: 'include' });
+  if (!answer.ok) {
+    const said = await answer.text().catch(() => '');
+    const message = said.trim() === '' ? `Could not bundle those files (status ${answer.status})` : reason(said);
+    throw new ApiError(message, answer.status);
+  }
+  return (await answer.json()) as { id: string; key: string; files: number };
 }
 
 /** What came back from a load: which library it is, and whether it replaced one. */

@@ -4,12 +4,13 @@ import {
   deleteScriptLibrary,
   fetchLibraryRegistry,
   fetchScriptLibraries,
+  bundleLibrary,
   installScriptLibrary,
   librarySize,
   librarySourceUrl,
   uploadLibrary,
 } from '../../api/libraries';
-import type { LibraryRegistryStatus, ScriptLibrary } from '../../api/libraries';
+import type { LibraryBundlePlan, LibraryRegistryStatus, ScriptLibrary } from '../../api/libraries';
 import type { SessionUser } from '../../api/session';
 import { timeAgo } from '../../api/tools';
 import downloadIcon from '../../assets/download.svg';
@@ -83,6 +84,15 @@ function origin(library: ScriptLibrary): string {
     parts.push(`npm  ·  ${library.registry.packageName}@${library.registry.version}  ·  ${library.registry.entry}`);
   }
   if (library.format === 'COMMONJS') parts.push('CommonJS');
+  /*
+   * A bundle says so, and says how many. The row above it names the package the
+   * bundle was entered by, which is true and is not the whole of what is in it -
+   * left unsaid, the row would read as though it were that one file. Issue #319.
+   */
+  if (library.bundledFrom !== null) {
+    const held = library.bundledFrom.length;
+    parts.push(`bundled from ${held} ${held === 1 ? 'file' : 'files'}`);
+  }
   return parts.join('  ·  ');
 }
 
@@ -101,6 +111,13 @@ function provenance(library: ScriptLibrary): string {
   if (library.format === 'COMMONJS') {
     lines.push(t('Stored as it was published; given its module and exports when it runs.'));
   }
+  // The bill of materials, on the hover for the reason the hash is: it is what
+  // makes the row checkable and it is more than a table column can hold.
+  if (library.bundledFrom !== null) {
+    lines.push(
+      ...library.bundledFrom.map((part) => (part.version === null ? part.name : `${part.name}@${part.version}`)),
+    );
+  }
   return lines.join('\n');
 }
 
@@ -117,6 +134,15 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
   /** Whether a package can be named here. Null until the server has said. */
   const [registry, setRegistry] = useState<LibraryRegistryStatus | null>(null);
   const [spec, setSpec] = useState('');
+  /**
+   * What the server offered to bundle, when a package turned out to be several
+   * files. Null the rest of the time, which is the ordinary install.
+   */
+  const [proposed, setProposed] = useState<LibraryBundlePlan | null>(null);
+  /** Files chosen at once, waiting on the same permission. */
+  const [chosen, setChosen] = useState<File[] | null>(null);
+  /** Which of them the bundle is entered by. Nothing is guessed at here. */
+  const [entry, setEntry] = useState('');
   const picker = useRef<HTMLInputElement>(null);
 
   const load = useCallback(() => {
@@ -156,21 +182,79 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
    * want different things done about them, so none is replaced here with a
    * shorter one.
    */
-  async function onInstall() {
+  async function onInstall(bundle = false) {
     const named = spec.trim();
     if (named === '') return;
     setBusy(true);
     setError(null);
     setNotice(null);
     try {
-      const installed = await installScriptLibrary(named);
-      setNotice(`Installed ${installed.key} from ${installed.registry?.packageName ?? named}.`);
+      const answered = await installScriptLibrary(named, bundle);
+      /*
+       * Not an error and not a silent bundle: the server answers a package that
+       * is several files with what bundling it would mean, and that question
+       * belongs on screen with the packages named. Issue #319.
+       */
+      if (answered.proposed !== null) {
+        setProposed(answered.proposed);
+        return;
+      }
+      const installed = answered.installed;
+      if (installed === null) return;
+      setNotice(
+        installed.bundledFrom === null
+          ? `Installed ${installed.key} from ${installed.registry?.packageName ?? named}.`
+          : `Bundled ${installed.key} from ${installed.bundledFrom.length} packages.`,
+      );
       setSpec('');
+      setProposed(null);
       load();
     } catch (cause: unknown) {
       setError(cause instanceof Error ? cause.message : t('Could not install that package.'));
     } finally {
       setBusy(false);
+    }
+  }
+
+  /**
+   * Several files are a bundle to be agreed to; one is the upload it always was.
+   *
+   * The entry is asked for rather than guessed at. A folder of six files has no
+   * `index.js` often enough that a guess would be wrong on the day it mattered,
+   * and the one it picked would be the one that ran.
+   */
+  function onChosen(files: File[]) {
+    if (files.length === 0) return;
+    if (files.length === 1) {
+      void onPicked(files[0]);
+      return;
+    }
+    setError(null);
+    setNotice(null);
+    setChosen(files);
+    setEntry(pathOf(files[0]));
+  }
+
+  /** The paths, which are what keep `require('./lib/parse')` working. */
+  async function onBundle() {
+    const files = chosen;
+    if (files === null) return;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const paths = files.map(pathOf);
+      const key = entry.split('/').pop()?.replace(/\.m?js$/, '') ?? 'library';
+      const made = await bundleLibrary(files, paths, entry, key, true);
+      setNotice(`Bundled ${made.key} from ${made.files} files.`);
+      setChosen(null);
+      load();
+    } catch (cause: unknown) {
+      setError(cause instanceof Error ? cause.message : t('Could not bundle those files.'));
+      setChosen(null);
+    } finally {
+      setBusy(false);
+      if (picker.current !== null) picker.current.value = '';
     }
   }
 
@@ -249,9 +333,15 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
                 version, never <code>latest</code>: a version that resolves differently tomorrow is not an
                 answer to what code is running here. A package has to publish one self-contained file. An ES
                 module is taken as it is and a CommonJS one is given its <code>module</code> and{' '}
-                <code>exports</code> as it runs, so <code>main</code> and a UMD bundle both work; what is
-                refused is a file that imports or requires a second package, because this installation does
-                not bundle. Build a bundle elsewhere and upload it.
+                <code>exports</code> as it runs, so <code>main</code> and a UMD bundle both work.
+                <br />
+                <br />
+                A package that is more than one file, or that needs a second package, is not refused: it is
+                offered as a bundle, with the packages and the versions their ranges resolved to, and made
+                into one file if you say so. The files go in as they are and what went in is listed on the
+                row — but a bundle is an artefact this installation assembled, so nothing outside it can be
+                compared with the result. Choosing several files at once bundles them the same way, and asks
+                which one it is entered by.
               </FieldHint>
             </span>
           </h1>
@@ -268,8 +358,9 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
           ref={picker}
           className={styles.picker}
           type="file"
-          accept=".js,.mjs,.ts,.mts,text/javascript,text/plain"
-          onChange={(event) => void onPicked(event.target.files?.[0])}
+          accept=".js,.mjs,.ts,.mts,.json,text/javascript,text/plain"
+          multiple
+          onChange={(event) => onChosen(Array.from(event.target.files ?? []))}
         />
         <div className={styles.actions}>
           {/*
@@ -358,7 +449,9 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
                   the hover: it is what makes the row checkable, and it is eighty
                   characters nobody needs across a table.
                 */}
-                {(library.registry !== null || library.format === 'COMMONJS') && (
+                {(library.registry !== null ||
+                  library.format === 'COMMONJS' ||
+                  library.bundledFrom !== null) && (
                   <span className={styles.from} title={provenance(library)}>
                     {origin(library)}
                   </span>
@@ -444,6 +537,75 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
         by pressing Remove, and the server refuses on exactly this set, so
         saying it here is saying what will happen rather than guessing at it.
       */}
+      {/*
+        The package that turned out to be several, and what bundling it means.
+
+        The packages are listed with the versions their ranges resolved to,
+        because that is what is being agreed to: a range is not a version, and
+        somebody saying yes to "and two more" has agreed to nothing they could
+        check afterwards.
+      */}
+      <ConfirmDialog
+        subject={proposed?.spec ?? null}
+        kind="bundleLibrary"
+        detail={
+          proposed === null ? undefined : (
+            <div className={styles.plan}>
+              <p className={styles.planWhy}>{proposed.why}</p>
+              <ul className={styles.planParts}>
+                {proposed.parts.map((part) => (
+                  <li key={part.name}>
+                    <strong>{part.name}</strong>
+                    {part.version === null ? '' : ` ${part.version}`}
+                  </li>
+                ))}
+              </ul>
+              <p className={styles.planFiles}>
+                {proposed.files} {proposed.files === 1 ? t('file') : t('files')}
+              </p>
+            </div>
+          )
+        }
+        onClose={() => setProposed(null)}
+        onConfirm={async () => {
+          await onInstall(true);
+        }}
+      />
+
+      {/* The same permission, for files somebody chose rather than a package. */}
+      <ConfirmDialog
+        subject={chosen === null ? null : `${chosen.length} files`}
+        kind="bundleLibrary"
+        detail={
+          chosen === null ? undefined : (
+            <div className={styles.plan}>
+              <label className={styles.planLabel} htmlFor="bundle-entry">
+                {t('Entered by')}
+              </label>
+              <select
+                id="bundle-entry"
+                className={styles.planEntry}
+                value={entry}
+                onChange={(event) => setEntry(event.target.value)}
+              >
+                {chosen.map((file) => (
+                  <option key={pathOf(file)} value={pathOf(file)}>
+                    {pathOf(file)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )
+        }
+        onClose={() => {
+          setChosen(null);
+          if (picker.current !== null) picker.current.value = '';
+        }}
+        onConfirm={async () => {
+          await onBundle();
+        }}
+      />
+
       <ConfirmDialog
         subject={libraries?.find((library) => library.id === confirming)?.key ?? null}
         kind="removeLibrary"
@@ -471,6 +633,22 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
       />
     </AppShell>
   );
+}
+
+/**
+ * Where a chosen file sits, relative to what was chosen.
+ *
+ * `webkitRelativePath` is filled in when a folder was picked and empty when
+ * files were, and it is what keeps `require('./lib/parse')` resolving: without
+ * it every file arrives as its basename and a specifier naming a directory
+ * answers nothing.
+ */
+function pathOf(file: File): string {
+  const held = file as File & { webkitRelativePath?: string };
+  const relative = held.webkitRelativePath ?? '';
+  // The chosen folder's own name is the first segment and is not part of the
+  // module's path: `sums/lib/parse.js` is `lib/parse.js` to everything inside it.
+  return relative === '' ? file.name : relative.split('/').slice(1).join('/') || file.name;
 }
 
 /**
