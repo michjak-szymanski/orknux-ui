@@ -260,6 +260,74 @@ declare global {
     readonly agent?: string;
     readonly tool?: string;
   };
+
+  /**
+   * A Slack connection in this workspace, as a function is handed one.
+   *
+   * The type carries the kind so a Jira connection is a mistake the editor
+   * catches rather than one the call does: two aliases over an id alone would
+   * be interchangeable.
+   */
+  interface OrknuxConnection<T extends string> {
+    readonly id: number;
+    readonly type: T;
+  }
+
+  type SlackConnection = OrknuxConnection<'SLACK'>;
+
+  type SlackThreadMessage = {
+    /** Slack's own timestamp, which is also the message's id in its channel. */
+    readonly ts: string;
+    readonly user: string;
+    readonly text: string;
+    /** Whether this is the message the thread hangs off. */
+    readonly parent: boolean;
+  };
+
+  /**
+   * What the server found, or why it did not look.
+   *
+   * A refusal is data rather than a thrown error, because a function has to be
+   * able to say something useful about "that connection is gone" — and a
+   * condition that cannot be decided must not quietly decide.
+   */
+  type SlackThread =
+    | { messages: SlackThreadMessage[]; replies: number; error?: undefined }
+    | { error: string; messages?: undefined; replies?: undefined };
+
+  /**
+   * What the *server* will do on this function's behalf.
+   *
+   * A function has no network and is not getting one — the sandbox is built
+   * without it — but there are questions about an outside service that cannot
+   * be answered from a payload. What is in this Slack thread is the one this
+   * was built for: Slack's message event carries no reply count, so "is this
+   * the first reply" is unanswerable from what arrives.
+   *
+   * So the server makes the call and what crosses is data. It reads only
+   * through connections belonging to the workspace this function is running
+   * in, which is taken from the run and is not something a function can set.
+   */
+  const orknux: {
+    readonly slack: {
+      /**
+       * The messages in one Slack thread, oldest first.
+       *
+       * @param connection which Slack to read through — a workspace with two
+       *   has two, and a reply that arrived on one is not in the other.
+       * @param channel the channel id the thread is in.
+       * @param threadTs the parent message's "ts".
+       * @param limit how many messages to bring back. "replies" is Slack's own
+       *   count of the whole thread either way.
+       */
+      thread(
+        connection: SlackConnection | number,
+        channel: string,
+        threadTs: string,
+        limit?: number,
+      ): SlackThread;
+    };
+  };
 }
 export {};
 `;
