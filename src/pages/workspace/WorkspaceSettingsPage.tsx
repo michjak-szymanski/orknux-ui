@@ -12,6 +12,7 @@ import type { SessionUser } from '../../api/session';
 import {
   fetchWorkspace,
   updateWorkspace,
+  setWorkspaceCompaction,
   setWorkspaceCompanionModel,
   setWorkspaceImageModel,
   setWorkspaceDefaultMemoryShare,
@@ -297,6 +298,23 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [voiceSaving, setVoiceSaving] = useState(false);
 
+  /*
+   * The Compaction card - issue #286.
+   *
+   * Strings for the two numbers, because empty is a value here: an empty
+   * threshold is compaction off, which is where every workspace starts, and
+   * clearing the box is how it is switched off again. Its own error, because
+   * the server refuses two of these three together and the sentence saying so
+   * has to appear beside the boxes it is about.
+   */
+  const [compactAfter, setCompactAfter] = useState('');
+  const [summaryTokens, setSummaryTokens] = useState('');
+  /** Which model writes the summary; '' is the one the chat is held with. */
+  const [summariser, setSummariser] = useState('');
+  const [compactionSaved, setCompactionSaved] = useState(false);
+  const [compactionError, setCompactionError] = useState<string | null>(null);
+  const [compactionSaving, setCompactionSaving] = useState(false);
+
   useEffect(() => {
     if (workspaceId === '') return;
     fetchWorkspace(workspaceId)
@@ -310,6 +328,9 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         setOverRoom(inBox(found?.voiceSpeechOverRoomPercent ?? null, AS_IS));
         setUnattended(inBox(found?.voiceUnattendedMicrophoneMs ?? null, A_MINUTE));
         setChunking(found?.voiceSpeechChunking ?? CHUNKING_DEFAULT);
+        setCompactAfter(found?.compactAfterTokens == null ? '' : String(found.compactAfterTokens));
+        setSummaryTokens(found?.compactionSummaryTokens == null ? '' : String(found.compactionSummaryTokens));
+        setSummariser(found?.compactionModelId ?? '');
       })
       .catch((cause: unknown) => {
         setError(cause instanceof Error ? cause.message : t('Could not load the workspace.'));
@@ -491,6 +512,46 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       setVoiceError(cause instanceof Error ? cause.message : t('Could not save that.'));
     } finally {
       setVoiceSaving(false);
+    }
+  }
+
+  /**
+   * The three compaction settings, saved together because they are one
+   * decision.
+   *
+   * Nothing here judges a number first. The server refuses a summary allowed to
+   * be as long as the conversation that triggers it, and says so in a sentence
+   * naming what to do instead; a copy of that rule on this page would be a
+   * second opinion about what may be saved, and the two would drift.
+   *
+   * An empty threshold clears the other two as well, because a summariser
+   * nothing calls and a length nothing is cut to are settings that do not exist
+   * - left behind, they would come back the day somebody typed a threshold and
+   * surprise them with a model they picked months ago.
+   */
+  async function compactAt() {
+    if (compactionSaving) return;
+
+    setCompactionSaving(true);
+    setCompactionError(null);
+    setCompactionSaved(false);
+    try {
+      const threshold = compactAfter.trim() === '' ? null : Number(compactAfter);
+      const updated = await setWorkspaceCompaction(
+        workspaceId,
+        threshold,
+        threshold === null || summaryTokens.trim() === '' ? null : Number(summaryTokens),
+        threshold === null || summariser === '' ? null : summariser,
+      );
+      setWorkspace(updated);
+      setCompactAfter(updated.compactAfterTokens == null ? '' : String(updated.compactAfterTokens));
+      setSummaryTokens(updated.compactionSummaryTokens == null ? '' : String(updated.compactionSummaryTokens));
+      setSummariser(updated.compactionModelId ?? '');
+      setCompactionSaved(true);
+    } catch (cause) {
+      setCompactionError(cause instanceof Error ? cause.message : t('Could not save that.'));
+    } finally {
+      setCompactionSaving(false);
     }
   }
 
@@ -1449,6 +1510,145 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
             disabled={workspace === null || voiceSaving}
           >
             {voiceSaving ? t('Saving…') : t('Save Changes')}
+          </button>
+        </div>
+      </section>
+      )}
+
+      {/*
+        Compaction - issue #286.
+
+        Its own card and not a field on the models one above, because what it
+        decides is not which model does a job: it is whether a conversation that
+        has grown too long is summarised or left to fail on its next turn. The
+        model here is the third field rather than the first for the same reason -
+        which model writes the summary is a detail of a decision already taken.
+
+        Empty is off, and off is where every workspace is until somebody types a
+        number. That is deliberate: compaction throws messages away, which is
+        what compacting means, and nothing should start doing that on a
+        conversation whose owner never asked.
+      */}
+      {hasChat && (
+      <section className={styles.card}>
+        <div className={styles.sectionTitle}>
+          <span className={styles.labelWithHint}>
+            <h2 className={styles.sectionHeading}>{t('Chat Compaction')}</h2>
+            <FieldHint label={t('Chat Compaction')}>
+              {t('A conversation that grows past its model’s window stops working, and the failure names a limit rather than what to do about it. Above the threshold here, everything but the last few turns is replaced by one summary of itself and the chat carries on. Those messages are gone — a copy kept beside them would be the same conversation with something added, which is the opposite of compacting. Leave the threshold empty and nothing here happens, which is where every workspace starts.')}
+            </FieldHint>
+          </span>
+          <div className={styles.rule} />
+        </div>
+
+        <div className={styles.field}>
+          <span className={styles.labelWithHint}>
+            <label className={styles.label} htmlFor="compact-after">
+              {t('Compact After')}
+            </label>
+            <FieldHint label={t('Compact After')}>
+              {t('How much of a conversation may pile up before its older turns are summarised. Counted in tokens and estimated rather than counted exactly, at four characters to a token: the real number is the model’s own tokeniser’s, and this errs high on purpose — compacting a little early costs one summary, compacting a little late costs the turn somebody was in the middle of. Set it well under the window of the model the chat is held with.')}
+            </FieldHint>
+          </span>
+          <div className={styles.inputWrapper}>
+            <input
+              id="compact-after"
+              className={styles.input}
+              type="number"
+              inputMode="numeric"
+              step={1000}
+              value={compactAfter}
+              placeholder={t('Empty — chats are never compacted')}
+              disabled={workspace === null}
+              onChange={(event) => {
+                setCompactionSaved(false);
+                setCompactAfter(event.target.value);
+              }}
+            />
+            <span className={styles.unit}>{t('tokens')}</span>
+          </div>
+        </div>
+
+        <div className={styles.field}>
+          <span className={styles.labelWithHint}>
+            <label className={styles.label} htmlFor="compaction-summary">
+              {t('Summary Length')}
+            </label>
+            <FieldHint label={t('Summary Length')}>
+              {t('How long the summary may be. A model asked to summarise forty turns with no bound will happily write ten, which is a compaction that compacts nothing — so this has to be smaller than the threshold above, and the server refuses it otherwise.')}
+            </FieldHint>
+          </span>
+          <div className={styles.inputWrapper}>
+            <input
+              id="compaction-summary"
+              className={styles.input}
+              type="number"
+              inputMode="numeric"
+              step={100}
+              value={summaryTokens}
+              placeholder={t('Default — 500')}
+              disabled={workspace === null}
+              onChange={(event) => {
+                setCompactionSaved(false);
+                setSummaryTokens(event.target.value);
+              }}
+            />
+            <span className={styles.unit}>{t('tokens')}</span>
+          </div>
+        </div>
+
+        {/*
+          Only chat models, for the reason the pickers above give: a model with
+          no endpoint that takes a conversation cannot be found out to be the
+          wrong one until a compaction has already thrown the older half away.
+        */}
+        <div className={styles.field}>
+          <span className={styles.labelWithHint}>
+            <label className={styles.label} htmlFor="compaction-model">
+              {t('Summarised By')}
+            </label>
+            <FieldHint label={t('Summarised By')}>
+              {t('Which model writes the summary. Its own setting because summarising is not the conversation: it is a cheaper job than answering and happens once in a while, so a workspace talking to an expensive model has every reason to summarise with a small one. Left as the chat’s own model, whichever model the chat is held with writes it.')}
+            </FieldHint>
+          </span>
+          <div className={styles.inputWrapper}>
+            <select
+              id="compaction-model"
+              className={`${styles.input} ${styles.select}`}
+              value={summariser}
+              disabled={workspace === null}
+              onChange={(event) => {
+                setCompactionSaved(false);
+                setSummariser(event.target.value);
+              }}
+            >
+              <option value="">{t('The chat’s own model')}</option>
+              {answering.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.name}
+                </option>
+              ))}
+            </select>
+            <img src={chevronDown12Icon} alt="" width={12} height={12} />
+          </div>
+        </div>
+
+        {/* The server's sentence, which names what is allowed rather than that something was refused. */}
+        {compactionError !== null && (
+          <p className={styles.error} role="alert">
+            {compactionError}
+          </p>
+        )}
+
+        <div className={styles.formActions}>
+          {compactionSaved && compactionError === null && <p className={styles.saved}>{t('Saved.')}</p>}
+          <button
+            type="button"
+            className={styles.save}
+            onClick={() => void compactAt()}
+            disabled={workspace === null || compactionSaving}
+          >
+            {compactionSaving ? t('Saving…') : t('Save Changes')}
           </button>
         </div>
       </section>

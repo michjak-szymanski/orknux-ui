@@ -42,6 +42,20 @@ export interface Workspace {
    */
   imageModelId: string | null;
   /**
+   * Above how many tokens a chat here is summarised; null is off, which is
+   * where every workspace starts.
+   *
+   * A conversation that outgrows its model fails on the next turn, naming a
+   * limit rather than what to do about it. Above this, everything but the last
+   * few turns becomes one summary of itself — and those messages are gone,
+   * which is what compacting means.
+   */
+  compactAfterTokens: number | null;
+  /** How long that summary may be, in tokens. */
+  compactionSummaryTokens: number | null;
+  /** Which model writes it; null uses the one the chat is held with. */
+  compactionModelId: string | null;
+  /**
    * The model behind the quick chat beside the page. Null means the button is
    * not offered.
    */
@@ -117,6 +131,7 @@ export interface Workspace {
 const WORKSPACE_FIELDS =
   'id name description roles { id name } adminRoles { id name } administered ' +
   'companionModelId transcriptionModelId speechModelId imageModelId quickChatModelId quickChatMayWrite ' +
+  'compactAfterTokens compactionSummaryTokens compactionModelId ' +
   'defaultMemoryShare taskMaxTurns taskMaxTurnsDefault voicePauseEndsTurnMs voiceSpeechOverRoomPercent voiceUnattendedMicrophoneMs ' +
   'voiceSpeechChunking';
 
@@ -171,6 +186,34 @@ export async function setWorkspaceSpeechModel(
     { workspaceId, modelId },
   );
   return data.setWorkspaceSpeechModel;
+}
+
+/**
+ * When a chat is summarised, how short the summary has to be, and what writes
+ * it.
+ *
+ * One call for the three because they are one decision: a threshold with no
+ * summariser does nothing, and a summariser with no threshold is never called.
+ * A null `afterTokens` turns compaction off.
+ */
+export async function setWorkspaceCompaction(
+  workspaceId: string,
+  afterTokens: number | null,
+  summaryTokens: number | null,
+  modelId: string | null,
+): Promise<Workspace> {
+  const data = await graphql<{ setWorkspaceCompaction: Workspace }>(
+    `mutation SetWorkspaceCompaction(
+       $workspaceId: ID!, $afterTokens: Int, $summaryTokens: Int, $modelId: ID
+     ) {
+       setWorkspaceCompaction(
+         workspaceId: $workspaceId, afterTokens: $afterTokens,
+         summaryTokens: $summaryTokens, modelId: $modelId
+       ) { ${WORKSPACE_FIELDS} }
+     }`,
+    { workspaceId, afterTokens, summaryTokens, modelId },
+  );
+  return data.setWorkspaceCompaction;
 }
 
 /** Chooses the model the workspace draws with; null takes the picture button away. */

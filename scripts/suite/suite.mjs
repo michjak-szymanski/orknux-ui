@@ -589,6 +589,28 @@ export const TESTS = [
   },
 
   {
+    name: 'chat-compaction-check',
+    what: 'the card that turns chat compaction on, and the refusal it draws beside the boxes',
+    needs: ['workspace'],
+    /*
+     * Issue #286. The server half is `ChatCompactionTest` and it proves the
+     * thing itself: the older turns become one summary, the recent ones are
+     * kept word for word, an unreachable summariser leaves the thread alone.
+     *
+     * What is here is the half a server cannot see. Three numbers are saved
+     * behind one button and two of them can be refused together - a summary
+     * allowed to be as long as the conversation that triggers it compacts
+     * nothing - and the refusal has to arrive as the server's sentence, in the
+     * card being typed into. The last feature to get this wrong put "That is
+     * not a certificate this can read" on screen as an internal error, which is
+     * a refusal nobody can act on.
+     *
+     * It turns compaction on and off again, and puts back whatever the
+     * workspace had: a check that leaves a workspace summarising its chats has
+     * changed what every check after it is looking at.
+     */
+  },
+  {
     name: 'chat-off-check',
     what: 'an installation with chat switched off stops offering chat’s settings',
     needs: ['workspace'],
