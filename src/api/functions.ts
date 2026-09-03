@@ -781,7 +781,17 @@ export const VALUE_TYPES: ValueType[] = ['STRING', 'NUMBER', 'BOOLEAN', 'OBJECT'
  * A parameter cannot be `NONE` — an argument that is nothing is not an
  * argument — so the return list is its own.
  */
-export const RETURN_TYPES: ValueType[] = [...VALUE_TYPES, 'NONE'];
+/*
+ * What a function may answer with. Everything a parameter can be except a
+ * connection: a function that works out *which* connection answers with a
+ * string, and offering a return type nothing would sensibly produce is a choice
+ * somebody has to think about once and never wants again. The database says the
+ * same - `ck_workflow_function_return` was left alone.
+ */
+export const RETURN_TYPES: ValueType[] = [
+  ...VALUE_TYPES.filter((type) => type !== 'CONNECTION'),
+  'NONE',
+];
 
 /**
  * What a picker holds while a function is being named rather than chosen.
