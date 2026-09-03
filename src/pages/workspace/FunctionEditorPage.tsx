@@ -593,8 +593,29 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
 
   useEffect(() => {
     if (functionId === '') return;
+
+    /*
+     * Cancelled on the way out, and that is not housekeeping - it is issue #324.
+     *
+     * This effect had no cleanup, so the answer to a fetch was applied whenever
+     * it arrived and whatever had happened in the meantime. Two things make one
+     * arrive late: React's development mode mounts every component twice, so
+     * there are two of these in flight from the first render, and a loaded
+     * machine delays the second by however long it delays it.
+     *
+     * What that looked like was somebody typing a declaration into the editor
+     * and watching it turn back into the stored one a second later - both halves
+     * of the signature at once, because both are set from here. It is the
+     * failure people describe as the editor having lost what they wrote, and it
+     * was reproducible about one run in two.
+     *
+     * A response for a load that has been superseded is dropped. Nothing else
+     * changes: the first one still fills the page.
+     */
+    let live = true;
     fetchFunction(functionId)
       .then((found) => {
+        if (!live) return;
         if (found === null) {
           setLoadError(t('That function does not exist, or you do not have access to it.'));
           return;
@@ -617,8 +638,13 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
         setLibraries(found.libraries);
       })
       .catch((cause: unknown) => {
+        if (!live) return;
         setLoadError(cause instanceof Error ? cause.message : t('Could not load the function.'));
       });
+
+    return () => {
+      live = false;
+    };
   }, [functionId]);
 
   useEffect(() => {
