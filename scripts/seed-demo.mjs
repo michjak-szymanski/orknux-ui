@@ -33,6 +33,24 @@
  * called - workflow names are unique across the whole installation, not per
  * workspace, so reusing them would collide with whatever holds them now.
  */
+/*
+ * Which copy of the fixture this builds, and what it calls it.
+ *
+ * Empty is the only copy there has ever been, so a plain run - including every
+ * screenshot run - builds exactly what it always did. `ORKNUX_SUITE_SHARD=2`
+ * builds a second, because the browser suite cannot run several checks at once
+ * while they all share a workspace, and one seeded copy per worker is what
+ * makes it possible. Issue #308.
+ *
+ * Imported rather than spelled again here: the suite looks its fixture up by
+ * these names, and two copies of the rule for what a copy is called is two
+ * fixtures that will one day disagree.
+ */
+import { copy, SHARD } from './suite/named.mjs';
+
+/** The same suffix as `copy`, in the spelling an address can hold. */
+const shardPath = (path) => (SHARD === '' ? path : `${path}-${SHARD}`);
+
 const BASE = process.env.ORKNUX_UI_URL ?? 'http://localhost:5173';
 const USER = process.env.ORKNUX_USER ?? 'alice';
 const PASSWORD = process.env.ORKNUX_PASSWORD ?? 'password';
@@ -41,7 +59,7 @@ const PASSWORD = process.env.ORKNUX_PASSWORD ?? 'password';
  * The name the capture looks for. The same variable is read there, so pointing
  * one at another workspace points both.
  */
-export const WORKSPACE_NAME = process.env.ORKNUX_DEMO_WORKSPACE ?? 'Northwind Support';
+export const WORKSPACE_NAME = copy(process.env.ORKNUX_DEMO_WORKSPACE ?? 'Northwind Support');
 
 /*
  * Where the demo's model comes from.
@@ -978,7 +996,13 @@ await gql('mutation($input: CreateTriggerInput!) { createTrigger(input: $input) 
      * `zendesk/ticket-created` is exactly the path a real installation would
      * reach for, so the demonstration must not be holding it.
      */
-    webhookPath: 'northwind/zendesk-ticket-created',
+    /*
+     * Unique across the installation, like a workflow's name: a webhook path is
+     * an address and two triggers cannot answer at one. So a second copy of the
+     * fixture takes a path of its own. `copy` puts the suffix after a space,
+     * which a URL cannot carry, so this one is spelled with a dash.
+     */
+    webhookPath: shardPath('northwind/zendesk-ticket-created'),
     authType: 'NONE',
     objectId: ticket.id,
     icon: 'link',
@@ -1019,7 +1043,9 @@ async function createWorkflow(name, description) {
 }
 
 const flagship = await createWorkflow(
-  'Answer a question asked in Slack',
+  // Copied for the shard, because a workflow's name is unique across the whole
+  // installation - a second fixture holding this one would be refused.
+  copy('Answer a question asked in Slack'),
   'Somebody mentions the bot in Slack; it works out which ticket they mean, and answers in the thread.',
 );
 
@@ -1198,7 +1224,7 @@ log(`workflow ${flagship.id}: ${flagship.name} (published)`);
  * run that needs a live model is a run that fails on somebody else's machine.
  */
 const sweep = await createWorkflow(
-  'Escalate before the target is missed',
+  copy('Escalate before the target is missed'),
   'Runs before the morning shift: what is close to its target, and who is told about it.',
 );
 const SWEEP_TRIGGER = 'trigger-nightly';

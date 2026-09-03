@@ -20,6 +20,12 @@
  * and exits non-zero, because a suite pointed at the wrong workspace does not
  * fail - it passes vacuously on empty pages, which is the failure mode this
  * whole exercise exists to remove.
+ *
+ * **It is also a function**, because the runner asks the same question of one
+ * copy of the fixture per worker when it is running several checks at once —
+ * see [SHARD][./named.mjs]. Printing and exiting is what the command does with
+ * the answer; `fixtureEnv` is the answer, and the two cannot drift because
+ * there is only one of them.
  */
 import { BASE, USER, PASSWORD } from './harness.mjs';
 /*
@@ -28,15 +34,7 @@ import { BASE, USER, PASSWORD } from './harness.mjs';
  * the environment. Two copies of a fixture's names is two fixtures; this file
  * and every check read the one list.
  */
-import { NAMES } from './named.mjs';
-
-const WORKSPACE_NAME = NAMES.WORKSPACE;
-const WORKFLOW_NAME = NAMES.WORKFLOW;
-const FUNCTION_NAME = NAMES.FUNCTION;
-const PANEL_FUNCTION_NAME = NAMES.PANEL_FUNCTION;
-const TOOL_NAME = NAMES.TOOL;
-const BIGGER_NAME = NAMES.BIGGER_WORKSPACE;
-const BARE_NAME = NAMES.BARE_WORKSPACE;
+import { NAMES, copy } from './named.mjs';
 
 /*
  * `import-refresh-check` switches out of a page that has ended, so it needs a
@@ -47,95 +45,147 @@ const BARE_NAME = NAMES.BARE_WORKSPACE;
  */
 const PAGE_SIZE = 4;
 
-const response = await fetch(`${BASE}/api/session`, {
-  method: 'POST',
-  headers: { 'content-type': 'application/json' },
-  body: JSON.stringify({ username: USER, password: PASSWORD }),
-});
-if (!response.ok) {
-  console.error(`Could not sign in as ${USER} at ${BASE}: ${response.status}`);
-  process.exit(1);
-}
-const cookie = response.headers.get('set-cookie').split(';')[0];
+/** What went wrong, as a thrown sentence rather than an exit from a library. */
+class FixtureTrouble extends Error {}
 
-async function gql(query, variables = {}) {
-  const answer = await fetch(`${BASE}/graphql`, {
+/**
+ * The environment that points a run at one copy of the fixture.
+ *
+ * [shard] is empty for the only copy there has ever been and a number for the
+ * others, and it decides nothing here beyond what the names are: a second copy
+ * is looked up, and its spare workspaces made, in exactly the way the first is.
+ */
+export async function fixtureEnv(shard = '') {
+  const names = shard === '' ? NAMES : shardedNames(shard);
+
+  const response = await fetch(`${BASE}/api/session`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', cookie },
-    body: JSON.stringify({ query, variables }),
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ username: USER, password: PASSWORD }),
   });
-  const body = await answer.json();
-  if (body.errors?.length) throw new Error(body.errors[0].message);
-  return body.data;
+  if (!response.ok) throw new FixtureTrouble(`Could not sign in as ${USER} at ${BASE}: ${response.status}`);
+  const cookie = response.headers.get('set-cookie').split(';')[0];
+
+  async function gql(query, variables = {}) {
+    const answer = await fetch(`${BASE}/graphql`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', cookie },
+      body: JSON.stringify({ query, variables }),
+    });
+    const body = await answer.json();
+    if (body.errors?.length) throw new FixtureTrouble(body.errors[0].message);
+    return body.data;
+  }
+
+  /** What was looked for, what was there, and no guess in between. */
+  function pick(what, wanted, had) {
+    const found = had.find((row) => row.name === wanted);
+    if (found === undefined) {
+      throw new FixtureTrouble(
+        `No ${what} called ${JSON.stringify(wanted)}. There is: ` +
+          `${had.map((row) => row.name).join(', ') || '(nothing)'}\n` +
+          `Has ${shard === '' ? '' : `ORKNUX_SUITE_SHARD=${shard} `}scripts/seed-demo.mjs been run against this server?`,
+      );
+    }
+    return found.id;
+  }
+
+  const { workspaces } = await gql('{ workspaces(page: 0, size: 200) { content { id name } } }');
+  const workspace = pick('workspace', names.WORKSPACE, workspaces.content);
+
+  const { workspaceWorkflows } = await gql(
+    'query($w: ID!) { workspaceWorkflows(workspaceId: $w, page: 0, size: 100) { content { id name } } }',
+    { w: workspace },
+  );
+  const workflow = pick('workflow', names.WORKFLOW, workspaceWorkflows.content);
+
+  const { workspaceFunctions } = await gql(
+    'query($w: ID!) { workspaceFunctions(workspaceId: $w, page: 0, size: 100) { content { id name } } }',
+    { w: workspace },
+  );
+  const fn = pick('function', names.FUNCTION, workspaceFunctions.content);
+  const panelFn = pick('function', names.PANEL_FUNCTION, workspaceFunctions.content);
+
+  const { workspaceTools } = await gql(
+    'query($w: ID!) { workspaceTools(workspaceId: $w, page: 0, size: 100) { content { id name } } }',
+    { w: workspace },
+  );
+  const tool = pick('tool', names.TOOL, workspaceTools.content);
+
+  /** A workspace of that name, made if it is not there yet. */
+  async function workspaceCalled(name, description) {
+    const held = workspaces.content.find((row) => row.name === name);
+    if (held !== undefined) return held.id;
+    const made = await gql(
+      'mutation($input: CreateWorkspaceInput!) { createWorkspace(input: $input) { id } }',
+      { input: { name, description } },
+    );
+    return made.createWorkspace.id;
+  }
+
+  const bare = await workspaceCalled(names.BARE_WORKSPACE, 'Made by scripts/suite/fixture.mjs. Deliberately empty.');
+  const bigger = await workspaceCalled(
+    names.BIGGER_WORKSPACE,
+    'Made by scripts/suite/fixture.mjs. Enough workflows for a second page.',
+  );
+
+  const { workspaceWorkflows: inBigger } = await gql(
+    'query($w: ID!) { workspaceWorkflows(workspaceId: $w, page: 0, size: 100) { content { id name } } }',
+    { w: bigger },
+  );
+  // One more than a page, so Next is offered and page two has something on it.
+  for (let n = inBigger.content.length; n <= PAGE_SIZE; n += 1) {
+    await gql('mutation($input: CreateWorkflowInput!) { createWorkflow(input: $input) { id } }', {
+      input: {
+        workspaceId: bigger,
+        // Unique across the installation, so a second copy of the fixture needs
+        // its own - the same reason the seeded workflow carries the suffix.
+        name: copy(`zz Suite filler ${n + 1}`, shard),
+        description: 'Made by fixture.mjs.',
+      },
+    });
+  }
+
+  return {
+    ORKNUX_WORKSPACE: String(workspace),
+    ORKNUX_WORKSPACE_NAME: names.WORKSPACE,
+    ORKNUX_WORKFLOW: String(workflow),
+    ORKNUX_FUNCTION: String(fn),
+    ORKNUX_PANEL_FUNCTION: String(panelFn),
+    ORKNUX_TOOL: String(tool),
+    ORKNUX_BARE_WORKSPACE: String(bare),
+    ORKNUX_BIGGER_WORKSPACE: String(bigger),
+  };
 }
 
-/** What was looked for, what was there, and no guess in between. */
-function pick(what, wanted, had) {
-  const found = had.find((row) => row.name === wanted);
-  if (found === undefined) {
-    console.error(`No ${what} called ${JSON.stringify(wanted)}. There is: ${had.map((row) => row.name).join(', ') || '(nothing)'}`);
-    console.error('Has scripts/seed-demo.mjs been run against this server?');
+/**
+ * The names of one copy, worked out for a shard this process is not itself in.
+ *
+ * The runner resolves every worker's fixture before spawning any of them, and
+ * `NAMES` was fixed when this module loaded - from *this* process's environment,
+ * which is shard-less. So the suffix is applied here rather than by re-reading
+ * the environment, and `copy` is the same function that put it there.
+ */
+function shardedNames(shard) {
+  return {
+    ...NAMES,
+    WORKSPACE: copy(process.env.ORKNUX_DEMO_WORKSPACE ?? 'Northwind Support', shard),
+    WORKFLOW: copy('Answer a question asked in Slack', shard),
+    BIGGER_WORKSPACE: copy('zz Suite - a second page of workflows', shard),
+    BARE_WORKSPACE: copy('zz Suite - nothing in it', shard),
+  };
+}
+
+/* --------------------------------------------------------------- the command */
+
+// Only when run as the command, so importing this to ask the question does not
+// print an environment nobody asked for.
+if (process.argv[1]?.endsWith('fixture.mjs')) {
+  try {
+    const held = await fixtureEnv(process.env.ORKNUX_SUITE_SHARD ?? '');
+    for (const [key, value] of Object.entries(held)) console.log(`${key}=${value}`);
+  } catch (trouble) {
+    console.error(trouble.message);
     process.exit(1);
   }
-  return found.id;
-}
-
-const { workspaces } = await gql('{ workspaces(page: 0, size: 200) { content { id name } } }');
-const workspace = pick('workspace', WORKSPACE_NAME, workspaces.content);
-
-const { workspaceWorkflows } = await gql(
-  'query($w: ID!) { workspaceWorkflows(workspaceId: $w, page: 0, size: 100) { content { id name } } }',
-  { w: workspace },
-);
-const workflow = pick('workflow', WORKFLOW_NAME, workspaceWorkflows.content);
-
-const { workspaceFunctions } = await gql(
-  'query($w: ID!) { workspaceFunctions(workspaceId: $w, page: 0, size: 100) { content { id name } } }',
-  { w: workspace },
-);
-const fn = pick('function', FUNCTION_NAME, workspaceFunctions.content);
-const panelFn = pick('function', PANEL_FUNCTION_NAME, workspaceFunctions.content);
-
-const { workspaceTools } = await gql(
-  'query($w: ID!) { workspaceTools(workspaceId: $w, page: 0, size: 100) { content { id name } } }',
-  { w: workspace },
-);
-const tool = pick('tool', TOOL_NAME, workspaceTools.content);
-
-/** A workspace of that name, made if it is not there yet. */
-async function workspaceCalled(name, description) {
-  const held = workspaces.content.find((row) => row.name === name);
-  if (held !== undefined) return held.id;
-  const made = await gql(
-    'mutation($input: CreateWorkspaceInput!) { createWorkspace(input: $input) { id } }',
-    { input: { name, description } },
-  );
-  return made.createWorkspace.id;
-}
-
-const bare = await workspaceCalled(BARE_NAME, 'Made by scripts/suite/fixture.mjs. Deliberately empty.');
-const bigger = await workspaceCalled(BIGGER_NAME, 'Made by scripts/suite/fixture.mjs. Enough workflows for a second page.');
-
-const { workspaceWorkflows: inBigger } = await gql(
-  'query($w: ID!) { workspaceWorkflows(workspaceId: $w, page: 0, size: 100) { content { id name } } }',
-  { w: bigger },
-);
-// One more than a page, so Next is offered and page two has something on it.
-for (let n = inBigger.content.length; n <= PAGE_SIZE; n += 1) {
-  await gql('mutation($input: CreateWorkflowInput!) { createWorkflow(input: $input) { id } }', {
-    input: { workspaceId: bigger, name: `zz Suite filler ${n + 1}`, description: 'Made by fixture.mjs.' },
-  });
-}
-
-for (const [key, value] of [
-  ['ORKNUX_WORKSPACE', workspace],
-  ['ORKNUX_WORKSPACE_NAME', WORKSPACE_NAME],
-  ['ORKNUX_WORKFLOW', workflow],
-  ['ORKNUX_FUNCTION', fn],
-  ['ORKNUX_PANEL_FUNCTION', panelFn],
-  ['ORKNUX_TOOL', tool],
-  ['ORKNUX_BARE_WORKSPACE', bare],
-  ['ORKNUX_BIGGER_WORKSPACE', bigger],
-]) {
-  console.log(`${key}=${value}`);
 }

@@ -29,15 +29,53 @@
  * What the seed calls the things the checks drive. One copy, imported by
  * `fixture.mjs` as well, so the two cannot drift apart.
  */
+/**
+ * Which copy of the fixture this process is working against.
+ *
+ * Empty for the only copy there has ever been, which is what every run without
+ * `--jobs` is and what the manual's screenshots are taken from — so nothing
+ * about a single-worker run changes.
+ *
+ * Above that, the suite runs several checks at once and they cannot share a
+ * workspace: two checks in one workspace walk over each other's rows, and a
+ * list assertion sees the other one's fixture. Isolation first, concurrency
+ * second, which is what issue #308 says. The unit of isolation is the **worker**
+ * rather than the check — one seeded copy each, checks serial within a worker —
+ * because a copy per check would be 131 seeds to build and four is enough to
+ * make the machine the limit.
+ *
+ * It suffixes names rather than numbers because names are what the fixture is:
+ * every check already looks its ids up by name, so a worker pointed at a second
+ * copy needs nothing else told to it.
+ */
+export const SHARD = process.env.ORKNUX_SUITE_SHARD ?? '';
+
+/**
+ * What a fixture of this copy is called: `Northwind Support`, or `... #2`.
+ *
+ * The shard is a parameter as well as a default, because the runner works out
+ * every worker's names before it spawns any of them - from a process that is
+ * itself in no shard - and a function that could only read its own environment
+ * would answer for the wrong copy.
+ */
+export const copy = (name, shard = SHARD) => (shard === '' ? name : `${name} #${shard}`);
+
 export const NAMES = {
   /** The workspace the suite is written against. */
-  WORKSPACE: process.env.ORKNUX_DEMO_WORKSPACE ?? 'Northwind Support',
+  WORKSPACE: copy(process.env.ORKNUX_DEMO_WORKSPACE ?? 'Northwind Support'),
   /*
    * The workflow the editor checks drive. It is the one with an agent in it -
    * retries, the doubling wait and the second handle all hang off an agent node
    * - and the one that carries the object field `editor-check` types into.
    */
-  WORKFLOW: 'Answer a question asked in Slack',
+  WORKFLOW: copy('Answer a question asked in Slack'),
+  /*
+   * Not copied, these three, and that is the distinction worth keeping: a
+   * function, a tool and a condition are named *inside* a workspace, so a second
+   * copy of the fixture holds its own `ticketReference` and the name still says
+   * which one. A workflow's name is unique across the whole installation, which
+   * is why that one and the workspaces above carry the suffix.
+   */
   /** The function `definition-jump-check` gives an object parameter to. */
   FUNCTION: 'ticketReference',
   /** The one `param-panel-check` and `split-check` open. */
@@ -49,8 +87,8 @@ export const NAMES = {
    * workflows to switch away from, and one holding none of what a workflow
    * runs, so that "Not here" is what the import dialog actually says.
    */
-  BIGGER_WORKSPACE: 'zz Suite - a second page of workflows',
-  BARE_WORKSPACE: 'zz Suite - nothing in it',
+  BIGGER_WORKSPACE: copy('zz Suite - a second page of workflows'),
+  BARE_WORKSPACE: copy('zz Suite - nothing in it'),
 };
 
 /** Which query lists each kind, and what the answer is called. */

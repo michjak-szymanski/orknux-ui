@@ -97,10 +97,30 @@ const code = () =>
  * typed, so typing a function in would leave the stray halves of every pair it
  * helpfully added, and the check would be measuring that instead.
  */
-async function writeAll(text) {
-  await page.click('.view-lines');
-  await page.keyboard.press('Control+A');
-  await page.keyboard.insertText(text);
+/**
+ * Replaces what is in the editor, and makes sure it went in.
+ *
+ * It used to type and carry on. Typing into Monaco is a click, a select-all and
+ * an insert, and if the editor has not attached yet the keystrokes go nowhere -
+ * the check then waits fifteen seconds for the panel to follow a declaration
+ * nobody wrote, and reports the feature broken. Not a hypothetical: it is what
+ * this did the first time the suite ran two checks at once and the machine had
+ * two browsers on it. Issue #308.
+ *
+ * So it looks afterwards, and tries again. `marker` is a word that is in the new
+ * text and not in the old, which is what makes "it went in" a question with an
+ * answer.
+ */
+async function writeAll(text, marker) {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    await page.click('.view-lines');
+    await page.keyboard.press('Control+A');
+    await page.keyboard.insertText(text);
+
+    if ((await until((now) => (now.code ?? '').includes(marker), null, 3_000)) !== null) return true;
+    console.log(`the editor did not take what was typed (attempt ${attempt})`);
+  }
+  return false;
 }
 
 /** Watches until something is true of the page, keeping the last sample. */
@@ -111,7 +131,9 @@ async function until(what, why, ms) {
     last = { panel: await panel(), code: await code() };
     if (what(last)) return last;
     if (Date.now() > stop) {
-      console.log(`gave up waiting for ${why}: ${JSON.stringify(last)}`);
+      // Null where the caller is going to try again and say so itself, so a
+      // retried wait does not print a giving-up line it did not mean.
+      if (why !== null) console.log(`gave up waiting for ${why}: ${JSON.stringify(last)}`);
       return null;
     }
     await page.waitForTimeout(150);
@@ -148,6 +170,7 @@ record(wrote !== null, 'renaming a parameter in the panel rewrites the declarati
 
 await writeAll(
   `export default function ${NAME}(caseNumber: number): string {\n  return String(caseNumber);\n}\n`,
+  'caseNumber',
 );
 
 const read = await until(
