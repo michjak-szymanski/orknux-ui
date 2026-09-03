@@ -385,3 +385,10 @@
   font-size: var(--text-base);
   color: var(--color-text-primary);
 }
+
+/* Beside the spinner: what is taking the time, in one line. */
+.busyNote {
+  margin-left: var(--space-8);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}

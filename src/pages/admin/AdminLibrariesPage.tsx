@@ -400,7 +400,7 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
                 onChange={(event) => setSpec(event.target.value)}
               />
               <button type="submit" className={styles.installButton} disabled={busy || spec.trim() === ''}>
-                {t('Install')}
+                {busy ? t('Installing…') : t('Install')}
               </button>
             </form>
           )}
@@ -433,6 +433,25 @@ export function AdminLibrariesPage({ session, onSignOut }: AdminLibrariesPagePro
         {notice !== null && error === null && <p className={styles.notice}>{notice}</p>}
         {!loading && error === null && libraries?.length === 0 && (
           <p className={styles.notice}>{t('No libraries loaded yet.')}</p>
+        )}
+
+        {/*
+          What is happening while nothing is on screen yet.
+
+          An install was a fetch and a store; it can now be a fetch of twenty
+          archives, a compiler loading, and every file in a graph rewritten - so
+          it takes seconds where it used to take one, and a button that only
+          greys out is a page that looks stuck. The first library to need the
+          compiler pays about two and a half seconds for it and no other ever
+          does, which is worth saying rather than leaving somebody to wonder.
+        */}
+        {busy && (
+          <p className={styles.notice}>
+            <Loader />
+            <span className={styles.busyNote}>
+              {t('Fetching, bundling and checking it runs. The first one that needs the module compiler waits a moment longer for it.')}
+            </span>
+          </p>
         )}
 
         {libraries?.map((library) => (
