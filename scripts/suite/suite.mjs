@@ -1488,6 +1488,34 @@ export const TESTS = [
      */
   },
   {
+    name: 'connection-parameter-check',
+    what: 'a parameter declared as a connection: picked on both screens, and handed over as its id',
+    needs: ['workspace'],
+    /*
+     * The type was added so a function could be handed one of the workspace's
+     * connections and pass it to `orknux.slack.thread`. Adding it to the Kotlin
+     * enum, the GraphQL schema and the editor's declarations left three places
+     * still treating it as a shape nobody had thought about - and the first of
+     * them, two CHECK constraints listing the types by hand, reached somebody as
+     * a stack trace. That half is guarded in Kotlin by `ParameterTypeTest`; the
+     * two screens are guarded here.
+     *
+     * What earns it a place is the assertion in the middle. A picker offering
+     * the right names and writing the wrong value photographs identically to one
+     * that works, so the function returns the argument it was given and the id
+     * is compared - as a string, which is the shape a trigger publishes and the
+     * shape the call is documented to take.
+     *
+     * It does not read a Slack thread. This machine has no Slack to read one
+     * from, and a check that needed one would be a check that runs only where
+     * somebody has set one up; what the call needs from these screens is the
+     * connection, so the connection is what is measured.
+     *
+     * Its own function and connection, made and deleted over GraphQL, and swept
+     * at the start in case an earlier run was killed before it could.
+     */
+  },
+  {
     name: 'rename-declaration-check',
     what: "renaming a function follows into the code, and only where it is the editor's own name to change",
     needs: ['workspace'],

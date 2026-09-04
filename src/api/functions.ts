@@ -768,6 +768,15 @@ export function argumentJson(type: ValueType, written: string): string {
     case 'NUMBER':
     case 'BOOLEAN':
       return held;
+    /*
+     * A connection crosses as its id in a string, which is what a trigger
+     * publishes: everything on a payload is text, so a function handed
+     * `trigger.connection` and one handed this argument are handed the same
+     * thing. Quoted here rather than at the far end, because the far end is a
+     * sandbox that should not have to guess.
+     */
+    case 'CONNECTION':
+      return JSON.stringify(held);
     default:
       return held;
   }

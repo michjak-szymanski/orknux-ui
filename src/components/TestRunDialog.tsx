@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 
 import { argumentJson, runFunction, valueTypeLabel } from '../api/functions';
 import type { FunctionParam, FunctionRun } from '../api/functions';
+import { fetchWorkspaceConnections } from '../api/integrations';
+import type { WorkspaceConnection } from '../api/integrations';
 import type { VariableType } from '../api/variables';
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
 import { FieldHint } from './FieldHint';
@@ -109,6 +111,40 @@ export function TestRunDialog({
   const [running, setRunning] = useState(false);
   const [ran, setRan] = useState<FunctionRun | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
+
+  /**
+   * The workspace's connections, for a parameter declared as one.
+   *
+   * Asked for only when the function has such a parameter, and only while the
+   * window is open: a run window on a function taking a string and a number has
+   * no business fetching a list it will never draw.
+   *
+   * The cleanup is not ceremony. This window is opened, shut and opened again
+   * without unmounting, and React mounts it twice in development - so without
+   * one, an answer to a request nobody is waiting for any more lands on top of
+   * whatever arrived after it. That is issue #324, one component over.
+   */
+  const [connections, setConnections] = useState<WorkspaceConnection[]>([]);
+  const [connectionsFailed, setConnectionsFailed] = useState(false);
+  const wantsConnection = params.some((param) => param.type === 'CONNECTION');
+
+  useEffect(() => {
+    if (!open || !wantsConnection || workspaceId === '') return;
+    let live = true;
+    setConnectionsFailed(false);
+    fetchWorkspaceConnections(workspaceId)
+      .then((held) => {
+        if (live) setConnections(held);
+      })
+      .catch(() => {
+        if (!live) return;
+        setConnections([]);
+        setConnectionsFailed(true);
+      });
+    return () => {
+      live = false;
+    };
+  }, [open, wantsConnection, workspaceId]);
 
   useEffect(() => {
     const held = dialogRef.current;
@@ -242,6 +278,45 @@ export function TestRunDialog({
                       </select>
                       <img src={chevronDown12Icon} alt="" width={12} height={12} />
                     </div>
+                  ) : param.type === 'CONNECTION' ? (
+                    <>
+                    /*
+                      Picked, for the reason the window exists: every field here
+                      is a parameter offered as its type, and a connection typed
+                      into a JSON box was the one type that was not - it asked
+                      for an id nobody has memorised, off a page in another tab,
+                      quoted correctly. The blank row is the `null` an unmapped
+                      node passes, said in the same words the boolean says it in.
+
+                      A list that could not be fetched says so and offers
+                      nothing, rather than reading as a workspace with no
+                      connections in it.
+                    */
+                    <div className={styles.inputWrapper}>
+                      <select
+                        id={`run-arg-${param.name}`}
+                        className={`${styles.select} ${styles.inputMono}`}
+                        value={values[param.name] ?? ''}
+                        aria-label={`Argument ${param.name}`}
+                        onChange={(event) =>
+                          setValues((current) => ({ ...current, [param.name]: event.target.value }))
+                        }
+                      >
+                        <option value="">nothing</option>
+                        {connections.map((held) => (
+                          <option key={held.id} value={held.id}>
+                            {held.name}
+                          </option>
+                        ))}
+                      </select>
+                      <img src={chevronDown12Icon} alt="" width={12} height={12} />
+                      </div>
+                      {connectionsFailed && (
+                        <p className={styles.fieldNote}>
+                          {t('The connections could not be fetched.')}
+                        </p>
+                      )}
+                    </>
                   ) : param.type === 'STRING' || param.type === 'NUMBER' ? (
                     <div className={styles.inputWrapper}>
                       <input

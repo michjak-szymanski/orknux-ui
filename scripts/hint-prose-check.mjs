@@ -183,6 +183,24 @@ const IN_THE_OPEN = [
     why: "how long this particular answer took, what it cost, and what was kept of it. What is recorded here is whichever arm reads longest, so this quotation moves whenever one is added or taken away - it quoted the nothing-was-reported arm until #227 added the token one, the token one until #240 added a drawn-picture arm, and the token one again now that 0.9.5 has taken that arm back out. A picture is no longer announced by this paragraph at all: the round says it drew one while it is still going (the `drew` frame), so the arm that existed to say \"charged for one picture rather than for tokens\" had nothing left to say. The entry went briefly missing from this table once: after #227 the scanner could not see into a fragment at all, so it read as excusing something that no longer existed and was deleted. It existed the whole time; `fragmentsIn` is why it can be seen again",
   },
   {
+    file: 'src/pages/admin/AdminLibrariesPage.tsx',
+    says: 'Fetching, bundling and checking it runs. The first one that needs the module compiler waits a moment longer for it.',
+    because: 'status',
+    why: 'what the server is doing while the install runs, beside the spinner that says it is still going. The second sentence is there because the wait is not uniform: the first library that turns out to be an ES module pays about two and a half seconds to start the module compiler and no later one ever does, and a pause nobody explained reads as a hang',
+  },
+  {
+    file: 'src/pages/chat/ChatPage.tsx',
+    says: 'Summarising the earlier part of this conversation…',
+    because: 'status',
+    why: 'what the turn is doing before it answers. Compaction used to happen silently, so a turn that took noticeably longer than the last one looked like a stall - and the transcript then carried a summary nobody had been told was written',
+  },
+  {
+    file: 'src/components/TestRunDialog.tsx',
+    says: 'The connections could not be fetched.',
+    because: 'error',
+    why: 'why the picker for a connection parameter is offering nothing. Without it an expired session reads as a workspace with no connections in it, which is the wrong thing to go and act on',
+  },
+  {
     file: 'src/components/CodeSuggestion.tsx',
     says: 'Reading what is there now…',
     because: 'status',

@@ -1029,26 +1029,63 @@ export function ActionForm({
                   </span>
                 </p>
                 <div className={styles.mappingList}>
-                  {mappings.map((mapping, index) => (
-                    <div key={mapping.argument} className={styles.mappingRow}>
-                      <span className={styles.mappingArgument}>{mapping.argument}</span>
-                      <div className={styles.inputWrapper}>
-                        <input
-                          className={`${styles.input} ${styles.inputMono}`}
-                          type="text"
-                          value={mapping.expression}
-                          aria-label={`Value for ${mapping.argument}`}
-                          onChange={(event) =>
-                            setMappings((current) =>
-                              current.map((row, at) =>
-                                at === index ? { ...row, expression: event.target.value } : row,
-                              ),
-                            )
-                          }
-                        />
+                  {mappings.map((mapping, index) => {
+                    const declared = chosenFunction?.params.find(
+                      (param) => param.name === mapping.argument,
+                    );
+                    const write = (expression: string) =>
+                      setMappings((current) =>
+                        current.map((row, at) => (at === index ? { ...row, expression } : row)),
+                      );
+                    return (
+                      <div key={mapping.argument} className={styles.mappingRow}>
+                        <span className={styles.mappingArgument}>{mapping.argument}</span>
+                        {/*
+                          An argument declared as a connection is picked from the
+                          workspace's, not typed. What crosses is the id either
+                          way - the picker writes the same string somebody would
+                          have typed - so this changes nothing about what runs.
+                          It changes who has to know the number: a workspace with
+                          nine connections had them named on one page and
+                          numbered on another, and copying between the two is a
+                          job the form can do.
+
+                          The blank row is kept and named, because blank means
+                          something here: it is the rule printed above these
+                          rows, and a picker that only said *Select connection…*
+                          would read as a field nobody had filled in yet rather
+                          than as the default this form has always had.
+                        */}
+                        {declared?.type === 'CONNECTION' ? (
+                          <DefinitionPicker
+                            id={`action-mapping-${mapping.argument}`}
+                            value={mapping.expression}
+                            options={connectionOptions}
+                            onChoose={write}
+                            placeholder={t('Select connection…')}
+                            searchPlaceholder={t('Search connections…')}
+                            ariaLabel={`Value for ${mapping.argument}`}
+                            pinned={{
+                              value: '',
+                              label: t('From the field of that name'),
+                              hint: t('What this action was given, under that name.'),
+                            }}
+                            failure={connectionCatalogue.failure}
+                          />
+                        ) : (
+                          <div className={styles.inputWrapper}>
+                            <input
+                              className={`${styles.input} ${styles.inputMono}`}
+                              type="text"
+                              value={mapping.expression}
+                              aria-label={`Value for ${mapping.argument}`}
+                              onChange={(event) => write(event.target.value)}
+                            />
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {/* A reading of the function that was chosen, not a note about
                       the block: it is what these rows have instead of contents. */}
                   {mappings.length === 0 && (
