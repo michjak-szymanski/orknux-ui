@@ -280,41 +280,46 @@ export function TestRunDialog({
                     </div>
                   ) : param.type === 'CONNECTION' ? (
                     <>
-                    /*
-                      Picked, for the reason the window exists: every field here
-                      is a parameter offered as its type, and a connection typed
-                      into a JSON box was the one type that was not - it asked
-                      for an id nobody has memorised, off a page in another tab,
-                      quoted correctly. The blank row is the `null` an unmapped
-                      node passes, said in the same words the boolean says it in.
+                      {/*
+                        Picked, for the reason the window exists: every field
+                        here is a parameter offered as its type, and a connection
+                        typed into a JSON box was the one type that was not - it
+                        asked for an id nobody has memorised, off a page in
+                        another tab, quoted correctly. The blank row is the
+                        `null` an unmapped node passes, said in the same words
+                        the boolean says it in.
 
-                      A list that could not be fetched says so and offers
-                      nothing, rather than reading as a workspace with no
-                      connections in it.
-                    */
-                    <div className={styles.inputWrapper}>
-                      <select
-                        id={`run-arg-${param.name}`}
-                        className={`${styles.select} ${styles.inputMono}`}
-                        value={values[param.name] ?? ''}
-                        aria-label={`Argument ${param.name}`}
-                        onChange={(event) =>
-                          setValues((current) => ({ ...current, [param.name]: event.target.value }))
-                        }
-                      >
-                        <option value="">nothing</option>
-                        {connections.map((held) => (
-                          <option key={held.id} value={held.id}>
-                            {held.name}
-                          </option>
-                        ))}
-                      </select>
-                      <img src={chevronDown12Icon} alt="" width={12} height={12} />
+                        A list that could not be fetched says so and offers
+                        nothing, rather than reading as a workspace with no
+                        connections in it.
+
+                        The braces are not decoration. Without them this is a
+                        JSX child rather than a comment, and every word of it was
+                        drawn in the window above the field it describes - which
+                        is what the check's screenshot showed and what its
+                        assertions, every one of them about the DOM, did not.
+                      */}
+                      <div className={styles.inputWrapper}>
+                        <select
+                          id={`run-arg-${param.name}`}
+                          className={`${styles.select} ${styles.inputMono}`}
+                          value={values[param.name] ?? ''}
+                          aria-label={`Argument ${param.name}`}
+                          onChange={(event) =>
+                            setValues((current) => ({ ...current, [param.name]: event.target.value }))
+                          }
+                        >
+                          <option value="">nothing</option>
+                          {connections.map((held) => (
+                            <option key={held.id} value={held.id}>
+                              {held.name}
+                            </option>
+                          ))}
+                        </select>
+                        <img src={chevronDown12Icon} alt="" width={12} height={12} />
                       </div>
                       {connectionsFailed && (
-                        <p className={styles.fieldNote}>
-                          {t('The connections could not be fetched.')}
-                        </p>
+                        <p className={styles.fieldNote}>{t('The connections could not be fetched.')}</p>
                       )}
                     </>
                   ) : param.type === 'STRING' || param.type === 'NUMBER' ? (

@@ -46,6 +46,7 @@ const FORM_STYLES: ActionFormStyles = {
   mappingList: styles.mappingList,
   mappingRow: styles.mappingRow,
   mappingArgument: styles.mappingArgument,
+  mappingPicker: styles.mappingPicker,
   paramList: styles.paramList,
   paramRow: styles.paramRow,
   error: styles.error,

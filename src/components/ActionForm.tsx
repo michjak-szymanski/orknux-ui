@@ -89,6 +89,8 @@ export interface ActionFormStyles {
   mappingList: string;
   mappingRow: string;
   mappingArgument: string;
+  /** The cell a picked argument sits in, so it is as wide as a typed one. */
+  mappingPicker: string;
   paramList: string;
   paramRow: string;
   error: string;
@@ -1057,21 +1059,23 @@ export function ActionForm({
                           than as the default this form has always had.
                         */}
                         {declared?.type === 'CONNECTION' ? (
-                          <DefinitionPicker
-                            id={`action-mapping-${mapping.argument}`}
-                            value={mapping.expression}
-                            options={connectionOptions}
-                            onChoose={write}
-                            placeholder={t('Select connection…')}
-                            searchPlaceholder={t('Search connections…')}
-                            ariaLabel={`Value for ${mapping.argument}`}
-                            pinned={{
-                              value: '',
-                              label: t('From the field of that name'),
-                              hint: t('What this action was given, under that name.'),
-                            }}
-                            failure={connectionCatalogue.failure}
-                          />
+                          <div className={styles.mappingPicker}>
+                            <DefinitionPicker
+                              id={`action-mapping-${mapping.argument}`}
+                              value={mapping.expression}
+                              options={connectionOptions}
+                              onChoose={write}
+                              placeholder={t('Select connection…')}
+                              searchPlaceholder={t('Search connections…')}
+                              ariaLabel={`Value for ${mapping.argument}`}
+                              pinned={{
+                                value: '',
+                                label: t('From the field of that name'),
+                                hint: t('What this action was given, under that name.'),
+                              }}
+                              failure={connectionCatalogue.failure}
+                            />
+                          </div>
                         ) : (
                           <div className={styles.inputWrapper}>
                             <input

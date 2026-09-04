@@ -127,6 +127,22 @@ try {
   await page.waitForSelector('dialog[data-check="test-run"][open]', { timeout: 20_000 });
   await page.waitForTimeout(500);
 
+  /*
+   * The window prints no source.
+   *
+   * Written after this check passed against a window that was drawing a
+   * paragraph of JSX comment above the field it described. A fragment was added
+   * around the branch and the comment inside it stopped being a comment - and
+   * every assertion here was about the DOM, which was exactly right the whole
+   * time. It cost nothing to add and it is the one thing a screenshot saw that
+   * a locator did not.
+   */
+  const windowSays = await page.locator('dialog[data-check="test-run"]').innerText();
+  check(
+    !windowSays.includes('/*') && !windowSays.includes('*/'),
+    'the window draws no comment markers: a JSX comment that lost its braces is drawn as text',
+  );
+
   const linkField = page.getByLabel('Argument link');
   const noteField = page.getByLabel('Argument note');
   const linkTag = await linkField.evaluate((node) => node.tagName.toLowerCase());
@@ -209,6 +225,12 @@ try {
   check(
     before === 'From the field of that name',
     `and it arrives naming the default rather than looking unfilled: ${JSON.stringify(before)}`,
+  );
+
+  const formSays = await page.locator('form').innerText();
+  check(
+    !formSays.includes('/*') && !formSays.includes('*/'),
+    'and neither does the form, for the same reason',
   );
 
   await mapper.click();

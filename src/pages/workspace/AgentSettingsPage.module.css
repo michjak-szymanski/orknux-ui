@@ -417,6 +417,19 @@ select.input {
   min-width: 0;
 }
 
+/*
+ * The same width, for the row that is picked rather than typed.
+ *
+ * A connection argument is a picker and the rest are text boxes, and the picker
+ * sizes itself to whatever it is showing - so a row holding a long connection
+ * name and a row holding a short one ended at different places, down a column
+ * where every other edge lines up.
+ */
+.mappingPicker {
+  flex: 1 0 0;
+  min-width: 0;
+}
+
 /* The sentence under a page title saying what the thing on it is for. */
 .subtitle {
   margin: 0;
