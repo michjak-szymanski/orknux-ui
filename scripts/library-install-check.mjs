@@ -76,6 +76,13 @@ if (status.configured !== true) {
   await finish(browser);
 }
 
+/*
+ * Waited for. Whether the field is drawn at all follows an answer about the
+ * registry, which arrives after the page does - so counting it straight away
+ * finds nothing on an installation that has one, and reports the field as
+ * missing.
+ */
+await field.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => {});
 record((await field.count()) === 1, 'a field for a package and its version');
 record(
   (await field.getAttribute('placeholder')) === 'random@4.1.0',
@@ -92,13 +99,23 @@ record(await install.isDisabled(), 'Install does nothing until something has bee
 const hint = page.locator('button[data-hint="Libraries"]');
 record((await hint.count()) === 1, 'a (?) beside the heading');
 const before = (await page.locator('body').innerText()).replace(/\s+/g, ' ');
-for (const sentence of ['does not bundle', 'exact version', 'fetches it once']) {
+for (const sentence of ['needs a second package', 'exact version', 'fetches it once']) {
   record(!before.includes(sentence), `"${sentence}" is not printed on the page while the note is shut`);
 }
 await hint.hover();
 await page.waitForTimeout(400);
 const opened = (await page.locator('[role="note"]').first().innerText()).replace(/\s+/g, ' ');
-record(opened.includes('does not bundle'), 'the note is where the answer on dependencies is');
+/*
+ * What the note says about dependencies, in the words it says them in now.
+ *
+ * It used to read "this installation does not bundle", and #319 made that
+ * false: a package that is more than one file, or that needs a second one, is
+ * offered as a bundle rather than refused. The check went on asking for the
+ * old sentence, which no page draws - so the three assertions above it, that
+ * the sentence is not printed while the note is shut, were passing on a
+ * sentence that is not printed anywhere at all.
+ */
+record(opened.includes('needs a second package'), 'the note is where the answer on dependencies is');
 record(opened.includes('latest'), 'and where the reason a version is pinned is');
 await page.mouse.move(1400, 990);
 await page.waitForTimeout(300);

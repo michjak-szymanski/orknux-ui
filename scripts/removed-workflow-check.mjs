@@ -160,6 +160,21 @@ const filterOptions = () =>
 /** Waits for the rows to settle after a control was used. */
 async function settle() {
   await page.waitForSelector('text=Showing', { timeout: 20_000 }).catch(() => {});
+  /*
+   * And for the Workflow filter to hold more than the row it is drawn with.
+   *
+   * The select is on the page before the workflows it offers have arrived, so
+   * it holds one option - the "any workflow" row - for a beat. Reading it then
+   * finds the removed workflow absent, which is exactly what this check is
+   * written to catch, so the race reports itself as the bug.
+   */
+  await page
+    .waitForFunction(
+      () => (document.querySelector('select[aria-label="Workflow:"]')?.options.length ?? 0) > 1,
+      undefined,
+      { timeout: 20_000 },
+    )
+    .catch(() => {});
   await page.waitForTimeout(900);
 }
 

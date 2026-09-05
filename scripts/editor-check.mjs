@@ -16,6 +16,15 @@ const { browser, page } = await open({ viewport: { width: 1440, height: 900 } })
 
 await page.goto(`${BASE}/workspace/${WORKSPACE}/workflows/${WORKFLOW}/editor`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('.react-flow__node', { timeout: 20_000 });
+/*
+ * The first node drawn is not the graph. React Flow puts the nodes down and
+ * then measures them, and a click that lands in between selects nothing - so
+ * `.react-flow__node.selected` matched no element and the ports read as null,
+ * which this reports as the ports having been dropped. That is the bug it is
+ * written to catch, arriving from the wrong direction.
+ */
+await page.locator('.react-flow__node').filter({ hasText: WATCHED }).first().waitFor({ state: 'visible', timeout: 20_000 });
+await page.waitForTimeout(1200);
 
 /** The ports a node draws, read off the canvas rather than out of the store. */
 async function portsOf(selector) {
@@ -32,6 +41,7 @@ async function portsOf(selector) {
 // changes the text it would otherwise be found by.
 const watched = page.locator('.react-flow__node').filter({ hasText: WATCHED }).first();
 await watched.click();
+await page.locator('.react-flow__node.selected').first().waitFor({ state: 'visible', timeout: 10_000 });
 await page.waitForTimeout(500);
 const portsBefore = await portsOf('.react-flow__node.selected');
 await page.getByLabel('Node name').click();
