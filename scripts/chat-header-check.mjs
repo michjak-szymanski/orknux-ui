@@ -24,12 +24,64 @@
  * two numbers within a few pixels of each other, rather than a class name that
  * says nothing about where the thing was drawn.
  */
-import { BASE, open, record, finish } from './suite/harness.mjs';
+import { BASE, WORKSPACE, open, record, finish } from './suite/harness.mjs';
 
-const { browser, page } = await open({ viewport: { width: 1440, height: 1000 } });
+const { browser, page, graphql } = await open({ viewport: { width: 1440, height: 1000 } });
 
-await page.goto(`${BASE}/chat`, { waitUntil: 'domcontentloaded' });
+/*
+ * Its own conversation, with one thing said in it.
+ *
+ * `/chat` opens whatever the workspace happens to hold, and a workspace whose
+ * newest chat has nothing in it leaves the find with nothing to find - the
+ * check then hung thirty seconds on a turn that was never coming and reported
+ * it as a failure of the header. A fixture that has to contain a conversation
+ * before this can run is a fixture nobody can promise.
+ *
+ * Nothing is asked of a model. The turn read below is the one that was *sent*,
+ * which the page draws the moment it leaves; whether anything answers is not
+ * this strip of chrome's business, and every installation this runs on has
+ * something to say and nothing to say it to.
+ */
+const PREFIX = 'zzChatHeader';
+const NEEDLE = 'pomegranate';
+let chatId = null;
+
+const { workspaceAgents } = await graphql(
+  `query($w: ID!) { workspaceAgents(workspaceId: $w, page: 0, size: 50) { content { id name } } }`,
+  { w: WORKSPACE },
+);
+const agent = workspaceAgents.content[0];
+if (agent === undefined) {
+  record(false, 'this workspace has no agent, so no chat can be started in it');
+  await finish(browser);
+}
+
+/* Whatever an earlier run left, in case one was killed before its delete. */
+const { chatSessions } = await graphql(`query($w: ID!) { chatSessions(workspaceId: $w) { id title } }`, {
+  w: WORKSPACE,
+});
+for (const old of chatSessions.filter((one) => (one.title ?? '').startsWith(PREFIX))) {
+  await graphql(`mutation($id: ID!) { deleteChat(id: $id) }`, { id: old.id }).catch(() => undefined);
+  console.log(`swept chat ${old.title} (#${old.id})`);
+}
+
+chatId = (
+  await graphql(`mutation($input: StartChatInput!) { startChat(input: $input) { id } }`, {
+    input: { workspaceId: WORKSPACE, title: `${PREFIX} ${Date.now()}`, agentId: agent.id },
+  })
+).startChat.id;
+
+await page.goto(`${BASE}/chat/${chatId}`, { waitUntil: 'domcontentloaded' });
 await page.locator('#chat-composer').waitFor({ state: 'visible', timeout: 20_000 });
+await page.waitForTimeout(700);
+
+await page.locator('#chat-composer').fill(`Where does a ${NEEDLE} come from`);
+await page.keyboard.press('Enter');
+await page
+  .locator('[class*="userBody"]')
+  .first()
+  .waitFor({ state: 'visible', timeout: 20_000 })
+  .catch(() => {});
 await page.waitForTimeout(700);
 
 const title = page.locator('h1').first();
@@ -124,5 +176,9 @@ await page.waitForTimeout(500);
 const afterCancel = (await page.locator('h1').first().textContent())?.trim() ?? '';
 record(afterCancel === named, `cancelling keeps the chat (it says "${afterCancel}")`);
 record((await page.locator('dialog[open]').count()) === 0, 'cancelling shuts the question');
+
+if (chatId !== null) {
+  await graphql(`mutation($id: ID!) { deleteChat(id: $id) }`, { id: chatId }).catch(() => undefined);
+}
 
 await finish(browser);
