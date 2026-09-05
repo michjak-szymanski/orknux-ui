@@ -128,6 +128,19 @@ if (!(await drawn(page, "the new function's editor"))) await done();
 await settled();
 
 const panel = page.locator('[aria-label="Used by"]');
+/*
+ * Waited until the panel has an answer. It draws its heading and its (?) while
+ * it asks the server what points here, so read too soon it holds "Used by ?"
+ * and nothing else - which this reports as the empty state having lost its
+ * words, the exact thing the check is for.
+ */
+await page
+  .waitForFunction(
+    () => ((document.querySelector('[aria-label="Used by"]')?.textContent ?? '').replace(/\s+/g, ' ').trim().length) > 12,
+    undefined,
+    { timeout: 20_000 },
+  )
+  .catch(() => {});
 const said = (await panel.innerText()).replace(/\s+/g, ' ').trim();
 record(
   said.includes('Nothing uses this yet'),

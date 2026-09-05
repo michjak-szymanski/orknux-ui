@@ -108,7 +108,30 @@ export async function open(options = {}) {
    * reason, and the stack says where.
    */
   const graphql = async (query, variables = {}) => {
-    const answer = await context.request.post(`${BASE}/graphql`, { data: { query, variables } });
+    /*
+     * One retry, and only on a dropped socket.
+     *
+     * Two workers is enough to make the vite proxy in front of the server reset
+     * a connection now and again - `read ECONNRESET`, on a request that never
+     * reached anything. It killed a check outright, twice, with nothing wrong
+     * in what it was asking.
+     *
+     * Deliberately narrow: a GraphQL *error* still throws on the first answer,
+     * as it always has, because a fixture that half-built must fail loudly. A
+     * socket that was never answered is not an answer to retry past - it is a
+     * question that was never asked.
+     */
+    let answer = null;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        answer = await context.request.post(`${BASE}/graphql`, { data: { query, variables } });
+        break;
+      } catch (dropped) {
+        const why = dropped instanceof Error ? dropped.message : String(dropped);
+        if (attempt === 1 || !/ECONNRESET|socket hang up|ECONNREFUSED/.test(why)) throw dropped;
+        console.log(`the connection was dropped, asking again: ${why.split(String.fromCharCode(10))[0]}`);
+      }
+    }
     const body = await answer.json();
     if (body.errors !== undefined) throw new Error(JSON.stringify(body.errors));
     return body.data;

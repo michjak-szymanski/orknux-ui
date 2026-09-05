@@ -138,7 +138,13 @@ record(
 await windowBox.fill(String(WINDOW));
 await output.fill(String(OUTPUT));
 await form.locator('button[type="submit"]').click();
-await page.waitForTimeout(1200);
+/*
+ * Waited for the word, not for 1.2 seconds. The save is a round trip, and how
+ * long it takes is the server's - beside another worker it took longer, and the
+ * card was read before it had said anything.
+ */
+await form.getByText('Saved.', { exact: true }).waitFor({ state: 'visible', timeout: 20_000 }).catch(() => {});
+await page.waitForTimeout(200);
 
 record(
   (await form.innerText()).includes('Saved.'),

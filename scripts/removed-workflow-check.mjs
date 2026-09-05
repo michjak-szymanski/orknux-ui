@@ -230,6 +230,30 @@ try {
 
   await page.selectOption('select[aria-label="Workflow:"]', String(gone.workflowId));
   await settle();
+  /*
+   * And for the rows to be the answer to the filter rather than the rows that
+   * were there before it.
+   *
+   * `settle` waits for the footer and for the filter to be filled; neither says
+   * the *list* has been refetched. Read in between, the assertions below judge
+   * the unfiltered page - and another check's removed workflow ran beside this
+   * one on the same worker, so the row they found was somebody else's and the
+   * failure read as this filter showing the wrong workflow's runs.
+   *
+   * The count comes from the server, so this is waiting on a number this check
+   * did not draw. It is allowed to give up; the assertions still judge what is
+   * on screen.
+   */
+  await page
+    .waitForFunction(
+      (want) =>
+        [...document.querySelectorAll('a[href*="/executions/"]')].filter((link) =>
+          /\/executions\/\d+$/.test(link.getAttribute('href') ?? ''),
+        ).length === want,
+      held.totalElements,
+      { timeout: 20_000 },
+    )
+    .catch(() => {});
   const isolated = await asDrawn();
 
   record(isolated.length > 0, `choosing it isolates its runs (${isolated.length} rows drawn)`);
