@@ -166,6 +166,22 @@ export async function fetchChatSessions(workspaceId: string): Promise<ChatSessio
 }
 
 /**
+ * One chat, asked for by its own id.
+ *
+ * The list is fetched per workspace, which is no use to a page that has been
+ * handed a chat and does not yet know which workspace it is about - and that is
+ * every arrival at `/chat/:id` from a link, a bookmark or a reload. Null where
+ * there is no such chat, or none this account may see.
+ */
+export async function fetchChatSession(id: string): Promise<ChatSession | null> {
+  const data = await graphql<{ chatSession: ChatSession | null }>(
+    `query ChatSession($id: ID!) { chatSession(id: $id) { ${SESSION_FIELDS} } }`,
+    { id },
+  );
+  return data.chatSession;
+}
+
+/**
  * Which chats said this, for the search that looks inside them rather than at
  * their names. Asked of the server: the sidebar holds the chats, not what was
  * said in them.

@@ -7,6 +7,7 @@ import {
   chooseChatAgent,
   deleteChat,
   fetchChatMessages,
+  fetchChatSession,
   fetchChatSessions,
   fetchChatsMentioning,
   regenerateChatAnswer,
@@ -67,7 +68,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { setSidebarCollapsed, useSidebarCollapsed } from '../../session/sidebar';
 import { useInstallation } from '../../session/installation';
 import { shellUser } from '../../session/user';
-import { useLastWorkspaceId } from '../../session/lastWorkspace';
+import { rememberWorkspace, useLastWorkspaceId } from '../../session/lastWorkspace';
 import { FieldHint } from '../../components/FieldHint';
 import { OpenDefinitionIcon } from '../../components/OpenDefinitionIcon';
 import styles from './ChatPage.module.css';
@@ -379,11 +380,11 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
   }, [collapsed]);
 
   /*
-   * The chat screen names no workspace of its own, so it uses the one last
-   * looked at — but only after checking that one still exists. A remembered id
-   * outlives the workspace it points at (anything that rebuilds the database
-   * gives them new ids), and a screen that trusts it asks about a workspace
-   * nobody can see and quietly does nothing.
+   * The workspace last looked at, which is what this page is about when no chat
+   * names one for it — but only after checking that one still exists. A
+   * remembered id outlives the workspace it points at (anything that rebuilds
+   * the database gives them new ids), and a screen that trusts it asks about a
+   * workspace nobody can see and quietly does nothing.
    *
    * Watched rather than read once. The selector in the corner leaves this page
    * where it is now, so it is the only thing that says the chat is about
@@ -391,14 +392,68 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
    * nothing at all (issue #250).
    */
   const remembered = useLastWorkspaceId();
+  /**
+   * What `remembered` was the last time this ran, so a switch can be told from
+   * an arrival.
+   *
+   * The two want opposite answers from the same pair of values. Arriving at a
+   * chat's address, the chat decides and the corner has to follow it; choosing
+   * a workspace in the corner, the corner decides and the chat has to be let go
+   * of. Without this the second is impossible - the chat named in the address is
+   * still named there at the moment of the switch, so a rule that always asked
+   * it would pin the page to the workspace being left (issue #250 again, from
+   * the other side).
+   */
+  const lastRemembered = useRef(remembered);
+  /**
+   * Which workspace's conversations the page is waiting for.
+   *
+   * A fetch that was already in flight when the corner moved lands after the
+   * new one, and puts the workspace that was left back on screen: the list, and
+   * with it the chat the address bar names, because a chat missing from the new
+   * list is dropped and one found in the old is kept.
+   */
+  const wanted = useRef<string | null>(null);
 
   useEffect(() => {
     let abandoned = false;
-    fetchWorkspaces(0, WORKSPACE_LOOKUP)
-      .then((page) => {
+    const switched = lastRemembered.current !== remembered;
+    lastRemembered.current = remembered;
+
+    /*
+     * Which workspace this chat is about.
+     *
+     * A chat belongs to a workspace and says so, and until #861 this page never
+     * asked: it took whichever workspace was last looked at, and fell through to
+     * the first one in the list when nothing had been. So `/chat/:id` opened from
+     * a link, a bookmark or a fresh browser drew the conversation under somebody
+     * else's workspace - the agents picker, the models voice mode needs, where
+     * attachments go and every link out of the page.
+     *
+     * Only when the corner has not just moved, and only for a chat that is
+     * really there in a workspace this account can see. Anything else falls back
+     * to what was remembered, which is what a chat with no id in the address has
+     * always done.
+     */
+    async function decide(): Promise<string | null> {
+      if (switched || chatId === null) return null;
+      const held = await fetchChatSession(chatId).catch(() => null);
+      return held?.workspaceId ?? null;
+    }
+
+    Promise.all([fetchWorkspaces(0, WORKSPACE_LOOKUP), decide()])
+      .then(([page, itsOwn]) => {
         if (abandoned) return;
-        const live = page.content.find((entry) => entry.id === remembered) ?? page.content[0];
+        const live =
+          page.content.find((entry) => entry.id === itsOwn) ??
+          page.content.find((entry) => entry.id === remembered) ??
+          page.content[0];
+        wanted.current = live?.id ?? null;
         setWorkspaceId(live?.id ?? null);
+        // So the corner names what the page is about. A selector still reading
+        // the workspace somebody came from, over a chat belonging to another,
+        // is the same wrong answer drawn in a second place.
+        if (live !== undefined) rememberWorkspace(live.id);
         if (live === undefined) setError(t('There is no workspace to chat in yet.'));
       })
       .catch((cause: unknown) => {
@@ -409,12 +464,15 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
     return () => {
       abandoned = true;
     };
-  }, [remembered]);
+  }, [remembered, chatId]);
 
   const loadSessions = useCallback(
     async (select?: string) => {
       if (workspaceId === null) return;
       const loaded = await fetchChatSessions(workspaceId);
+      // Somebody has chosen another workspace since this was asked for. Its
+      // answer is about a page nobody is looking at any more.
+      if (wanted.current !== workspaceId) return;
       setSessions(loaded);
       // Nothing in the address bar means "open the most recent one", which is
       // what somebody arriving at /chat expects; a chat named there wins.
@@ -434,10 +492,22 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
 
   useEffect(() => {
     if (workspaceId === null) return;
+    /*
+     * Only once the page and the corner agree which workspace this is.
+     *
+     * Between the two there is a moment - the corner has moved, the effect
+     * above has not answered yet - when this would fetch the conversations of
+     * the workspace being left. That answer is not merely stale: the address
+     * bar has no chat in it at that point, so the newest chat of the old
+     * workspace is opened, and the effect above then reads that chat and moves
+     * the whole page back to where it came from. Waiting is what stops the
+     * switch fighting itself.
+     */
+    if (workspaceId !== remembered) return;
     void loadSessions().catch((cause: unknown) =>
       setError(cause instanceof Error ? cause.message : t('Could not load the chats.')),
     );
-  }, [workspaceId, loadSessions]);
+  }, [workspaceId, remembered, loadSessions]);
 
   /*
    * What the chat can be pointed at.

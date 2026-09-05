@@ -158,6 +158,61 @@ if (await drawn(page, 'the chat')) {
   );
 }
 
+/* ------------------------------------------- and arriving at one by address */
+
+/*
+ * Issue #861, which is the same question asked from the other side: the corner
+ * decides where a chat goes, and the chat decides where the page starts.
+ *
+ * The page never asked. It took the remembered workspace, and the first one in
+ * the list when nothing was remembered - so a chat opened from a link, a
+ * bookmark or a reload was drawn under whichever workspace the browser happened
+ * to have been in. Everything on the page followed it: the agents in the
+ * picker, the models voice mode needs, where an attachment goes, and a link
+ * naming an agent of that other workspace as the one answering this chat.
+ *
+ * Staged the way somebody hits it - the browser is left sitting in the other
+ * workspace, and then a chat belonging to this one is opened by its address.
+ * The links are what is read rather than the sidebar, because they are what
+ * carries the workspace: a page about the wrong one draws every one of them
+ * pointing there.
+ */
+const mine = chatSessions[0];
+if (mine !== undefined) {
+  await page.goto(`${BASE}/workspace/${other}/issues`, { waitUntil: 'domcontentloaded' });
+  await drawn(page, 'the issue list');
+  await page.goto(`${BASE}/chat/${mine.id}`, { waitUntil: 'domcontentloaded' });
+  if (await drawn(page, 'the chat')) {
+    await page.locator('#chat-composer').waitFor({ state: 'visible', timeout: 20_000 });
+    await page.waitForTimeout(1500);
+
+    const elsewhere = await page.evaluate(
+      (id) =>
+        [...document.querySelectorAll('a[href*="/workspace/"]')]
+          .map((link) => link.getAttribute('href') ?? '')
+          .filter((href) => !href.startsWith(`/workspace/${id}/`)),
+      WORKSPACE,
+    );
+    record(
+      elsewhere.length === 0,
+      `a chat opened by its address is about its own workspace (${JSON.stringify(elsewhere.slice(0, 4))})`,
+    );
+    record(
+      (await picker.inputValue()) === String(WORKSPACE),
+      `and the corner follows it there (${await picker.inputValue()}, wanted ${WORKSPACE})`,
+    );
+    /*
+     * The title is off `current`, which is the chat found in the list this page
+     * fetched - so a page that drew the links correctly and still listed the
+     * wrong workspace's conversations would have nothing to find and no name to
+     * print. It is the one assertion here that reads what was actually loaded
+     * rather than what was linked to.
+     */
+    const named = await page.locator('[class*="_sessionTitle"]').allTextContents();
+    record(named.includes(mine.title), `and the conversation itself is on the page (${JSON.stringify(mine.title)})`);
+  }
+}
+
 /* What this check made, it takes away. */
 await graphql(`mutation ($id: ID!) { deleteWorkspace(id: $id) }`, { id: other }).catch(() => undefined);
 
