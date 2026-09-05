@@ -340,8 +340,20 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
 
   useEffect(() => {
     if (workspaceId === '') return;
+    /*
+     * An answer that is no longer wanted is dropped rather than applied.
+     *
+     * This fills the form from what came back, so a reply landing late writes
+     * the stored version over whatever is in the boxes - somebody's typing, or
+     * the record they opened after this one. Nothing on screen says it
+     * happened: it is the state behind the fields that is replaced, and the
+     * state is what the save sends. #324, #862 and #863 were three reports of
+     * it on three pages.
+     */
+    let abandoned = false;
     fetchWorkspace(workspaceId)
       .then((found) => {
+        if (abandoned) return;
         setWorkspace(found);
         setName(found?.name ?? '');
         setDescription(found?.description ?? '');
@@ -362,8 +374,12 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         setSummariser(found?.compactionModelId ?? '');
       })
       .catch((cause: unknown) => {
+        if (abandoned) return;
         setError(cause instanceof Error ? cause.message : t('Could not load the workspace.'));
       });
+    return () => {
+      abandoned = true;
+    };
   }, [workspaceId]);
 
   /*

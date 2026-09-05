@@ -57,8 +57,20 @@ export function AdminCertificatePage({ session, onSignOut }: AdminCertificatePag
   useEffect(() => {
     if (adding) return;
     setLoading(true);
+    /*
+     * An answer that is no longer wanted is dropped rather than applied.
+     *
+     * This fills the form from what came back, so a reply landing late writes
+     * the stored version over whatever is in the boxes - somebody's typing, or
+     * the record they opened after this one. Nothing on screen says it
+     * happened: it is the state behind the fields that is replaced, and the
+     * state is what the save sends. #324, #862 and #863 were three reports of
+     * it on three pages.
+     */
+    let abandoned = false;
     fetchTrustedCertificate(certificateId)
       .then((found) => {
+        if (abandoned) return;
         if (found === null) {
           setError(t('That certificate authority is not here.'));
         } else {
@@ -72,9 +84,13 @@ export function AdminCertificatePage({ session, onSignOut }: AdminCertificatePag
         setLoading(false);
       })
       .catch((cause: unknown) => {
+        if (abandoned) return;
         setError(cause instanceof Error ? cause.message : t('That could not be read.'));
         setLoading(false);
       });
+    return () => {
+      abandoned = true;
+    };
   }, [adding, certificateId]);
 
   async function save(event: FormEvent<HTMLFormElement>) {

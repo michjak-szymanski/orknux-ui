@@ -18,6 +18,16 @@ if ((await agent.count()) === 0) {
   await finish(browser);
 }
 await agent.click();
+/*
+ * Waited for the selection to take, not for six hundred milliseconds.
+ *
+ * React Flow puts its nodes down and then measures them, and a click that lands
+ * in between selects nothing - so every `.react-flow__node.selected` below
+ * matches no element, and the read that follows waits thirty seconds for a node
+ * that was never selected and takes the check down. `editor-check` had the same
+ * failure from the same cause.
+ */
+await page.locator('.react-flow__node.selected').first().waitFor({ state: 'visible', timeout: 15_000 });
 await page.waitForTimeout(600);
 
 const hasRetries = await page.getByText('Retries', { exact: true }).count();

@@ -65,8 +65,20 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
 
   useEffect(() => {
     // The workspaces query is already filtered to what the caller may see.
+    /*
+     * An answer that is no longer wanted is dropped rather than applied.
+     *
+     * This fills the form from what came back, so a reply landing late writes
+     * the stored version over whatever is in the boxes - somebody's typing, or
+     * the record they opened after this one. Nothing on screen says it
+     * happened: it is the state behind the fields that is replaced, and the
+     * state is what the save sends. #324, #862 and #863 were three reports of
+     * it on three pages.
+     */
+    let abandoned = false;
     fetchWorkspaces(0, WORKSPACE_LIST_SIZE)
       .then((page) => {
+        if (abandoned) return;
         const found = page.content.find((candidate) => candidate.id === workspaceId) ?? null;
         if (found === null) {
           setLoadError(t('That workspace does not exist, or you do not have access to it.'));
@@ -79,8 +91,12 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         setAdminRoleIds(found.adminRoles.map((role) => role.id));
       })
       .catch((cause: unknown) => {
+        if (abandoned) return;
         setLoadError(cause instanceof Error ? cause.message : t('Could not load the workspace.'));
       });
+    return () => {
+      abandoned = true;
+    };
   }, [workspaceId]);
 
   async function handleSave(event: FormEvent<HTMLFormElement>) {

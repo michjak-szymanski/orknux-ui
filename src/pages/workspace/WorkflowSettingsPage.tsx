@@ -50,8 +50,20 @@ export function WorkflowSettingsPage({ session, onSignOut }: WorkflowSettingsPag
 
   useEffect(() => {
     if (workspaceId === '') return;
+    /*
+     * An answer that is no longer wanted is dropped rather than applied.
+     *
+     * This fills the form from what came back, so a reply landing late writes
+     * the stored version over whatever is in the boxes - somebody's typing, or
+     * the record they opened after this one. Nothing on screen says it
+     * happened: it is the state behind the fields that is replaced, and the
+     * state is what the save sends. #324, #862 and #863 were three reports of
+     * it on three pages.
+     */
+    let abandoned = false;
     fetchWorkspaceWorkflows(workspaceId, 0, WORKFLOW_LIST_SIZE)
       .then((page) => {
+        if (abandoned) return;
         const found = page.content.find((candidate) => candidate.id === workflowId) ?? null;
         if (found === null) {
           setLoadError(t('That workflow is not assigned to this workspace, or you do not have access to it.'));
@@ -62,8 +74,12 @@ export function WorkflowSettingsPage({ session, onSignOut }: WorkflowSettingsPag
         setDescription(found.description ?? '');
       })
       .catch((cause: unknown) => {
+        if (abandoned) return;
         setLoadError(cause instanceof Error ? cause.message : t('Could not load the workflow.'));
       });
+    return () => {
+      abandoned = true;
+    };
   }, [workspaceId, workflowId]);
 
   async function handleSave(event: FormEvent<HTMLFormElement>) {
