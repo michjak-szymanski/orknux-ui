@@ -70,8 +70,16 @@ try {
   // Both (?) say which of Slack's tokens they mean.
   const botHint = page.locator('[data-hint="Bot token"]');
   record((await botHint.count()) === 1, 'the bot token offers a (?)');
+  /*
+   * Scrolled to and then waited for. A hover that lands before the dialog has
+   * settled ends up over nothing, and the read that follows waits thirty
+   * seconds for a note that was never opened and takes the check down with it -
+   * once in three runs. Waiting for the note is waiting for the hover to have
+   * worked.
+   */
+  await botHint.scrollIntoViewIfNeeded();
   await botHint.hover();
-  await page.waitForTimeout(400);
+  await page.locator('[role="note"]').first().waitFor({ state: 'visible', timeout: 15_000 });
   const botSaid = (await page.locator('[role="note"]').first().innerText()).replace(/\s+/g, ' ');
   record(
     botSaid.includes('xoxb-') && botSaid.includes('OAuth & Permissions') && botSaid.includes('xapp-'),
@@ -81,8 +89,9 @@ try {
   await page.waitForTimeout(300);
 
   const appHint = page.locator('[data-hint="App-Level Token"]');
+  await appHint.scrollIntoViewIfNeeded();
   await appHint.hover();
-  await page.waitForTimeout(400);
+  await page.locator('[role="note"]').first().waitFor({ state: 'visible', timeout: 15_000 });
   const appSaid = (await page.locator('[role="note"]').first().innerText()).replace(/\s+/g, ' ');
   record(
     appSaid.includes('Optional') && appSaid.includes('mentions'),

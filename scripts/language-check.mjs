@@ -126,8 +126,22 @@ try {
     'and names each of them in itself: Polski, not Polish',
   );
 
-  /* The mutation goes first and the reload follows it, so wait for the page. */
-  await Promise.all([page.waitForLoadState('load'), polish.click()]);
+  /*
+   * The mutation goes first and the reload follows it, so wait for the page -
+   * and wait for *this* document to be gone rather than for a load state.
+   *
+   * `waitForLoadState('load')` answers about the document that is already
+   * there, which has finished loading, so it returned at once and everything
+   * after it raced the reload: the first thing to ask the page anything got
+   * "Execution context was destroyed, most likely because of a navigation" and
+   * took the whole check down. A mark put on the window before the press is
+   * gone exactly when the new document has replaced the old one.
+   */
+  await page.evaluate(() => {
+    window.__beforeLanguage = true;
+  });
+  await polish.click();
+  await page.waitForFunction(() => window.__beforeLanguage === undefined, undefined, { timeout: 20_000 });
   await page.waitForSelector('h1');
   await page.waitForTimeout(500);
 

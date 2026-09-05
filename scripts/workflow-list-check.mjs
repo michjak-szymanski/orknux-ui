@@ -103,6 +103,18 @@ async function footer() {
 /** Waits for the rows to settle after a control was used. */
 async function settle() {
   await page.waitForSelector('text=Showing', { timeout: 20_000 });
+  /*
+   * "Showing" is drawn while the list is still being fetched, and it reads
+   * "Showing 0-0 of 0 workflows" until it lands - so waiting for that word
+   * alone lets every assertion below read an empty page. It came back as
+   * "10 per page draws 10 rows (drew 0)", which is a fetch that had not
+   * finished reported as a page size that does nothing.
+   */
+  await page
+    .locator('a[href*="/workflows/"][href$="/editor"]')
+    .first()
+    .waitFor({ state: 'visible', timeout: 20_000 })
+    .catch(() => {});
   await page.waitForTimeout(900);
 }
 

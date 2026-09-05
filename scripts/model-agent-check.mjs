@@ -61,6 +61,14 @@ await page.goto(`${BASE}/workspace/${WORKSPACE}/models`, { waitUntil: 'domconten
 if (!(await drawn(page, 'the models screen'))) await finish(browser);
 
 const onChatModel = page.locator(`button[aria-label="Make an agent on ${chatModel.name}"]`);
+/*
+ * Waited for. `drawn` answers as soon as the screen has text on it, and the
+ * models arrive after that - so the row this button is on may not be drawn
+ * yet, and the button reads as one the page does not offer. That is exactly
+ * the finding this check exists to make, which is why it has to be waited for
+ * rather than looked for.
+ */
+await onChatModel.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => {});
 record(await onChatModel.isVisible(), `the button is on ${JSON.stringify(chatModel.name)}, which answers questions`);
 
 if (otherModel !== undefined) {

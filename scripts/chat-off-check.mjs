@@ -33,8 +33,24 @@ const CHATS_OWN = ['Companion Model', 'Speech-to-text Model', 'Text-to-speech Mo
 async function settingsPage() {
   await page.goto(`${BASE}/workspace/${WORKSPACE}/settings`, { waitUntil: 'domcontentloaded' });
   if (!(await drawn(page, 'the workspace settings'))) return null;
-  // The models arrive after the workspace does, and the fields are drawn with them.
-  await page.waitForTimeout(1500);
+  /*
+   * Waited until the page stops growing, rather than for a fixed moment.
+   *
+   * `drawn` is satisfied by 155 characters of heading and a Save - the whole
+   * page, four seconds before the cards arrive - and the fields this reads are
+   * drawn with the models, which land last. A fixed 1.5s passed on the machine
+   * this was written on and read an empty page here, reporting the three chat
+   * fields as missing while chat was on. There is nothing to wait *for* by
+   * name, because which fields exist is the thing being measured; so what is
+   * waited for is the page settling.
+   */
+  let sections = -1;
+  for (let tries = 0; tries < 40; tries += 1) {
+    const now = await page.locator('main h2').count();
+    if (now === sections && now > 2) break;
+    sections = now;
+    await page.waitForTimeout(400);
+  }
   return page.evaluate(() => ({
     text: document.querySelector('main')?.innerText ?? '',
     headings: [...document.querySelectorAll('main h2')].map((one) => one.textContent?.trim() ?? ''),
