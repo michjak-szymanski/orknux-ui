@@ -143,8 +143,23 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
 
   useEffect(() => {
     if (toolId === '') return;
+    /*
+     * An answer that is no longer wanted is dropped rather than applied.
+     *
+     * `apply` replaces the name, the description, the code and the parameters
+     * from what came back, so a load landing after somebody has begun editing
+     * puts the stored tool back over the top of them - #324 in the function
+     * editor, and it showed here as a parameter renamed in the panel reverting
+     * to what it was a second later, with nothing on screen to say so.
+     *
+     * The listener further down deliberately does the opposite: a tool saved
+     * from somewhere else should replace this page's copy, because otherwise
+     * the next save here would put the old version back.
+     */
+    let abandoned = false;
     fetchTool(toolId)
       .then((found) => {
+        if (abandoned) return;
         if (found === null) {
           setLoadError(t('That tool does not exist, or you do not have access to it.'));
           return;
@@ -152,8 +167,12 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
         apply(found);
       })
       .catch((cause: unknown) => {
+        if (abandoned) return;
         setLoadError(cause instanceof Error ? cause.message : t('Could not load the tool.'));
       });
+    return () => {
+      abandoned = true;
+    };
   }, [toolId]);
 
   function apply(found: Tool) {

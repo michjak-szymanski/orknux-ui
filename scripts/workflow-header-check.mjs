@@ -126,6 +126,18 @@ try {
       [...document.querySelectorAll('main section a[href*="/editor"]')].map((one) => one.textContent.trim()),
     );
 
+  /*
+   * Waited for. The page draws its header and the table's column row before the
+   * workflows arrive - which is right, and is why every assertion above this
+   * one passes on a list that is still empty. Reading the names at that moment
+   * gives two empty arrays and a failure that reads as "the sort is broken".
+   */
+  await page
+    .locator('main section a[href*="/editor"]')
+    .first()
+    .waitFor({ state: 'visible', timeout: 20_000 })
+    .catch(() => {});
+
   const ascending = await names();
   await page.locator('button[aria-label^="Sorted "]').first().click();
   await page.waitForFunction(() => new URL(location.href).searchParams.get('dir') === 'desc', { timeout: 10_000 });
