@@ -218,13 +218,19 @@ async function shown(selector) {
     );
     const picker = card?.querySelector('#workspace-memory-against') ?? null;
     /*
-     * The card's own save, by its whole name. Anything beginning "Sav" was the
-     * only save in either card until the workspace one grew a second control
-     * with a Save of its own - the turns a task may take - which is drawn above
-     * this one and is never disabled, so the refusal below read as a save that
-     * had stayed on. Both cards spell theirs the same way, listening or not.
+     * The save, by its whole name, and looked for on the page rather than in
+     * the card.
+     *
+     * It used to be the card's own. 0.9.6 gave the workspace's settings one
+     * Save for all of them, so there is exactly one on the page now and it sits
+     * outside every section - and a lookup inside the card found nothing,
+     * which read as a Save that could not be judged either way.
+     *
+     * By the whole name and not by anything beginning "Sav": that was fine
+     * while a card had one button, and stopped being fine when a second
+     * control with a Save of its own appeared above it.
      */
-    const save = [...(card?.querySelectorAll('button') ?? [])].find((node) => {
+    const save = [...document.querySelectorAll('button')].find((node) => {
       const said = (node.textContent ?? '').trim();
       return said === 'Save Changes' || said === 'Saving…';
     });
@@ -242,7 +248,13 @@ async function shown(selector) {
       // Everything the card says in the open that is not an alert and not the
       // one-word note a save leaves behind.
       notes: paragraphs.filter((text) => !alerts.includes(text) && text !== 'Saved.'),
-      saved: paragraphs.includes('Saved.'),
+      /*
+       * Read beside the Save rather than in the card, and for the same reason
+       * the Save itself is: one Save for the whole page since 0.9.6, and the
+       * word it leaves behind is beside it. A card that drew its own "Saved."
+       * would now be four cards claiming one save.
+       */
+      saved: [...document.querySelectorAll('p')].some((node) => (node.textContent ?? '').trim() === 'Saved.'),
       against: picker === null ? null : picker.value,
       saveOff: save === undefined ? null : save.disabled,
     };
@@ -359,7 +371,8 @@ async function save() {
    * take - so "Save" now matches two buttons in this section and Playwright
    * refuses to guess. The one this check means is the one under the slider.
    */
-  await page.locator('section:has(#workspace-memory-share) button:text-is("Save Changes")').click();
+  // The page's one Save, which is what saves this card since 0.9.6.
+  await page.locator('button:text-is("Save Changes")').first().click();
   await page.waitForTimeout(2000);
 }
 
