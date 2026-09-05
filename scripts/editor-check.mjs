@@ -8,7 +8,7 @@
  * Two: editing a node used to replace its data wholesale, dropping the ports the
  * server had worked out, so a field vanished from the node until a save.
  */
-import { BASE, WORKSPACE, WORKFLOW, open, record, finish } from './suite/harness.mjs';
+import { BASE, WORKSPACE, WORKFLOW, open, record, selectNode, finish } from './suite/harness.mjs';
 
 const WATCHED = 'Reply in the thread';
 
@@ -40,8 +40,7 @@ async function portsOf(selector) {
 // The node itself, before and after — selected, because editing the name
 // changes the text it would otherwise be found by.
 const watched = page.locator('.react-flow__node').filter({ hasText: WATCHED }).first();
-await watched.click();
-await page.locator('.react-flow__node.selected').first().waitFor({ state: 'visible', timeout: 10_000 });
+if (!(await selectNode(page, watched, WATCHED))) await finish(browser);
 await page.waitForTimeout(500);
 const portsBefore = await portsOf('.react-flow__node.selected');
 await page.getByLabel('Node name').click();

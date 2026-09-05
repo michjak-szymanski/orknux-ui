@@ -201,7 +201,22 @@ async function drill({ label, where, settle, pass, fail, subject }) {
 
   await pass();
   await validate.click();
-  await page.waitForTimeout(2500);
+  /*
+   * Waited for the verdict, not for two and a half seconds.
+   *
+   * Validating compiles on the server, and how long that takes is the server's
+   * business - beside another worker it took longer than the sleep, and the
+   * status was still the one from before the press. Read then, it says the code
+   * has not been validated, which is the failure this check exists to catch.
+   */
+  await page
+    .waitForFunction(
+      () => !(document.querySelector('[data-check="validate-status"]')?.textContent ?? '').includes('has not been validated'),
+      undefined,
+      { timeout: 30_000 },
+    )
+    .catch(() => {});
+  await page.waitForTimeout(300);
   const green = await statusText();
   console.log(`${label} passed: ${JSON.stringify(green)}`);
   record(green !== null && /^Valid — /.test(green), `${label} passed: reads "Valid — …", the same sequence`);

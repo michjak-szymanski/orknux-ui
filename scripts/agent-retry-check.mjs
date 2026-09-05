@@ -2,7 +2,7 @@
  * Drives the editor to see that an agent node now has what an action node has:
  * a Retries box, a "When it fails" switch, and a second handle once it is on.
  */
-import { BASE, WORKSPACE, WORKFLOW, open, record, shot, finish } from './suite/harness.mjs';
+import { BASE, WORKSPACE, WORKFLOW, open, record, selectNode, shot, finish } from './suite/harness.mjs';
 
 const { browser, page } = await open({ viewport: { width: 1440, height: 900 } });
 
@@ -17,17 +17,7 @@ if ((await agent.count()) === 0) {
   record(false, 'no agent node on this canvas to click');
   await finish(browser);
 }
-await agent.click();
-/*
- * Waited for the selection to take, not for six hundred milliseconds.
- *
- * React Flow puts its nodes down and then measures them, and a click that lands
- * in between selects nothing - so every `.react-flow__node.selected` below
- * matches no element, and the read that follows waits thirty seconds for a node
- * that was never selected and takes the check down. `editor-check` had the same
- * failure from the same cause.
- */
-await page.locator('.react-flow__node.selected').first().waitFor({ state: 'visible', timeout: 15_000 });
+if (!(await selectNode(page, agent, 'the agent node'))) await finish(browser);
 await page.waitForTimeout(600);
 
 const hasRetries = await page.getByText('Retries', { exact: true }).count();

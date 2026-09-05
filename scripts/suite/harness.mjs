@@ -219,6 +219,35 @@ export async function drawn(page, name, options = {}) {
 }
 
 /**
+ * Click a node on the canvas and be sure it is the selected one.
+ *
+ * React Flow puts its nodes down and then measures them, and a click that lands
+ * in between selects nothing at all. Waiting afterwards cannot mend a press
+ * that already missed - the page is settled by then and no node is chosen - so
+ * the press itself is what has to be repeated. Two checks lost half an hour to
+ * this and reported it as the editor dropping a node's ports and an agent node
+ * having no handles.
+ *
+ * Returns true when something is selected; records the failure and returns
+ * false when nothing ever is, so the caller can stop rather than read a canvas
+ * with no selection on it.
+ */
+export async function selectNode(page, node, name = 'the node') {
+  await node.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => {});
+  for (let press = 0; press < 5; press += 1) {
+    await node.click({ timeout: 10_000 }).catch(() => {});
+    const took = await page
+      .locator('.react-flow__node.selected')
+      .first()
+      .waitFor({ state: 'visible', timeout: 4_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (took) return true;
+  }
+  return record(false, `${name}: five presses and nothing on the canvas is selected`);
+}
+
+/**
  * Close the browser, say what happened, and exit.
  *
  * Extra booleans are for the checks that computed their verdict in local
