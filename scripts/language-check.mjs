@@ -72,6 +72,26 @@ async function recorded() {
  * four translated section names satisfied while thirty-four page labels
  * underneath them stayed in English.
  */
+/**
+ * The menu once it has stopped growing.
+ *
+ * Some of these rows arrive with what the page fetched, so a fixed wait reads
+ * nine of the ten and the comparison against the Polish side then fails on a
+ * count rather than on a translation - which is what it looked like: "the menu
+ * draws 9 items in English", "the same 10 items are drawn in Polish".
+ */
+async function settledMenu() {
+  let before = null;
+  for (let tries = 0; tries < 25; tries += 1) {
+    const now = await menu();
+    const said = JSON.stringify(now);
+    if (said === before) return now;
+    before = said;
+    await page.waitForTimeout(400);
+  }
+  return menu();
+}
+
 async function menu() {
   return page.evaluate(() =>
     Object.fromEntries(
@@ -100,7 +120,7 @@ try {
   await page.goto(`${BASE}/workspace/${WORKSPACE}/agents`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('h1');
   await page.waitForTimeout(500);
-  const englishMenu = await menu();
+  const englishMenu = await settledMenu();
   record(
     Object.keys(englishMenu).length >= 8,
     `the menu on that page draws ${Object.keys(englishMenu).length} items in English`,
@@ -188,7 +208,7 @@ try {
   await page.goto(`${BASE}/workspace/${WORKSPACE}/agents`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('h1');
   await page.waitForTimeout(500);
-  const polishMenu = await menu();
+  const polishMenu = await settledMenu();
 
   record(
     Object.keys(polishMenu).length === Object.keys(englishMenu).length,

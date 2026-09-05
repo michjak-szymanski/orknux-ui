@@ -526,6 +526,13 @@ if (await drawn(page, 'the session to remove')) {
       .llmSession;
 
   const remove = page.getByRole('button', { name: 'Remove session', exact: true });
+  /*
+   * Waited for rather than counted. `drawn` says the page has stopped changing,
+   * which a page whose fetch has not answered yet also satisfies - two samples
+   * of the same shell four hundred milliseconds apart look exactly like a page
+   * that has settled. The control this is about arrives with the session.
+   */
+  await remove.first().waitFor({ state: 'visible', timeout: 20_000 }).catch(() => {});
   record((await remove.count()) === 1, 'the session offers one Remove session button');
 
   /* ----------------------------------------------------------- one press */
