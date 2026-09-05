@@ -100,7 +100,31 @@ await type(multiplier, '2');
 const doubled = await sentence().innerText();
 record(doubled.includes('6s'), `a multiplier of two is what the tick used to mean: "${doubled}"`);
 
-// The three that most nodes never set are behind a word rather than in the way.
+/*
+ * The three that most nodes never set are behind a word rather than in the way.
+ *
+ * Set up rather than assumed, for the reason the attempt count is: the panel
+ * decides whether to open on them from what the node holds, and the node this
+ * drives is the one the manual photographs - which has had a policy of its own
+ * put on it, and which an earlier run of this check that died before its
+ * restore would have left holding a jitter and a budget. Asserting "not shown
+ * by default" against whatever happens to be stored is asserting about the last
+ * run rather than about the panel.
+ *
+ * So the three are emptied, saved, and the node opened again. That is a round
+ * trip rather than a re-render, which is the only way to read what the panel
+ * opens on.
+ */
+if (await maximumWait().isVisible()) {
+  if (await maximumWait().isEnabled()) await type(maximumWait, '');
+  await type(jitter, '');
+  await type(budget, '');
+  await save();
+  await openTheAgent();
+  await type(attempts, '3');
+  await type(initialWait, '2');
+  await type(multiplier, '2');
+}
 record(!(await maximumWait().isVisible()), 'the ceiling, the jitter and the budget are not shown by default');
 await more().click();
 await page.waitForTimeout(300);

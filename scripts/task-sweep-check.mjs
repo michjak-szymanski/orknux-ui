@@ -12,10 +12,15 @@
  * That one thing: **the control is drawn only where the inline engine is
  * running.** An installation carrying its tasks on Temporal recovers a stuck
  * one through Temporal and takes the interval from its configuration file, so
- * the field is not offered there at all. The suite runs against the inline
- * engine, so that half is measured by answering `taskSweepConfigurable` with
- * false on the way to the page - which changes what is drawn and nothing that
- * is stored, and is exactly the branch being asserted.
+ * the field is not offered there at all.
+ *
+ * Which of the two this is, is asked rather than assumed. On the inline engine
+ * the field is driven for real and the absent case is staged by answering
+ * `taskSweepConfigurable` with false on the way to the page - which changes
+ * what is drawn and nothing that is stored. On Temporal the absent case is
+ * simply true, and the half that types into the field is not driven at all,
+ * because the server refuses to store the number there and a forged screen
+ * over a refusing server measures the forgery.
  *
  * Puts the original number back before it exits, whichever way it went.
  */
@@ -39,10 +44,28 @@ record(
   Number.isInteger(started.taskSweepMinutes) && started.taskSweepMinutes > 0,
   `a task left queued is picked up after ${started.taskSweepMinutes} minutes`,
 );
-record(
-  started.taskSweepConfigurable === true,
-  `this installation runs the inline engine, so the field is offered [configurable=${started.taskSweepConfigurable}]`,
-);
+/*
+ * Which installation this is, rather than an assertion that it is the one this
+ * was written on.
+ *
+ * The field exists only where the inline engine carries the tasks; an
+ * installation on Temporal recovers a stuck one through Temporal and takes the
+ * interval from its configuration file. Both are correct products, so
+ * `taskSweepConfigurable` is a fact to branch on and not a thing to demand -
+ * the same arrangement `library-install-check` uses for a registry that may or
+ * may not be configured.
+ *
+ * The half that is skipped is said out loud. A check that quietly asserts
+ * nothing reads exactly like one that asserted something and was satisfied.
+ */
+const inline = started.taskSweepConfigurable === true;
+if (!inline) {
+  console.log(
+    'this installation carries its tasks on Temporal [taskSweepConfigurable=false], so the field is not offered ' +
+      'here and the half that types into it is not driven. The half below it is: on Temporal the absent field is ' +
+      'the real thing rather than a forged answer.',
+  );
+}
 
 /** The number box, and the Save that belongs to it rather than to retention. */
 const field = () => page.getByLabel('How many minutes a task may wait before it is picked up');
@@ -56,7 +79,7 @@ const save = () =>
   page.getByRole('button', { name: 'Save how long before a stuck task is picked up', exact: true });
 
 await page.goto(SETTINGS, { waitUntil: 'domcontentloaded' });
-if (await drawn(page, 'admin settings')) {
+if (inline && (await drawn(page, 'admin settings'))) {
   /*
    * Wait for the field before counting anything.
    *
@@ -170,14 +193,18 @@ if (await drawn(page, 'admin settings as a Temporal installation')) {
 await page.unroute('**/graphql');
 
 // Its own data, swept up: the installation goes back to what it waited before.
-await graphql(
-  'mutation($minutes: Int!) { setTaskSweepMinutes(minutes: $minutes) { taskSweepMinutes } }',
-  { minutes: started.taskSweepMinutes },
-);
-const ended = await stored();
-record(
-  ended.taskSweepMinutes === started.taskSweepMinutes,
-  `put back to ${ended.taskSweepMinutes}`,
-);
+// Nothing was changed where the field is not offered, and the mutation is
+// refused there anyway - it is the same rule, on the server's side of it.
+if (inline) {
+  await graphql(
+    'mutation($minutes: Int!) { setTaskSweepMinutes(minutes: $minutes) { taskSweepMinutes } }',
+    { minutes: started.taskSweepMinutes },
+  );
+  const ended = await stored();
+  record(
+    ended.taskSweepMinutes === started.taskSweepMinutes,
+    `put back to ${ended.taskSweepMinutes}`,
+  );
+}
 
 await finish(browser);

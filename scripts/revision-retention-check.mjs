@@ -41,6 +41,16 @@ const field = () => page.getByLabel('How many days of component history to keep'
 
 await page.goto(SETTINGS, { waitUntil: 'domcontentloaded' });
 if (await drawn(page, 'admin settings')) {
+  /*
+   * Waited for, not counted straight away.
+   *
+   * `drawn` is satisfied by the shell - the nav down the side is text, and it
+   * is on screen before the settings this page is made of have arrived - so
+   * the heading was being counted on a page that had not drawn it yet. Every
+   * assertion under this one waits for the field and passed the whole time,
+   * which is what a lone failure at the top of a passing check looks like.
+   */
+  await field().waitFor({ state: 'visible', timeout: 20_000 });
   const heading = await page.getByText('Component history', { exact: true }).count();
   record(heading > 0, 'the settings page has a Component history section');
 

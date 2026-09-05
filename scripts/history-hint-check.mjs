@@ -240,6 +240,21 @@ try {
       .catch(() => false);
     if (!record(there, `${what} draws the ${region} panel`)) continue;
 
+    /*
+     * And then waited for it to have decided what it holds.
+     *
+     * The panel draws a loader while it fetches, and the region exists the
+     * whole time - so everything below could be read off a panel that had not
+     * answered yet. It showed as the status being `null` on one of the two
+     * pages and the right words on the other, which is a race reported as a
+     * difference between two screens that draw the same component.
+     */
+    await found
+      .locator('[class*="empty"], [class*="list"], [class*="error"]')
+      .first()
+      .waitFor({ state: 'visible', timeout: 20_000 })
+      .catch(() => {});
+
     const said = (await found.innerText()).replace(/\s+/g, ' ').trim();
 
     // The (?) is there, and it is the one about this panel rather than a
