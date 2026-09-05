@@ -657,12 +657,18 @@ export const TESTS = [
   {
     name: 'chat-header-check',
     what: 'the title bar is one row, its search searches, and its delete asks first',
-    needs: [],
+    needs: ['workspace'],
     /*
      * The delete assertion is the one that matters. The trash button called
      * `deleteChat` straight through - one press, nothing said, every message
      * gone - from the header and from the row menu both. The check presses it
      * and asserts the chat is still there.
+     *
+     * 'workspace' rather than nothing. It used to open whichever chat `/chat`
+     * landed on, which is why it was declared as needing none - and it hung on
+     * a workspace whose newest conversation was empty, because the find has to
+     * have something to find. It starts a chat of its own now and deletes it
+     * again, so what it needs is a workspace with an agent to start one on.
      */
   },
 
