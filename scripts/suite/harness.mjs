@@ -161,28 +161,60 @@ export function failures() {
  * thing that is not there answers with a short card saying so, and a bare "drew
  * nothing" cannot tell that from a page that failed to render.
  *
+ * **And wait for it to stop.** "Has drawn something" was the wrong question and
+ * cost a day of chasing findings that were not there. Every page in this
+ * product is drawn in two parts - the shell, which is text on screen in a
+ * frame, and then the thing the page is about, which arrives when the server
+ * answers. Asking only whether there was *any* text meant this returned on the
+ * navigation down the side, and eight checks then measured a page that had not
+ * loaded yet:
+ *
+ *   "10 per page draws 10 rows (drew 0)"        the rows had not arrived
+ *   "the settings page has a Component history  the section had not arrived
+ *    section"
+ *   "the button is on Gemma 31B"                the model rows had not arrived
+ *   "with chat on, the workspace offers chat's  `main` held 155 characters for
+ *    own settings"                              the first three seconds
+ *
+ * Every one of those reads as the product having lost something. So a page is
+ * drawn when its text is the same twice running, [still] apart - which is cheap,
+ * needs no check to know what it is waiting for by name, and is exactly the
+ * difference between "something is on screen" and "this is the answer".
+ *
+ * [still]`: 0` waives that for a page that is genuinely never still. Nothing
+ * needs it today; it is here so that the one that does can say so out loud
+ * rather than going back to the old behaviour for everybody.
+ *
  * Returns true when the page drew, false when it did not - having already
  * recorded the failure, so the caller's job is only to stop reading.
  *
  *   if (!(await drawn(page, 'admin settings'))) continue;
  */
 export async function drawn(page, name, options = {}) {
-  const { within = 20_000, atLeast = 1, where = 'body' } = options;
+  const { within = 20_000, atLeast = 1, where = 'body', still = 400 } = options;
   const upTo = Date.now() + within;
   let held = '';
+  let before = null;
+  let moved = false;
   for (;;) {
     held = await page.evaluate((selector) => document.querySelector(selector)?.innerText ?? '', where);
     // A [role="status"] is the loading mark; while one is on screen the page is
     // still deciding what it holds, and what it holds now is not an answer.
     const loading = (await page.locator('[role="status"]').count()) > 0;
-    if (held.trim().length >= atLeast && !loading) return true;
+    const settled = still === 0 || (before !== null && held === before);
+    if (held.trim().length >= atLeast && !loading && settled) return true;
+    if (before !== null && held !== before) moved = true;
+    before = held;
     if (Date.now() >= upTo) break;
-    await page.waitForTimeout(250);
+    await page.waitForTimeout(still === 0 ? 250 : still);
   }
   return record(
     false,
-    `${name}: the page drew ${held.trim().length} characters in ${within / 1000}s and settled on none of it, ` +
-      `so nothing read off it means a thing. <${where}> holds: ${JSON.stringify(held.replace(/\s+/g, ' ').slice(0, 200))}`,
+    moved
+      ? `${name}: the page was still changing ${within / 1000}s after it was opened, so nothing read off it is ` +
+        `what it will settle on. <${where}> holds: ${JSON.stringify(held.replace(/\s+/g, ' ').slice(0, 200))}`
+      : `${name}: the page drew ${held.trim().length} characters in ${within / 1000}s and settled on none of it, ` +
+        `so nothing read off it means a thing. <${where}> holds: ${JSON.stringify(held.replace(/\s+/g, ' ').slice(0, 200))}`,
   );
 }
 

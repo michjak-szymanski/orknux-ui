@@ -326,15 +326,60 @@ function report(result, worker) {
  * browser mid-assertion produces output nobody can read and the answer to "is
  * this build broken" has already arrived.
  */
+/*
+ * Except the ones that cannot share the installation.
+ *
+ * Sharding gives each worker its own workspace, which is the whole of what a
+ * check normally touches. Two do not stop there: `chat-off-check` switches chat
+ * off for the *installation*, and `language-check` puts alice into Polish - and
+ * every worker signs in as alice. Anything running beside either one is reading
+ * a different product, and it fails for a reason that is nowhere in its own
+ * output.
+ *
+ * That is what the last full run's three unexplained failures were:
+ * `hint-hover`, `component-history` and `agent-retry` all pass alone and all
+ * failed beside those two. So a check marked `alone` waits for the others to
+ * finish, runs by itself, and lets them start again - which costs the length of
+ * that one check and buys an answer that means something.
+ */
+let running = 0;
+let holding = false;
+
+/** Nothing else in flight, and nothing else starting, until this one is done. */
+async function toItself(test, at) {
+  holding = true;
+  while (running > 0) await new Promise((wake) => setTimeout(wake, 100));
+  running += 1;
+  try {
+    return await run(test, at);
+  } finally {
+    running -= 1;
+    holding = false;
+  }
+}
+
 let next = 0;
 async function worker(at) {
   for (;;) {
+    if (stoppedAt !== null) return;
+    while (holding && stoppedAt === null) await new Promise((wake) => setTimeout(wake, 100));
     if (stoppedAt !== null) return;
     const mine = next;
     next += 1;
     if (mine >= chosen.length) return;
 
-    const result = await run(chosen[mine], at);
+    const test = chosen[mine];
+    let result;
+    if (test.alone === true && jobs > 1) {
+      result = await toItself(test, at);
+    } else {
+      running += 1;
+      try {
+        result = await run(test, at);
+      } finally {
+        running -= 1;
+      }
+    }
     done.push(result);
     report(result, at);
     if (result.code !== 0 && failFast) {

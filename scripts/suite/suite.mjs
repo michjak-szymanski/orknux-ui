@@ -23,6 +23,12 @@
  *
  * `ci: false` means exactly one thing: this check is not run by the CI job. The
  * reason is written beside it, and it is never "it is flaky".
+ *
+ * `alone: true` means this check changes something the whole installation
+ * shares, so nothing may run beside it. Sharding hands each worker its own
+ * workspace, which covers everything a check normally touches; it does not
+ * cover a switch in Admin or the language on the account every worker signs in
+ * as. Two checks are in that position and both say so.
  */
 export const TESTS = [
   // --- the editor canvas -----------------------------------------------------
@@ -639,6 +645,9 @@ export const TESTS = [
     name: 'chat-off-check',
     what: 'an installation with chat switched off stops offering chat’s settings',
     needs: ['workspace'],
+    // It switches chat off for the whole installation, so anything running
+    // beside it is reading a product without chat in it.
+    alone: true,
     /*
      * Issue #201. The only check here that changes an installation-wide
      * setting: it turns chat off, reads the workspace's settings page, and puts
@@ -2475,6 +2484,11 @@ export const TESTS = [
     name: 'language-check',
     what: 'a language switch that reaches the server, redraws the page and moves <html lang>',
     needs: ['session'],
+    // Every worker signs in as alice, and this puts alice into Polish for as
+    // long as it runs. Everything else finds its controls by their English
+    // names, so beside this one everything else is looking for words that are
+    // not on the screen.
+    alone: true,
     /*
      * The only check that ever sets alice's language, and it sets it back in a
      * `finally`. Everything else in this suite finds its controls by their
