@@ -78,8 +78,25 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
 
   useEffect(() => {
     if (modelId === '') return;
+    /*
+     * An answer that is no longer wanted is dropped rather than drawn.
+     *
+     * `apply` fills every box on this page from what came back, so a load that
+     * lands late writes the stored model over whatever is in them - the same
+     * defect as #324 in the function editor. Two ways in: a reply that arrives
+     * after somebody has begun typing, which showed as a Context Window that
+     * saved as empty however carefully it was entered; and the reply for the
+     * model that was open a moment ago landing after the one now open, which
+     * draws one model's numbers under another's name.
+     *
+     * Nothing on screen says either happened. The box still reads what was
+     * typed - it is the state behind it that was put back, and the save sends
+     * the state.
+     */
+    let abandoned = false;
     fetchModel(modelId)
       .then((found) => {
+        if (abandoned) return;
         if (found === null) {
           setLoadError(t('That model does not exist, or you do not have access to it.'));
           return;
@@ -87,14 +104,22 @@ export function ModelSettingsPage({ session, onSignOut }: ModelSettingsPageProps
         apply(found);
       })
       .catch((cause: unknown) => {
+        if (abandoned) return;
         setLoadError(cause instanceof Error ? cause.message : t('Could not load the model.'));
       });
 
     // The metrics are their own request: the settings should still show if the
     // usage query is the thing that failed.
     fetchModelUsage(modelId)
-      .then(setUsage)
-      .catch(() => setUsage(null));
+      .then((held) => {
+        if (!abandoned) setUsage(held);
+      })
+      .catch(() => {
+        if (!abandoned) setUsage(null);
+      });
+    return () => {
+      abandoned = true;
+    };
   }, [modelId]);
 
   function apply(found: Model) {
