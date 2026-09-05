@@ -436,6 +436,15 @@ export const TESTS = [
     what: 'naming a package on the Libraries screen: the field, the pinned version, and the refusal',
     needs: ['session'],
     /*
+     * A library belongs to the installation, not to a workspace, so sharding
+     * does not separate this from `library-bundle-check` - they read and write
+     * one list. It counts the rows before a refused install and again after, to
+     * say nothing was loaded; the other one adding or removing a library in
+     * between makes that count differ, and the failure reads as a refusal that
+     * installed something anyway.
+     */
+    alone: true,
+    /*
      * Issue #265. It reaches no registry, and could not be in this suite if it
      * did: what it drives is the half that is answered before anything is
      * fetched - a tag instead of a version - so it runs on a machine with no way
@@ -598,6 +607,9 @@ export const TESTS = [
     name: 'library-bundle-check',
     what: 'several files chosen at once, asked about, and made into one library',
     needs: ['session'],
+    // The other half of the pair above: one installation-wide list of
+    // libraries, and two checks that both write to it.
+    alone: true,
     /*
      * Issue #319. The server half is `LibraryBundleTest`, `LibraryBundleInstallTest`
      * and the two upload tests in `ScriptLibraryTest`: the graph is walked, the
