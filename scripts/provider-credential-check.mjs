@@ -232,6 +232,20 @@ async function offered(typed = '', label = 'API Key') {
   const search = page.locator(`input[aria-label="Search workspace secrets for the ${label}"]`);
   await search.waitFor({ state: 'visible', timeout: 10_000 });
   if (typed !== '') await search.fill(typed);
+  /*
+   * The rows are fetched when the picker opens, so two hundred milliseconds is
+   * a guess at how long the server takes. Read too soon it holds nothing, and
+   * every assertion below reports the secret as one the picker does not offer -
+   * which is what this check is written to catch.
+   *
+   * Waited for and not required: an empty list is a real answer here too, so
+   * the wait is allowed to give up and the assertions judge what is there.
+   */
+  await page
+    .locator('[role="listbox"] [role="option"]')
+    .first()
+    .waitFor({ state: 'visible', timeout: 8_000 })
+    .catch(() => {});
   await page.waitForTimeout(200);
   return page.locator('[role="listbox"]').evaluate((node) => ({
     rows: Array.from(node.querySelectorAll('[role="option"]')).map((row) => ({
@@ -624,5 +638,15 @@ record(
 await page.screenshot({ path: shot('provider-credential-missing-row.png') });
 
 stranding = false;
+/*
+ * The route goes before the browser does.
+ *
+ * `finish` closes the browser, and a request the page had already sent is still
+ * inside the handler above when it does - so the handler's `route.fetch` fails
+ * on a context that no longer exists, and the check dies *after* every one of
+ * its assertions has passed. It reported as a failure with nothing failed in
+ * it, which is the worst kind to read.
+ */
+await page.unrouteAll({ behavior: 'ignoreErrors' });
 await sweep();
 await finish(browser);

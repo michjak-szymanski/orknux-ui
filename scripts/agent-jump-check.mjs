@@ -123,6 +123,19 @@ async function measure(root, where) {
     `${where}: nothing to open while the model reads "None - this agent cannot run"`,
   );
 
+  /*
+   * Waited for. The picker is drawn with its "None" row before the workspace's
+   * models have arrived, so reading it straight away finds one option and
+   * concludes the workspace has no model in it - which is a fetch in flight
+   * reported as an empty workspace.
+   */
+  await page
+    .waitForFunction(
+      (id) => (document.getElementById(id)?.options.length ?? 0) > 1,
+      await select.getAttribute('id'),
+      { timeout: 15_000 },
+    )
+    .catch(() => {});
   const options = await select.locator('option').evaluateAll((all) =>
     all.map((one) => ({ value: one.value, label: one.textContent.trim() })).filter((one) => one.value !== ''),
   );
