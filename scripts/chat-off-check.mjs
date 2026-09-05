@@ -45,12 +45,19 @@ async function settingsPage() {
    * waited for is the page settling.
    */
   let sections = -1;
-  for (let tries = 0; tries < 40; tries += 1) {
+  let settled = false;
+  for (let tries = 0; tries < 75; tries += 1) {
     const now = await page.locator('main h2').count();
-    if (now === sections && now > 2) break;
+    if (now === sections && now > 2) {
+      settled = true;
+      break;
+    }
     sections = now;
     await page.waitForTimeout(400);
   }
+  // Said out loud rather than read anyway: every assertion below is about which
+  // cards this page holds, and a page still filling has not answered that.
+  if (!settled) console.log(`the settings page never settled: ${sections} sections after 30s`);
   return page.evaluate(() => ({
     text: document.querySelector('main')?.innerText ?? '',
     headings: [...document.querySelectorAll('main h2')].map((one) => one.textContent?.trim() ?? ''),

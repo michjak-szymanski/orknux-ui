@@ -41,11 +41,23 @@ if (await handling.isChecked()) {
   await page.waitForTimeout(900);
 }
 
+/*
+ * Selected again after each toggle.
+ *
+ * Turning the failure branch on rebuilds the node - a second handle appears, so
+ * the node object is replaced - and React Flow does not always carry the
+ * selection across that. When it does not, every `.selected` read below matches
+ * nothing: the counts come back zero and the `innerText` waits thirty seconds
+ * for a node that is no longer chosen. Which handles a node draws is what this
+ * check is about, so a lost selection must not be allowed to answer it.
+ */
+if (!(await selectNode(page, agent, 'the agent node'))) await finish(browser);
 const handlesBefore = await page.locator('.react-flow__node.selected .react-flow__handle-right, .react-flow__node.selected .react-flow__handle-bottom').count();
 
 await page.getByText('Handle it here', { exact: true }).click();
 await page.waitForTimeout(900);
 
+if (!(await selectNode(page, agent, 'the agent node'))) await finish(browser);
 const handlesAfter = await page.locator('.react-flow__node.selected .react-flow__handle-right, .react-flow__node.selected .react-flow__handle-bottom').count();
 const labels = await page.locator('.react-flow__node.selected').innerText();
 
