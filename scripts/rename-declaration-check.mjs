@@ -161,7 +161,7 @@ try {
 
   await page.getByRole('button', { name: 'Save Changes' }).click();
   // `ValidationStatus`'s own words for a save the server accepted.
-  await page.waitForSelector('text=Saved, and valid', { timeout: 20_000 });
+  await page.waitForSelector('text=Saved and valid', { timeout: 20_000 });
 
   const kept = await stored(stub.id);
   check(kept.name === RENAMED, `the server stores the new name (${kept.name})`);

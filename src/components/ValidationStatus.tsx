@@ -76,6 +76,7 @@ export interface ValidationStatusProps {
  *
  *     The code has not been validated.
  *     Valid - the code compiles and the sandbox's parser accepts it.
+ *     Saved and valid.
  *     Not valid - Line 3: Unexpected token.
  *
  * The head of each is this component's and the tail is the page's, which is
@@ -92,8 +93,17 @@ export function ValidationStatus({ subject, status, saved = false, explains }: V
              * A save is a validation the server performed and accepted, so
              * saying both is not saying the same thing twice - it is why this
              * green can be trusted, and it is one line rather than two badges.
+             *
+             * Saved says it on its own. The tail explains what *valid* means,
+             * which is worth a line the first time somebody validates and is
+             * dead weight once the thing is saved - and the whole of it did not
+             * fit the space, so it arrived cut off mid-word: "Saved, and valid
+             * - the code compiles and the sandbox's parser ac". A sentence the
+             * interface cannot finish is worse than the short one.
              */
-            `${saved ? 'Saved, and valid' : 'Valid'} — ${status.message}`
+            saved
+              ? 'Saved and valid'
+              : `Valid — ${status.message}`
           : `Not valid — ${status.message}`;
 
   const tone = status === null ? styles.dotIdle : status.ok ? styles.dotOk : styles.dotBad;
