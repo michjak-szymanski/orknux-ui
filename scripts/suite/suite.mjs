@@ -66,6 +66,16 @@ export const TESTS = [
     alone: true,
   },
   {
+    name: 'quick-chat-stop-check',
+    what: 'stopping the quick chat mid-request, with the answer held open so no model decides the timing',
+    needs: ['workspace'],
+    /*
+     * It sets the workspace's quick-chat model and puts it back, so it changes
+     * something the installation shares - but only that one field, and only its
+     * own; it does not need `alone`.
+     */
+  },
+  {
     name: 'workflow-switch-check',
     what: 'switching a workflow off from the editor, which asks first, and back on, which does not',
     needs: ['workspace'],

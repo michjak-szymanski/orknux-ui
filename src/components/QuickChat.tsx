@@ -74,6 +74,8 @@ export function QuickChat({ workspacePath }: QuickChatProps) {
   const [said, setSaid] = useState<QuickChatTurn[]>([]);
   const [draft, setDraft] = useState('');
   const [asking, setAsking] = useState(false);
+  /** The in-flight request, so Stop can abort it. Null when nothing is asking. */
+  const inFlight = useRef<AbortController | null>(null);
   /*
    * The changes offered, by the turn each was offered in.
    *
@@ -151,6 +153,8 @@ export function QuickChat({ workspacePath }: QuickChatProps) {
     setSaid(conversation);
     setAsking(true);
     setError(null);
+    const controller = new AbortController();
+    inFlight.current = controller;
     try {
       // The page is read at the moment of asking rather than when the panel
       // opened: somebody can navigate with it open, and "this" then means the
@@ -158,7 +162,7 @@ export function QuickChat({ workspacePath }: QuickChatProps) {
       const answer = await askQuickChat(workspaceId, conversation, {
         label: labelFor(pathname),
         path: pathname,
-      });
+      }, controller.signal);
       const grown: QuickChatTurn[] = [...conversation, { role: 'assistant', content: answer.answer }];
       setSaid(grown);
       if (answer.suggestion !== undefined) {
@@ -187,10 +191,23 @@ export function QuickChat({ workspacePath }: QuickChatProps) {
         setToolOffers((held) => ({ ...held, [grown.length - 1]: { suggestion, inEditor: !unclaimed } }));
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t('That could not be answered.'));
+      // Stop drops the request. The user turn stays - it is what they asked -
+      // and the answer that never came is simply absent, rather than an error
+      // about a thing they chose to end.
+      if (cause instanceof DOMException && cause.name === 'AbortError') {
+        // nothing to say; they stopped it
+      } else {
+        setError(cause instanceof Error ? cause.message : t('That could not be answered.'));
+      }
     } finally {
+      inFlight.current = null;
       setAsking(false);
     }
+  }
+
+  /** Drop the in-flight request. The catch above reads the abort as a stop. */
+  function stop() {
+    inFlight.current?.abort();
   }
 
   /*
@@ -313,9 +330,15 @@ export function QuickChat({ workspacePath }: QuickChatProps) {
               rows={2}
               aria-label={t('Ask about this page')}
             />
-            <button type="submit" className={styles.send} disabled={asking || draft.trim() === ''}>
-              {asking ? '…' : 'Ask'}
-            </button>
+            {asking ? (
+              <button type="button" className={styles.send} onClick={stop} aria-label={t('Stop')}>
+                {t('Stop')}
+              </button>
+            ) : (
+              <button type="submit" className={styles.send} disabled={draft.trim() === ''}>
+                {t('Ask')}
+              </button>
+            )}
           </form>
         </section>
       )}

@@ -65,12 +65,22 @@ export async function askQuickChat(
   workspaceId: string,
   messages: QuickChatTurn[],
   page: QuickChatPage,
+  /**
+   * Aborts the request when the person presses Stop while the model thinks.
+   *
+   * The panel has no streaming to interrupt - one request, one answer - so
+   * stopping is dropping the request rather than telling the server to halt.
+   * The fetch rejects with an AbortError, which the caller reads as "stopped"
+   * rather than as a failure.
+   */
+  signal?: AbortSignal,
 ): Promise<QuickChatAnswer> {
   const answer = await fetch(`/api/workspaces/${workspaceId}/quick-chat`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ messages, page }),
     credentials: 'include',
+    signal,
   });
 
   const said = (await answer.json().catch(() => null)) as
