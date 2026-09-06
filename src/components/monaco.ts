@@ -306,6 +306,34 @@ declare global {
     | { messages: SlackThreadMessage[]; replies: number; error?: undefined }
     | { error: string; messages?: undefined; replies?: undefined };
 
+  type OrknuxRequest = {
+    url: string;
+    /** Any method; lower case is fine, it is upper-cased on the way out. */
+    method?: string;
+    headers?: Record<string, string>;
+    /** Text is sent as it is. Anything else is sent as JSON. */
+    body?: unknown;
+  };
+
+  /**
+   * What came back, or why nothing did.
+   *
+   * A refusal is data rather than a thrown error, for the reason a thread's is:
+   * a condition that cannot reach a service still has to decide, and an
+   * exception makes it undecidable instead of false.
+   */
+  type OrknuxResponse =
+    | {
+        status: number;
+        headers: Record<string, string>;
+        /** The text that arrived, whatever it was. */
+        body: string;
+        /** The same text parsed, when it was JSON. Absent when it was not. */
+        json?: unknown;
+        error?: undefined;
+      }
+    | { error: string; status?: undefined; headers?: undefined; body?: undefined; json?: undefined };
+
   /**
    * What the *server* will do on this function's behalf.
    *
@@ -337,6 +365,29 @@ declare global {
         threadTs: string,
         limit?: number,
       ): SlackThread;
+    };
+
+    /**
+     * Requests the server makes on this function's behalf.
+     *
+     * The function never holds a socket: it hands over a URL and gets an answer
+     * back as data. Where it may get to is the installation's proxy rules — the
+     * same rules a Slack call and an MCP call obey — which this cannot see and
+     * cannot argue with.
+     *
+     * Credentials are not a parameter here. A function is handed its
+     * workspace's variables after its own parameters, so the header is built
+     * from one of those: a token written into the source would be
+     * revision-tracked, exportable, and shown to anything that reads the code.
+     */
+    readonly http: {
+      /**
+       * @param what a URL, or an object of url, method, headers, body. An object body
+       *   is sent as JSON and given a JSON content type unless one was set.
+       */
+      request(what: string | OrknuxRequest): OrknuxResponse;
+      get(url: string, headers?: Record<string, string>): OrknuxResponse;
+      post(url: string, body?: unknown, headers?: Record<string, string>): OrknuxResponse;
     };
   };
 }
