@@ -136,6 +136,8 @@ export interface Workspace {
    * each of them means.
    */
   voiceSpeechChunking: SpeechChunking;
+  /** Whether this workspace's chats show when each message was sent. */
+  chatShowTimestamps: boolean;
 }
 
 const WORKSPACE_FIELDS =
@@ -144,7 +146,7 @@ const WORKSPACE_FIELDS =
   'compactAfterTokens compactionSummaryTokens compactionModelId ' +
   'defaultMemoryShare taskMaxTurns taskMaxTurnsDefault scriptTimeoutSeconds scriptTimeoutSecondsDefault ' +
   'voicePauseEndsTurnMs voiceSpeechOverRoomPercent voiceUnattendedMicrophoneMs ' +
-  'voiceSpeechChunking';
+  'voiceSpeechChunking chatShowTimestamps';
 
 /** Just enough of a role to name it where a workspace lists what opens it. */
 export interface WorkspaceRole {
@@ -256,6 +258,25 @@ export async function setWorkspaceQuickChatModel(
 }
 
 /** Whether the quick chat may start things, or only look them up. */
+/**
+ * Whether this workspace's chats show when each message was sent.
+ *
+ * A display choice, per workspace rather than per person, so a chat two people
+ * open reads the same. Issue #323.
+ */
+export async function setWorkspaceChatTimestamps(
+  workspaceId: string,
+  shown: boolean,
+): Promise<Workspace> {
+  const data = await graphql<{ setWorkspaceChatTimestamps: Workspace }>(
+    `mutation SetWorkspaceChatTimestamps($workspaceId: ID!, $shown: Boolean!) {
+       setWorkspaceChatTimestamps(workspaceId: $workspaceId, shown: $shown) { ${WORKSPACE_FIELDS} }
+     }`,
+    { workspaceId, shown },
+  );
+  return data.setWorkspaceChatTimestamps;
+}
+
 export async function setWorkspaceQuickChatWrites(
   workspaceId: string,
   allowed: boolean,

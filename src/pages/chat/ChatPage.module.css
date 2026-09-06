@@ -572,6 +572,19 @@
 }
 
 /*
+ * When a message was sent, shown only where the workspace turned it on.
+ *
+ * Quiet on purpose: it is context for a message, not a voice in the thread, so
+ * it takes the muted colour and the smallest size and sits inline with the name
+ * rather than starting a line of its own.
+ */
+.sentAt {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
  * Where a call sits in the thread, and nothing about how one looks.
  *
  * What a call looks like is `CallLine`'s, because a task's page draws the same

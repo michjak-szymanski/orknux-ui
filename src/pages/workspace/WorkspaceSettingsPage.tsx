@@ -18,6 +18,7 @@ import {
   setWorkspaceScriptTimeout,
   setWorkspaceTaskMaxTurns,
   setWorkspaceQuickChatModel,
+  setWorkspaceChatTimestamps,
   setWorkspaceQuickChatWrites,
   setWorkspaceSpeechModel,
   setWorkspaceTranscriptionModel,
@@ -317,6 +318,8 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
   const [image, setImage] = useState('');
   const [quickChat, setQuickChat] = useState('');
   const [quickChatWrites, setQuickChatWrites] = useState(false);
+  /** Whether chats in this workspace show when each message was sent. Issue #323. */
+  const [chatTimestamps, setChatTimestamps] = useState(false);
 
   /**
    * Which settings the person actually touched.
@@ -381,6 +384,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         setImage(found?.imageModelId ?? '');
         setQuickChat(found?.quickChatModelId ?? '');
         setQuickChatWrites(found?.quickChatMayWrite ?? false);
+        setChatTimestamps(found?.chatShowTimestamps ?? false);
         setCompactAfter(found?.compactAfterTokens == null ? '' : String(found.compactAfterTokens));
         setSummaryTokens(found?.compactionSummaryTokens == null ? '' : String(found.compactionSummaryTokens));
         setSummariser(found?.compactionModelId ?? '');
@@ -558,6 +562,9 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       if (touched.has('image')) {
         latest = await setWorkspaceImageModel(workspaceId, asNull(image));
       }
+      if (touched.has('chatTimestamps')) {
+        latest = await setWorkspaceChatTimestamps(workspaceId, chatTimestamps);
+      }
       if (touched.has('quickChat')) {
         latest = await setWorkspaceQuickChatModel(workspaceId, asNull(quickChat));
       }
@@ -615,6 +622,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
     setImage(held.imageModelId ?? '');
     setQuickChat(held.quickChatModelId ?? '');
     setQuickChatWrites(held.quickChatMayWrite);
+    setChatTimestamps(held.chatShowTimestamps);
     setPause(inBox(held.voicePauseEndsTurnMs, A_SECOND));
     setOverRoom(inBox(held.voiceSpeechOverRoomPercent, AS_IS));
     setUnattended(inBox(held.voiceUnattendedMicrophoneMs, A_MINUTE));
@@ -1099,6 +1107,25 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
                 ))}
             </select>
             <img src={chevronDown12Icon} alt="" width={12} height={12} />
+          </div>
+
+          {/*
+            A display choice, not a capability, so it is a plain checkbox rather
+            than a model or a limit. Per workspace on purpose: a chat two people
+            open should read the same for both. Issue #323.
+          */}
+          <div className={styles.checkRowWithHint}>
+            <label className={styles.checkRow}>
+              <input
+                type="checkbox"
+                checked={chatTimestamps}
+                onChange={(event) => { touch('chatTimestamps'); setChatTimestamps(event.target.checked); }}
+              />
+              <span>{t('Show when each message was sent')}</span>
+            </label>
+            <FieldHint label={t('Show when each message was sent')}>
+              {t('A small time beside each message in this workspace’s chats. The time was always recorded; this decides whether it is drawn. Off by default.')}
+            </FieldHint>
           </div>
 
         </div>

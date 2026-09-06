@@ -362,7 +362,30 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
    * What to mark a turn with: the one being looked at, one of the others that
    * matched, or nothing.
    */
-  const findMark = (index: number): string | undefined => {
+  /**
+   * A message's send time, drawn only where the workspace shows them.
+   *
+   * Null for a line carried in from the session this chat continues - it was
+   * said before the chat existed - and for a live turn until the reload that
+   * reads its stored time back. Both read as no time rather than a guessed one.
+   * The date is shown as well as the clock only when it is not today, because a
+   * chat opened this afternoon does not need every line stamped with the date.
+   */
+  const sentAt = (at: string | null): string | null => {
+    if (!showTimestamps || at === null) return null;
+    const when = new Date(at);
+    if (Number.isNaN(when.getTime())) return null;
+    const today = new Date();
+    const sameDay =
+      when.getFullYear() === today.getFullYear() &&
+      when.getMonth() === today.getMonth() &&
+      when.getDate() === today.getDate();
+    return sameDay
+      ? when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : when.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
+
+    const findMark = (index: number): string | undefined => {
     if (findHits.length === 0) return undefined;
     if (findHits[findAt] === index) return 'at';
     return findHits.includes(index) ? 'hit' : undefined;
@@ -707,6 +730,8 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
   const [hears, setHears] = useState(false);
   /** Whether a speech model is set, which is what puts a speaker under an answer. */
   const [reads, setReads] = useState(false);
+  /** Whether the workspace shows when each message was sent. Issue #323. */
+  const [showTimestamps, setShowTimestamps] = useState(false);
   /*
    * Whether this chat is being held out loud.
    *
@@ -780,6 +805,7 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
         if (abandoned) return;
         setHears(held?.transcriptionModelId != null);
         setReads(held?.speechModelId != null);
+        setShowTimestamps(held?.chatShowTimestamps ?? false);
         setChunking(held?.voiceSpeechChunking ?? CHUNKING_DEFAULT);
         setTurnTaking(
           held === null
@@ -1133,8 +1159,8 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
 
     setMessages((present) => [
       ...present,
-      { role: 'user', content: text, actor: null, takes: [], thinking: null, thinkingMillis: null },
-      { role: 'assistant', content: '', actor: null, takes: [], thinking: null, thinkingMillis: null },
+      { role: 'user', content: text, actor: null, takes: [], thinking: null, thinkingMillis: null, at: null },
+      { role: 'assistant', content: '', actor: null, takes: [], thinking: null, thinkingMillis: null, at: null },
     ]);
     setError(null);
     setWorking(NOTHING_YET);
@@ -1235,6 +1261,9 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
             takes: [],
             thinking: null,
             thinkingMillis: null,
+            // A drawn image is a fresh line; its time, if shown, arrives with
+            // the reload that reads it back from the store.
+            at: null,
           };
           if (at < 0) return [...present, drawn];
           return [...present.slice(0, at), drawn, present[at]];
@@ -1260,6 +1289,7 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
             takes: [],
             thinking: null,
             thinkingMillis: null,
+            at: null,
           };
           if (at < 0) return [...present, note];
           return [...present.slice(0, at), note, present[at]];
@@ -1359,7 +1389,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
     setAttached([]);
     // Shown straight away: the server has it, and waiting for the model to
     // finish before drawing what was typed reads as a dropped message.
-    setMessages((present) => [...present, { role: 'user', content: said, actor: null, takes: [], thinking: null, thinkingMillis: null }]);
+    setMessages((present) => [...present, { role: 'user', content: said, actor: null, takes: [], thinking: null, thinkingMillis: null, at: null }]);
     setError(null);
     // The last answer's working, cleared as this one starts. It stayed on
     // screen after that answer landed on purpose; it belongs to that answer,
@@ -1368,7 +1398,7 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
     thinkingSoFar.current = '';
     // The answer grows in place as it arrives, so the empty assistant turn is
     // appended first and each piece lands on the end of it.
-    setMessages((present) => [...present, { role: 'assistant', content: '', actor: null, takes: [], thinking: null, thinkingMillis: null }]);
+    setMessages((present) => [...present, { role: 'assistant', content: '', actor: null, takes: [], thinking: null, thinkingMillis: null, at: null }]);
     const asked = new AbortController();
     asking.current = asked;
     try {
@@ -2328,6 +2358,9 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                       and unnamed it reads as something the reader typed.
                     */}
                     {message.actor !== null && <span className={styles.saidBy}>{message.actor}</span>}
+                    {sentAt(message.at) !== null && (
+                      <span className={styles.sentAt}>{sentAt(message.at)}</span>
+                    )}
                     <div className={styles.userBubble}>{message.content}</div>
                     {/*
                       Under the bubble, inside the body, so it lines up with the
@@ -2365,6 +2398,9 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                     <span className={styles.assistantName}>
                       {message.actor ?? current.agentName ?? current.modelName ?? 'assistant'}
                     </span>
+                    {sentAt(message.at) !== null && (
+                      <span className={styles.sentAt}>{sentAt(message.at)}</span>
+                    )}
                     {/* Only the answer just given has a time behind it. */}
                     {lastSpend !== null && index === messages.length - 1 && (
                       <button

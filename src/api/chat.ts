@@ -108,6 +108,12 @@ export interface ChatMessage {
    * measurement and are not is worse than one number missing.
    */
   thinkingMillis: number | null;
+  /**
+   * When it was sent, ISO-8601, or null for a line carried in from the LLM
+   * session this chat continues - said before the chat existed. Drawn only
+   * where the workspace has turned message times on.
+   */
+  at: string | null;
 }
 
 /** The role a call reads under, which is not a turn anybody took. */
@@ -196,7 +202,7 @@ export async function fetchChatsMentioning(workspaceId: string, text: string): P
 
 export async function fetchChatMessages(id: string): Promise<ChatMessage[]> {
   const data = await graphql<{ chatMessages: ChatMessage[] }>(
-    'query ChatMessages($id: ID!) { chatMessages(id: $id) { role content actor takes thinking thinkingMillis } }',
+    'query ChatMessages($id: ID!) { chatMessages(id: $id) { role content actor takes thinking thinkingMillis at } }',
     { id },
   );
   return data.chatMessages;
@@ -279,7 +285,7 @@ export async function sendChatMessage(id: string, text: string): Promise<ChatAns
     `mutation SendChatMessage($id: ID!, $text: String!) {
        sendChatMessage(id: $id, text: $text) {
          session { ${SESSION_FIELDS} }
-         answer { role content actor takes thinking thinkingMillis }
+         answer { role content actor takes thinking thinkingMillis at }
          millis inputTokens outputTokens cost
        }
      }`,
