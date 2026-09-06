@@ -1274,7 +1274,7 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
        * so this is said where the conversation is rather than beside the answer:
        * a line in the transcript, at the point the older turns used to be.
        */
-      onCompacted: (held: { replaced: number; kept: number; tokens: number }) => {
+      onCompacted: (held: { replaced: number; kept: number; tokens: number; summary: string }) => {
         setWorking((present) => ({ ...present, compacting: false }));
         setMessages((present) => {
           const at = present.length - 1;
@@ -1290,6 +1290,9 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
             thinking: null,
             thinkingMillis: null,
             at: null,
+            // Carries the summary so the note can reveal it, collapsed by
+            // default. Empty when an older server sent no summary text.
+            compaction: held.summary === '' ? null : { replaced: held.replaced, summary: held.summary },
           };
           if (at < 0) return [...present, note];
           return [...present.slice(0, at), note, present[at]];
@@ -2335,7 +2338,19 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
                 is the calls that were made, and the data they returned belongs
                 in front of the model rather than in the thread.
               */}
-              {message.role === CALL_ROLE ? (
+              {message.compaction != null ? (
+                /*
+                  The note a compaction left, with the summary it made folded
+                  inside it. Collapsed by default - it is a housekeeping line,
+                  not a turn, and somebody reading the conversation should not
+                  have a summary of the part they already read pushed in front
+                  of what came next. Open it to see what was kept. Issue #332.
+                */
+                <details className={styles.compaction}>
+                  <summary className={styles.compactionLine}>{message.content}</summary>
+                  <div className={styles.compactionSummary}>{message.compaction.summary}</div>
+                </details>
+              ) : message.role === CALL_ROLE ? (
                 <div className={styles.call}>
                   {/*
                     Folded, the same as one arriving live.

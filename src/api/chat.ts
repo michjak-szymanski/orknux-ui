@@ -114,6 +114,13 @@ export interface ChatMessage {
    * where the workspace has turned message times on.
    */
   at: string | null;
+  /**
+   * When this line is the note a compaction left rather than a turn, the
+   * summary it carries and how many turns it replaced - so the chat can show
+   * the summary collapsed rather than only saying how many went. Absent on
+   * every ordinary message. Issue #332.
+   */
+  compaction?: { replaced: number; summary: string } | null;
 }
 
 /** The role a call reads under, which is not a turn anybody took. */
@@ -354,7 +361,7 @@ export interface ChatStreamHandlers {
    * silently is the behaviour people remember as the product having lost their
    * conversation.
    */
-  onCompacted?: (held: { replaced: number; kept: number; tokens: number }) => void;
+  onCompacted?: (held: { replaced: number; kept: number; tokens: number; summary: string }) => void;
   onDone: (spend: ChatSpend) => void;
   onError: (reason: string) => void;
 }
@@ -457,6 +464,7 @@ async function read(response: Response, handlers: ChatStreamHandlers): Promise<v
       replaced?: number;
       kept?: number;
       tokens?: number;
+      summary?: string;
     }>(frame);
     if (payload === null) return;
 
@@ -469,6 +477,7 @@ async function read(response: Response, handlers: ChatStreamHandlers): Promise<v
         replaced: payload.replaced,
         kept: payload.kept ?? 0,
         tokens: payload.tokens ?? 0,
+        summary: payload.summary ?? '',
       });
     }
     else if (frame.event === 'call' && payload.at !== undefined) {

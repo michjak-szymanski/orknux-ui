@@ -1534,3 +1534,38 @@ button.attachmentName {
 @media (prefers-reduced-motion: reduce) {
   .compacting { animation: none; opacity: 0.8; }
 }
+
+/*
+ * A compaction's note, with its summary folded inside.
+ *
+ * A housekeeping line rather than a voice in the thread, so it is muted and
+ * centred and does not wear a bubble - and it is closed until asked, because a
+ * summary of the part somebody already read does not belong in front of what
+ * came after it. Issue #332.
+ */
+.compaction {
+  align-self: center;
+  max-width: 90%;
+  margin: var(--space-8) 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.compactionLine {
+  cursor: pointer;
+  text-align: center;
+  list-style: none;
+}
+
+.compactionLine::-webkit-details-marker {
+  display: none;
+}
+
+.compactionSummary {
+  margin-top: var(--space-8);
+  padding: var(--space-12);
+  border-left: 2px solid var(--color-border);
+  white-space: pre-wrap;
+  color: var(--color-text-secondary);
+  text-align: left;
+}
