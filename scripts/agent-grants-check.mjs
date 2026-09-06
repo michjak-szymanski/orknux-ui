@@ -74,6 +74,8 @@ let mine = [];
 async function sweep() {
   for (const tool of mine) await deleteTool(tool.id).catch(() => {});
   mine = [];
+  for (const one of myServers) await deleteServer(one.id).catch(() => {});
+  myServers = [];
 }
 
 const stale = (await listTools()).filter((tool) => tool.name.startsWith(SCRATCH));
@@ -84,6 +86,42 @@ for (let held = (await listTools()).length; held < WANT_ROWS; held += 1) {
   mine.push(await createTool(`${SCRATCH}${String(held).padStart(2, '0')}`));
 }
 if (mine.length > 0) console.log(`NOTE: made ${mine.length} scratch tool(s) to reach ${WANT_ROWS} rows`);
+
+const listServers = async () =>
+  (
+    await graphql(
+      `query ($workspaceId: ID!) {
+         mcpServers(workspaceId: $workspaceId) { id name }
+       }`,
+      { workspaceId: WORKSPACE },
+    )
+  ).mcpServers;
+
+const createServer = async (name) =>
+  (
+    await graphql(`mutation ($input: CreateMcpServerInput!) { createMcpServer(input: $input) { id name } }`, {
+      input: { workspaceId: WORKSPACE, name, address: 'http://localhost:9/mcp' },
+    })
+  ).createMcpServer;
+
+const deleteServer = (id) => graphql(`mutation ($id: ID!) { removeMcpServer(id: $id) }`, { id });
+
+/*
+ * The MCP group is a grant list like the other three now, so it is measured
+ * like them - against rows, which means there have to be some. They are
+ * registered servers rather than names typed into the form, because that is
+ * what the list draws; the address is unreachable on purpose and never dialled,
+ * since nothing here connects to one.
+ */
+let myServers = [];
+const staleServers = (await listServers()).filter((one) => one.name.startsWith(SCRATCH));
+for (const one of staleServers) await deleteServer(one.id).catch(() => {});
+if (staleServers.length > 0) console.log(`NOTE: swept ${staleServers.length} scratch server(s) from an earlier run`);
+
+for (let held = (await listServers()).length; held < WANT_ROWS; held += 1) {
+  myServers.push(await createServer(`${SCRATCH}server${String(held).padStart(2, '0')}`));
+}
+if (myServers.length > 0) console.log(`NOTE: made ${myServers.length} scratch MCP server(s) to reach ${WANT_ROWS} rows`);
 
 /** The agent the editor's panel opens, so both frames are asked about one agent. */
 const { workflowGraph: graph } = await graphql(
@@ -142,24 +180,6 @@ async function readGroup(root, what) {
 }
 
 /**
- * The MCP servers, which are chips rather than rows and so are read apart: a
- * chip carries no grant name, because every one of them is granted.
- */
-async function readServers(root) {
-  return root.locator('[data-grants="mcp servers"]').evaluate((node) => {
-    const box = node.querySelector('[data-grant-rows]');
-    const after = box?.nextElementSibling ?? null;
-    return {
-      chips: box === null ? 0 : box.children.length,
-      boxHeight: box === null ? 0 : Math.round(box.getBoundingClientRect().height),
-      wanted: box === null ? 0 : box.scrollHeight,
-      /* The "+ Add Server" control, which must not be inside what scrolls. */
-      addBelow: after !== null && (after.textContent ?? '').includes('Add Server'),
-    };
-  });
-}
-
-/**
  * One frame, from the wall it used to draw to the search that narrows it and
  * back again. `where` is only what the failures are called.
  */
@@ -191,7 +211,7 @@ async function measure(root, where) {
   );
 
   // Every group on the form, not only the one the litter is in.
-  for (const what of ['memory catalogs', 'skill catalogs', 'tools']) {
+  for (const what of ['memory catalogs', 'skill catalogs', 'tools', 'mcp servers']) {
     const group = await readGroup(root, what);
     if (group === null) {
       record(false, `${where}: no group called ${what}`);
@@ -222,33 +242,24 @@ async function measure(root, where) {
   }
 
   /*
-   * The fourth group #172 names, and the one that had to be measured against
-   * something rather than against an empty box: an agent with no MCP servers
-   * satisfies any cap at all. So where there are none, twenty-six are typed in -
-   * into the form, never saved - and taken out again afterwards.
+   * The fourth group #172 names, which used to be the odd one out: a row of
+   * chips with a box to type a name into, so granting a server meant knowing
+   * its name by heart and nothing on screen said which ones existed. It is the
+   * same list as the other three now, so the loop above measures it the same
+   * way and there is nothing left here to do apart from say that it is a list.
    */
-  let servers = await readServers(root);
-  const scratchChips = servers.chips === 0 ? 26 : 0;
-  for (let n = 0; n < scratchChips; n += 1) {
-    await root.getByRole('button', { name: '+ Add Server' }).click();
-    await root.getByLabel('New MCP server').fill(`${SCRATCH}server${n}`);
-    await root.getByLabel('New MCP server').press('Enter');
-  }
-  servers = await readServers(root);
-
-  record(servers.chips >= 26, `${where}: the MCP group is holding ${servers.chips} servers to be measured with`);
-  record(
-    servers.boxHeight <= 100,
-    `${where}: the chips are bounded at ${servers.boxHeight}px, wanting ${servers.wanted}px`,
-  );
-  record(servers.wanted > servers.boxHeight + 1, `${where}: and are really clipped rather than merely fitting`);
-  record(
-    servers.addBelow,
-    `${where}: the way to add one is outside the box, where scrolling the chips cannot take it away`,
-  );
-
-  for (let n = 0; n < scratchChips; n += 1) {
-    await root.locator('[data-grants="mcp servers"] [data-grant-rows] button').first().click();
+  const servers = await readGroup(root, 'mcp servers');
+  if (servers === null) {
+    record(false, `${where}: there is no MCP Servers group on this form`);
+  } else {
+    record(
+      servers.names.length >= SEARCH_FROM,
+      `${where}: MCP Servers draws the workspace's ${servers.names.length} servers as rows, not only the granted ones`,
+    );
+    record(
+      servers.searchable,
+      `${where}: and is searchable at that size, like every other group on the form`,
+    );
   }
 
   // ---- #172: a granted row survives the search -----------------------------

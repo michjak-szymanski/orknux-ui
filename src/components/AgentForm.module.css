@@ -4,7 +4,7 @@
  * The same form is a card on the agent's own page and a panel down the left of
  * the workflow editor, so it paints itself with class names handed in. These
  * are the few neither frame had: a disclosure for the system prompt, the rows a
- * grant is ticked on, and the chips an MCP server is named in.
+ * grant is ticked on.
  */
 
 .labelWithHint {
@@ -211,10 +211,10 @@
  * a tick, a name and a count - so it takes no padding of its own, which at this
  * row's height would be the difference between six rows in the box and five.
  *
- * One class for the checkbox rows and the server chips alike, rather than two
- * that would say the same thing and drift: what differs between them is the box
- * around the mark, not the mark. `flex: none` is what keeps it from being
- * squeezed away by a long name in the editor's narrow panel.
+ * `flex: none` is what keeps it from being squeezed away by a long name in the
+ * editor's narrow panel. It was written for the checkbox rows and the MCP
+ * server chips alike; the chips are gone - MCP servers are a grant list like
+ * the others now - and the one class stayed where it was needed.
  */
 .grantJump {
   display: inline-flex;
@@ -232,84 +232,6 @@
   margin: 0;
   font-size: var(--text-md);
   color: var(--color-text-muted);
-}
-
-/* ---- MCP servers ---- */
-
-/*
- * A column rather than one wrapping row: the chips are bounded and scroll, and
- * the way to add one sits under them where scrolling cannot take it away.
- */
-.servers {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-8);
-}
-
-/*
- * Bounded like the grant lists, at three rows of chips. Chips are far denser
- * than checkbox rows, so the same number of names costs a fraction of the
- * height - which is why this cap is smaller and why there is no search box
- * over it.
- */
-.serverChips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-8);
-  width: 100%;
-  max-height: 96px;
-  overflow-y: auto;
-}
-
-.chip {
-  display: flex;
-  align-items: center;
-  gap: var(--space-6);
-  padding: var(--space-4) var(--space-8);
-  background: var(--color-border);
-  border-radius: var(--radius-4);
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  color: var(--color-text-primary);
-}
-
-.chipRemove {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 12px;
-  height: 12px;
-  padding: 0;
-  background: none;
-  border: 0;
-  cursor: pointer;
-}
-
-.addServer {
-  padding: 0 var(--space-4);
-  background: none;
-  border: 0;
-  font-weight: 500;
-  font-size: var(--text-md);
-  color: var(--color-accent-brand);
-  cursor: pointer;
-}
-
-.newServer {
-  width: 160px;
-  padding: var(--space-4) var(--space-8);
-  background: var(--color-bg);
-  border: 1px solid var(--color-accent-brand);
-  border-radius: var(--radius-4);
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  color: var(--color-text-primary);
-}
-
-.newServer:focus {
-  outline: none;
 }
 
 /* ---- Session memory (issue #226) ---- */

@@ -23,17 +23,18 @@
  * exactly those. A frame that forgot one is a form with no way out in half the
  * places it is shown.
  *
- * It writes one thing: an MCP server to name, so the chip that names something
- * registered can be told from the chip that names nothing. It is removed at the
- * end, and any left behind by a killed run are swept at the start. The agent is
- * never saved.
+ * It writes two things: an MCP server to name, so the row naming something
+ * registered can be told from the row naming nothing, and - since the list
+ * draws the workspace rather than a box to type into - that second grant on the
+ * agent itself. Both are put back at the end, and any server left behind by a
+ * killed run is swept at the start.
  */
 import { BASE, WORKSPACE, WORKFLOW, open, record, shot, finish } from './suite/harness.mjs';
 
 /** Nobody's MCP server is called this. The sweep is by prefix. */
 const SCRATCH = 'jumpCheckServer_';
 
-/** A chip naming nothing this workspace has, which must get no mark. */
+/** A grant naming nothing this workspace has, which must be drawn and must get no mark. */
 const UNKNOWN = 'jumpCheckServer_notRegistered';
 
 const { browser, page, graphql } = await open({ viewport: { width: 1440, height: 1000 } });
@@ -69,7 +70,35 @@ const { workflowGraph: graph } = await graphql(
 );
 const agentNode = graph.nodes.find((node) => node.kind === 'AGENT' && node.agentId !== null) ?? null;
 
+/*
+ * The grant that names nothing.
+ *
+ * It used to be typed into the form and never saved, because the control was a
+ * box to type a name into. The list draws the workspace's servers now, so the
+ * only way to have a grant the workspace has no row for is to hold one: it goes
+ * on the agent here and comes off in `done`, and it is the one thing this check
+ * saves. `held` is what the agent granted before, restored exactly.
+ */
+let held = null;
+
+async function grantUnknown() {
+  const { agent } = await graphql(`query ($id: ID!) { agent(id: $id) { id name type mcpServers } }`, {
+    id: agentNode.agentId,
+  });
+  held = agent;
+  await graphql(`mutation ($id: ID!, $input: UpdateAgentInput!) { updateAgent(id: $id, input: $input) { id } }`, {
+    id: agent.id,
+    input: { name: agent.name, type: agent.type, mcpServers: [...agent.mcpServers, UNKNOWN] },
+  });
+}
+
 async function done(...extras) {
+  if (held !== null) {
+    await graphql(`mutation ($id: ID!, $input: UpdateAgentInput!) { updateAgent(id: $id, input: $input) { id } }`, {
+      id: held.id,
+      input: { name: held.name, type: held.type, mcpServers: held.mcpServers },
+    }).catch(() => {});
+  }
   await removeServer(registered.id).catch(() => {});
   await finish(browser, ...extras);
 }
@@ -189,39 +218,41 @@ async function measure(root, where) {
   // ---- the MCP servers ---------------------------------------------------
 
   /*
-   * A grant here is a name somebody typed rather than a reference, so the two
-   * cases are different marks: one names a server this workspace has, the other
-   * names nothing, and a way out to a page that would answer "no such server"
-   * is worse than none at all.
+   * Two rows, and what tells them apart is the mark. One names a server this
+   * workspace has and opens it; the other names nothing this workspace has - a
+   * grant left behind by a rename or a deletion - and carries no way out,
+   * because a way out to a page that would answer "no such server" is worse
+   * than none at all.
+   *
+   * The unknown one is drawn at all, which is the half worth stating: the list
+   * draws the workspace, and a grant with no row in it would otherwise be
+   * invisible while still being granted and still being sent to the agent.
    */
-  for (const named of [registered.name, UNKNOWN]) {
-    await root.getByRole('button', { name: '+ Add Server' }).click();
-    await root.getByLabel('New MCP server').fill(named);
-    await root.getByLabel('New MCP server').press('Enter');
-  }
-  await page.waitForTimeout(200);
-
-  const chips = await root.locator('[data-grants="mcp servers"]').evaluate((node) =>
-    Array.from(node.querySelectorAll('[data-grant-rows] > *')).map((chip) => ({
-      text: chip.innerText.trim(),
-      href: chip.querySelector('a')?.getAttribute('href') ?? null,
-    })),
-  );
-  const known = chips.find((chip) => chip.text.startsWith(registered.name));
-  const unknown = chips.find((chip) => chip.text.startsWith(UNKNOWN));
-  record(
-    known?.href === `/workspace/${WORKSPACE}/integrations/servers/${registered.id}`,
-    `${where}: the chip naming a registered server opens it (${known?.href})`,
-  );
-  record(unknown?.href === null, `${where}: and the chip naming nothing registered carries no way out`);
-
-  // Put the form back as it was found; nothing here is ever saved.
-  for (let taken = 0; taken < 2; taken += 1) {
-    await root.locator('[data-grants="mcp servers"] [data-grant-rows] button').last().click();
+  const servers = await rowsOf(root, 'mcp servers');
+  if (servers === null) {
+    record(false, `${where}: there is no MCP Servers group on this form`);
+  } else {
+    const known = servers.find((row) => row.name === registered.name);
+    const unknown = servers.find((row) => row.name === UNKNOWN);
+    record(
+      known?.href === `/workspace/${WORKSPACE}/integrations/servers/${registered.id}`,
+      `${where}: the row naming a registered server opens it (${known?.href})`,
+    );
+    record(
+      unknown !== undefined,
+      `${where}: a grant the workspace has no server for is still drawn, rather than silently dropped`,
+    );
+    record(
+      unknown !== undefined && unknown.href === null,
+      `${where}: and it carries no way out, because there is nothing to open`,
+    );
   }
 }
 
 // ------------------------------------------------------------- the two frames
+
+// Before either frame is opened, so both are asked about the same agent.
+await grantUnknown();
 
 const settings = `/workspace/${WORKSPACE}/agents/${agentNode.agentId}/settings`;
 await page.goto(`${BASE}${settings}`, { waitUntil: 'domcontentloaded' });

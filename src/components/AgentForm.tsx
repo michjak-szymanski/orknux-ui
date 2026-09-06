@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import type { FormEvent, KeyboardEvent, ReactNode } from 'react';
+import { useEffect, useState } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 import { fetchMemoryBudget, updateAgent } from '../api/agents';
@@ -16,7 +16,6 @@ import { fetchWorkspaceTools } from '../api/tools';
 import type { Tool } from '../api/tools';
 import chevronDownIcon from '../assets/chevron-down.svg';
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
-import xCircleIcon from '../assets/x-circle.svg';
 import { CatalogueNote, useCatalogue } from './Catalogue';
 import type { Catalogue } from './Catalogue';
 import { FieldHint } from './FieldHint';
@@ -167,6 +166,12 @@ interface GrantListProps<Item> {
    * finding the page by hand. Issue #251.
    */
   linkOf?: (item: Item) => string | null;
+  /**
+   * The (?) beside the heading, where the kind of grant needs a word of
+   * explanation. Tools and catalogs do not; MCP servers do, because the word
+   * says nothing about what connecting to one lets the agent do.
+   */
+  hint?: ReactNode;
   /** The names granted now. */
   granted: string[];
   onChange: (granted: string[]) => void;
@@ -212,6 +217,7 @@ function GrantList<Item>({
   nameOf,
   metaOf,
   linkOf,
+  hint,
   granted,
   onChange,
 }: GrantListProps<Item>) {
@@ -236,14 +242,30 @@ function GrantList<Item>({
     };
   });
 
+  /*
+   * A grant the catalogue has no row for still gets one.
+   *
+   * The rule above - a ticked row is never hidden - was written about the
+   * search box, but the catalogue can hide a grant just as easily: the thing
+   * was renamed, or deleted, or the list did not arrive. The grant is still
+   * stored and still sent to the agent, so a list that draws only what the
+   * workspace currently has shows an agent with fewer grants than it has, and
+   * the only way to drop one becomes editing something else. Drawn last, marked
+   * as unknown, and revocable - which is the one thing anybody wants from it.
+   */
+  const orphans = granted.filter((name) => !rows.some((row) => row.name === name));
+
   const shown = rows.filter((row) => row.matches || row.ticked);
   const matching = rows.filter((row) => row.matches).length;
-  const here = rows.filter((row) => row.ticked).length;
+  const here = rows.filter((row) => row.ticked).length + orphans.length;
 
   return (
     <div className={styles.field} data-grants={what}>
       <span className={own.grantHead}>
-        <span className={styles.label}>{label}</span>
+        <span className={own.labelWithHint}>
+          <span className={styles.label}>{label}</span>
+          {hint !== undefined && <FieldHint label={label}>{hint}</FieldHint>}
+        </span>
         {/*
           Printed rather than put behind a (?), and that is the rule rather than
           an exception to it: this is the state of the thing being looked at, not
@@ -276,7 +298,7 @@ function GrantList<Item>({
         />
       )}
 
-      {items.length > 0 && (
+      {(items.length > 0 || orphans.length > 0) && (
         <div className={own.checkList} data-grant-rows="">
           {shown.map((row) => {
             const meta = metaOf?.(row.item);
@@ -348,6 +370,27 @@ function GrantList<Item>({
               </div>
             );
           })}
+
+          {/*
+            The grants the workspace has no row for, drawn last so they cannot
+            be mistaken for part of the list above, and marked with what is
+            wrong: the name is granted and nothing here is called that. The tick
+            is on and unticking it is the only thing it does - there is nothing
+            to link to and nothing to search.
+          */}
+          {orphans.map((name) => (
+            <div key={`orphan:${name}`} className={`${own.checkRow} ${own.checkRowKept}`} data-grant-name={name} data-grant-unknown="">
+              <label className={own.grantToggle}>
+                <input
+                  type="checkbox"
+                  checked
+                  onChange={() => onChange(granted.filter((one) => one !== name))}
+                />
+                <span className={own.grantName}>{name}</span>
+              </label>
+              <span className={own.checkCount}>{t('not in this workspace')}</span>
+            </div>
+          ))}
           {shown.length === 0 && <p className={own.emptyNote}>{t('Nothing by that name.')}</p>}
         </div>
       )}
@@ -386,12 +429,9 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
   const [budget, setBudget] = useState<SessionMemoryBudget | null>(null);
 
   const [promptOpen, setPromptOpen] = useState(true);
-  const [addingServer, setAddingServer] = useState(false);
-  const [newServer, setNewServer] = useState('');
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
-  const newServerRef = useRef<HTMLInputElement>(null);
 
   /*
    * What this workspace can offer the agent: its models, and its catalogs.
@@ -431,12 +471,6 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
   const serverCatalogue = useCatalogue<McpServer>(t('MCP servers'), () => fetchMcpServers(workspaceId), [workspaceId], {
     skip: noWorkspace,
   });
-
-  /** Where a named MCP server is defined, or null when nothing here is called that. */
-  const serverPage = (named: string): string | null => {
-    const found = serverCatalogue.items.find((server) => server.name === named);
-    return found === undefined ? null : `/workspace/${workspaceId}/integrations/servers/${found.id}`;
-  };
 
   /*
    * Only the models are unpacked here. The three grant lists are handed the
@@ -523,28 +557,7 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
    */
   const inheritedRefusal = asked === null ? (budget?.refusal ?? null) : null;
 
-  useEffect(() => {
-    if (addingServer) newServerRef.current?.focus();
-  }, [addingServer]);
 
-  function addServer() {
-    const value = newServer.trim();
-    if (value !== '' && !mcpServers.includes(value)) {
-      setMcpServers((current) => [...current, value]);
-    }
-    setNewServer('');
-    setAddingServer(false);
-  }
-
-  function handleServerKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      addServer();
-    } else if (event.key === 'Escape') {
-      setNewServer('');
-      setAddingServer(false);
-    }
-  }
 
   async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -950,84 +963,26 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
           </div>
         </div>
 
-        <div className={styles.field} data-grants="mcp servers">
-          <span className={own.labelWithHint}>
-            <span className={styles.label}>{t('MCP Servers')}</span>
-            <FieldHint label={t('MCP Servers')}>
-              {t('External tool servers this agent can connect to.')}
-            </FieldHint>
-          </span>
-          <div className={own.servers}>
-            {/*
-              Bounded like the grant lists above, and for the same reason - but
-              without a search, because there is nothing here to search for. The
-              lists above draw the whole workspace and mark what is granted; this
-              draws only what is granted, so a box that narrowed it would only
-              ever hide grants. The count is the length of the list, which is
-              already on the screen.
-
-              The way to add one is outside the box on purpose: put inside it, it
-              would scroll away with the chips the moment there were enough of
-              them to need scrolling.
-            */}
-            {mcpServers.length > 0 && (
-              <div className={own.serverChips} data-grant-rows="">
-                {mcpServers.map((server) => {
-                  const opens = serverPage(server);
-                  return (
-                    <span key={server} className={own.chip}>
-                      {server}
-                      {/*
-                        The registered server this chip names - issue #251. A grant
-                        is a name somebody typed rather than a reference, so a chip
-                        naming nothing this workspace has gets no mark: a way out
-                        to a page that would answer "no such server" is worse than
-                        none.
-                      */}
-                      {opens !== null && (
-                        <Link
-                          className={own.grantJump}
-                          to={opens}
-                          target="_blank"
-                          rel="noreferrer"
-                          title={`Opens ${server} in a new tab`}
-                          aria-label={`Open ${server}`}
-                        >
-                          <OpenDefinitionIcon />
-                        </Link>
-                      )}
-                      <button
-                        type="button"
-                        className={own.chipRemove}
-                        onClick={() => setMcpServers((current) => current.filter((named) => named !== server))}
-                        aria-label={`Remove ${server}`}
-                        title={`Remove ${server}`}
-                      >
-                        <img src={xCircleIcon} alt="" width={8} height={8} />
-                      </button>
-                    </span>
-                  );
-                })}
-              </div>
-            )}
-
-            {addingServer ? (
-              <input
-                ref={newServerRef}
-                className={own.newServer}
-                type="text"
-                value={newServer}
-                placeholder="server-name"
-                onChange={(event) => setNewServer(event.target.value)}
-                onKeyDown={handleServerKeyDown}
-                onBlur={addServer}
-                aria-label={t('New MCP server')}
-              />
-            ) : (
-              <button type="button" className={own.addServer} onClick={() => setAddingServer(true)}>{t('+ Add Server')}</button>
-            )}
-          </div>
-        </div>
+        {/*
+          The same list as Tools and the catalogs above, and for the reason
+          issue #172 gave for those: this was a row of chips with a text box to
+          type a name into, so granting a server meant knowing its name by heart
+          and spelling it, and nothing on the screen said which ones there were.
+          The workspace already knows. Requested 2026-09-06.
+        */}
+        <GrantList<McpServer>
+          label={t('MCP Servers')}
+          what="mcp servers"
+          styles={styles}
+          catalogue={serverCatalogue}
+          empty={t('No MCP servers in this workspace yet.')}
+          hint={t('External tool servers this agent can connect to.')}
+          keyOf={(server) => server.id}
+          nameOf={(server) => server.name}
+          linkOf={(server) => `/workspace/${workspaceId}/integrations/servers/${server.id}`}
+          granted={mcpServers}
+          onChange={setMcpServers}
+        />
       </div>
 
       {saveError !== null && (
