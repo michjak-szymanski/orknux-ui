@@ -39,6 +39,15 @@ record(
 /** The number box on the settings page, found by what it is labelled. */
 const field = () => page.getByLabel('How many days of component history to keep');
 
+/*
+ * This control's Save, not the page's.
+ *
+ * There is a second retention setting beside this one now - run history, issue
+ * #167 - and each has a Save of its own, so asking the page for a button named
+ * Save finds two and refuses to guess. The button is the input's sibling.
+ */
+const save = () => page.locator('#revision-retention-days').locator('..').getByRole('button', { name: 'Save', exact: true });
+
 await page.goto(SETTINGS, { waitUntil: 'domcontentloaded' });
 if (await drawn(page, 'admin settings')) {
   /*
@@ -61,13 +70,12 @@ if (await drawn(page, 'admin settings')) {
   );
 
   // Nothing typed yet, so there is nothing to save.
-  const save = page.getByRole('button', { name: 'Save', exact: true });
-  record(await save.isDisabled(), 'Save is dead while the field holds the stored number');
+  record(await save().isDisabled(), 'Save is dead while the field holds the stored number');
 
   const wanted = started.revisionRetentionDays === 30 ? 45 : 30;
   await field().fill(String(wanted));
-  record(await save.isEnabled(), 'Save wakes up once the number differs');
-  await save.click();
+  record(await save().isEnabled(), 'Save wakes up once the number differs');
+  await save().click();
   await page.getByText('Saved.', { exact: true }).waitFor({ timeout: 10_000 }).catch(() => {});
 
   const afterSave = await stored();
@@ -85,7 +93,7 @@ if (await drawn(page, 'admin settings')) {
 
   // A number is not the way to say "keep nothing", so zero is refused.
   await field().fill('0');
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await save().click();
   const refused = await page
     .getByText('not a number of days', { exact: false })
     .waitFor({ timeout: 10_000 })

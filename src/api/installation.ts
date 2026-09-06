@@ -41,6 +41,16 @@ export interface InstallationSettings {
   /** What a fresh installation would keep: ORKNUX_REVISION_RETENTION_DAYS. */
   revisionRetentionDaysConfigured: number;
   /**
+   * How long a finished run is kept before a sweep takes it.
+   *
+   * The same bargain as the setting above - the file is where a fresh
+   * installation starts, this screen is the answer from then on - with a longer
+   * default, because a run is the record of something that happened and gets
+   * asked about weeks later. A run still going is never swept.
+   */
+  executionRetentionDays: number;
+  executionRetentionDaysConfigured: number;
+  /**
    * How many minutes a task may sit queued before something hands it over
    * again.
    *
@@ -66,6 +76,7 @@ const FIELDS =
   'attachmentsEnabled attachmentsConfigurable attachmentStorage attachmentLocation attachmentMaxFileSizeMb ' +
   'chatEnabled chatConfigurable metricsAnonymous metricsAnonymousConfigured ' +
   'revisionRetentionDays revisionRetentionDaysConfigured ' +
+  'executionRetentionDays executionRetentionDaysConfigured ' +
   'taskSweepMinutes taskSweepMinutesConfigured taskSweepConfigurable';
 
 export async function fetchInstallationSettings(): Promise<InstallationSettings> {
@@ -125,6 +136,23 @@ export async function setRevisionRetentionDays(days: number): Promise<Installati
     { days },
   );
   return data.setRevisionRetentionDays;
+}
+
+/**
+ * How long a finished run is kept before a sweep takes it.
+ *
+ * Administrators only, recorded in the audit log, and read by the sweep on
+ * every pass so it takes effect without a restart. A run still going is never
+ * swept, whatever this says.
+ */
+export async function setExecutionRetentionDays(days: number): Promise<InstallationSettings> {
+  const data = await graphql<{ setExecutionRetentionDays: InstallationSettings }>(
+    `mutation SetExecutionRetentionDays($days: Int!) {
+       setExecutionRetentionDays(days: $days) { ${FIELDS} }
+     }`,
+    { days },
+  );
+  return data.setExecutionRetentionDays;
 }
 
 /**

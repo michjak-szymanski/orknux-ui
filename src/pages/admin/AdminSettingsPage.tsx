@@ -5,6 +5,7 @@ import {
   setAttachmentsEnabled,
   setChatEnabled,
   setMetricsAnonymous,
+  setExecutionRetentionDays,
   setRevisionRetentionDays,
   setTaskSweepMinutes,
 } from '../../api/installation';
@@ -48,6 +49,7 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
    * one without saving an empty string on the way through.
    */
   const [retention, setRetention] = useState('');
+  const [runRetention, setRunRetention] = useState('');
   /** The same, for the interval box: a half-typed number is not a setting. */
   const [sweep, setSweep] = useState('');
 
@@ -68,6 +70,8 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
         if (abandoned) return;
         setSettings(held);
         setRetention(String(held.revisionRetentionDays));
+      setRunRetention(String(held.executionRetentionDays));
+        setRunRetention(String(held.executionRetentionDays));
         setSweep(String(held.taskSweepMinutes));
       })
       .catch((cause: unknown) => {
@@ -348,6 +352,52 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
                 <code>ORKNUX_REVISION_RETENTION_DAYS</code> in the environment says{' '}
                 {settings.revisionRetentionDaysConfigured} days, but an administrator stored{' '}
                 {settings.revisionRetentionDays} here, and the stored answer is the one in force.
+              </p>
+            )}
+
+            <h2 className={styles.sectionHeading}>{t('Run history')}</h2>
+
+            <div className={styles.setting}>
+              <div className={styles.settingText}>
+                <span className={styles.labelWithHint}>
+                  <p className={styles.settingLabel}>{t('How long finished runs are kept')}</p>
+                  <FieldHint label={t('How long finished runs are kept')}>
+                    {t('Every run a workflow makes is kept with its steps and its log lines, and nothing deleted one until this existed — so a busy installation grew this table without bound. Counted from when a run finished. A run still going is never swept, however long it has been going, and deleting a workspace takes its runs with it.')}
+                  </FieldHint>
+                </span>
+              </div>
+              <div className={styles.retention}>
+                <input
+                  id="execution-retention-days"
+                  name="executionRetentionDays"
+                  className={styles.input}
+                  type="number"
+                  min={1}
+                  max={3650}
+                  value={runRetention}
+                  onChange={(event) => setRunRetention(event.target.value)}
+                  disabled={busy}
+                  aria-label={t('How many days of run history to keep')}
+                />
+                <span className={styles.retentionUnit}>{t('days')}</span>
+                <button
+                  type="button"
+                  className={styles.primaryButton}
+                  onClick={() => void save(() => setExecutionRetentionDays(Number(runRetention)))}
+                  disabled={
+                    busy ||
+                    runRetention.trim() === '' ||
+                    Number(runRetention) === settings.executionRetentionDays
+                  }
+                >{t('Save')}</button>
+              </div>
+            </div>
+
+            {settings.executionRetentionDays !== settings.executionRetentionDaysConfigured && (
+              <p className={styles.fieldNote}>
+                <code>ORKNUX_EXECUTION_RETENTION_DAYS</code> in the environment says{' '}
+                {settings.executionRetentionDaysConfigured} days, but an administrator stored{' '}
+                {settings.executionRetentionDays} here, and the stored answer is the one in force.
               </p>
             )}
 

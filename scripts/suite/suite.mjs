@@ -66,6 +66,16 @@ export const TESTS = [
     alone: true,
   },
   {
+    name: 'execution-retention-check',
+    what: 'how long finished runs are kept: typed, saved, reloaded, and zero refused',
+    needs: [],
+    /*
+     * Installation-wide, like the setting beside it: it needs no workspace and
+     * puts back what it found. The sweep itself is a server test, where a clock
+     * can be moved.
+     */
+  },
+  {
     name: 'field-search-check',
     what: "the field picker's search, and that a group's heading does not keep its fields",
     needs: ['workflow'],
