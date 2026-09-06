@@ -117,6 +117,15 @@ const says = () => page.$eval('#node-object', (one) => one.textContent?.trim() ?
 /** Whether the fields editor is offered, which only a custom shape gets. */
 const addsFields = () => page.locator('button', { hasText: '+ Add field' }).count().then((n) => n > 0);
 
+/**
+ * The field names the panel is showing, in order.
+ *
+ * A custom shape's fields are the node's own and a saved shape's are the
+ * shape's, so this is what says which set the panel is holding.
+ */
+const fieldNames = () =>
+  page.$$eval('input[aria-label^="Name of field"]', (found) => found.map((one) => one.value));
+
 /** The rows in the open list, and whether each is marked as not being an object. */
 const rows = () =>
   page.$$eval('#node-object ~ * [role="option"], [role="option"]', (found) =>
@@ -197,5 +206,33 @@ record(
 await choose('Custom');
 record((await says()) === 'Custom', `Custom can be chosen again (${JSON.stringify(await says())})`);
 record(await addsFields(), 'and the fields editor comes back with it, so the choice is not one-way');
+
+/* ---- and the fields that were the node's own are the node's own again ---- */
+
+/*
+ * The round trip used to come back holding the *shape's* fields. Choosing a
+ * shape seeds the fields it has and drops the rest, which is what a saved shape
+ * is for - but nothing put the node's own fields back, so a look at a saved
+ * shape silently threw away whatever had been named before it. Reported against
+ * #309 on 2026-09-06: "select custom, add field a, b, select defined shape,
+ * go back to custom - custom has fields from defined shape".
+ */
+const back = await fieldNames();
+record(
+  back.includes('field1'),
+  `the fields the node held of its own are back (${JSON.stringify(back)})`,
+);
+record(
+  !back.includes('id'),
+  "and the saved shape's fields did not stay behind in place of them",
+);
+const kept = await page
+  .locator('#node-mapping-field1')
+  .inputValue()
+  .catch(() => null);
+record(
+  kept === 'something',
+  `and what was in the field came back with its name (${JSON.stringify(kept)})`,
+);
 
 await clean();

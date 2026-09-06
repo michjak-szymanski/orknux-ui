@@ -1687,6 +1687,20 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
    */
   const [enabled, setEnabled] = useState(true);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  /**
+   * The fields a node held of its own, set aside while a saved shape has the
+   * panel.
+   *
+   * Choosing a shape seeds the fields it has and drops the rest, which is what
+   * a saved shape is for - but it made choosing one destructive: the fields
+   * somebody had just named were gone, and Custom came back holding the
+   * shape's fields rather than their own. Nothing on the server has been
+   * touched at that point, so this keeps them by node, against the node's key,
+   * until Custom asks for them back. It is not read for a node that never left
+   * Custom and it is not saved anywhere: shutting the editor forgets it, which
+   * is the same as what a Discard does. Issue #309.
+   */
+  const ownFields = useRef(new Map<string, NodeMapping[]>());
   const [draft, setDraft] = useState<NodeData | null>(null);
   /** The field whose name is mid-edit, if any, and the name it had. */
   const [fieldEdit, setFieldEdit] = useState<{ index: number; was: string } | null>(null);
@@ -4111,7 +4125,20 @@ Change the keystroke in Preferences.`}
                         label: t('Custom'),
                         hint: t("Fields of this node's own, named here"),
                       }}
-                      onChoose={(chosen) => setDraft({ ...draft, objectId: chosen || null })}
+                      onChoose={(chosen) => {
+                        const to = chosen || null;
+                        const key = selectedKey ?? '';
+                        // Leaving Custom: the fields are the node's own and the
+                        // shape is about to replace them, so they are kept.
+                        if (draft.objectId === null && to !== null) {
+                          ownFields.current.set(key, draft.mappings);
+                        }
+                        // Coming back to it: they are the node's again. With
+                        // nothing set aside - a node that opened on a shape -
+                        // what is on screen stays, as something to start from.
+                        const held = to === null ? ownFields.current.get(key) : undefined;
+                        setDraft({ ...draft, objectId: to, mappings: held ?? draft.mappings });
+                      }}
                       placeholder={t('Choose a shape…')}
                       searchPlaceholder={t("Search objects…")}
                     />
