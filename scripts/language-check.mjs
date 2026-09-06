@@ -81,6 +81,15 @@ async function recorded() {
  * draws 9 items in English", "the same 10 items are drawn in Polish".
  */
 async function settledMenu() {
+  /*
+   * The network first, and the loop only afterwards. Two identical reads in a
+   * row are what a finished menu looks like - and equally what one whose fetch
+   * has not answered yet looks like, because nothing has moved in either case.
+   * Settling alone read nine of the ten on 2026-09-06 and the Polish side,
+   * warm by then, read all ten; the check reported a translation failure over
+   * a count. Waiting for the page to go quiet is what tells the two apart.
+   */
+  await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => {});
   let before = null;
   for (let tries = 0; tries < 25; tries += 1) {
     const now = await menu();
