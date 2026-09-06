@@ -66,6 +66,11 @@ export const TESTS = [
     alone: true,
   },
   {
+    name: 'workflow-switch-check',
+    what: 'switching a workflow off from the editor, which asks first, and back on, which does not',
+    needs: ['workspace'],
+  },
+  {
     name: 'execution-retention-check',
     what: 'how long finished runs are kept: typed, saved, reloaded, and zero refused',
     needs: [],

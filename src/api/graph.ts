@@ -168,6 +168,14 @@ export interface WorkflowGraph {
    * itself - no trigger, no schedule, no tool call - while Run still does.
    */
   enabled: boolean;
+  /**
+   * The assignment `enabled` belongs to, so the editor can change it.
+   *
+   * `setWorkflowEnabled` takes the assignment rather than the workflow: a
+   * definition may be assigned to several workspaces and each switches it on or
+   * off for itself. Null where this workspace has no assignment.
+   */
+  assignmentId: string | null;
   nodes: GraphNode[];
   edges: GraphEdge[];
   /** What the graph is missing, worst first; empty when it holds together. */
@@ -180,6 +188,7 @@ const GRAPH_FIELDS = `
   description
   status
   enabled
+  assignmentId
   nodes {
     key kind name description agentId triggerId actionId conditionId objectId outputName icon orientation
     yesLabel noLabel fallbackEnabled retryAttempts retryBackoffSeconds

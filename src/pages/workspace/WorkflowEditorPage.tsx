@@ -65,7 +65,7 @@ import { createObject, fetchWorkspaceObjects } from '../../api/objects';
 import type { WorkflowObject } from '../../api/objects';
 import { fetchWorkspaceTriggers } from '../../api/triggers';
 import type { Trigger } from '../../api/triggers';
-import { removeWorkflow } from '../../api/workflows';
+import { removeWorkflow, setWorkflowEnabled } from '../../api/workflows';
 import activityIcon from '../../assets/activity.svg';
 import arrowLeftIcon from '../../assets/arrow-left.svg';
 import bellIcon from '../../assets/bell.svg';
@@ -1690,6 +1690,33 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
    * nobody publishes into a silence they cannot see from here.
    */
   const [enabled, setEnabled] = useState(true);
+  /** Which assignment `enabled` belongs to; `setWorkflowEnabled` takes that, not the workflow. */
+  const [assignmentId, setAssignmentId] = useState<string | null>(null);
+  /** The confirm before switching one off, the same one the workflows list asks. */
+  const [switchingOff, setSwitchingOff] = useState(false);
+
+  /**
+   * Switch this workflow on or off for this workspace.
+   *
+   * The assignment carries it, not the workflow: a definition may be assigned
+   * to several workspaces and each answers for itself. Nothing else on this
+   * page changes, so the graph is not re-read - the flag and the badge are the
+   * whole of what moved.
+   */
+  async function switchTo(on: boolean) {
+    if (assignmentId === null) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const held = await setWorkflowEnabled(assignmentId, on);
+      setEnabled(held.enabled);
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : t('That could not be saved.'));
+    } finally {
+      setBusy(false);
+      setSwitchingOff(false);
+    }
+  }
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   /**
    * The fields a node held of its own, set aside while a saved shape has the
@@ -2171,7 +2198,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
         setSteps({ back: 0, forward: 0 });
         setName(graph.name);
         setStatus(graph.status);
-        setEnabled(graph.enabled);
+        setEnabled(graph.enabled);      setAssignmentId(graph.assignmentId);        setAssignmentId(graph.assignmentId);
         setNodes((current) => {
           /*
            * The measurement of the box that is already on the screen, handed
@@ -3162,7 +3189,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     try {
       const graph = await saveWorkflowGraph(workspaceId, workflowId, toGraph());
       setStatus(graph.status);
-      setEnabled(graph.enabled);
+      setEnabled(graph.enabled);      setAssignmentId(graph.assignmentId);
       // What is left to fix is decided by the server, and saving is when it
       // decides again. Keeping the list from the last load means the panel
       // describes a graph that is no longer on screen. The save is the newest
@@ -3568,7 +3595,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
       await saveWorkflowGraph(workspaceId, workflowId, toGraph());
       const graph = await publishWorkflow(workspaceId, workflowId);
       setStatus(graph.status);
-      setEnabled(graph.enabled);
+      setEnabled(graph.enabled);      setAssignmentId(graph.assignmentId);
       asked.current += 1;
       applyGraphFeedback(graph);
       setSaved(true);
@@ -3618,11 +3645,34 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           <span className={status === 'PUBLISHED' ? `${styles.badge} ${styles.badgeLive}` : styles.badge}>
             {status === 'PUBLISHED' ? 'Published' : 'Draft'}
           </span>
-          {!enabled && (
-            <span
-              className={`${styles.badge} ${styles.badgeOff}`}
-              title={t('No trigger, schedule or tool call will start this workflow while it is switched off. Run still will.')}
-            >{t('Switched off')}</span>
+          {/*
+            The badge is the control now.
+
+            It said "Switched off" and offered no way to change it, so the only
+            way back on was the workflows list - and somebody who has just drawn
+            a workflow is in the editor, not the list. Issue #330. Switching
+            *off* asks first, the same question the list asks, because a
+            workflow that stops answering its triggers is a quiet change with
+            loud consequences; switching on is its own confirmation.
+          */}
+          {assignmentId !== null && (
+            <button
+              type="button"
+              className={enabled ? styles.badge : `${styles.badge} ${styles.badgeOff}`}
+              title={
+                enabled
+                  ? t('This workflow answers its triggers. Switch it off and nothing but Run will start it.')
+                  : t('No trigger, schedule or tool call will start this workflow while it is switched off. Run still will.')
+              }
+              disabled={busy}
+              onClick={() => {
+                if (enabled) {
+                  setSwitchingOff(true);
+                  return;
+                }
+                void switchTo(true);
+              }}
+            >{enabled ? t('Switched on') : t('Switched off')}</button>
           )}
           {error !== null && (
             <span className={styles.error} role="alert">
@@ -4820,6 +4870,17 @@ Change the keystroke in Preferences.`}
         first, and then reloads rather than undoing: what the server holds is
         what the graph was, whatever the panel has been doing to it since.
       */}
+      {/*
+        The same question the workflows list asks, in the same words, because
+        it is the same act - a workflow that stops answering its triggers.
+      */}
+      <ConfirmDialog
+        subject={switchingOff ? name : null}
+        kind="disable"
+        onClose={() => setSwitchingOff(false)}
+        onConfirm={() => switchTo(false)}
+      />
+
       <ConfirmDialog
         subject={discarding ? name : null}
         kind="discard"
