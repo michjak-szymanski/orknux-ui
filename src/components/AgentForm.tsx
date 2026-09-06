@@ -741,7 +741,17 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
           the mutation judges a share with; a second copy in the browser would
           eventually disagree with it, and the one that drifted would be this.
         */}
-        <div className={styles.field}>
+        {/*
+          Named so a check can read this card and nothing else.
+
+          What it says - the figures, the refusal, the note under them - used to
+          be found by walking up to the enclosing form, which meant every
+          paragraph anywhere on the form counted as this card having answered.
+          It held while the form was mostly fields; it stopped holding the
+          moment a grant list below grew an empty-state sentence of its own, and
+          the check then read the figures before they had arrived.
+        */}
+        <div className={styles.field} data-check="session-memory">
           <span className={own.labelWithHint}>
             <label className={styles.label} htmlFor="agent-memory-share">
               {t('Session Memory')}

@@ -209,7 +209,17 @@ async function shown(selector) {
   return page.evaluate((one) => {
     const slider = document.querySelector(one);
     if (slider === null) return null;
-    const card = slider.closest('section, form') ?? null;
+    /*
+     * This card, not the whole form.
+     *
+     * It used to walk up to the enclosing form, so every paragraph anywhere on
+     * it counted as this card having said something - and `settled` below waits
+     * for exactly that. A grant list further down grew an empty-state sentence,
+     * `settled` returned on it, and the figures were read before the preview
+     * had arrived: two assertions failing about a card that was perfectly
+     * correct a second later. The card names itself now.
+     */
+    const card = slider.closest('[data-check="session-memory"]') ?? slider.closest('section, form') ?? null;
     const alerts = [...(card?.querySelectorAll('[role="alert"]') ?? [])].map((node) =>
       (node.textContent ?? '').replace(/\s+/g, ' ').trim(),
     );

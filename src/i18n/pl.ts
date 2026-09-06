@@ -178,7 +178,6 @@ export const PL: Record<string, string> = {
   "MCP Servers": "Serwery MCP",
   "Add MCP Server": "Dodaj serwer MCP",
   "Remove MCP Server": "Usuń serwer MCP",
-  "New MCP server": "Nowy serwer MCP",
   "+ Add Server": "+ Dodaj serwer",
   "Issue": "Zgłoszenie",
   "Issues": "Zgłoszenia",
