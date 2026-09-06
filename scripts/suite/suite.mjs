@@ -44,6 +44,16 @@ export const TESTS = [
     needs: ['workflow'],
   },
   {
+    name: 'condition-arguments-check',
+    what: "a condition node fills in the parameters of the function it asks, with the ordinary controls",
+    needs: ['workspace'],
+    /*
+     * Makes its own function, condition and workflow: the rows only exist for a
+     * condition that asks a function that declares parameters, and no fixture
+     * has one that would stay put.
+     */
+  },
+  {
     name: 'page-reset-check',
     what: 'the page a list is on, and the workspace switch that used to keep it',
     needs: [],

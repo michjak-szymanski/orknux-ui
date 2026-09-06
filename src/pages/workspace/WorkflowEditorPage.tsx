@@ -57,6 +57,8 @@ import type { Agent } from '../../api/agents';
 import { fetchWorkspaceConditions } from '../../api/conditions';
 import type { Condition } from '../../api/conditions';
 import { startExecution } from '../../api/executions';
+import { fetchWorkspaceFunctions } from '../../api/functions';
+import type { WorkspaceFunction } from '../../api/functions';
 import { fetchWorkspaceConnections } from '../../api/integrations';
 import type { WorkspaceConnection } from '../../api/integrations';
 import { createObject, fetchWorkspaceObjects } from '../../api/objects';
@@ -229,6 +231,8 @@ function sameMappings(left: NodeMapping[], right: NodeMapping[]): boolean {
 /** The whole of a workspace's catalogue fits in the picker. */
 const TRIGGER_PAGE_SIZE = 100;
 const ACTION_PAGE_SIZE = 100;
+const FUNCTION_PAGE_SIZE = 200;
+
 const CONDITION_PAGE_SIZE = 100;
 const AGENT_PAGE_SIZE = 100;
 const OBJECT_PAGE_SIZE = 100;
@@ -2019,6 +2023,13 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
    */
   const [connections, setConnections] = useState<WorkspaceConnection[]>([]);
   const [conditions, setConditions] = useState<Condition[]>([]);
+  /*
+   * Only for their signatures. A condition node fills in the parameters of the
+   * function its condition asks, and the list of those is the function's - kept
+   * nowhere else, so a second copy would go stale the moment somebody edited
+   * the function.
+   */
+  const [functions, setFunctions] = useState<WorkspaceFunction[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [objects, setObjects] = useState<WorkflowObject[]>([]);
 
@@ -2276,6 +2287,9 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     fetchWorkspaceConditions(workspaceId, 0, CONDITION_PAGE_SIZE)
       .then((page) => setConditions(page.content))
       .catch(() => setConditions([]));
+    fetchWorkspaceFunctions(workspaceId, 0, FUNCTION_PAGE_SIZE)
+      .then((page) => setFunctions(page.content))
+      .catch(() => setFunctions([]));
     fetchWorkspaceObjects(workspaceId, 0, OBJECT_PAGE_SIZE)
       .then((page) => setObjects(page.content))
       .catch(() => setObjects([]));
@@ -2846,6 +2860,47 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
 
     return connection.id;
   }, [draft, actions, connections]);
+
+  /**
+   * The parameters of the function this node's condition asks, in order.
+   *
+   * Read off the function rather than the condition: the signature is the
+   * function's, and a condition that names one is a question, not a copy of its
+   * declaration. Empty for a condition that is not function-based and for a
+   * function that takes nothing - both of which draw no rows, which is right
+   * for each.
+   */
+  const conditionParams = useMemo(() => {
+    if (draft === null || draft.kind !== 'CONDITION' || draft.conditionId === null) return [];
+    const asked = conditions.find((one) => one.id === draft.conditionId);
+    if (asked?.functionId == null) return [];
+    return functions.find((one) => one.id === asked.functionId)?.params ?? [];
+  }, [draft, draft?.kind, draft?.conditionId, conditions, functions]);
+
+  /**
+   * Picking a condition seeds the parameters its function declares.
+   *
+   * The same rule the shape and the action follow: the declaration decides
+   * which rows there are, one it does not have is dropped, and what is *in*
+   * each row stays the node's. A node that fills none in passes nothing, and
+   * the condition is handed the whole of what the run carries, as it was
+   * before there were rows here at all.
+   */
+  useEffect(() => {
+    if (draft === null || draft.kind !== 'CONDITION') return;
+
+    const seeded = conditionParams.map(
+      (param) =>
+        draft.mappings.find((held) => held.name === param.name) ?? {
+          name: param.name,
+          expression: '',
+          mode: 'VALUE' as MappingMode,
+        },
+    );
+    if (sameMappings(draft.mappings, seeded)) return;
+
+    setDraft((held) => (held === null ? held : { ...held, mappings: seeded }));
+  }, [draft, draft?.kind, conditionParams]);
 
   /**
    * Picking a saved shape seeds the fields it has.
@@ -4145,10 +4200,59 @@ Change the keystroke in Preferences.`}
                   </div>
                 )}
 
+                {draft.kind === 'CONDITION' && (
+                  <div className={styles.field}>
+                    <span className={styles.labelRow}>
+                      <label className={styles.label} htmlFor="node-condition">
+                        {t('Condition')}
+                      </label>
+                      <span className={styles.labelLinks}>
+                        <button
+                          type="button"
+                          className={styles.definitionLink}
+                          onClick={() => setBuilding({ kind: 'CONDITION', id: null })}
+                        >{t('New')}</button>
+                        {draft.conditionId !== null && (
+                          <Link
+                            to={`/workspace/${workspaceId}/conditions/${draft.conditionId}`}
+                            className={styles.definitionJump}
+                            onClick={openingIn(
+                              'CONDITION',
+                              draft.conditionId,
+                              `/workspace/${workspaceId}/conditions/${draft.conditionId}`,
+                            )}
+                            title={t('Opens the condition this node points at')}
+                            aria-label={t('Open the condition\'s definition')}
+                          >
+                            <OpenDefinitionIcon />
+                          </Link>
+                        )}
+                      </span>
+                    </span>
+                    <DefinitionPicker
+                      id="node-condition"
+                      value={draft.conditionId ?? ''}
+                      options={conditions.map((condition) => ({ value: condition.id, label: condition.name }))}
+                      onChoose={(chosen) => setDraft({ ...draft, conditionId: chosen || null })}
+                      placeholder={t('Choose a condition…')}
+                      searchPlaceholder={t("Search conditions…")}
+                    />
+                  </div>
+                )}
                 {((draft.kind === 'ACTION' && draft.actionId !== null) ||
                   draft.kind === 'AGENT' ||
                   draft.kind === 'SESSION' ||
-                  draft.kind === 'OBJECT') && (
+                  draft.kind === 'OBJECT' ||
+                  /*
+                    A condition node, where the condition asks a function that
+                    declares parameters. The rows are the ordinary ones - a
+                    value or a reference to a field the run carries - because
+                    that is the same choice, and the picker can only offer real
+                    fields here, where the graph is. The condition's own
+                    settings page cannot: it has no graph to read them from,
+                    which is why the rows moved.
+                  */
+                  (draft.kind === 'CONDITION' && conditionParams.length > 0)) && (
                   <div className={styles.field}>
                     <span className={styles.labelRow}>
                       <span className={styles.labelWithHint}>
@@ -4181,6 +4285,13 @@ Change the keystroke in Preferences.`}
                               <>
                                 Each field is written here or read from another node; together they are what this
                                 node hands on. Give the node an output name to pass them as one object.
+                              </>
+                            ) : draft.kind === 'CONDITION' ? (
+                              <>
+                                What the condition&apos;s function is asked about. The rows are its parameters;
+                                what goes in them is this node&apos;s, so another node asking the same condition
+                                can look at something else. Leave them all empty and the function is handed the
+                                whole of what the run carries, as it was before.
                               </>
                             ) : (
                               <>What is here is what this node sends — the action definition is not changed.</>
@@ -4537,45 +4648,6 @@ Change the keystroke in Preferences.`}
                   </div>
                 )}
 
-                {draft.kind === 'CONDITION' && (
-                  <div className={styles.field}>
-                    <span className={styles.labelRow}>
-                      <label className={styles.label} htmlFor="node-condition">
-                        {t('Condition')}
-                      </label>
-                      <span className={styles.labelLinks}>
-                        <button
-                          type="button"
-                          className={styles.definitionLink}
-                          onClick={() => setBuilding({ kind: 'CONDITION', id: null })}
-                        >{t('New')}</button>
-                        {draft.conditionId !== null && (
-                          <Link
-                            to={`/workspace/${workspaceId}/conditions/${draft.conditionId}`}
-                            className={styles.definitionJump}
-                            onClick={openingIn(
-                              'CONDITION',
-                              draft.conditionId,
-                              `/workspace/${workspaceId}/conditions/${draft.conditionId}`,
-                            )}
-                            title={t('Opens the condition this node points at')}
-                            aria-label={t('Open the condition\'s definition')}
-                          >
-                            <OpenDefinitionIcon />
-                          </Link>
-                        )}
-                      </span>
-                    </span>
-                    <DefinitionPicker
-                      id="node-condition"
-                      value={draft.conditionId ?? ''}
-                      options={conditions.map((condition) => ({ value: condition.id, label: condition.name }))}
-                      onChoose={(chosen) => setDraft({ ...draft, conditionId: chosen || null })}
-                      placeholder={t('Choose a condition…')}
-                      searchPlaceholder={t("Search conditions…")}
-                    />
-                  </div>
-                )}
 
                 <div className={styles.field}>
                   <span className={styles.labelRow}>

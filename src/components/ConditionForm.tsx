@@ -197,8 +197,16 @@ export function ConditionForm({
    * Empty is what every condition written before this holds, and it means what
    * it always meant - the function is handed what the run is carrying.
    */
-  const [passed, setPassed] = useState<Record<string, ConditionArgument>>(() =>
-    Object.fromEntries((condition?.arguments ?? []).map((one) => [one.name, one])),
+  /*
+   * Read, never written. The rows that edited these moved to the node - the
+   * editor has the graph and can offer a real picker, and this form cannot -
+   * but a condition that already carries arguments must keep them: the
+   * evaluator falls back to them for a node that fills nothing in, so a save
+   * from this page that dropped them would change what an untouched graph
+   * does.
+   */
+  const passed: Record<string, ConditionArgument> = Object.fromEntries(
+    (condition?.arguments ?? []).map((one) => [one.name, one]),
   );
   const [members, setMembers] = useState<string[]>(condition?.members ?? []);
   const [draftValue, setDraftValue] = useState('');
@@ -604,73 +612,20 @@ export function ConditionForm({
                 failure={functionCatalogue.failure}
               />
               {/*
-                One row per parameter the chosen function declares.
+                The parameters are filled in on the node, not here.
 
-                The list is the function's rather than the condition's: a
-                condition that asks "is this the first reply" needs the thread
-                and the connection it arrived on, and those are fields of the run
-                - so each row is a value written in or a reference to one of
-                them, which is the same choice a node's parameter offers.
-                Issue #316.
+                They were here first - issue #316 - and the rows could not do
+                the job: this form has no graph behind it, so "a reference to a
+                field the run carries" had to be typed from memory into a plain
+                box, with no list of what there is to reference. The workflow
+                editor has the graph and offers the ordinary picker, and a
+                condition used by two nodes now lets each of them look at
+                something else, which the one shared list here could not.
 
-                Nothing filled in is not an empty argument: a condition passing
-                none is handed what the run is carrying, which is what every
-                condition did before this existed.
+                A condition that still carries arguments keeps working: the
+                evaluator falls back to them for a node that fills nothing in.
+                Nothing was migrated and nothing changed meaning.
               */}
-              {declared.length > 0 && (
-                <div className={own.arguments}>
-                  <span className={styles.label}>{t('Passed to it')}</span>
-                  {declared.map((param) => (
-                    <div className={own.argumentRow} key={param.name}>
-                      <span className={own.argumentName} title={`${param.name}: ${param.type.toLowerCase()}`}>
-                        {param.name}
-                      </span>
-                      <select
-                        className={`${styles.input} ${own.argumentMode}`}
-                        aria-label={`How ${param.name} is filled in`}
-                        value={passed[param.name]?.mode ?? 'VALUE'}
-                        onChange={(event) =>
-                          setPassed((held) => ({
-                            ...held,
-                            [param.name]: {
-                              name: param.name,
-                              expression: held[param.name]?.expression ?? '',
-                              mode: event.target.value as ConditionArgument['mode'],
-                            },
-                          }))
-                        }
-                      >
-                        <option value="VALUE">{t('Value')}</option>
-                        <option value="REFERENCE">{t('Reference')}</option>
-                      </select>
-                      <input
-                        className={`${styles.input} ${styles.inputMono}`}
-                        type="text"
-                        aria-label={`What ${param.name} is`}
-                        placeholder={
-                          (passed[param.name]?.mode ?? 'VALUE') === 'REFERENCE'
-                            ? t('threadTs')
-                            : t('a written value')
-                        }
-                        value={passed[param.name]?.expression ?? ''}
-                        onChange={(event) =>
-                          setPassed((held) => ({
-                            ...held,
-                            [param.name]: {
-                              name: param.name,
-                              expression: event.target.value,
-                              mode: held[param.name]?.mode ?? 'VALUE',
-                            },
-                          }))
-                        }
-                      />
-                    </div>
-                  ))}
-                  <p className={styles.fieldHint}>
-                    {t("A reference reads a field the run is carrying — a trigger's channel, its thread, the connection it arrived on. Leave them all empty and the function is handed the whole of what the run carries, as it was before.")}
-                  </p>
-                </div>
-              )}
 
               {functionId === NEW_FUNCTION && (
                 <>
