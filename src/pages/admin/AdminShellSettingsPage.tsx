@@ -299,7 +299,7 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
                   MCP server <span className={styles.required}>*</span>
                 </label>
                 <FieldHint label={t('MCP server')}>
-                  {t('The id of the registered MCP server this shell speaks through. Register the server on the Integrations page first - we recommend DesktopCommander - then paste its id here. A picker will replace this once installation-wide servers land; today it is the id.')}
+                  {t('The id of the registered MCP server this shell speaks through. Register the server on the Integrations page first, then paste its id here. A picker will replace this once installation-wide servers land; today it is the id.')}
                 </FieldHint>
                 <input
                   id="shell-mcp-server"
