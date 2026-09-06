@@ -23,6 +23,7 @@ import { AutoRefresh } from '../../components/AutoRefresh';
 import { CompactPagination } from '../../components/CompactPagination';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { usePageWithin } from '../../components/pageWithin';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceAuditPage.module.css';
 import { t } from '../../i18n';
@@ -52,7 +53,7 @@ export function WorkspaceAuditPage({ session, onSignOut }: WorkspaceAuditPagePro
 
   const [entries, setEntries] = useState<PageOf<ActivityEntry> | null>(null);
   const [users, setUsers] = useState<string[]>([]);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = usePageWithin(workspaceId);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [category, setCategory] = useState<ActivityCategory | ''>('');

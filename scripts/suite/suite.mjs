@@ -44,6 +44,18 @@ export const TESTS = [
     needs: ['workflow'],
   },
   {
+    name: 'page-reset-check',
+    what: 'the page a list is on, and the workspace switch that used to keep it',
+    needs: [],
+    /*
+     * `alone`, because it makes two workspaces and takes them away again, and
+     * `workspace-selector-check` counts the installation's workspaces before
+     * and after a reload to assert nothing came or went. Both are right; they
+     * cannot be right at the same time.
+     */
+    alone: true,
+  },
+  {
     name: 'field-search-check',
     what: "the field picker's search, and that a group's heading does not keep its fields",
     needs: ['workflow'],

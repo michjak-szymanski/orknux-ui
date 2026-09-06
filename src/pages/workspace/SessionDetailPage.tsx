@@ -25,6 +25,7 @@ import { BackLink } from '../../components/BackLink';
 import { CompactPagination } from '../../components/CompactPagination';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { usePageWithin } from '../../components/pageWithin';
 import { shellUser } from '../../session/user';
 import styles from './SessionDetailPage.module.css';
 import { t } from '../../i18n';
@@ -147,7 +148,7 @@ export function SessionDetailPage({ session, onSignOut }: SessionDetailPageProps
   const [held, setHeld] = useState<LlmSession | null>(null);
   const [missing, setMissing] = useState(false);
   const [events, setEvents] = useState<LlmSessionEventPage | null>(null);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = usePageWithin(sessionId);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');

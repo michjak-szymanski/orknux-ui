@@ -17,6 +17,7 @@ import {
 } from '../../components/ComponentTransfer';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { usePageWithin } from '../../components/pageWithin';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceActionsPage.module.css';
 import { t } from '../../i18n';
@@ -41,7 +42,7 @@ export function WorkspaceActionsPage({ session, onSignOut }: WorkspaceActionsPag
   const { workspaceId = '' } = useParams();
 
   const [actions, setActions] = useState<PageOf<Action> | null>(null);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = usePageWithin(workspaceId);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

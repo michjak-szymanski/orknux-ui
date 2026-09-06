@@ -23,6 +23,7 @@ import {
 } from '../../components/ComponentTransfer';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { usePageWithin } from '../../components/pageWithin';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceFunctionsPage.module.css';
 import { t } from '../../i18n';
@@ -49,7 +50,7 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
   const navigate = useNavigate();
 
   const [functions, setFunctions] = useState<PageOf<WorkspaceFunction> | null>(null);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = usePageWithin(workspaceId);
   /*
    * A function just made, arriving from the editor as `?made=<id>`.
    *

@@ -20,6 +20,7 @@ import {
 import { CreateAgentDialog } from '../../components/CreateAgentDialog';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { usePageWithin } from '../../components/pageWithin';
 import { shellUser } from '../../session/user';
 import styles from './AgentsPage.module.css';
 import { t } from '../../i18n';
@@ -35,7 +36,7 @@ export function AgentsPage({ session, onSignOut }: AgentsPageProps) {
   const { workspaceId = '' } = useParams();
 
   const [agents, setAgents] = useState<PageOf<Agent> | null>(null);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = usePageWithin(workspaceId);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);

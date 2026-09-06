@@ -27,6 +27,7 @@ import { Loader } from '../../components/Loader';
 import { SortControl } from '../../components/SortControl';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { usePageWithin } from '../../components/pageWithin';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceWorkflowsPage.module.css';
 import { t } from '../../i18n';
@@ -104,7 +105,7 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
 
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workflows, setWorkflows] = useState<PageOf<WorkspaceWorkflow> | null>(null);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = usePageWithin(workspaceId);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);

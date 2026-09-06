@@ -33,6 +33,7 @@ import { CreateTriggerDialog } from '../../components/CreateTriggerDialog';
 import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { usePageWithin } from '../../components/pageWithin';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceTriggersPage.module.css';
 import { t } from '../../i18n';
@@ -70,7 +71,7 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
   const settingsPath = (trigger: Trigger) => `/workspace/${workspaceId}/triggers/${trigger.id}`;
 
   const [triggers, setTriggers] = useState<PageOf<Trigger> | null>(null);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = usePageWithin(workspaceId);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -80,7 +81,7 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
   const [firingsError, setFiringsError] = useState<string | null>(null);
   /** Everything that has fired here, whichever trigger did it. */
   const [history, setHistory] = useState<PageOf<TriggerFiring> | null>(null);
-  const [historyPage, setHistoryPage] = useState(1);
+  const [historyPage, setHistoryPage] = usePageWithin(workspaceId);
   const [historyError, setHistoryError] = useState<string | null>(null);
   /**
    * What each Slack connection's bot token can and cannot do.

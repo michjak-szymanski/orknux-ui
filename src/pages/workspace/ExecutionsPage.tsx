@@ -25,6 +25,7 @@ import { Loader } from '../../components/Loader';
 import { SelectField } from '../../components/SelectField';
 import { CompactPagination } from '../../components/CompactPagination';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { usePageWithin } from '../../components/pageWithin';
 import { shellUser } from '../../session/user';
 import styles from './ExecutionsPage.module.css';
 import { t } from '../../i18n';
@@ -54,7 +55,7 @@ export function ExecutionsPage({ session, onSignOut }: ExecutionsPageProps) {
   const [runs, setRuns] = useState<PageOf<Execution> | null>(null);
   const [workflows, setWorkflows] = useState<WorkspaceWorkflow[]>([]);
   const [ran, setRan] = useState<ExecutionWorkflow[]>([]);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = usePageWithin(workspaceId);
   const [status, setStatus] = useState<ExecutionStatus | ''>('');
   const [workflowId, setWorkflowId] = useState('');
   const [days, setDays] = useState<number | ''>(1);

@@ -12,6 +12,7 @@ import { CompactPagination } from '../../components/CompactPagination';
 import { Loader } from '../../components/Loader';
 import { FieldHint } from '../../components/FieldHint';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { usePageWithin } from '../../components/pageWithin';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceSessionsPage.module.css';
 import { t } from '../../i18n';
@@ -45,7 +46,7 @@ export function WorkspaceSessionsPage({ session, onSignOut }: WorkspaceSessionsP
   const { workspaceId = '' } = useParams();
 
   const [sessions, setSessions] = useState<LlmSessionPage | null>(null);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = usePageWithin(workspaceId);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [order, setOrder] = useState<LlmSessionOrder>('LAST_EVENT');

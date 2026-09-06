@@ -20,6 +20,7 @@ import { Loader } from '../../components/Loader';
 import { NameDialog } from '../../components/NameDialog';
 import { FieldHint } from '../../components/FieldHint';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { usePageWithin } from '../../components/pageWithin';
 import { shellUser } from '../../session/user';
 import styles from './CatalogueTable.module.css';
 import { t } from '../../i18n';
@@ -43,7 +44,7 @@ export function WorkspaceObjectsPage({ session, onSignOut }: WorkspaceObjectsPag
   const navigate = useNavigate();
 
   const [objects, setObjects] = useState<PageOf<WorkflowObject> | null>(null);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = usePageWithin(workspaceId);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 

@@ -14,6 +14,7 @@ import { CompactPagination } from '../../components/CompactPagination';
 import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { usePageWithin } from '../../components/pageWithin';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceTasksPage.module.css';
 import { t } from '../../i18n';
@@ -40,7 +41,7 @@ export function WorkspaceTasksPage({ session, onSignOut }: WorkspaceTasksPagePro
   const navigate = useNavigate();
 
   const [tasks, setTasks] = useState<TaskPage | null>(null);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = usePageWithin(workspaceId);
   const [status, setStatus] = useState<TaskStatus | ''>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
