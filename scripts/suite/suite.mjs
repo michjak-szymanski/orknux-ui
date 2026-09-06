@@ -44,6 +44,17 @@ export const TESTS = [
     needs: ['workflow'],
   },
   {
+    name: 'field-search-check',
+    what: "the field picker's search, and that a group's heading does not keep its fields",
+    needs: ['workflow'],
+    /*
+     * It reads the groups off the open list and picks its own needle out of a
+     * heading, so it does not care what the fixture's nodes are called - which
+     * is the point: the bug was that a heading matched and kept everything
+     * under it, and that shape exists in any graph.
+     */
+  },
+  {
     name: 'bend-check',
     what: "a line's points moving it exactly as far as they were dragged, bare and labelled",
     needs: ['workspace'],

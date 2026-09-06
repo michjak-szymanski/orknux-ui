@@ -83,14 +83,27 @@ export function FieldPicker({ options, value, onChange, label, labels = FIELD_LA
     return () => document.removeEventListener('mousedown', onDocumentClick);
   }, [open]);
 
+  /*
+   * The field and the expression, and deliberately not the group name.
+   *
+   * Matching the group name kept every field of a group whose heading matched,
+   * which reads as a search box that does nothing: a graph with a *Slack reply
+   * received* trigger and an *Azure E2E Agent* answered `re` with every field
+   * of both, because "reply", "received" and "azure" all contain it. Two
+   * letters is where somebody looks to see whether the box works at all, and
+   * this is what they saw. Reported 2026-09-06.
+   *
+   * Nothing is lost with it gone. The expression carries where the field comes
+   * from - `trigger.text` - so searching by source still works, and it does it
+   * on a name the graph actually uses rather than on a heading that happens to
+   * share two letters with the word being typed.
+   */
   const matching = useMemo(() => {
     const needle = search.trim().toLowerCase();
     if (needle === '') return options;
     return options.filter(
       (option) =>
-        option.field.toLowerCase().includes(needle) ||
-        option.groupName.toLowerCase().includes(needle) ||
-        option.expression.toLowerCase().includes(needle),
+        option.field.toLowerCase().includes(needle) || option.expression.toLowerCase().includes(needle),
     );
   }, [options, search]);
 
@@ -137,7 +150,7 @@ export function FieldPicker({ options, value, onChange, label, labels = FIELD_LA
       </button>
 
       {open && (
-        <div className={styles.menu}>
+        <div className={styles.menu} data-field-menu="">
           <input
             className={styles.search}
             value={search}
@@ -157,11 +170,21 @@ export function FieldPicker({ options, value, onChange, label, labels = FIELD_LA
             <div className={styles.list}>
               {grouped.map((group) => (
                 <div className={styles.group} key={group[0].groupKey}>
-                  <p className={styles.groupName}>{group[0].groupName}</p>
+                  {/*
+                    What a check reads the list off. CSS modules hash the class
+                    names this project writes, so a check outside the bundle
+                    cannot ask for one - the grant lists mark their rows the
+                    same way and for the same reason.
+                  */}
+                  <p className={styles.groupName} data-field-group="">
+                    {group[0].groupName}
+                  </p>
                   {group.map((option) => (
                     <button
                       key={option.expression}
                       type="button"
+                      data-field-option={option.field}
+                      data-field-expression={option.expression}
                       className={
                         option.expression === value ? `${styles.option} ${styles.optionChosen}` : styles.option
                       }
