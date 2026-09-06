@@ -375,6 +375,25 @@ function escaped(name: string): string {
 }
 
 /**
+ * The name the code gives the default-exported function, or null.
+ *
+ * The panel and the code are one declaration with two controls, and renaming was
+ * the half that only went one way: the Name field rewrote the code, and a name
+ * typed into the code left the panel - and the signature above it, and what is
+ * saved - on the old one. Issue #321 fixed exactly this for the parameters and
+ * did not touch the name.
+ *
+ * Null for anything this cannot read, which is the same answer the parameters
+ * give and for the same reason: mid-edit is the ordinary case, and a panel that
+ * emptied itself because somebody deleted a bracket for a moment would be worse
+ * than the bug.
+ */
+export function sourceName(source: string): string | null {
+  const match = /export\s+default\s+(?:async\s+)?function\s*\*?\s*([A-Za-z_$][\w$]*)\s*\(/.exec(source);
+  return match === null ? null : match[1];
+}
+
+/**
  * The declaration of the default-exported function, and where its parameters are.
  *
  * Found by matching the declaration and then walking to the closing bracket, because
@@ -637,13 +656,36 @@ export function starterSource(
 ): string {
   const opening = `export default async function ${name}(${declarations.join(', ')}) {`;
 
+  /*
+   * The stub says what there is, because nothing else does at that moment.
+   *
+   * A function starts with an empty body and a sandbox whose whole surface is
+   * one global nobody has heard of. Somebody writing their first one reaches
+   * for `fetch`, gets a refusal, and learns what is here one refusal at a time
+   * - and the editor's completion only helps once they have typed `orknux.`,
+   * which they have no reason to. Word for word what the server writes into a
+   * stored one: two spellings of this would show up as the code changing when
+   * a function is saved.
+   */
+  const surface = [
+    '  // What this server will do for you, and there is nothing else:',
+    "  //   orknux.log.info('what is happening')      what you say while this runs",
+    '  //   orknux.http.get(url, headers)             a request, made by the server',
+    '  //   orknux.http.post(url, { a: 1 })           an object body goes as JSON',
+    '  //   orknux.slack.thread(connection, ch, ts)   the messages in one thread',
+    '  // Each answers a value with `error` on it when it could not; check that',
+    '  // first. There is no fetch, no import and no require: this is a sandbox.',
+    '',
+  ];
+
   if (returnType === 'NONE') {
-    return [opening, '  // Nothing goes on from here; this runs for what it does.', '}', ''].join('\n');
+    return [opening, ...surface, '  // Nothing goes on from here; this runs for what it does.', '}', ''].join('\n');
   }
 
   const gives = returned.length === 0 ? '{}' : `{ ${returned.join(', ')} }`;
   return [
     opening,
+    ...surface,
     '  // What this returns is handed to the next node.',
     `  return ${gives};`,
     '}',

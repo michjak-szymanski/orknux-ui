@@ -21,6 +21,7 @@ import {
   validateFunctionSource,
   valueTypeLabel,
   withName,
+  sourceName,
   withParameters,
 } from '../../api/functions';
 import type { FunctionParam, ScriptImport, WorkspaceFunction } from '../../api/functions';
@@ -591,6 +592,17 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
    */
   const declaredAs = useRef<string | null>(null);
 
+  /**
+   * The code exactly as it arrived, so an unedited page follows nothing.
+   *
+   * A stored function whose code and details already disagree about the name is
+   * an ordinary thing to open - it is the state issue #267 leaves behind - and
+   * reading the declaration's name into the panel the moment it opens would put
+   * work in the page nobody did, which is the failure #175 is about. So the name
+   * is followed only once somebody has actually changed the code.
+   */
+  const openedWith = useRef<string | null>(null);
+
   useEffect(() => {
     if (functionId === '') return;
 
@@ -629,6 +641,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
          * any — JavaScript without annotations is TypeScript, so opening one of those
          * shows exactly what was written and compiling it changes nothing.
          */
+        openedWith.current = found.typescript ?? found.source;
         setSource(found.typescript ?? found.source);
         setReturnType(found.returnType);
         setReturnObjectId(found.returnObjectId);
@@ -782,6 +795,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
           declaredAs.current = identifier(found.name);
           setName(found.name);
           setDescription(found.description ?? '');
+          openedWith.current = found.typescript ?? found.source;
           setSource(found.typescript ?? found.source);
           setReturnType(found.returnType);
           setReturnObjectId(found.returnObjectId);
@@ -1013,6 +1027,30 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
     if (source === rewrote.current) return;
 
     const timer = window.setTimeout(() => {
+      /*
+       * The name as well as the parameters.
+       *
+       * #321 carried the parameter list back from the code and left the name
+       * behind, so renaming the function where anybody writing code renames it
+       * - in the declaration - left the panel, the signature above it and what
+       * is saved on the old name. The declaration is one thing with two
+       * controls; both halves of it travel both ways now.
+       *
+       * `declaredAs` is moved with it, which is what stops the two effects
+       * arguing: the rename-into-the-code effect only renames *from* the name
+       * this page last wrote, so telling it the new name means it sees nothing
+       * to do rather than rewriting the declaration back.
+       */
+      const written = sourceName(source);
+      // Only somebody's own edit. Code that is still exactly what was
+      // opened has not been renamed by anybody, however much it
+      // disagrees with the details beside it.
+      if (source !== openedWith.current && written !== null && written !== identifier(name)) {
+        declaredAs.current = written;
+        setName(written);
+        setSaved(false);
+      }
+
       const read = parametersOf(source, handed, objects, params);
       if ('problem' in read) return;
       if (sameParameters(declared(read.params), declared(params))) return;
@@ -2383,6 +2421,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                           declaredAs.current = identifier(found.name);
                           setName(found.name);
                           setDescription(found.description ?? '');
+                          openedWith.current = found.typescript ?? found.source;
                           setSource(found.typescript ?? found.source);
                           setReturnType(found.returnType);
                           setReturnObjectId(found.returnObjectId);

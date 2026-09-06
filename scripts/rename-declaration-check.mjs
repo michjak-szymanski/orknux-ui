@@ -230,6 +230,37 @@ try {
   await page.waitForTimeout(800);
   check(!(await asking()), 'and leaving it asks nothing');
 
+  /* ---- and the other way round, which is where anybody writing code renames ---- */
+
+  /*
+   * The declaration is one thing with two controls, and until now only one of
+   * them was listened to for the *name*: #321 carried the parameter list back
+   * from the code and left the name behind, so renaming the function where a
+   * programmer renames it - in the declaration - left the panel, the signature
+   * above it and what is saved on the old name. Reported 2026-09-06.
+   */
+  const both = await makeFunction(`${PREFIX}Both${STAMP}`, null);
+  await openEditor(both.id);
+
+  const wanted = `${PREFIX}FromCode${STAMP}`;
+  await page.locator('.view-lines').first().click({ position: { x: 40, y: 10 } });
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.type(`export default async function ${wanted}() {`);
+  // Longer than the pause the editor waits before reading a declaration: it is
+  // half-written for most of the time somebody is typing one.
+  await page.waitForTimeout(1500);
+
+  const moved = await page.locator('#function-name').inputValue();
+  check(moved === wanted, `a name typed into the declaration moves the panel (${JSON.stringify(moved)})`);
+
+  // And the page does not then argue with itself: the effect that writes the
+  // panel's name into the code must find nothing to do, not rename it back.
+  await page.waitForTimeout(1200);
+  check(
+    (await firstLine()).includes(wanted),
+    `and the code keeps the name that was typed into it (${JSON.stringify(await firstLine())})`,
+  );
+
   await page.screenshot({ path: shot('rename-declaration.png'), fullPage: true });
 } catch (failure) {
   record(false, `the check threw: ${failure.message}`);
