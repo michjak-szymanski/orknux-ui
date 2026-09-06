@@ -71,6 +71,18 @@ const ROOT = resolve(SCRIPTS, '..');
  */
 const TIMEOUT = Number(process.env.ORKNUX_SUITE_TIMEOUT ?? 240_000);
 
+/*
+ * A check may ask for longer with `budget` in `suite.mjs`, and one does. The
+ * number above catches a hang, which means it has to sit near what the slowest
+ * healthy check takes - and a check that walks every address in the product is
+ * not slow because it is stuck, it is slow because there are forty-seven of
+ * them. Raising TIMEOUT for all of it would blind the other hundred-odd checks
+ * to the hang it exists to catch, so the one that needs room says how much.
+ */
+function budgetFor(test) {
+  return Number(test.budget ?? TIMEOUT);
+}
+
 const RESULTS = process.env.ORKNUX_SUITE_RESULTS ?? resolve(SCRIPTS, 'suite/results');
 
 /**
@@ -261,10 +273,11 @@ function run(test, worker = 0) {
 
     // Killed rather than waited on. SIGKILL because a chromium that is not
     // answering will not answer a polite signal either.
+    const limit = budgetFor(test);
     const alarm = setTimeout(() => {
       child.kill('SIGKILL');
-      output += `\n--- killed after ${TIMEOUT / 1000}s ---\n`;
-    }, TIMEOUT);
+      output += `\n--- killed after ${limit / 1000}s ---\n`;
+    }, limit);
 
     child.on('error', (problem) => {
       clearTimeout(alarm);

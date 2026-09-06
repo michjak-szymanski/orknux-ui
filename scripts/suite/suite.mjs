@@ -24,6 +24,12 @@
  * `ci: false` means exactly one thing: this check is not run by the CI job. The
  * reason is written beside it, and it is never "it is flaky".
  *
+ * `budget: <ms>` raises the runner's timeout for one check. The default is a
+ * hang-catcher and sits near what the slowest healthy check takes, so a check
+ * that is legitimately longer than that has to say so rather than have every
+ * other check's hang-catcher loosened around it. One check asks, and the
+ * reason is beside it.
+ *
  * `alone: true` means this check changes something the whole installation
  * shares, so nothing may run beside it. Sharding hands each worker its own
  * workspace, which covers everything a check normally touches; it does not
@@ -470,6 +476,16 @@ export const TESTS = [
     name: 'hint-prose-check',
     what: 'every block of prose still in the open, and the written reason for each one',
     needs: ['workspace'],
+    /*
+     * Ten minutes, because it opens forty-seven addresses and the default four
+     * is not a budget it can finish in: at about six seconds an address the
+     * sweep alone is over five minutes, and every one of those addresses is
+     * allowed thirty seconds to draw before the page is given up on. It was
+     * killed at thirty-seven of the forty-seven on 2026-09-06, having passed
+     * every assertion it reached - a green check reported as a failure, which
+     * is the one outcome a suite must not produce.
+     */
+    budget: 600_000,
     /*
      * The one in this group that is not about a screen somebody already
      * converted. The other six each drive a page whose prose was moved and
