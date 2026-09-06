@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { createShell, deleteShell, fetchShell, shellStatusLabel, updateShell } from '../../api/shell';
+import type { ShellKind } from '../../api/shell';
 import type { Shell } from '../../api/shell';
 import type { SessionUser } from '../../api/session';
 import { AdminSidebar } from '../../components/AdminSidebar';
@@ -76,8 +77,16 @@ function whole(text: string, most: number): boolean {
  */
 export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSettingsPageProps) {
   const { shellId } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const adding = shellId === undefined;
+  /*
+   * MCP or SSH. On a new shell the route says which - /admin/shell/new-mcp is
+   * the MCP form - and on an existing one it is the shell's own kind, read when
+   * it loads. A kind cannot change after creation, so this is set once.
+   */
+  const [kind, setKind] = useState<ShellKind>(location.pathname.endsWith('new-mcp') ? 'MCP' : 'SSH');
+  const [mcpServerId, setMcpServerId] = useState('');
 
   const [shell, setShell] = useState<Shell | null>(null);
   const [name, setName] = useState('');
@@ -114,6 +123,8 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
           return;
         }
         setShell(found);
+        setKind(found.kind);
+        setMcpServerId(found.mcpServerId ?? '');
         setName(found.name);
         setHost(found.host);
         setPort(String(found.port));
@@ -138,12 +149,14 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
    * `ssh build.internal`: leaving it out means the account the server itself
    * runs as, which is a thing somebody chose rather than a field they forgot.
    */
+  const transportComplete =
+    kind === 'MCP'
+      ? mcpServerId.trim() !== ''
+      : host.trim() !== '' && Number.isInteger(portNumber) && portNumber > 0 && portNumber < 65536;
+
   const complete =
     name.trim() !== '' &&
-    host.trim() !== '' &&
-    Number.isInteger(portNumber) &&
-    portNumber > 0 &&
-    portNumber < 65536 &&
+    transportComplete &&
     // Empty is a valid answer for either limit; a number that is not one is not.
     whole(commandTimeout, MAX_TIMEOUT_SECONDS) &&
     whole(outputKept, MAX_OUTPUT_KIB);
@@ -163,7 +176,13 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
     const secret = clearKey ? '' : passphrase !== '' ? passphrase : undefined;
 
     try {
-      const input = {
+      const input = kind === 'MCP' ? {
+        kind: 'MCP' as ShellKind,
+        name: name.trim(),
+        mcpServerId: mcpServerId.trim(),
+        commandTimeoutSeconds: commandTimeout.trim() === '' ? null : Number(commandTimeout),
+        maxOutputBytes: outputKept.trim() === '' ? null : Number(outputKept) * KIB,
+      } : {
         name: name.trim(),
         host: host.trim(),
         port: portNumber,
@@ -217,19 +236,20 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
     }
   }
 
-  const called = adding ? t('Add Shell') : (shell?.name ?? '…');
+  const kindWord = kind === 'MCP' ? t('MCP Shell') : t('SSH Shell');
+  const called = adding ? `${t('Add ')}${kindWord}` : (shell?.name ?? '…');
 
   return (
     <AppShell
-      title={adding ? t('New shell') : shell?.name}
+      title={adding ? `${t('New ')}${kindWord}` : shell?.name}
       user={shellUser(session)}
       onSignOut={onSignOut}
       sidebar={<AdminSidebar active="shell" />}
     >
       <header className={styles.headerBlock}>
         <p className={styles.breadcrumbs}>
-          <BackLink to="/admin/shell" label={t('Shell')} />
-          <Link className={styles.crumbLink} to="/admin/shell">{t('Shell')}</Link>
+          <BackLink to="/admin/shell" label={t('Shells')} />
+          <Link className={styles.crumbLink} to="/admin/shell">{t('Shells')}</Link>
           <span className={styles.crumbSeparator}>/</span>
           <span className={styles.crumbCurrent}>{called}</span>
         </p>
@@ -273,6 +293,29 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
               />
             </div>
 
+            {kind === 'MCP' && (
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="shell-mcp-server">
+                  MCP server <span className={styles.required}>*</span>
+                </label>
+                <FieldHint label={t('MCP server')}>
+                  {t('The id of the registered MCP server this shell speaks through. Register the server on the Integrations page first - we recommend DesktopCommander - then paste its id here. A picker will replace this once installation-wide servers land; today it is the id.')}
+                </FieldHint>
+                <input
+                  id="shell-mcp-server"
+                  name="shellMcpServer"
+                  className={styles.input}
+                  type="text"
+                  inputMode="numeric"
+                  placeholder={t('e.g. 12')}
+                  value={mcpServerId}
+                  onChange={(event) => setMcpServerId(event.target.value)}
+                  required
+                />
+              </div>
+            )}
+
+            {kind === 'SSH' && (<>
             <div className={styles.fieldRow}>
               <div className={styles.field}>
                 <span className={styles.labelWithHint}>
@@ -347,8 +390,10 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
                 </FieldHint>
               </span>
             )}
+            </>)}
           </section>
 
+          {kind === 'SSH' && (
           <section className={styles.card}>
             <h2 className={styles.cardTitle}>{t('Account')}</h2>
             <div className={styles.divider} />
@@ -443,6 +488,7 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
               </span>
             )}
           </section>
+          )}
 
           {/*
             The two numbers that decide what an agent can do here, and they used
@@ -553,7 +599,7 @@ export function AdminShellSettingsPage({ session, onSignOut }: AdminShellSetting
                 disabled={saving}
               >{t('Cancel')}</button>
               <button type="submit" className={styles.primaryButton} disabled={!complete || saving}>
-                {saving ? t('Saving…') : adding ? t('Add Shell') : t('Save Changes')}
+                {saving ? t('Saving…') : adding ? `${t('Add ')}${kindWord}` : t('Save Changes')}
               </button>
             </div>
           </div>

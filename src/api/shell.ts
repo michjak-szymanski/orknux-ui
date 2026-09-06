@@ -8,9 +8,15 @@ import { t } from '../i18n';
  * everything the server will say about a stored key, which is all the form needs
  * in order to tell somebody it is about to replace one.
  */
+export type ShellKind = 'SSH' | 'MCP';
+
 export interface Shell {
   id: string;
   name: string;
+  /** SSH or MCP - which list it belongs in and what carries its commands. */
+  kind: ShellKind;
+  /** The MCP server an MCP shell speaks through, or null for SSH. */
+  mcpServerId: string | null;
   host: string;
   port: number;
   /**
@@ -57,9 +63,15 @@ export interface Shell {
 export type ShellStatus = 'NOT_CONFIGURED' | 'NOT_CHECKED' | 'CONNECTED' | 'FAILED';
 
 export interface ShellInput {
+  /** SSH or MCP. Omitted is SSH; a shell's kind cannot change after creation. */
+  kind?: ShellKind;
+  /** Required for an MCP shell, ignored for SSH. */
+  mcpServerId?: string | null;
   name: string;
-  host: string;
-  port: number;
+  /** Required for an SSH shell, blank/ignored for an MCP shell. */
+  host?: string;
+  /** Ignored for an MCP shell. */
+  port?: number;
   /** Empty or absent means the account the server itself runs as. */
   username?: string | null;
   /** Left out entirely to keep the stored key; empty to clear it. */
@@ -92,7 +104,7 @@ export function shellStatusLabel(status: ShellStatus): string {
 }
 
 const SHELL_FIELDS =
-  'id name host port username account privateKeySet passphraseSet hostKey enabled status ' +
+  'id name kind mcpServerId host port username account privateKeySet passphraseSet hostKey enabled status ' +
   'commandTimeoutSeconds maxOutputBytes defaultCommandTimeoutSeconds defaultMaxOutputBytes ' +
   'lastCheckMessage lastCheckedAt createdAt lastModifiedAt';
 

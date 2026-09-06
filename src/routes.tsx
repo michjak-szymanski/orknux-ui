@@ -159,6 +159,7 @@ export const PAGE_ELEMENTS: Record<PagePath, PageElement> = {
   '/admin/shell': (session, onSignOut) => <AdminShellPage session={session} onSignOut={onSignOut} />,
   /* Before the one with an id in it: `new` is a page, not a shell called new. */
   '/admin/shell/new': (session, onSignOut) => <AdminShellSettingsPage session={session} onSignOut={onSignOut} />,
+  '/admin/shell/new-mcp': (session, onSignOut) => <AdminShellSettingsPage session={session} onSignOut={onSignOut} />,
   '/admin/shell/:shellId': (session, onSignOut) => <AdminShellSettingsPage session={session} onSignOut={onSignOut} />,
   '/admin/roles': (session, onSignOut) => <AdminRolesPage session={session} onSignOut={onSignOut} />,
   '/admin/users': (session, onSignOut) => <AdminUsersPage session={session} onSignOut={onSignOut} />,
