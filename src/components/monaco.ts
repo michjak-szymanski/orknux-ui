@@ -289,7 +289,12 @@ declare global {
   type SlackThreadMessage = {
     /** Slack's own timestamp, which is also the message's id in its channel. */
     readonly ts: string;
-    readonly user: string;
+    /**
+     * Who wrote it, or the bot that did. Null where Slack said neither, which
+     * it does for some app messages - so a function counting distinct people
+     * has to drop the nulls rather than trust every message to name somebody.
+     */
+    readonly user: string | null;
     readonly text: string;
     /** Whether this is the message the thread hangs off. */
     readonly parent: boolean;
@@ -365,6 +370,26 @@ declare global {
         threadTs: string,
         limit?: number,
       ): SlackThread;
+    };
+
+    /**
+     * What this function says while it runs.
+     *
+     * There is no console here and there is not going to be one. A line is
+     * built here, crosses as text, and the server writes it under a logger of
+     * its own — so what functions say can be turned up without the server
+     * getting louder with them.
+     *
+     * The level is the installation's, not this function's: a call below it is
+     * dropped where it was written, so tracing can be left in and costs one
+     * comparison while it is turned off. Anything that is not a string is
+     * logged as JSON.
+     */
+    readonly log: {
+      debug(...said: unknown[]): void;
+      info(...said: unknown[]): void;
+      warn(...said: unknown[]): void;
+      error(...said: unknown[]): void;
     };
 
     /**
