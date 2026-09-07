@@ -251,6 +251,19 @@ export function SecretField({
   const pickerId = `${id}-variable`;
   const reading = field.source === 'VARIABLE';
 
+  /*
+   * Showing what is being typed, as distinct from revealing what is stored.
+   * `onReveal` fetches the saved credential from the server and is only there to
+   * offer once something is stored; a form that is adding has nothing to fetch,
+   * so a value someone pastes stays behind dots with no way to check it. This is
+   * the plain password-box toggle for that case - it flips the box between text
+   * and dots and touches nothing on the server. See issue #339.
+   */
+  const [showTyped, setShowTyped] = useState(false);
+  const typedValue = field.value !== null && field.value !== '';
+  const canShowTyped = !field.offersReveal && typedValue;
+  const showingValue = field.revealed || (showTyped && typedValue);
+
   return (
     <div className={styles.field}>
       <div className={styles.header}>
@@ -328,7 +341,7 @@ export function SecretField({
           <input
             id={id}
             className={`${styles.input} ${styles.inputMono}`}
-            type={field.revealed || field.value === '' ? 'text' : 'password'}
+            type={showingValue || field.value === '' ? 'text' : 'password'}
             value={field.value ?? MASK}
             onChange={(event) => {
               field.type(event.target.value);
@@ -348,6 +361,13 @@ export function SecretField({
                 if (field.revealed) field.hide();
                 else onReveal();
               }}
+            />
+          )}
+          {canShowTyped && (
+            <RevealToggle
+              shown={showTyped}
+              label={label}
+              onToggle={() => setShowTyped((on) => !on)}
             />
           )}
         </div>
