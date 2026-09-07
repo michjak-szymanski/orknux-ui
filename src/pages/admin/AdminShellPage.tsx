@@ -277,7 +277,11 @@ export function AdminShellPage({ session, onSignOut }: AdminShellPageProps) {
       </div>
 
       <p className={styles.subtitle}>
-        {t('A machine reached through a tool server installed on it rather than over SSH. Register the server on the Integrations page, then point an MCP shell at it here.')}
+        {t('A machine reached through a tool server installed on it rather than over SSH. We recommend')}{' '}
+        <a href="https://github.com/michjak-szymanski/orknux-shell" target="_blank" rel="noreferrer">
+          Orknux Shell
+        </a>
+        {t('; register it on the Integrations page, then point an MCP shell at it here.')}
       </p>
 
       <section className={styles.card}>
