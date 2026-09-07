@@ -311,6 +311,16 @@ declare global {
     | { messages: SlackThreadMessage[]; replies: number; error?: undefined }
     | { error: string; messages?: undefined; replies?: undefined };
 
+  /** What a post() turned into: the channel and the new message's own "ts", or why not. */
+  type SlackPost =
+    | { channel: string; ts: string | null; error?: undefined }
+    | { error: string; channel?: undefined; ts?: undefined };
+
+  /** Whether a react() went on. Already-reacted counts as ok. */
+  type SlackReaction =
+    | { ok: true; error?: undefined }
+    | { error: string; ok?: undefined };
+
   type OrknuxRequest = {
     url: string;
     /** Any method; lower case is fine, it is upper-cased on the way out. */
@@ -370,6 +380,38 @@ declare global {
         threadTs: string,
         limit?: number,
       ): SlackThread;
+
+      /**
+       * Post a message, through the same kind of connection thread() reads.
+       *
+       * @param connection which Slack to post through.
+       * @param channel the channel id, or a #name or @handle it resolves.
+       * @param text what to say.
+       * @param threadTs when set, the message joins that thread rather than the
+       *   channel. "ts" in the answer is the new message's own timestamp, which
+       *   is what react() hangs on and what a reply threads onto.
+       */
+      post(
+        connection: OrknuxConnectionRef,
+        channel: string,
+        text: string,
+        threadTs?: string,
+      ): SlackPost;
+
+      /**
+       * Add an emoji reaction to a message.
+       *
+       * @param ts the message's own "ts" — post() returns one, and every thread
+       *   message carries one.
+       * @param emoji the short name, with or without the colons: "thumbsup" and
+       *   ":thumbsup:" both work.
+       */
+      react(
+        connection: OrknuxConnectionRef,
+        channel: string,
+        ts: string,
+        emoji: string,
+      ): SlackReaction;
     };
 
     /**
