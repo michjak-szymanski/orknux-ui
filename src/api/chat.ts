@@ -396,15 +396,38 @@ export async function streamChatMessage(
    * `ReaderWatch` on the other side of it. Issue #299.
    */
   signal?: AbortSignal,
+  /**
+   * Whether leaving stops the answer.
+   *
+   * A voice turn is spoken and gone, so walking away means stop it - the
+   * behaviour issue #299 gave voice mode. A text turn is a record kept whether
+   * anybody is still reading or not, so leaving no longer loses it (#335); it
+   * is written to the history and read back the next time the chat is opened.
+   * Pressing Stop stops it either way, through `interruptChat`.
+   */
+  voice = false,
 ): Promise<void> {
   const response = await fetch(`/api/chats/${id}/stream`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'same-origin',
-    body: JSON.stringify({ text, attachmentIds }),
+    body: JSON.stringify({ text, attachmentIds, voice }),
     signal,
   });
   await read(response, handlers);
+}
+
+/**
+ * Stops the answer being written on a chat, when Stop is pressed.
+ *
+ * A text chat no longer stops just because its reader left - the answer is
+ * wanted when the person comes back (#335) - so an intentional stop is a call
+ * of its own rather than the side effect of closing the connection. The stream
+ * the browser is reading closes on its own once the server puts the interrupted
+ * turn back.
+ */
+export async function interruptChat(id: string): Promise<void> {
+  await fetch(`/api/chats/${id}/interrupt`, { method: 'POST', credentials: 'same-origin' });
 }
 
 /**
@@ -420,8 +443,10 @@ export async function regenerateChatAnswer(
   handlers: ChatStreamHandlers,
   /** The same handle a send takes, and stopping this stops the model too. */
   signal?: AbortSignal,
+  /** Whether leaving stops it; see `streamChatMessage`. A voice again sets it. */
+  voice = false,
 ): Promise<void> {
-  const response = await fetch(`/api/chats/${id}/regenerate`, {
+  const response = await fetch(`/api/chats/${id}/regenerate?voice=${voice}`, {
     method: 'POST',
     credentials: 'same-origin',
     signal,

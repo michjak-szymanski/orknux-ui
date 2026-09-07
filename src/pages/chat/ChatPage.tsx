@@ -10,6 +10,7 @@ import {
   fetchChatSession,
   fetchChatSessions,
   fetchChatsMentioning,
+  interruptChat,
   regenerateChatAnswer,
   renameChat,
   streamChatMessage,
@@ -1204,6 +1205,9 @@ export function ChatPage({ session, onSignOut }: ChatPageProps) {
         },
         going,
         signal,
+        // A voice turn is spoken and gone: leaving it stops it, the way #299
+        // meant voice mode to work. The composer's text turns leave this false.
+        true,
       );
       if (failure !== null) throw new Error(failure);
       if (going.length > 0) {
@@ -1624,17 +1628,17 @@ Attached: ${unopenable.map((file) => file.filename).join(', ')}`;
   /**
    * Stops the turn in flight, from the composer.
    *
-   * The same interruption the circle in voice mode makes, and it has to be the
-   * same one: the two would otherwise disagree about what stopping means, with
-   * one of them ending the model call and the other only looking away. What it
-   * reaches is the request, so the server sees the connection close and hangs
-   * up on the provider — see `ReaderWatch`. Issue #299.
-   *
-   * The answer written so far is not kept. The server does not write an
-   * abandoned answer to the history, and the log is re-read as this unwinds, so
-   * what stays on screen is what the chat actually holds.
+   * Two things, because a text chat no longer stops just because its reader
+   * left: leaving is asynchronous now and the answer is kept for when the
+   * person comes back (#335). So closing the connection is no longer enough to
+   * stop the model - it would go on writing an answer to the history nobody
+   * asked to keep - and Stop also tells the server to hang up, through the
+   * interrupt door. The abort still closes the stream this browser is reading;
+   * the interrupt is what ends the model call. Pressing Stop is the one place
+   * the two are meant together.
    */
   function handleStop() {
+    if (currentId !== null) interruptChat(currentId).catch(() => undefined);
     asking.current?.abort();
     asking.current = null;
   }
