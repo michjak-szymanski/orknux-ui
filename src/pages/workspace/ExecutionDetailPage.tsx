@@ -20,7 +20,7 @@ import {
   rerunExecution,
   rerunExecutionStep,
 } from '../../api/executions';
-import type { ExecutionDetail, ExecutionStep, StepStatus } from '../../api/executions';
+import type { ExecutionDetail, ExecutionPicture, ExecutionStep, StepStatus } from '../../api/executions';
 import { NODE_KIND_LABEL } from '../../api/graph';
 import type { NodeKind } from '../../api/graph';
 import type { SessionUser } from '../../api/session';
@@ -52,6 +52,7 @@ const KIND_CLASS: Record<NodeKind, string> = {
   // Listed for completeness rather than because it happens: a session node is
   // a declaration the agent reads, so no run ever records a step of this kind.
   SESSION: 'session',
+  IMAGE: 'image',
 };
 
 const STEP_STATUS_LABEL: Record<StepStatus, string> = {
@@ -765,6 +766,7 @@ export function ExecutionDetailPage({ session, onSignOut }: ExecutionDetailPageP
             key={selected.key}
             step={selected}
             workspaceId={workspaceId}
+            pictures={(run?.pictures ?? []).filter((picture) => picture.nodeKey === selected.key)}
             runEnded={run !== null && run.status !== 'RUNNING'}
             onRerunFromHere={rerunFromStep}
             onClose={() => setSelectedKey(null)}
@@ -788,12 +790,15 @@ function SummaryRow({ label, mono = false, children }: { label: string; mono?: b
 function NodeDetailsPanel({
   step,
   workspaceId,
+  pictures,
   runEnded,
   onRerunFromHere,
   onClose,
 }: {
   step: ExecutionStep;
   workspaceId: string;
+  /** The pictures this step's image node drew, if it is one; empty otherwise. */
+  pictures: ExecutionPicture[];
   /** True once the run has finished, so a pending step was never reached. */
   runEnded: boolean;
   /** Starts the workflow again from this step; rejects with the server's words. */
@@ -924,6 +929,27 @@ function NodeDetailsPanel({
 
       <h3 className={styles.panelHeading}>{t('Output')}</h3>
       <pre className={styles.payload}>{prettyJson(step.output)}</pre>
+
+      {pictures.length > 0 && (
+        <>
+          <h3 className={styles.panelHeading}>{pictures.length === 1 ? t('Picture') : t('Pictures')}</h3>
+          <div className={styles.pictures}>
+            {pictures.map((picture) => (
+              <figure key={picture.id} className={styles.picture}>
+                {/* The bytes are served by ExecutionPictureAPI; a 404 draws the
+                    broken-image icon, which is what says a picture was swept. */}
+                <img src={picture.url} alt={picture.prompt} className={styles.pictureImage} />
+                <figcaption className={styles.pictureCaption}>
+                  <span className={styles.picturePrompt} title={picture.prompt}>{picture.prompt}</span>
+                  <a className={styles.pictureDownload} href={picture.url} download={picture.filename}>
+                    {t('Download')}
+                  </a>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </>
+      )}
     </aside>
   );
 }

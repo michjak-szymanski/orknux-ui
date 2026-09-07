@@ -121,6 +121,21 @@ export interface ExecutionDetail extends Execution {
    * here. Null when Temporal is off or has no interface to send anybody to.
    */
   temporalUrl?: string | null;
+  /** The pictures this run's image nodes drew, each keyed to its step by nodeKey. */
+  pictures?: ExecutionPicture[];
+}
+
+/** One picture an image node drew, as the run graph shows it. */
+export interface ExecutionPicture {
+  id: string;
+  /** Which step drew it, so it shows under that node. */
+  nodeKey: string;
+  /** Where the bytes are: an <img src> and the download. */
+  url: string;
+  /** What it was drawn from, its alt text. */
+  prompt: string;
+  filename: string;
+  contentType: string;
 }
 
 export interface ExecutionFilters {
@@ -237,6 +252,7 @@ const EXECUTION_DETAIL_FIELDS = `
   steps { key kind name description status startedAt finishedAt durationSeconds input output error actionId conditionId branch attempts carriedOver x y }
   edges { source target branch }
   logs { id nodeKey at level message }
+  pictures { id nodeKey url prompt filename contentType }
   temporalUrl
 `;
 

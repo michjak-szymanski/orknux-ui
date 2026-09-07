@@ -62,6 +62,8 @@ import type { WorkspaceFunction } from '../../api/functions';
 import { fetchWorkspaceConnections } from '../../api/integrations';
 import type { WorkspaceConnection } from '../../api/integrations';
 import { createObject, fetchWorkspaceObjects } from '../../api/objects';
+import { fetchModels } from '../../api/models';
+import type { Model } from '../../api/models';
 import type { WorkflowObject } from '../../api/objects';
 import { fetchWorkspaceTriggers } from '../../api/triggers';
 import type { Trigger } from '../../api/triggers';
@@ -75,6 +77,7 @@ import cloudUploadIcon from '../../assets/cloud-upload.svg';
 import copyIcon from '../../assets/copy.svg';
 import downloadIcon from '../../assets/download.svg';
 import filterIcon from '../../assets/filter.svg';
+import imageIcon from '../../assets/image.svg';
 import messageSquareIcon from '../../assets/message-square.svg';
 import pencilIcon from '../../assets/pencil.svg';
 import playIcon from '../../assets/play.svg';
@@ -177,6 +180,8 @@ interface NodeData extends Record<string, unknown> {
    * whose fields are the ones it holds.
    */
   objectId: string | null;
+  /** The image model an image node draws with; null until one is picked. */
+  imageModelId: string | null;
   /**
    * What this node calls what it produces, so a later node can point a
    * reference at it. Only an agent node has one.
@@ -1123,6 +1128,7 @@ const KIND_COLOUR: Record<NodeKind, string> = {
   CONDITION: '#f59e0b',
   OBJECT: '#a855f7',
   SESSION: '#8b5cf6',
+  IMAGE: '#ec4899',
 };
 
 /**
@@ -1171,6 +1177,7 @@ const KIND_CLASS: Record<NodeKind, string> = {
   CONDITION: 'condition',
   OBJECT: 'objectNode',
   SESSION: 'session',
+  IMAGE: 'image',
 };
 
 /**
@@ -1486,7 +1493,7 @@ function withDefinition<T extends { id: string }>(all: T[], one: T): T[] {
  * for - things that belong together are next to each other, and a list is the
  * only place that can be said.
  */
-const ADD_ORDER: NodeKind[] = ['TRIGGER', 'ACTION', 'CONDITION', 'OBJECT', 'AGENT', 'SESSION'];
+const ADD_ORDER: NodeKind[] = ['TRIGGER', 'ACTION', 'CONDITION', 'OBJECT', 'IMAGE', 'AGENT', 'SESSION'];
 
 const ADD_ICON: Record<NodeKind, string> = {
   TRIGGER: bellIcon,
@@ -1495,6 +1502,7 @@ const ADD_ICON: Record<NodeKind, string> = {
   CONDITION: filterIcon,
   OBJECT: boxIcon,
   SESSION: messageSquareIcon,
+  IMAGE: imageIcon,
 };
 
 export interface ToolButtonProps {
@@ -2059,6 +2067,8 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   const [functions, setFunctions] = useState<WorkspaceFunction[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [objects, setObjects] = useState<WorkflowObject[]>([]);
+  /** The workspace's image models, for an image node's model picker. */
+  const [imageModels, setImageModels] = useState<Model[]>([]);
 
   /*
    * Where the graph has been, so Ctrl+Z can put it back.
@@ -2243,6 +2253,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
               actionId: node.actionId,
               conditionId: node.conditionId,
               objectId: node.objectId ?? null,
+              imageModelId: node.imageModelId ?? null,
               outputName: node.outputName ?? null,
               icon: node.icon ?? null,
               orientation: node.orientation ?? null,
@@ -2320,6 +2331,9 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     fetchWorkspaceObjects(workspaceId, 0, OBJECT_PAGE_SIZE)
       .then((page) => setObjects(page.content))
       .catch(() => setObjects([]));
+    fetchModels(workspaceId)
+      .then((all) => setImageModels(all.filter((model) => model.kind === 'IMAGE' && model.enabled)))
+      .catch(() => setImageModels([]));
   }, [workspaceId]);
 
   // Clicking on the canvas is React Flow's business, but a node we have just added
@@ -2467,6 +2481,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           actionId: null,
           conditionId: null,
           objectId: null,
+          imageModelId: null,
           /*
            * An agent starts with its answer named.
            *
@@ -2478,7 +2493,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
            * the canvas, and only started working once somebody typed a
            * different name. Now the default is real.
            */
-          outputName: kind === 'AGENT' ? 'reply' : null,
+          outputName: kind === 'AGENT' ? 'reply' : kind === 'IMAGE' ? 'image' : null,
           orientation: null,
           /*
            * A new action stops the run when it fails, which is what every node
@@ -2500,7 +2515,9 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
            * plain grey box beside four illustrated ones reads as unfinished.
            */
           icon: kind === 'SESSION' ? 'message-square' : null,
-          mappings: [],
+          // An image node draws from one parameter, its prompt, so it starts
+          // with that row rather than empty - there is nothing else to add.
+          mappings: kind === 'IMAGE' ? [{ name: 'prompt', expression: '', mode: 'VALUE' }] : [],
         },
       },
     ]);
@@ -2634,6 +2651,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           data.actionId === draft.actionId &&
           data.conditionId === draft.conditionId &&
           data.objectId === draft.objectId &&
+          data.imageModelId === draft.imageModelId &&
           data.outputName === draft.outputName &&
           data.icon === draft.icon &&
           data.orientation === draft.orientation &&
@@ -3031,6 +3049,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           actionId: data.actionId,
           conditionId: data.conditionId,
           objectId: data.objectId,
+          imageModelId: data.imageModelId,
           outputName: data.outputName,
           icon: data.icon,
           orientation: data.orientation ?? null,
@@ -3109,6 +3128,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
             data.actionId,
             data.conditionId,
             data.objectId,
+            data.imageModelId,
             data.outputName,
             /*
              * In because the validator has something to say about it: a node
@@ -4289,7 +4309,35 @@ Change the keystroke in Preferences.`}
                     />
                   </div>
                 )}
+
+                {draft.kind === 'IMAGE' && (
+                  <div className={styles.field}>
+                    <span className={styles.labelRow}>
+                      <span className={styles.labelWithHint}>
+                        <label className={styles.label} htmlFor="node-image-model">
+                          {t('Image Model')}
+                        </label>
+                        <FieldHint label={t('Image Model')}>
+                          {t('Which of this workspace’s image models draws the picture. Picked on the node, so two image nodes can draw with two models.')}
+                        </FieldHint>
+                      </span>
+                    </span>
+                    <DefinitionPicker
+                      id="node-image-model"
+                      value={draft.imageModelId ?? ''}
+                      options={imageModels.map((model) => ({ value: model.id, label: model.name }))}
+                      onChoose={(chosen) => setDraft({ ...draft, imageModelId: chosen || null })}
+                      placeholder={
+                        imageModels.length === 0
+                          ? t('This workspace has no image model')
+                          : t('Choose an image model…')
+                      }
+                      searchPlaceholder={t('Search image models…')}
+                    />
+                  </div>
+                )}
                 {((draft.kind === 'ACTION' && draft.actionId !== null) ||
+                  draft.kind === 'IMAGE' ||
                   draft.kind === 'AGENT' ||
                   draft.kind === 'SESSION' ||
                   draft.kind === 'OBJECT' ||
@@ -4342,6 +4390,12 @@ Change the keystroke in Preferences.`}
                                 what goes in them is this node&apos;s, so another node asking the same condition
                                 can look at something else. Leave them all empty and the function is handed the
                                 whole of what the run carries, as it was before.
+                              </>
+                            ) : draft.kind === 'IMAGE' ? (
+                              <>
+                                <strong>prompt</strong> is what the picture is drawn from — wording of your own, or
+                                a field the run is carrying. The drawn picture is filed with the run and shown on
+                                its graph, and the node hands on a reference to it under its output name.
                               </>
                             ) : (
                               <>What is here is what this node sends — the action definition is not changed.</>

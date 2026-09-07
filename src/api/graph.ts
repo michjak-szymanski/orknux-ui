@@ -2,7 +2,7 @@ import { graphql } from './client';
 import { t } from '../i18n';
 
 export type WorkflowStatus = 'DRAFT' | 'PUBLISHED';
-export type NodeKind = 'TRIGGER' | 'AGENT' | 'ACTION' | 'CONDITION' | 'OBJECT' | 'SESSION';
+export type NodeKind = 'TRIGGER' | 'AGENT' | 'ACTION' | 'CONDITION' | 'OBJECT' | 'SESSION' | 'IMAGE';
 
 
 /**
@@ -32,6 +32,8 @@ export interface GraphNode {
    * whose fields are simply the ones it holds.
    */
   objectId?: string | null;
+  /** The image model an IMAGE node draws with; null until one is picked. */
+  imageModelId?: string | null;
   /**
    * What this node calls what it produces, so a later node can point a
    * reference at it. Null hands the output on unchanged.
@@ -190,7 +192,7 @@ const GRAPH_FIELDS = `
   enabled
   assignmentId
   nodes {
-    key kind name description agentId triggerId actionId conditionId objectId outputName icon orientation
+    key kind name description agentId triggerId actionId conditionId objectId imageModelId outputName icon orientation
     yesLabel noLabel fallbackEnabled retryAttempts retryBackoffSeconds
     retryMultiplier retryMaxWaitSeconds retryJitter retryBudgetSeconds x y
     mappings { name expression mode sourceNodeKey }
@@ -293,5 +295,6 @@ export const NODE_KIND_LABEL: Record<NodeKind, string> = {
   CONDITION: 'Condition',
   OBJECT: 'Object',
   SESSION: t('LLM Session'),
+  IMAGE: t('Image'),
 };
 

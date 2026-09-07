@@ -407,6 +407,11 @@
   background: #06b6d4;
 }
 
+/* An image node: what a workflow draws. Pink, its own, far from the others. */
+.image {
+  background: #ec4899;
+}
+
 .nodeContent {
   display: flex;
   flex-direction: column;
