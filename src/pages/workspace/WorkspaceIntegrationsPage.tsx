@@ -26,6 +26,23 @@ export interface WorkspaceIntegrationsPageProps {
   onSignOut?: () => void;
 }
 
+/**
+ * Green once the last check reached the server, red when it failed, grey until
+ * the first one. Kept up to date on a timer, so this says which servers answer
+ * now rather than which answered whenever somebody last pressed Check. #329.
+ */
+function reachableDot(reachable: boolean | null): string {
+  if (reachable === true) return styles.dotConnected;
+  if (reachable === false) return styles.dotFailed;
+  return styles.dotIdle;
+}
+
+function reachableLabel(reachable: boolean | null): string {
+  if (reachable === true) return t('Reachable');
+  if (reachable === false) return t('Unreachable');
+  return t('Not checked');
+}
+
 /** Green once the service answered, red when a check failed, grey until then. */
 function statusDot(status: ConnectionStatus): string {
   switch (status) {
@@ -117,6 +134,10 @@ export function WorkspaceIntegrationsPage({ session, onSignOut }: WorkspaceInteg
             <span className={`${styles.colGrow} ${styles.address}`}>{server.address}</span>
             <span className={`${styles.colMeta} ${styles.meta}`}>
               {authLabel(server.authType, server.secretSet)}
+            </span>
+            <span className={`${styles.colMeta} ${styles.status}`} title={server.checkDetail ?? undefined}>
+              <span className={reachableDot(server.reachable)} aria-hidden="true" />
+              {reachableLabel(server.reachable)}
             </span>
             <span className={styles.colActions}>
               <Link

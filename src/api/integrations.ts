@@ -87,6 +87,15 @@ export interface McpServer {
   secretVariableCatalog: string | null;
   /** A reference pointing at nothing, which the field says rather than failing later. */
   secretVariableMissing: boolean;
+  /**
+   * What the last check found, kept up to date on a timer so the list shows
+   * reachability without anybody pressing Check. Null on `reachable` is "not
+   * checked yet", drawn as neither reachable nor failed.
+   */
+  reachable: boolean | null;
+  lastCheckedAt: string | null;
+  checkDetail: string | null;
+  toolCount: number | null;
 }
 
 /** What pressing Check on an MCP server found. */
@@ -106,7 +115,8 @@ const WORKSPACE_CONNECTION_FIELDS =
   'smtpPort smtpUsername smtpFrom smtpSecurity status lastCheckMessage lastCheckedAt';
 const MCP_SERVER_FIELDS =
   'id workspaceId name address authType headers { name value } secretSet ' +
-  'secretVariableId secretVariableName secretVariableCatalog secretVariableMissing';
+  'secretVariableId secretVariableName secretVariableCatalog secretVariableMissing ' +
+  'reachable lastCheckedAt checkDetail toolCount';
 
 const CONNECTIONS_QUERY = `
   query Connections($page: Int!, $size: Int!) {
