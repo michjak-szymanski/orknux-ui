@@ -6,6 +6,7 @@ import type { SessionUser } from '../../api/session';
 import { fetchWorkspaceWorkflows, removeWorkflow, updateWorkflow } from '../../api/workflows';
 import type { WorkspaceWorkflow } from '../../api/workflows';
 import { AppShell } from '../../components/AppShell';
+import { BackLink } from '../../components/BackLink';
 import { Loader } from '../../components/Loader';
 import { PublicationHistory } from '../../components/PublicationHistory';
 import { FieldHint } from '../../components/FieldHint';
@@ -114,6 +115,7 @@ export function WorkflowSettingsPage({ session, onSignOut }: WorkflowSettingsPag
     >
       <header className={styles.headerBlock}>
         <p className={styles.breadcrumbs}>
+          <BackLink to={`/workspace/${workspaceId}`} label={t('Workflows')} />
           <Link className={styles.crumbLink} to={`/workspace/${workspaceId}`}>
             {t('Workflows')}
           </Link>
