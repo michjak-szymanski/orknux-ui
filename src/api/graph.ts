@@ -32,6 +32,12 @@ export interface GraphNode {
    * whose fields are simply the ones it holds.
    */
   objectId?: string | null;
+  /**
+   * The shape an AGENT node's answer is held to; null is prose. Set, the model
+   * must answer a JSON object matching that workspace Object, and the node's
+   * outputs grow a field per entry of it. Meaningless on every other kind.
+   */
+  outputObjectId?: string | null;
   /** The image model an IMAGE node draws with; null until one is picked. */
   imageModelId?: string | null;
   /**
@@ -192,7 +198,7 @@ const GRAPH_FIELDS = `
   enabled
   assignmentId
   nodes {
-    key kind name description agentId triggerId actionId conditionId objectId imageModelId outputName icon orientation
+    key kind name description agentId triggerId actionId conditionId objectId outputObjectId imageModelId outputName icon orientation
     yesLabel noLabel fallbackEnabled retryAttempts retryBackoffSeconds
     retryMultiplier retryMaxWaitSeconds retryJitter retryBudgetSeconds x y
     mappings { name expression mode sourceNodeKey }

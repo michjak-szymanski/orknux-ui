@@ -318,9 +318,15 @@ const IN_THE_OPEN = [
   },
   {
     file: 'src/pages/admin/AdminShellPage.tsx',
-    says: 'No shells yet. Until there is one, an agent given the shells has nowhere to run.',
+    says: 'No SSH shells yet. These reach a machine over SSH with a stored key.',
     because: 'status',
-    why: 'empty, and what that means for an agent right now',
+    why: 'empty, and what that half of the split page holds - the one sentence that tells the two lists apart',
+  },
+  {
+    file: 'src/pages/admin/AdminShellPage.tsx',
+    says: 'No MCP shells yet. Register a tool server on Integrations, then add one here.',
+    because: 'status',
+    why: 'empty, and where the thing it lists comes from - the split left each list needing its own sentence',
   },
   {
     file: 'src/pages/admin/AdminTemplatesPage.tsx',

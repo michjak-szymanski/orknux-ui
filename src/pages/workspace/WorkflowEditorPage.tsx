@@ -180,6 +180,12 @@ interface NodeData extends Record<string, unknown> {
    * whose fields are the ones it holds.
    */
   objectId: string | null;
+  /**
+   * The shape an agent node's answer is held to; null is prose. Set, the model
+   * must answer a JSON object matching that workspace Object, and the answer
+   * has a field per entry of it. Only an agent node has one.
+   */
+  outputObjectId: string | null;
   /** The image model an image node draws with; null until one is picked. */
   imageModelId: string | null;
   /**
@@ -2253,6 +2259,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
               actionId: node.actionId,
               conditionId: node.conditionId,
               objectId: node.objectId ?? null,
+              outputObjectId: node.outputObjectId ?? null,
               imageModelId: node.imageModelId ?? null,
               outputName: node.outputName ?? null,
               icon: node.icon ?? null,
@@ -2481,6 +2488,8 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           actionId: null,
           conditionId: null,
           objectId: null,
+          // Prose until a shape is chosen, which is what an agent always was.
+          outputObjectId: null,
           imageModelId: null,
           /*
            * An agent starts with its answer named.
@@ -2651,6 +2660,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           data.actionId === draft.actionId &&
           data.conditionId === draft.conditionId &&
           data.objectId === draft.objectId &&
+          data.outputObjectId === draft.outputObjectId &&
           data.imageModelId === draft.imageModelId &&
           data.outputName === draft.outputName &&
           data.icon === draft.icon &&
@@ -3049,6 +3059,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           actionId: data.actionId,
           conditionId: data.conditionId,
           objectId: data.objectId,
+          outputObjectId: data.outputObjectId,
           imageModelId: data.imageModelId,
           outputName: data.outputName,
           icon: data.icon,
@@ -3128,6 +3139,10 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
             data.actionId,
             data.conditionId,
             data.objectId,
+            // In because choosing a shape changes what the node gives: the
+            // ports grow a field per entry of it, and they have to grow when
+            // the shape is picked rather than at the next save.
+            data.outputObjectId,
             data.imageModelId,
             data.outputName,
             /*
@@ -4068,6 +4083,67 @@ Change the keystroke in Preferences.`}
                 )}
 
                 {/*
+                  What the answer must be, decided before anything reads it.
+
+                  A shape here holds the model to a JSON object matching that
+                  workspace Object, and the node's outputs grow a field per
+                  entry of it - which is what makes an agent's answer something
+                  a later node can point into rather than prose it can only
+                  pass along. The pinned row is not the Object node's Custom -
+                  a mode with an editor of its own - but the way back: choosing
+                  Prose clears the shape, and the answer is the prose an agent
+                  always gave. Empty means exactly that, so nothing about a
+                  node drawn before this control existed changes.
+                */}
+                {draft.kind === 'AGENT' && (
+                  <div className={styles.field}>
+                    <span className={styles.labelRow}>
+                      <span className={styles.labelWithHint}>
+                        <label className={styles.label} htmlFor="node-answer-shape">
+                          {t('Answer Shape')}
+                        </label>
+                        <FieldHint label={t('Answer Shape')}>
+                          {t('The agent must answer a JSON object of this shape; empty keeps prose.')}
+                        </FieldHint>
+                      </span>
+                      <span className={styles.labelLinks}>
+                        <button
+                          type="button"
+                          className={styles.definitionLink}
+                          onClick={() => setBuilding({ kind: 'OBJECT', id: null })}
+                        >
+                          {t('New')}
+                        </button>
+                        {draft.outputObjectId !== null && (
+                          <Link
+                            to={`/workspace/${workspaceId}/objects/${draft.outputObjectId}`}
+                            className={styles.definitionJump}
+                            onClick={leavingFor(`/workspace/${workspaceId}/objects/${draft.outputObjectId}`)}
+                            title={t('Opens the object this node points at')}
+                            aria-label={t('Open the object\'s definition')}
+                          >
+                            <OpenDefinitionIcon />
+                          </Link>
+                        )}
+                      </span>
+                    </span>
+                    <DefinitionPicker
+                      id="node-answer-shape"
+                      value={draft.outputObjectId ?? ''}
+                      options={objects.map((shape) => ({ value: shape.id, label: shape.name }))}
+                      pinned={{
+                        value: '',
+                        label: t('Prose'),
+                        hint: t('No shape; the agent answers in words'),
+                      }}
+                      onChoose={(chosen) => setDraft({ ...draft, outputObjectId: chosen || null })}
+                      placeholder={t('Choose a shape…')}
+                      searchPlaceholder={t("Search objects…")}
+                    />
+                  </div>
+                )}
+
+                {/*
                   Which conversation this node keeps, shown and not set.
 
                   The edge on the canvas is the truth, and this is a reading of
@@ -4806,11 +4882,18 @@ Change the keystroke in Preferences.`}
                       </label>
                       <FieldHint label={t('Output name')}>
                         {draft.kind === 'AGENT' ? (
-                          <>
-                            An agent answers in prose, which has no fields to point at. Naming the answer is
-                            what puts it in the list a later node picks from — call it <code>reply</code> and a
-                            send step can reference it.
-                          </>
+                          draft.outputObjectId === null ? (
+                            <>
+                              An agent answers in prose, which has no fields to point at. Naming the answer is
+                              what puts it in the list a later node picks from — call it <code>reply</code> and a
+                              send step can reference it.
+                            </>
+                          ) : (
+                            <>
+                              The answer shape gives the answer fields, offered under this name — call it{' '}
+                              <code>reply</code> and a later node references <code>reply.priority</code>.
+                            </>
+                          )
                         ) : (
                           <>
                             What this node hands on is wrapped under this name, so a later node references{' '}
@@ -5048,7 +5131,15 @@ Change the keystroke in Preferences.`}
         onSubmit={async (name, description) => {
           const made = await createObject(workspaceId, { name, description: description || undefined });
           setObjects((all) => withDefinition(all, made));
-          setDraft((current) => (current === null ? current : { ...current, objectId: made.id }));
+          // Which field it lands in is which panel asked: an agent's New is
+          // beside its Answer Shape, an object node's beside its Shape.
+          setDraft((current) =>
+            current === null
+              ? current
+              : current.kind === 'AGENT'
+                ? { ...current, outputObjectId: made.id }
+                : { ...current, objectId: made.id },
+          );
           setBuilding(null);
         }}
       />

@@ -1868,6 +1868,12 @@ export const PL: Record<string, string> = {
   "The workspace’s values, handed to this function after its own parameters. Their values are never shown here — which is why a variable that is set looks empty on this page: what is chosen is the name, and only the sandbox ever sees what is behind it.": "Wartości przestrzeni roboczej, przekazywane tej funkcji po jej własnych parametrach. Ich wartości nigdy nie są tu pokazywane — dlatego ustawiona zmienna wygląda na tej stronie na pustą: wybiera się nazwę, a to, co za nią stoi, widzi wyłącznie piaskownica.",
   "The workspace’s values, handed to this tool after its own parameters. Their values are never shown here — which is why a variable that is set looks empty on this page: what is chosen is the name, and only the sandbox ever sees what is behind it.": "Wartości przestrzeni roboczej, przekazywane temu narzędziu po jego własnych parametrach. Ich wartości nigdy nie są tu pokazywane — dlatego ustawiona zmienna wygląda na tej stronie na pustą: wybiera się nazwę, a to, co za nią stoi, widzi wyłącznie piaskownica.",
 
+  // --- the agent node's answer shape ----------------------------------------
+  "Answer Shape": "Kształt odpowiedzi",
+  "The agent must answer a JSON object of this shape; empty keeps prose.": "Agent musi odpowiedzieć obiektem JSON o tym kształcie; puste zostawia prozę.",
+  "Prose": "Proza",
+  "No shape; the agent answers in words": "Bez kształtu; agent odpowiada słowami",
+
   // --- timeouts, on the editors and the workspace --------------------------
   "Workspace default": "Domyślne przestrzeni",
   "How long one call may run, in seconds; empty uses the workspace default.": "Ile sekund może trwać jedno wywołanie; puste używa domyślnej wartości przestrzeni.",
