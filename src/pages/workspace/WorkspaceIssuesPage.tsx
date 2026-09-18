@@ -13,6 +13,7 @@ import { CompactPagination } from '../../components/CompactPagination';
 import { Loader } from '../../components/Loader';
 import { SortControl } from '../../components/SortControl';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { PAGE_SIZES, usePageSize } from '../../components/pageSize';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceIssuesPage.module.css';
 import { t } from '../../i18n';
@@ -21,18 +22,6 @@ export interface WorkspaceIssuesPageProps {
   session: SessionUser;
   onSignOut?: () => void;
 }
-
-/**
- * How many rows a page holds, and what else it may be set to.
- *
- * Ten fits a laptop without scrolling, which is why it is first; a tracker
- * being read rather than worked through wants fifty. Remembered per person
- * rather than per workspace - it says how much of a screen somebody has, not
- * what they are looking at.
- */
-const PAGE_SIZES = [10, 25, 50, 100];
-const DEFAULT_PAGE_SIZE = 10;
-const PAGE_SIZE_KEY = 'orknux.issues.page-size';
 
 /** How long typing has to pause before the list is asked. */
 const SEARCH_PAUSE_MS = 300;
@@ -176,10 +165,12 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
       { replace: true },
     );
   }
-  const [pageSize, setPageSize] = useState(() => {
-    const held = Number(window.localStorage.getItem(PAGE_SIZE_KEY));
-    return PAGE_SIZES.includes(held) ? held : DEFAULT_PAGE_SIZE;
-  });
+  /*
+   * How many rows at a time, remembered for whoever is reading. Ten fits a
+   * laptop without scrolling; a tracker being read rather than worked through
+   * wants fifty. The remembering is the shared hook's - see pageSize.ts.
+   */
+  const [pageSize, setPageSize] = usePageSize('issues');
   const [loading, setLoading] = useState(true);
   /*
    * Bumped to ask again.
@@ -570,7 +561,6 @@ export function WorkspaceIssuesPage({ session, onSignOut }: WorkspaceIssuesPageP
             pageSizes={PAGE_SIZES}
             onPageSizeChange={(chosen) => {
               setPageSize(chosen);
-              window.localStorage.setItem(PAGE_SIZE_KEY, String(chosen));
               // The page somebody is on means something different at a
               // different size, and the first page is the one that always
               // exists.

@@ -13,6 +13,7 @@ import { AdminSidebar } from '../../components/AdminSidebar';
 import { AutoRefresh } from '../../components/AutoRefresh';
 import { Loader } from '../../components/Loader';
 import { Pagination } from '../../components/Pagination';
+import { PAGE_SIZES, usePageSize } from '../../components/pageSize';
 import { shellUser } from '../../session/user';
 import styles from './AdminAuditPage.module.css';
 import { t } from '../../i18n';
@@ -22,13 +23,13 @@ export interface AdminAuditPageProps {
   onSignOut?: () => void;
 }
 
-const PAGE_SIZE = 8;
 const SEARCH_DEBOUNCE_MS = 300;
 
 export function AdminAuditPage({ session, onSignOut }: AdminAuditPageProps) {
   const [entries, setEntries] = useState<PageOf<WorkspaceAuditEntry> | null>(null);
   const [users, setUsers] = useState<string[]>([]);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = usePageSize('admin-audit');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [userId, setUserId] = useState('');
@@ -52,7 +53,7 @@ export function AdminAuditPage({ session, onSignOut }: AdminAuditPageProps) {
   const load = useCallback(() => {
     setLoading(true);
     setError(null);
-    fetchWorkspaceAudit(page - 1, PAGE_SIZE, {
+    fetchWorkspaceAudit(page - 1, pageSize, {
       search: debouncedSearch || undefined,
       userId: userId || undefined,
       days: days === '' ? undefined : days,
@@ -66,7 +67,7 @@ export function AdminAuditPage({ session, onSignOut }: AdminAuditPageProps) {
         setError(cause instanceof Error ? cause.message : t('Could not load the audit log.'));
         setLoading(false);
       });
-  }, [page, debouncedSearch, userId, days]);
+  }, [page, pageSize, debouncedSearch, userId, days]);
 
   useEffect(load, [load]);
 
@@ -177,10 +178,16 @@ export function AdminAuditPage({ session, onSignOut }: AdminAuditPageProps) {
 
         <Pagination
           page={page}
-          pageSize={PAGE_SIZE}
+          pageSize={pageSize}
           totalItems={entries?.totalElements ?? 0}
           onPageChange={setPage}
           label={t('audit entries')}
+          pageSizes={PAGE_SIZES}
+          onPageSizeChange={(chosen) => {
+            setPageSize(chosen);
+            // Which page somebody is on means something else at another size.
+            setPage(1);
+          }}
         />
       </section>
     </AppShell>

@@ -21,6 +21,7 @@ import { Loader } from '../../components/Loader';
 import { NameDialog } from '../../components/NameDialog';
 import { FieldHint } from '../../components/FieldHint';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { PAGE_SIZES, usePageSize } from '../../components/pageSize';
 import { usePageWithin } from '../../components/pageWithin';
 import { shellUser } from '../../session/user';
 import styles from './CatalogueTable.module.css';
@@ -31,27 +32,26 @@ export interface WorkspaceToolsPageProps {
   onSignOut?: () => void;
 }
 
-const PAGE_SIZE = 10;
-
 export function WorkspaceToolsPage({ session, onSignOut }: WorkspaceToolsPageProps) {
   const { workspaceId = '' } = useParams();
   const navigate = useNavigate();
 
   const [tools, setTools] = useState<PageOf<Tool> | null>(null);
   const [page, setPage] = usePageWithin(workspaceId);
+  const [pageSize, setPageSize] = usePageSize('tools');
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
   const load = useCallback(() => {
     if (workspaceId === '') return;
     setError(null);
-    fetchWorkspaceTools(workspaceId, page - 1, PAGE_SIZE)
+    fetchWorkspaceTools(workspaceId, page - 1, pageSize)
       .then(setTools)
       .catch((cause: unknown) => {
         setTools(null);
         setError(cause instanceof Error ? cause.message : t('Could not load the tools.'));
       });
-  }, [workspaceId, page]);
+  }, [workspaceId, page, pageSize]);
 
   useEffect(load, [load]);
 
@@ -161,10 +161,16 @@ export function WorkspaceToolsPage({ session, onSignOut }: WorkspaceToolsPagePro
         {tools !== null && (
           <CompactPagination
             page={page}
-            pageSize={PAGE_SIZE}
+            pageSize={pageSize}
             totalItems={tools.totalElements}
             unit="tools"
             onPageChange={setPage}
+            pageSizes={PAGE_SIZES}
+            onPageSizeChange={(chosen) => {
+              setPageSize(chosen);
+              // Which page somebody is on means something else at another size.
+              setPage(1);
+            }}
           />
         )}
       </section>

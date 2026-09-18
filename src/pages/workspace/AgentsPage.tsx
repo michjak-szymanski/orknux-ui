@@ -20,6 +20,7 @@ import {
 import { CreateAgentDialog } from '../../components/CreateAgentDialog';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { PAGE_SIZES, usePageSize } from '../../components/pageSize';
 import { usePageWithin } from '../../components/pageWithin';
 import { shellUser } from '../../session/user';
 import styles from './AgentsPage.module.css';
@@ -30,13 +31,12 @@ export interface AgentsPageProps {
   onSignOut?: () => void;
 }
 
-const PAGE_SIZE = 5;
-
 export function AgentsPage({ session, onSignOut }: AgentsPageProps) {
   const { workspaceId = '' } = useParams();
 
   const [agents, setAgents] = useState<PageOf<Agent> | null>(null);
   const [page, setPage] = usePageWithin(workspaceId);
+  const [pageSize, setPageSize] = usePageSize('agents');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -45,7 +45,7 @@ export function AgentsPage({ session, onSignOut }: AgentsPageProps) {
     if (workspaceId === '') return;
     setLoading(true);
     setError(null);
-    fetchWorkspaceAgents(workspaceId, page - 1, PAGE_SIZE)
+    fetchWorkspaceAgents(workspaceId, page - 1, pageSize)
       .then((result) => {
         setAgents(result);
         setLoading(false);
@@ -55,7 +55,7 @@ export function AgentsPage({ session, onSignOut }: AgentsPageProps) {
         setError(cause instanceof Error ? cause.message : t('Could not load agents.'));
         setLoading(false);
       });
-  }, [workspaceId, page]);
+  }, [workspaceId, page, pageSize]);
 
   useEffect(load, [load]);
 
@@ -152,10 +152,16 @@ export function AgentsPage({ session, onSignOut }: AgentsPageProps) {
 
         <CompactPagination
           page={page}
-          pageSize={PAGE_SIZE}
+          pageSize={pageSize}
           totalItems={agents?.totalElements ?? 0}
           unit="agents"
           onPageChange={setPage}
+          pageSizes={PAGE_SIZES}
+          onPageSizeChange={(chosen) => {
+            setPageSize(chosen);
+            // Which page somebody is on means something else at another size.
+            setPage(1);
+          }}
         />
       </section>
 

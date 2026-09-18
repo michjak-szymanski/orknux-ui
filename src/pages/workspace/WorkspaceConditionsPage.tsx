@@ -17,6 +17,7 @@ import {
 } from '../../components/ComponentTransfer';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { PAGE_SIZES, usePageSize } from '../../components/pageSize';
 import { usePageWithin } from '../../components/pageWithin';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceConditionsPage.module.css';
@@ -26,8 +27,6 @@ export interface WorkspaceConditionsPageProps {
   session: SessionUser;
   onSignOut?: () => void;
 }
-
-const PAGE_SIZE = 5;
 
 /**
  * Reusable conditions for workflow branching and action triggers.
@@ -42,6 +41,7 @@ export function WorkspaceConditionsPage({ session, onSignOut }: WorkspaceConditi
 
   const [conditions, setConditions] = useState<PageOf<Condition> | null>(null);
   const [page, setPage] = usePageWithin(workspaceId);
+  const [pageSize, setPageSize] = usePageSize('conditions');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,7 +49,7 @@ export function WorkspaceConditionsPage({ session, onSignOut }: WorkspaceConditi
     if (workspaceId === '') return;
     setLoading(true);
     setError(null);
-    fetchWorkspaceConditions(workspaceId, page - 1, PAGE_SIZE)
+    fetchWorkspaceConditions(workspaceId, page - 1, pageSize)
       .then((result) => {
         setConditions(result);
         setLoading(false);
@@ -59,7 +59,7 @@ export function WorkspaceConditionsPage({ session, onSignOut }: WorkspaceConditi
         setError(cause instanceof Error ? cause.message : t('Could not load the conditions.'));
         setLoading(false);
       });
-  }, [workspaceId, page]);
+  }, [workspaceId, page, pageSize]);
 
   useEffect(load, [load]);
 
@@ -143,10 +143,16 @@ export function WorkspaceConditionsPage({ session, onSignOut }: WorkspaceConditi
 
           <CompactPagination
             page={page}
-            pageSize={PAGE_SIZE}
+            pageSize={pageSize}
             totalItems={conditions?.totalElements ?? 0}
             onPageChange={setPage}
             unit="conditions"
+            pageSizes={PAGE_SIZES}
+            onPageSizeChange={(chosen) => {
+              setPageSize(chosen);
+              // Which page somebody is on means something else at another size.
+              setPage(1);
+            }}
           />
         </div>
       </section>

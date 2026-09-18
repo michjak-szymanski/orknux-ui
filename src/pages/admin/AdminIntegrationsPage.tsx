@@ -13,6 +13,7 @@ import { FieldHint } from '../../components/FieldHint';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { Loader } from '../../components/Loader';
 import { Pagination } from '../../components/Pagination';
+import { PAGE_SIZES, usePageSize } from '../../components/pageSize';
 import { shellUser } from '../../session/user';
 import styles from './AdminIntegrationsPage.module.css';
 import { t } from '../../i18n';
@@ -22,12 +23,11 @@ export interface AdminIntegrationsPageProps {
   onSignOut?: () => void;
 }
 
-const PAGE_SIZE = 4;
-
 /** The admin's default connections, assigned to workspaces as they are created. */
 export function AdminIntegrationsPage({ session, onSignOut }: AdminIntegrationsPageProps) {
   const [connections, setConnections] = useState<PageOf<Connection> | null>(null);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = usePageSize('admin-integrations');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // False when closed, true when adding, the connection itself when editing.
@@ -36,7 +36,7 @@ export function AdminIntegrationsPage({ session, onSignOut }: AdminIntegrationsP
   const load = useCallback(() => {
     setLoading(true);
     setError(null);
-    fetchConnections(page - 1, PAGE_SIZE)
+    fetchConnections(page - 1, pageSize)
       .then((result) => {
         setConnections(result);
         setLoading(false);
@@ -46,7 +46,7 @@ export function AdminIntegrationsPage({ session, onSignOut }: AdminIntegrationsP
         setError(cause instanceof Error ? cause.message : t('Could not load the connections.'));
         setLoading(false);
       });
-  }, [page]);
+  }, [page, pageSize]);
 
   useEffect(load, [load]);
 
@@ -120,10 +120,16 @@ export function AdminIntegrationsPage({ session, onSignOut }: AdminIntegrationsP
 
         <Pagination
           page={page}
-          pageSize={PAGE_SIZE}
+          pageSize={pageSize}
           totalItems={connections?.totalElements ?? 0}
           onPageChange={setPage}
           label={t('default connections')}
+          pageSizes={PAGE_SIZES}
+          onPageSizeChange={(chosen) => {
+            setPageSize(chosen);
+            // Which page somebody is on means something else at another size.
+            setPage(1);
+          }}
         />
       </section>
 

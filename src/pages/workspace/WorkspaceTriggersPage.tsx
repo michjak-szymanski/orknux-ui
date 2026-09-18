@@ -33,6 +33,7 @@ import { CreateTriggerDialog } from '../../components/CreateTriggerDialog';
 import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { PAGE_SIZES, usePageSize } from '../../components/pageSize';
 import { usePageWithin } from '../../components/pageWithin';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceTriggersPage.module.css';
@@ -42,11 +43,6 @@ export interface WorkspaceTriggersPageProps {
   session: SessionUser;
   onSignOut?: () => void;
 }
-
-const PAGE_SIZE = 5;
-
-/** Enough recent firings to see a pattern without becoming the page. */
-const HISTORY_PAGE_SIZE = 10;
 
 /** A timestamp as somebody watching a trigger reads it: how long ago. */
 function when(at: string): string {
@@ -72,6 +68,7 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
 
   const [triggers, setTriggers] = useState<PageOf<Trigger> | null>(null);
   const [page, setPage] = usePageWithin(workspaceId);
+  const [pageSize, setPageSize] = usePageSize('triggers');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -82,6 +79,7 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
   /** Everything that has fired here, whichever trigger did it. */
   const [history, setHistory] = useState<PageOf<TriggerFiring> | null>(null);
   const [historyPage, setHistoryPage] = usePageWithin(workspaceId);
+  const [historyPageSize, setHistoryPageSize] = usePageSize('trigger-history');
   const [historyError, setHistoryError] = useState<string | null>(null);
   /**
    * What each Slack connection's bot token can and cannot do.
@@ -105,7 +103,7 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
     if (workspaceId === '') return;
     setLoading(true);
     setError(null);
-    fetchWorkspaceTriggers(workspaceId, page - 1, PAGE_SIZE)
+    fetchWorkspaceTriggers(workspaceId, page - 1, pageSize)
       .then((result) => {
         setTriggers(result);
         setLoading(false);
@@ -115,7 +113,7 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
         setError(cause instanceof Error ? cause.message : t('Could not load triggers.'));
         setLoading(false);
       });
-  }, [workspaceId, page]);
+  }, [workspaceId, page, pageSize]);
 
   useEffect(load, [load]);
 
@@ -153,13 +151,13 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
   const loadHistory = useCallback(() => {
     if (workspaceId === '') return;
     setHistoryError(null);
-    fetchWorkspaceTriggerFirings(workspaceId, historyPage - 1, HISTORY_PAGE_SIZE)
+    fetchWorkspaceTriggerFirings(workspaceId, historyPage - 1, historyPageSize)
       .then(setHistory)
       .catch((cause: unknown) => {
         setHistory(null);
         setHistoryError(cause instanceof Error ? cause.message : t('Could not load the history.'));
       });
-  }, [workspaceId, historyPage]);
+  }, [workspaceId, historyPage, historyPageSize]);
 
   useEffect(loadHistory, [loadHistory]);
 
@@ -384,10 +382,16 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
 
           <CompactPagination
             page={page}
-            pageSize={PAGE_SIZE}
+            pageSize={pageSize}
             totalItems={triggers?.totalElements ?? 0}
             onPageChange={setPage}
             unit="triggers"
+            pageSizes={PAGE_SIZES}
+            onPageSizeChange={(chosen) => {
+              setPageSize(chosen);
+              // Which page somebody is on means something else at another size.
+              setPage(1);
+            }}
           />
         </div>
       </section>
@@ -479,10 +483,16 @@ export function WorkspaceTriggersPage({ session, onSignOut }: WorkspaceTriggersP
 
         <CompactPagination
           page={historyPage}
-          pageSize={HISTORY_PAGE_SIZE}
+          pageSize={historyPageSize}
           totalItems={history?.totalElements ?? 0}
           onPageChange={setHistoryPage}
           unit="firings"
+          pageSizes={PAGE_SIZES}
+          onPageSizeChange={(chosen) => {
+            setHistoryPageSize(chosen);
+            // Which page somebody is on means something else at another size.
+            setHistoryPage(1);
+          }}
         />
       </section>
 

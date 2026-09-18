@@ -17,6 +17,7 @@ import {
 } from '../../components/ComponentTransfer';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { PAGE_SIZES, usePageSize } from '../../components/pageSize';
 import { usePageWithin } from '../../components/pageWithin';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceActionsPage.module.css';
@@ -26,8 +27,6 @@ export interface WorkspaceActionsPageProps {
   session: SessionUser;
   onSignOut?: () => void;
 }
-
-const PAGE_SIZE = 6;
 
 /**
  * The workspace's action catalogue: the blocks its workflows are built from.
@@ -43,6 +42,7 @@ export function WorkspaceActionsPage({ session, onSignOut }: WorkspaceActionsPag
 
   const [actions, setActions] = useState<PageOf<Action> | null>(null);
   const [page, setPage] = usePageWithin(workspaceId);
+  const [pageSize, setPageSize] = usePageSize('actions');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,7 +50,7 @@ export function WorkspaceActionsPage({ session, onSignOut }: WorkspaceActionsPag
     if (workspaceId === '') return;
     setLoading(true);
     setError(null);
-    fetchWorkspaceActions(workspaceId, page - 1, PAGE_SIZE)
+    fetchWorkspaceActions(workspaceId, page - 1, pageSize)
       .then((result) => {
         setActions(result);
         setLoading(false);
@@ -60,7 +60,7 @@ export function WorkspaceActionsPage({ session, onSignOut }: WorkspaceActionsPag
         setError(cause instanceof Error ? cause.message : t('Could not load the actions.'));
         setLoading(false);
       });
-  }, [workspaceId, page]);
+  }, [workspaceId, page, pageSize]);
 
   useEffect(load, [load]);
 
@@ -152,10 +152,16 @@ export function WorkspaceActionsPage({ session, onSignOut }: WorkspaceActionsPag
 
           <CompactPagination
             page={page}
-            pageSize={PAGE_SIZE}
+            pageSize={pageSize}
             totalItems={actions?.totalElements ?? 0}
             onPageChange={setPage}
             unit="actions"
+            pageSizes={PAGE_SIZES}
+            onPageSizeChange={(chosen) => {
+              setPageSize(chosen);
+              // Which page somebody is on means something else at another size.
+              setPage(1);
+            }}
           />
         </div>
       </section>

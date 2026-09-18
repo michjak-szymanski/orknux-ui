@@ -14,6 +14,7 @@ import { CompactPagination } from '../../components/CompactPagination';
 import { FieldHint } from '../../components/FieldHint';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { PAGE_SIZES, usePageSize } from '../../components/pageSize';
 import { usePageWithin } from '../../components/pageWithin';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceTasksPage.module.css';
@@ -23,8 +24,6 @@ export interface WorkspaceTasksPageProps {
   session: SessionUser;
   onSignOut?: () => void;
 }
-
-const PAGE_SIZE = 12;
 
 /** How many agents to offer. More than a workspace has, in one page. */
 const AGENTS = 200;
@@ -42,6 +41,7 @@ export function WorkspaceTasksPage({ session, onSignOut }: WorkspaceTasksPagePro
 
   const [tasks, setTasks] = useState<TaskPage | null>(null);
   const [page, setPage] = usePageWithin(workspaceId);
+  const [pageSize, setPageSize] = usePageSize('tasks');
   const [status, setStatus] = useState<TaskStatus | ''>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +61,7 @@ export function WorkspaceTasksPage({ session, onSignOut }: WorkspaceTasksPagePro
     fetchTasks(workspaceId, {
       status: status === '' ? undefined : status,
       page: page - 1,
-      size: PAGE_SIZE,
+      size: pageSize,
     })
       .then((found) => {
         setTasks(found);
@@ -72,7 +72,7 @@ export function WorkspaceTasksPage({ session, onSignOut }: WorkspaceTasksPagePro
         setError(cause instanceof Error ? cause.message : t('Could not load the tasks.'));
         setLoading(false);
       });
-  }, [workspaceId, status, page]);
+  }, [workspaceId, status, page, pageSize]);
 
   useEffect(load, [load]);
 
@@ -302,10 +302,16 @@ export function WorkspaceTasksPage({ session, onSignOut }: WorkspaceTasksPagePro
         {tasks !== null && tasks.totalElements > 0 && (
           <CompactPagination
             page={page}
-            pageSize={PAGE_SIZE}
+            pageSize={pageSize}
             totalItems={tasks.totalElements}
             unit="tasks"
             onPageChange={setPage}
+            pageSizes={PAGE_SIZES}
+            onPageSizeChange={(chosen) => {
+              setPageSize(chosen);
+              // Which page somebody is on means something else at another size.
+              setPage(1);
+            }}
           />
         )}
       </section>

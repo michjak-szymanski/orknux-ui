@@ -1,3 +1,4 @@
+import chevronDown12Icon from '../assets/chevron-down-12.svg';
 import styles from './Pagination.module.css';
 import { t, tf } from '../i18n';
 
@@ -9,9 +10,26 @@ export interface PaginationProps {
   onPageChange: (page: number) => void;
   /** Announced to screen readers, e.g. "workspaces". */
   label: string;
+  /**
+   * The sizes on offer, and what to do when one is chosen.
+   *
+   * Beside the count, the same place CompactPagination keeps it: "showing 1-4
+   * of 9" is the sentence this changes, and somebody reading that line is
+   * already asking how many they see at once.
+   */
+  pageSizes?: number[];
+  onPageSizeChange?: (size: number) => void;
 }
 
-export function Pagination({ page, pageSize, totalItems, onPageChange, label }: PaginationProps) {
+export function Pagination({
+  page,
+  pageSize,
+  totalItems,
+  onPageChange,
+  label,
+  pageSizes,
+  onPageSizeChange,
+}: PaginationProps) {
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const current = Math.min(Math.max(page, 1), totalPages);
   const firstItem = totalItems === 0 ? 0 : (current - 1) * pageSize + 1;
@@ -25,6 +43,29 @@ export function Pagination({ page, pageSize, totalItems, onPageChange, label }: 
           last: lastItem,
           total: totalItems,
         })}
+        {pageSizes !== undefined && onPageSizeChange !== undefined && (
+          <>
+            {' · '}
+            <label className={styles.perPage}>
+              {t('Show')}
+              <span className={styles.selectWrapper}>
+                <select
+                  className={styles.perPageSelect}
+                  value={pageSize}
+                  aria-label={`How many ${label} to show at once`}
+                  onChange={(event) => onPageSizeChange(Number(event.target.value))}
+                >
+                  {pageSizes.map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+                <img src={chevronDown12Icon} alt="" width={12} height={12} />
+              </span>
+            </label>
+          </>
+        )}
       </p>
 
       <div className={styles.actions}>

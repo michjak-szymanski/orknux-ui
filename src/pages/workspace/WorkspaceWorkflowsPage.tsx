@@ -27,6 +27,7 @@ import { Loader } from '../../components/Loader';
 import { SortControl } from '../../components/SortControl';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { PAGE_SIZES, usePageSize } from '../../components/pageSize';
 import { usePageWithin } from '../../components/pageWithin';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceWorkflowsPage.module.css';
@@ -59,23 +60,6 @@ export interface WorkspaceWorkflowsPageProps {
   session: SessionUser;
   onSignOut?: () => void;
 }
-
-/**
- * How many rows a page holds, and what else it may be set to.
- *
- * The same four the issue list offers, for the same reason: it says how much of
- * a screen somebody has, not what they are looking at. Remembered per person
- * rather than per workspace, and under a key of this list's own - somebody who
- * reads workflows four at a time and issues fifty at a time is not being
- * inconsistent.
- *
- * Ten rather than the four this used to hold. Four was not a choice anybody had
- * made, and it is not one of the sizes on offer - a control that opens showing a
- * number it cannot be set back to is a control that looks broken.
- */
-const PAGE_SIZES = [10, 25, 50, 100];
-const DEFAULT_PAGE_SIZE = 10;
-const PAGE_SIZE_KEY = 'orknux.workflows.page-size';
 
 /**
  * What the list can be ordered by, in the words this page already uses.
@@ -149,12 +133,11 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
    * How many rows at a time, remembered for whoever is reading.
    *
    * Not in the address: it is a fact about the screen somebody is at, so a link
-   * they send should not force their choice on the person who opens it.
+   * they send should not force their choice on the person who opens it. The
+   * remembering - which sizes are on offer, and under what key - is the shared
+   * hook's; see pageSize.ts, which every paginated list now goes through.
    */
-  const [pageSize, setPageSize] = useState(() => {
-    const held = Number(window.localStorage.getItem(PAGE_SIZE_KEY));
-    return PAGE_SIZES.includes(held) ? held : DEFAULT_PAGE_SIZE;
-  });
+  const [pageSize, setPageSize] = usePageSize('workflows');
 
   /*
    * Which list the page number belongs to.
@@ -489,7 +472,6 @@ export function WorkspaceWorkflowsPage({ session, onSignOut }: WorkspaceWorkflow
             pageSizes={PAGE_SIZES}
             onPageSizeChange={(chosen) => {
               setPageSize(chosen);
-              window.localStorage.setItem(PAGE_SIZE_KEY, String(chosen));
               // Which page somebody is on means something else at another size;
               // the guard above the fetch puts them back on the first.
             }}

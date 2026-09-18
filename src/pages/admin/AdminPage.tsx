@@ -15,6 +15,7 @@ import { CreateWorkspaceDialog } from '../../components/CreateWorkspaceDialog';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { Loader } from '../../components/Loader';
 import { Pagination } from '../../components/Pagination';
+import { PAGE_SIZES, usePageSize } from '../../components/pageSize';
 import { shellUser } from '../../session/user';
 import styles from './AdminPage.module.css';
 import { t } from '../../i18n';
@@ -24,15 +25,14 @@ export interface AdminPageProps {
   onSignOut?: () => void;
 }
 
-const WORKSPACES_PAGE_SIZE = 4;
-
 export function AdminPage({ session, onSignOut }: AdminPageProps) {
   const [workspacesPage, setWorkspacesPage] = useState(1);
+  const [pageSize, setPageSize] = usePageSize('admin-workspaces');
   const [creating, setCreating] = useState(false);
   // Bumped after a write so both tables refetch, audit log included.
   const [reloadToken, setReloadToken] = useState(0);
 
-  const workspaces = useLoadedPage(() => fetchWorkspaces(workspacesPage - 1, WORKSPACES_PAGE_SIZE), [workspacesPage, reloadToken]);
+  const workspaces = useLoadedPage(() => fetchWorkspaces(workspacesPage - 1, pageSize), [workspacesPage, pageSize, reloadToken]);
 
   // The section links need somewhere to go; the first workspace listed is the sensible default.
   const firstWorkspace = workspaces.data?.content[0];
@@ -105,10 +105,16 @@ export function AdminPage({ session, onSignOut }: AdminPageProps) {
 
         <Pagination
           page={workspacesPage}
-          pageSize={WORKSPACES_PAGE_SIZE}
+          pageSize={pageSize}
           totalItems={workspaces.data?.totalElements ?? 0}
           onPageChange={setWorkspacesPage}
           label={t('workspaces')}
+          pageSizes={PAGE_SIZES}
+          onPageSizeChange={(chosen) => {
+            setPageSize(chosen);
+            // Which page somebody is on means something else at another size.
+            setWorkspacesPage(1);
+          }}
         />
       </section>
 

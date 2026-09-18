@@ -23,6 +23,7 @@ import {
 } from '../../components/ComponentTransfer';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { PAGE_SIZES, usePageSize } from '../../components/pageSize';
 import { usePageWithin } from '../../components/pageWithin';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceFunctionsPage.module.css';
@@ -32,8 +33,6 @@ export interface WorkspaceFunctionsPageProps {
   session: SessionUser;
   onSignOut?: () => void;
 }
-
-const PAGE_SIZE = 5;
 
 /**
  * Enough of a workspace's functions to find one among them.
@@ -51,10 +50,11 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
 
   const [functions, setFunctions] = useState<PageOf<WorkspaceFunction> | null>(null);
   const [page, setPage] = usePageWithin(workspaceId);
+  const [pageSize, setPageSize] = usePageSize('functions');
   /*
    * A function just made, arriving from the editor as `?made=<id>`.
    *
-   * The list is five to a page and sorted by name, so something created a
+   * The list is a handful to a page and sorted by name, so something created a
    * moment ago is usually not on the page this opens at - and a list that does
    * not show what you just made reads as a list that did not get it. Where it
    * is gets worked out once, here, rather than by asking somebody to go
@@ -92,7 +92,7 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
     if (workspaceId === '') return;
     setLoading(true);
     setError(null);
-    fetchWorkspaceFunctions(workspaceId, page - 1, PAGE_SIZE)
+    fetchWorkspaceFunctions(workspaceId, page - 1, pageSize)
       .then((result) => {
         setFunctions(result);
         setLoading(false);
@@ -102,7 +102,7 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
         setError(cause instanceof Error ? cause.message : t('Could not load the functions.'));
         setLoading(false);
       });
-  }, [workspaceId, page]);
+  }, [workspaceId, page, pageSize]);
 
   useEffect(load, [load]);
 
@@ -120,7 +120,7 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
       .then((all) => {
         if (!current) return;
         const at = all.content.findIndex((fn) => fn.id === made);
-        if (at >= 0) setPage(Math.floor(at / PAGE_SIZE) + 1);
+        if (at >= 0) setPage(Math.floor(at / pageSize) + 1);
       })
       .catch(() => undefined)
       .finally(() => {
@@ -129,7 +129,7 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
     return () => {
       current = false;
     };
-  }, [made, workspaceId]);
+  }, [made, workspaceId, pageSize]);
 
   return (
     <AppShell
@@ -253,7 +253,7 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
 
           <CompactPagination
             page={page}
-            pageSize={PAGE_SIZE}
+            pageSize={pageSize}
             totalItems={functions?.totalElements ?? 0}
             onPageChange={(next) => {
               setPage(next);
@@ -262,6 +262,12 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
               if (query.has('made')) setQuery({}, { replace: true });
             }}
             unit="functions"
+            pageSizes={PAGE_SIZES}
+            onPageSizeChange={(chosen) => {
+              setPageSize(chosen);
+              // Which page somebody is on means something else at another size.
+              setPage(1);
+            }}
           />
         </div>
       </section>

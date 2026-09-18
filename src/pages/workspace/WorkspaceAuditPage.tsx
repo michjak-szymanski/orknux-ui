@@ -23,6 +23,7 @@ import { AutoRefresh } from '../../components/AutoRefresh';
 import { CompactPagination } from '../../components/CompactPagination';
 import { Loader } from '../../components/Loader';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { PAGE_SIZES, usePageSize } from '../../components/pageSize';
 import { usePageWithin } from '../../components/pageWithin';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceAuditPage.module.css';
@@ -33,7 +34,6 @@ export interface WorkspaceAuditPageProps {
   onSignOut?: () => void;
 }
 
-const PAGE_SIZE = 8;
 const SEARCH_DEBOUNCE_MS = 300;
 
 const CATEGORY_ICON: Record<ActivityCategory, string> = {
@@ -54,6 +54,7 @@ export function WorkspaceAuditPage({ session, onSignOut }: WorkspaceAuditPagePro
   const [entries, setEntries] = useState<PageOf<ActivityEntry> | null>(null);
   const [users, setUsers] = useState<string[]>([]);
   const [page, setPage] = usePageWithin(workspaceId);
+  const [pageSize, setPageSize] = usePageSize('audit');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [category, setCategory] = useState<ActivityCategory | ''>('');
@@ -81,7 +82,7 @@ export function WorkspaceAuditPage({ session, onSignOut }: WorkspaceAuditPagePro
     if (workspaceId === '') return;
     setLoading(true);
     setError(null);
-    fetchWorkspaceActivity(workspaceId, page - 1, PAGE_SIZE, {
+    fetchWorkspaceActivity(workspaceId, page - 1, pageSize, {
       search: debouncedSearch || undefined,
       category: category || undefined,
       userId: userId || undefined,
@@ -96,7 +97,7 @@ export function WorkspaceAuditPage({ session, onSignOut }: WorkspaceAuditPagePro
         setError(cause instanceof Error ? cause.message : t('Could not load the audit log.'));
         setLoading(false);
       });
-  }, [workspaceId, page, debouncedSearch, category, userId, days]);
+  }, [workspaceId, page, pageSize, debouncedSearch, category, userId, days]);
 
   useEffect(load, [load]);
 
@@ -232,10 +233,16 @@ export function WorkspaceAuditPage({ session, onSignOut }: WorkspaceAuditPagePro
 
         <CompactPagination
           page={page}
-          pageSize={PAGE_SIZE}
+          pageSize={pageSize}
           totalItems={entries?.totalElements ?? 0}
           unit="entries"
           onPageChange={setPage}
+          pageSizes={PAGE_SIZES}
+          onPageSizeChange={(chosen) => {
+            setPageSize(chosen);
+            // Which page somebody is on means something else at another size.
+            setPage(1);
+          }}
         />
       </section>
     </AppShell>

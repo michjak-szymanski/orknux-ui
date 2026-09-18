@@ -12,6 +12,7 @@ import { CompactPagination } from '../../components/CompactPagination';
 import { Loader } from '../../components/Loader';
 import { FieldHint } from '../../components/FieldHint';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { PAGE_SIZES, usePageSize } from '../../components/pageSize';
 import { usePageWithin } from '../../components/pageWithin';
 import { shellUser } from '../../session/user';
 import styles from './WorkspaceSessionsPage.module.css';
@@ -22,12 +23,11 @@ export interface WorkspaceSessionsPageProps {
   onSignOut?: () => void;
 }
 
-const PAGE_SIZE = 12;
 const SEARCH_PAUSE_MS = 300;
 
 /**
  * Asked of the server rather than sorted here, for the reason every paged list
- * has: sorting the twelve rows on screen orders the page and not the workspace.
+ * has: sorting the rows on screen orders the page and not the workspace.
  */
 const ORDERS: { label: string; order: LlmSessionOrder }[] = [
   { label: t('Last spoken in'), order: 'LAST_EVENT' },
@@ -47,6 +47,7 @@ export function WorkspaceSessionsPage({ session, onSignOut }: WorkspaceSessionsP
 
   const [sessions, setSessions] = useState<LlmSessionPage | null>(null);
   const [page, setPage] = usePageWithin(workspaceId);
+  const [pageSize, setPageSize] = usePageSize('sessions');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [order, setOrder] = useState<LlmSessionOrder>('LAST_EVENT');
@@ -68,7 +69,7 @@ export function WorkspaceSessionsPage({ session, onSignOut }: WorkspaceSessionsP
     fetchLlmSessions(workspaceId, {
       search: debouncedSearch || undefined,
       page: page - 1,
-      size: PAGE_SIZE,
+      size: pageSize,
       order,
       ascending,
     })
@@ -81,7 +82,7 @@ export function WorkspaceSessionsPage({ session, onSignOut }: WorkspaceSessionsP
         setError(cause instanceof Error ? cause.message : t('Could not load the sessions.'));
         setLoading(false);
       });
-  }, [workspaceId, debouncedSearch, page, order, ascending]);
+  }, [workspaceId, debouncedSearch, page, pageSize, order, ascending]);
 
   useEffect(load, [load]);
 
@@ -228,10 +229,16 @@ export function WorkspaceSessionsPage({ session, onSignOut }: WorkspaceSessionsP
         {sessions !== null && sessions.totalElements > 0 && (
           <CompactPagination
             page={page}
-            pageSize={PAGE_SIZE}
+            pageSize={pageSize}
             totalItems={sessions.totalElements}
             unit="sessions"
             onPageChange={setPage}
+            pageSizes={PAGE_SIZES}
+            onPageSizeChange={(chosen) => {
+              setPageSize(chosen);
+              // Which page somebody is on means something else at another size.
+              setPage(1);
+            }}
           />
         )}
       </section>

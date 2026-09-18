@@ -25,6 +25,7 @@ import { Loader } from '../../components/Loader';
 import { SelectField } from '../../components/SelectField';
 import { CompactPagination } from '../../components/CompactPagination';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { PAGE_SIZES, usePageSize } from '../../components/pageSize';
 import { usePageWithin } from '../../components/pageWithin';
 import { shellUser } from '../../session/user';
 import styles from './ExecutionsPage.module.css';
@@ -35,7 +36,6 @@ export interface ExecutionsPageProps {
   onSignOut?: () => void;
 }
 
-const PAGE_SIZE = 6;
 const WORKFLOW_LIST_SIZE = 100;
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -56,6 +56,7 @@ export function ExecutionsPage({ session, onSignOut }: ExecutionsPageProps) {
   const [workflows, setWorkflows] = useState<WorkspaceWorkflow[]>([]);
   const [ran, setRan] = useState<ExecutionWorkflow[]>([]);
   const [page, setPage] = usePageWithin(workspaceId);
+  const [pageSize, setPageSize] = usePageSize('executions');
   const [status, setStatus] = useState<ExecutionStatus | ''>('');
   const [workflowId, setWorkflowId] = useState('');
   const [days, setDays] = useState<number | ''>(1);
@@ -96,7 +97,7 @@ export function ExecutionsPage({ session, onSignOut }: ExecutionsPageProps) {
     if (workspaceId === '') return;
     setLoading(true);
     setError(null);
-    fetchWorkspaceExecutions(workspaceId, page - 1, PAGE_SIZE, {
+    fetchWorkspaceExecutions(workspaceId, page - 1, pageSize, {
       status: status || undefined,
       workflowId: workflowId || undefined,
       days: days === '' ? undefined : days,
@@ -111,7 +112,7 @@ export function ExecutionsPage({ session, onSignOut }: ExecutionsPageProps) {
         setError(cause instanceof Error ? cause.message : t('Could not load executions.'));
         setLoading(false);
       });
-  }, [workspaceId, page, status, workflowId, days, debouncedSearch]);
+  }, [workspaceId, page, pageSize, status, workflowId, days, debouncedSearch]);
 
   useEffect(load, [load]);
 
@@ -279,10 +280,16 @@ export function ExecutionsPage({ session, onSignOut }: ExecutionsPageProps) {
 
         <CompactPagination
           page={page}
-          pageSize={PAGE_SIZE}
+          pageSize={pageSize}
           totalItems={runs?.totalElements ?? 0}
           unit="runs"
           onPageChange={setPage}
+          pageSizes={PAGE_SIZES}
+          onPageSizeChange={(chosen) => {
+            setPageSize(chosen);
+            // Which page somebody is on means something else at another size.
+            setPage(1);
+          }}
         />
       </section>
     </AppShell>

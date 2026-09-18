@@ -34,6 +34,12 @@
  * log lists entries, a session lists lines - and those are written down with
  * why, because an unexplained mismatch is exactly what this is looking for.
  *
+ * The size control is part of the footer's contract now, not a nicety some
+ * lists have: "not all table views contain a show X per page option" was a
+ * user's report, and the fix was to offer it beside every count. So the source
+ * half fails on any `<CompactPagination>` without `pageSizes`, and the browser
+ * half fails on any footer drawn without the select beside it.
+ *
  * ---------------------------------------------------------------------------
  * And the row above the list, as of issue #174
  *
@@ -159,8 +165,9 @@ const found = [];
 for (const path of sources()) {
   const held = readFileSync(path, 'utf8');
   for (const block of held.split('<CompactPagination').slice(1)) {
-    const unit = /unit="([^"]+)"/.exec(block.slice(0, block.indexOf('/>')))?.[1] ?? null;
-    found.push({ file: path.split(/[\\/]/).pop(), unit });
+    const props = block.slice(0, block.indexOf('/>'));
+    const unit = /unit="([^"]+)"/.exec(props)?.[1] ?? null;
+    found.push({ file: path.split(/[\\/]/).pop(), unit, sized: props.includes('pageSizes=') });
   }
 }
 
@@ -168,6 +175,16 @@ record(found.length > 0, `the interface has paginated lists to check (${found.le
 record(
   found.every((one) => one.unit !== null),
   `every call site names its rows: ${found.filter((one) => one.unit === null).map((one) => one.file).join(', ') || 'all of them do'}`,
+);
+
+/*
+ * The other half of the sentence: every footer offers "Show <n>". The report
+ * this answers was about the lists that did not, so a new list shipping
+ * without the control is a check failure rather than the report coming back.
+ */
+record(
+  found.every((one) => one.sized),
+  `every call site offers the size control: ${found.filter((one) => !one.sized).map((one) => `${one.file} ("${one.unit}")`).join(', ') || 'all of them do'}`,
 );
 
 const listed = new Set(LISTS.map((one) => `${one.file}|${one.unit}`));
@@ -320,9 +337,9 @@ try {
       `${list.title} calls its rows "${list.unit}"${list.why === undefined ? '' : ` (${list.why})`} - it said "${said.unit}"`,
     );
 
-    // The size control, where there is one, takes the same word.
+    // The size control, which every footer carries now, takes the same word.
     const sized = page.locator(`select[aria-label^="How many"]`);
-    if ((await sized.count()) > 0) {
+    if (record((await sized.count()) > 0, `${list.title}: the size control is beside the footer`)) {
       const asked = await sized.first().getAttribute('aria-label');
       record(
         asked === `How many ${list.unit} to show at once`,

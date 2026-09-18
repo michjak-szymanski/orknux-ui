@@ -72,3 +72,42 @@
   color: var(--color-accent-foreground);
   cursor: default;
 }
+
+/*
+ * The size control, spelled the way CompactPagination.module.css spells it:
+ * part of the sentence it changes, with the chevron drawn by us because the
+ * browser no longer draws one.
+ */
+.perPage {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.selectWrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.selectWrapper > img {
+  position: absolute;
+  right: var(--space-2);
+  pointer-events: none;
+}
+
+.perPageSelect {
+  padding: 1px var(--space-16) 1px var(--space-4);
+  /* `--color-bg`, the token, which the menu it drops takes its colour from. */
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-4);
+  font: inherit;
+  font-size: inherit;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.perPageSelect:hover {
+  border-color: var(--color-text-muted);
+}
