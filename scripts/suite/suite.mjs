@@ -496,6 +496,17 @@ export const TESTS = [
     needs: ['session'],
   },
   {
+    name: 'plugin-accept-check',
+    what: 'a plugin asking for permissions and capabilities is one question, and one answer loads it',
+    needs: ['session'],
+    /*
+     * `alone`, because a plugin is loaded for the whole installation: while it
+     * is in, its function stands in every workspace's catalogues, and a check
+     * counting rows beside this one would count a row that vanishes.
+     */
+    alone: true,
+  },
+  {
     name: 'library-install-check',
     what: 'naming a package on the Libraries screen: the field, the pinned version, and the refusal',
     needs: ['session'],

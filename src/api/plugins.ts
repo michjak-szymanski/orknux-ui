@@ -153,14 +153,18 @@ export async function loadPlugin(name: string, written: string, accept?: string[
  * A load refused because nobody has agreed to what the plugin asks for.
  *
  * Its own type rather than an `ApiError` carrying a sentence, because the page
- * has a list to draw and a decision to put in front of somebody: the names are
+ * has lists to draw and a decision to put in front of somebody: the names are
  * what goes back in `accept`, and the summaries are what that decision is made
- * on. A refusal flattened into a string is one the page can only reprint.
+ * on. Two lists, never one — a permission relaxes the sandbox and a capability
+ * asks the server to act on the plugin's behalf, and the page has to be able to
+ * say which is which. A refusal flattened into a string is one the page can
+ * only reprint.
  */
 export class PluginPermissionsRequired extends ApiError {
   constructor(
     message: string,
     readonly permissions: PluginPermission[],
+    readonly capabilities: PluginPermission[],
   ) {
     super(message, 400);
     this.name = 'PluginPermissionsRequired';
@@ -191,8 +195,11 @@ export async function uploadPlugin(file: File, typescript?: string, accept?: str
     // The server explains a refusal — too large, not JavaScript, not text — and
     // that sentence is more use than the status code.
     const said = await answer.text().catch(() => '');
-    const asked = permissionsWanted(said);
-    if (asked !== null) throw new PluginPermissionsRequired(reason(said), asked);
+    const asked = wanted(said, 'permissions');
+    const askedOfServer = wanted(said, 'capabilities');
+    if (asked.length > 0 || askedOfServer.length > 0) {
+      throw new PluginPermissionsRequired(reason(said), asked, askedOfServer);
+    }
     const message = said.trim() === '' ? `Could not load the plugin (status ${answer.status})` : reason(said);
     throw new ApiError(message, answer.status);
   }
@@ -276,20 +283,21 @@ function reason(said: string): string {
 }
 
 /**
- * The permissions a refusal is asking for, or null when it is about something else.
+ * One of the lists a refusal is asking about, or nothing when it is about
+ * something else.
  *
  * Read off the body rather than off the status: 400 is also how a file too large
- * and a plugin that does not parse come back, and only this one has a list in it.
+ * and a plugin that does not parse come back, and only this one has lists in it.
  */
-function permissionsWanted(said: string): PluginPermission[] | null {
-  let parsed: { permissions?: unknown };
+function wanted(said: string, kind: 'permissions' | 'capabilities'): PluginPermission[] {
+  let parsed: Record<string, unknown>;
   try {
-    parsed = JSON.parse(said) as { permissions?: unknown };
+    parsed = JSON.parse(said) as Record<string, unknown>;
   } catch {
-    return null;
+    return [];
   }
-  const asked = parsed.permissions;
-  if (!Array.isArray(asked) || asked.length === 0) return null;
+  const asked = parsed[kind];
+  if (!Array.isArray(asked)) return [];
   return asked.map((one) => {
     const { name, summary } = one as Partial<PluginPermission>;
     return { name: name ?? '', summary: summary ?? '' };

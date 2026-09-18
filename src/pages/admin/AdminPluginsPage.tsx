@@ -42,8 +42,10 @@ interface Asking {
   /** The name it arrived as: what was picked, or the last part of the URL. */
   name: string;
   source: string;
-  /** The server's list, in the server's words. */
+  /** The server's lists, in the server's words. */
   permissions: PluginPermission[];
+  /** Kept apart from the permissions: these ask the server to act, not the sandbox to relax. */
+  capabilities: PluginPermission[];
 }
 
 /**
@@ -120,7 +122,7 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
         list below says it in the shape somebody can answer.
       */
       if (cause instanceof PluginPermissionsRequired) {
-        setAsking({ name, source, permissions: cause.permissions });
+        setAsking({ name, source, permissions: cause.permissions, capabilities: cause.capabilities });
       } else {
         setError(cause instanceof Error ? cause.message : t('Could not load that plugin.'));
       }
@@ -198,7 +200,8 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
     await loadSource(
       pending.name,
       pending.source,
-      pending.permissions.map((one) => one.name),
+      // Both lists go back in one answer; the server reads each by its own names.
+      [...pending.permissions, ...pending.capabilities].map((one) => one.name),
     );
   }
 
@@ -336,14 +339,37 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
             vocabulary is the server's, so a list written here would explain a
             permission it has since renamed - or miss one it has added.
           */}
-          <ul className={styles.permissions}>
-            {asking.permissions.map((one) => (
-              <li key={one.name} className={styles.permission}>
-                <span className={styles.permissionName}>{one.name}</span>
-                <span className={styles.permissionSummary}>{one.summary}</span>
-              </li>
-            ))}
-          </ul>
+          {asking.permissions.length > 0 && (
+            <ul className={styles.permissions}>
+              {asking.permissions.map((one) => (
+                <li key={one.name} className={styles.permission}>
+                  <span className={styles.permissionName}>{one.name}</span>
+                  <span className={styles.permissionSummary}>{one.summary}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {/*
+            Its own list under its own sentence, never folded into the one
+            above: a permission turns a language feature back on inside the
+            sandbox, a capability has the server act on the plugin's behalf,
+            and those are not decisions of the same size.
+          */}
+          {asking.capabilities.length > 0 && (
+            <>
+              <p className={styles.askingLine}>
+                {t('It asks the server to do these on its behalf.')}
+              </p>
+              <ul className={styles.permissions}>
+                {asking.capabilities.map((one) => (
+                  <li key={one.name} className={styles.permission}>
+                    <span className={styles.permissionName}>{one.name}</span>
+                    <span className={styles.permissionSummary}>{one.summary}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
           <div className={styles.askingActions}>
             {/*
               The decision, worded as one. "OK" beside a list of what a stranger's
