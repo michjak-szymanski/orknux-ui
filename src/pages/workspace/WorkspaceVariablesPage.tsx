@@ -513,8 +513,10 @@ function VariableTable({
         name: draft.name.trim(),
         description: draft.description.trim(),
         type: draft.type,
-        // Empty leaves what is stored, which is what an untouched secret means.
-        value: draft.value === '' && kind === 'SECRET' ? undefined : draft.value,
+        // A covered secret's box is empty whatever is stored, so only a box the
+        // person can actually read may say "empty means clear it".
+        value:
+          kind === 'SECRET' && variable.valueSet && !(variable.id in shown) ? undefined : draft.value,
       });
       /*
        * The list first, the draft after.
@@ -630,7 +632,9 @@ function VariableTable({
 
         {variables.map((variable) => {
           const draft = draftFor(variable);
-          const readable = kind === 'VALUE' || variable.id in shown;
+          // A secret with nothing stored has nothing to hide, so its box stays
+          // open — otherwise a secret saved empty could never be edited again.
+          const readable = kind === 'VALUE' || variable.id in shown || !variable.valueSet;
           return (
             <div key={variable.id} className={table.row}>
               <input
@@ -670,7 +674,7 @@ function VariableTable({
                   log records; covering it again is only this screen's business,
                   so anything typed in the meantime stays.
                 */}
-                {kind === 'SECRET' && (variable.valueSet || readable) && (
+                {kind === 'SECRET' && variable.valueSet && (
                   <RevealToggle
                     shown={readable}
                     label={variable.name}
