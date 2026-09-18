@@ -15,6 +15,7 @@ import {
   namesObject,
   parametersOf,
   sameParameters,
+  setFunctionTimeout,
   starterSource,
   tsType,
   updateFunction,
@@ -184,6 +185,12 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
   const [name, setName] = useState(functionId === '' ? NEW_FUNCTION_NAME : '');
   const [renamed, setRenamed] = useState(false);
   const [description, setDescription] = useState('');
+  /**
+   * How long one call may run, in seconds, as typed. Empty means the workspace
+   * default — a string rather than a number so an empty field is that choice
+   * and not a zero nobody typed.
+   */
+  const [timeoutSeconds, setTimeoutSeconds] = useState('');
   /** The left column: what somebody writes. */
   const [source, setSource] = useState('');
   /*
@@ -636,6 +643,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
         declaredAs.current = identifier(found.name);
         setName(found.name);
         setDescription(found.description ?? '');
+        setTimeoutSeconds(found.timeoutSeconds == null ? '' : String(found.timeoutSeconds));
         /*
          * The TypeScript, or the JavaScript for a function stored before there was
          * any — JavaScript without annotations is TypeScript, so opening one of those
@@ -795,6 +803,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
           declaredAs.current = identifier(found.name);
           setName(found.name);
           setDescription(found.description ?? '');
+          setTimeoutSeconds(found.timeoutSeconds == null ? '' : String(found.timeoutSeconds));
           openedWith.current = found.typescript ?? found.source;
           setSource(found.typescript ?? found.source);
           setReturnType(found.returnType);
@@ -1173,6 +1182,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
       return !(
         name.trim() === NEW_FUNCTION_NAME &&
         description.trim() === '' &&
+        timeoutSeconds.trim() === '' &&
         declared(params).length === 0 &&
         externals.length === 0 &&
         imports.length === 0 &&
@@ -1193,6 +1203,9 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
     return (
       name.trim() !== fn.name.trim() ||
       description.trim() !== (fn.description ?? '').trim() ||
+      // The timeout as the field holds it against the one stored, both spelled
+      // as text: empty is the workspace default on either side.
+      timeoutSeconds.trim() !== (fn.timeoutSeconds == null ? '' : String(fn.timeoutSeconds)) ||
       source !== (fn.typescript ?? fn.source) ||
       returnType !== fn.returnType ||
       // Normalised the way a save normalises it: an object chosen and then
@@ -1213,6 +1226,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
     fn,
     name,
     description,
+    timeoutSeconds,
     source,
     returnType,
     returnObjectId,
@@ -1375,7 +1389,18 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
       const stored = creating
         ? await createFunction({ workspaceId, ...details })
         : await updateFunction(functionId, details);
-      setFn(stored);
+      /*
+       * The timeout travels apart from the rest, because the server keeps it out
+       * of UpdateFunctionInput on purpose - a save of the code never carries it.
+       * Sent only when it moved, against what the save just brought back, and the
+       * answer is the function as it now stands, so it is the baseline the same
+       * way the save's own answer is. Out of range is the server's refusal to
+       * make, and it lands in the catch below like any other.
+       */
+      const wanted = timeoutSeconds.trim() === '' ? null : Number(timeoutSeconds);
+      const settled =
+        wanted === (stored.timeoutSeconds ?? null) ? stored : await setFunctionTimeout(stored.id, wanted);
+      setFn(settled);
       setStatus({ ok: true, message: "the code compiles and the sandbox's parser accepts it" });
       setSaved(true);
       /*
@@ -1731,6 +1756,35 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                     }}
                   />
                 </div>
+                {/*
+                  Not for a plugin's function: the server refuses the edit, so
+                  the field would be a control that cannot do anything.
+                */}
+                {fn?.editable !== false && (
+                  <div className={styles.field}>
+                    <span className={styles.headingWithHint}>
+                      <label className={styles.fieldLabel} htmlFor="function-timeout">
+                        {t('Timeout')}
+                      </label>
+                      <FieldHint label={t('Timeout')}>
+                        {t('How long one call may run, in seconds; empty uses the workspace default.')}
+                      </FieldHint>
+                    </span>
+                    <input
+                      id="function-timeout"
+                      className={styles.input}
+                      type="number"
+                      min={1}
+                      max={600}
+                      placeholder={t('Workspace default')}
+                      value={timeoutSeconds}
+                      onChange={(event) => {
+                        setTimeoutSeconds(event.target.value);
+                        setSaved(false);
+                      }}
+                    />
+                  </div>
+                )}
 
                 {/*
                   The binding as it actually is, read from the same setting the
@@ -2421,6 +2475,7 @@ export function FunctionEditorPage({ session, onSignOut }: FunctionEditorPagePro
                           declaredAs.current = identifier(found.name);
                           setName(found.name);
                           setDescription(found.description ?? '');
+                          setTimeoutSeconds(found.timeoutSeconds == null ? '' : String(found.timeoutSeconds));
                           openedWith.current = found.typescript ?? found.source;
                           setSource(found.typescript ?? found.source);
                           setReturnType(found.returnType);

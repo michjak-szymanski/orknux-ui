@@ -121,6 +121,8 @@ export interface WorkspaceFunction {
   libraries: ScriptLibraryImport[];
   /** "(input: object, format: string)", ready for the list. */
   signature: string;
+  /** How long one call may run, in seconds. Null means the workspace default. */
+  timeoutSeconds: number | null;
   lastModifiedAt: string;
   lastModifiedBy: string;
 }
@@ -147,7 +149,7 @@ const FUNCTION_FIELDS =
    externals { variableId name type }
    imports { functionId name function { name description signature returnType returnObjectName } }
    ${SCRIPT_LIBRARY_IMPORT_FIELDS}
-   signature lastModifiedAt lastModifiedBy`;
+   signature timeoutSeconds lastModifiedAt lastModifiedBy`;
 
 const WORKSPACE_FUNCTIONS_QUERY = `
   query WorkspaceFunctions($workspaceId: ID!, $page: Int!, $size: Int!) {
@@ -176,6 +178,12 @@ const CREATE_FUNCTION_MUTATION = `
 const UPDATE_FUNCTION_MUTATION = `
   mutation UpdateFunction($id: ID!, $input: UpdateFunctionInput!) {
     updateFunction(id: $id, input: $input) { ${FUNCTION_FIELDS} }
+  }
+`;
+
+const SET_FUNCTION_TIMEOUT_MUTATION = `
+  mutation SetFunctionTimeout($id: ID!, $seconds: Int) {
+    setFunctionTimeout(id: $id, seconds: $seconds) { ${FUNCTION_FIELDS} }
   }
 `;
 
@@ -724,6 +732,22 @@ export async function updateFunction(
     },
   });
   return data.updateFunction;
+}
+
+/**
+ * Sets how long one call of this function may run, in seconds.
+ *
+ * Its own mutation, deliberately apart from `updateFunction`: the timeout is not
+ * part of UpdateFunctionInput, so a save of the code never carries it and cannot
+ * clear it by omission. Null puts the function back on the workspace default;
+ * anything else is 1..600, and the server refuses what is out of range.
+ */
+export async function setFunctionTimeout(id: string, seconds: number | null): Promise<WorkspaceFunction> {
+  const data = await graphql<{ setFunctionTimeout: WorkspaceFunction }>(SET_FUNCTION_TIMEOUT_MUTATION, {
+    id,
+    seconds,
+  });
+  return data.setFunctionTimeout;
 }
 
 /** The editor's Validate: answers rather than failing when the source is broken. */

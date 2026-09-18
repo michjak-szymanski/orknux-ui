@@ -92,6 +92,16 @@ export interface Workspace {
   /** What a task here gets when the field above is null, so the box can show it. */
   taskMaxTurnsDefault: number;
   /**
+   * How many seconds one run of a tool or function here may hold its thread,
+   * where the tool or function has no timeout of its own.
+   *
+   * Null means the workspace has decided nothing and the installation's own
+   * number is used.
+   */
+  scriptTimeoutSeconds: number | null;
+  /** What a run here gets when the field above is null, so the box can show it. */
+  scriptTimeoutSecondsDefault: number;
+  /**
    * How long a pause has to run, after somebody has been talking, before voice
    * mode decides they have finished and sends what it heard.
    *
@@ -132,7 +142,8 @@ const WORKSPACE_FIELDS =
   'id name description roles { id name } adminRoles { id name } administered ' +
   'companionModelId transcriptionModelId speechModelId imageModelId quickChatModelId quickChatMayWrite ' +
   'compactAfterTokens compactionSummaryTokens compactionModelId ' +
-  'defaultMemoryShare taskMaxTurns taskMaxTurnsDefault voicePauseEndsTurnMs voiceSpeechOverRoomPercent voiceUnattendedMicrophoneMs ' +
+  'defaultMemoryShare taskMaxTurns taskMaxTurnsDefault scriptTimeoutSeconds scriptTimeoutSecondsDefault ' +
+  'voicePauseEndsTurnMs voiceSpeechOverRoomPercent voiceUnattendedMicrophoneMs ' +
   'voiceSpeechChunking';
 
 /** Just enough of a role to name it where a workspace lists what opens it. */
@@ -297,6 +308,20 @@ export async function setWorkspaceTaskMaxTurns(
     { workspaceId, turns },
   );
   return data.setWorkspaceTaskMaxTurns;
+}
+
+/** Null clears it, which puts the workspace back on the installation's number. */
+export async function setWorkspaceScriptTimeout(
+  workspaceId: string,
+  seconds: number | null,
+): Promise<Workspace> {
+  const data = await graphql<{ setWorkspaceScriptTimeout: Workspace }>(
+    `mutation SetWorkspaceScriptTimeout($workspaceId: ID!, $seconds: Int) {
+       setWorkspaceScriptTimeout(workspaceId: $workspaceId, seconds: $seconds) { ${WORKSPACE_FIELDS} }
+     }`,
+    { workspaceId, seconds },
+  );
+  return data.setWorkspaceScriptTimeout;
 }
 
 /**

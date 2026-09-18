@@ -2,7 +2,7 @@ import { graphql } from './client';
 import type { PageOf } from './client';
 import type { ValueType } from './actions';
 import { asImportInput } from './functions';
-import type { ScriptImport, ScriptImportInput } from './functions';
+import type { FunctionExternal, ScriptImport, ScriptImportInput } from './functions';
 import { SCRIPT_LIBRARY_IMPORT_FIELDS, asLibraryInput } from './libraries';
 import type { ScriptLibraryImport, ScriptLibraryImportInput } from './libraries';
 import { t } from '../i18n';
@@ -42,6 +42,8 @@ export interface Tool {
   typescript: string;
   /** What it takes, in the order the sandbox passes it. */
   params: ToolParam[];
+  /** The workspace's variables it is handed, after the parameters it declares. */
+  externals: FunctionExternal[];
   /**
    * The workspace's functions it calls, under the names it calls them.
    *
@@ -59,6 +61,8 @@ export interface Tool {
   libraries: ScriptLibraryImport[];
   /** "(city: string, days: number)", ready for the list. */
   signature: string;
+  /** How long one call may run, in seconds. Null means the workspace's default. */
+  timeoutSeconds: number | null;
   enabled: boolean;
   lastModifiedAt: string;
   lastModifiedBy: string;
@@ -89,9 +93,10 @@ function asInput(param: ToolParam): { name: string; type: ValueType; objectId?: 
 const TOOL_FIELDS =
   'id workspaceId name description source typescript ' +
   'params { name type objectId objectName } ' +
+  'externals { variableId name type } ' +
   'imports { functionId name function { name description signature returnType returnObjectName } } ' +
   `${SCRIPT_LIBRARY_IMPORT_FIELDS} ` +
-  'signature enabled lastModifiedAt lastModifiedBy';
+  'signature timeoutSeconds enabled lastModifiedAt lastModifiedBy';
 
 export async function fetchWorkspaceTools(workspaceId: string, page = 0, size = 20): Promise<PageOf<Tool>> {
   const data = await graphql<{ workspaceTools: PageOf<Tool> }>(
@@ -126,6 +131,8 @@ export interface CreateToolInput {
   typescript?: string;
   /** Left out means the one every tool used to take: an object called `input`. */
   params?: ToolParam[];
+  /** Which of the workspace's variables it is handed, in order. */
+  externalVariableIds?: string[];
   /** The workspace's functions it calls, under the names it calls them. */
   imports?: ScriptImportInput[];
   /** The installation's libraries it uses, under the names it uses them by. */
@@ -157,6 +164,8 @@ export interface UpdateToolInput {
   /** Left out leaves them alone; an empty list takes them all off. */
   params?: ToolParam[];
   /** Left out leaves them alone; an empty list takes them all off. */
+  externalVariableIds?: string[];
+  /** Left out leaves them alone; an empty list takes them all off. */
   imports?: ScriptImportInput[];
   /** Left out leaves them alone; an empty list takes them all off. */
   libraries?: ScriptLibraryImportInput[];
@@ -186,6 +195,24 @@ export async function setToolEnabled(id: string, enabled: boolean): Promise<Tool
     { id, enabled },
   );
   return data.setToolEnabled;
+}
+
+/**
+ * The tool's own clock, set on its own; null puts it back on the workspace default.
+ *
+ * A mutation of its own for the same reason a function's timeout has one: it is
+ * not part of UpdateToolInput, so a save of the code never carries it and cannot
+ * clear it by omission. Null puts the tool back on the workspace default;
+ * anything else is 1..600, and the server refuses what is out of range.
+ */
+export async function setToolTimeout(id: string, seconds: number | null): Promise<Tool> {
+  const data = await graphql<{ setToolTimeout: Tool }>(
+    `mutation SetToolTimeout($id: ID!, $seconds: Int) {
+       setToolTimeout(id: $id, seconds: $seconds) { ${TOOL_FIELDS} }
+     }`,
+    { id, seconds },
+  );
+  return data.setToolTimeout;
 }
 
 export async function validateToolSource(workspaceId: string, source: string): Promise<SourceValidation> {
@@ -334,12 +361,18 @@ function nameOf(entry: string): string | null {
  * disagree - a parameter added to the signature and not to the code, or the other
  * way round, cannot be expressed.
  *
+ * The workspace's variables are handed to a tool after the parameters it
+ * declares, so the last few entries are theirs and are checked rather than read:
+ * code that has dropped one, or renamed it, is refused here instead of being
+ * saved as a tool whose externals arrive under other names.
+ *
  * Either the parameters or a sentence saying what is wrong, which is what the
  * assistant is told so its next attempt is at the real problem.
  */
 export function toolParametersOf(
   source: string,
   name: string,
+  externals: { name: string }[],
   objects: { id: string; name: string }[],
   known: ToolParam[],
 ): { params: ToolParam[] } | { problem: string } {
@@ -348,8 +381,28 @@ export function toolParametersOf(
     return { problem: `it has no \`function ${name}\` declaration to read a parameter list from` };
   }
 
+  const entries = splitParameters(source.slice(found.from, found.to));
+  if (entries.length < externals.length) {
+    return {
+      problem:
+        `it does not accept the ${externals.length === 1 ? 'variable' : 'variables'} this tool is handed ` +
+        `after its own parameters (${externals.map((external) => external.name).join(', ')}), which come last`,
+    };
+  }
+
+  const declared = entries.slice(0, entries.length - externals.length);
+  const handed = entries.slice(entries.length - externals.length);
+  const mismatch = handed.findIndex((entry, at) => nameOf(entry) !== externals[at].name);
+  if (mismatch !== -1) {
+    return {
+      problem:
+        `the workspace variable \`${externals[mismatch].name}\` is handed to this tool after its own ` +
+        'parameters, and the code has to go on accepting it, in that position and under that name',
+    };
+  }
+
   const params: ToolParam[] = [];
-  for (const entry of splitParameters(source.slice(found.from, found.to))) {
+  for (const entry of declared) {
     const written = nameOf(entry);
     if (written === null) {
       return { problem: `\`${entry.trim()}\` is not a parameter this editor can show - name each one plainly` };

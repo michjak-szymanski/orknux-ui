@@ -1866,6 +1866,13 @@ export const PL: Record<string, string> = {
   // --- two notes the transform reached this time ---------------------------
   "A saved shape fixes which fields there are; this node decides what goes in them. Custom means the fields are this node's own.": "Zapisany kształt ustala, jakie są pola; ten węzeł decyduje, co się w nich znajdzie. „Własny” oznacza, że pola należą do tego węzła.",
   "The workspace’s values, handed to this function after its own parameters. Their values are never shown here — which is why a variable that is set looks empty on this page: what is chosen is the name, and only the sandbox ever sees what is behind it.": "Wartości przestrzeni roboczej, przekazywane tej funkcji po jej własnych parametrach. Ich wartości nigdy nie są tu pokazywane — dlatego ustawiona zmienna wygląda na tej stronie na pustą: wybiera się nazwę, a to, co za nią stoi, widzi wyłącznie piaskownica.",
+  "The workspace’s values, handed to this tool after its own parameters. Their values are never shown here — which is why a variable that is set looks empty on this page: what is chosen is the name, and only the sandbox ever sees what is behind it.": "Wartości przestrzeni roboczej, przekazywane temu narzędziu po jego własnych parametrach. Ich wartości nigdy nie są tu pokazywane — dlatego ustawiona zmienna wygląda na tej stronie na pustą: wybiera się nazwę, a to, co za nią stoi, widzi wyłącznie piaskownica.",
+
+  // --- timeouts, on the editors and the workspace --------------------------
+  "Workspace default": "Domyślne przestrzeni",
+  "How long one call may run, in seconds; empty uses the workspace default.": "Ile sekund może trwać jedno wywołanie; puste używa domyślnej wartości przestrzeni.",
+  "Tool Timeout": "Limit czasu narzędzi",
+  "Seconds one tool or function call may run; empty uses the installation’s bound.": "Ile sekund może trwać wywołanie narzędzia lub funkcji; puste używa limitu instalacji.",
 
   // --- one-word labels, which is what the menu is made of -------------------
   "Assignee": "Przypisany",

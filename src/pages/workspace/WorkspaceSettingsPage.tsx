@@ -15,6 +15,7 @@ import {
   setWorkspaceCompanionModel,
   setWorkspaceImageModel,
   setWorkspaceDefaultMemoryShare,
+  setWorkspaceScriptTimeout,
   setWorkspaceTaskMaxTurns,
   setWorkspaceQuickChatModel,
   setWorkspaceQuickChatWrites,
@@ -241,6 +242,12 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
    * installation's own number is used.
    */
   const [turns, setTurns] = useState('');
+  /**
+   * How many seconds one tool or function run here may hold its thread, as
+   * typed. Text for the reason `turns` is: empty is a real answer, meaning the
+   * workspace has decided nothing and the installation's own bound is used.
+   */
+  const [scriptTimeout, setScriptTimeout] = useState('');
   /** What the server said about a number it would not take. */
   /** Whether that share may be saved at all, which is the bounds and nothing else. */
   const [verdict, setVerdict] = useState<SessionMemoryBudget | null>(null);
@@ -359,6 +366,11 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
         setDescription(found?.description ?? '');
         setShare(found?.defaultMemoryShare ?? null);
         setTurns(found?.taskMaxTurns === null || found?.taskMaxTurns === undefined ? '' : String(found.taskMaxTurns));
+        setScriptTimeout(
+          found?.scriptTimeoutSeconds === null || found?.scriptTimeoutSeconds === undefined
+            ? ''
+            : String(found.scriptTimeoutSeconds),
+        );
         setPause(inBox(found?.voicePauseEndsTurnMs ?? null, A_SECOND));
         setOverRoom(inBox(found?.voiceSpeechOverRoomPercent ?? null, AS_IS));
         setUnattended(inBox(found?.voiceUnattendedMicrophoneMs ?? null, A_MINUTE));
@@ -526,6 +538,10 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
       if (touched.has('turns')) {
         latest = await setWorkspaceTaskMaxTurns(workspaceId, wantedTurns);
       }
+      const wantedTimeout = scriptTimeout.trim() === '' ? null : Number(scriptTimeout);
+      if (touched.has('scriptTimeout')) {
+        latest = await setWorkspaceScriptTimeout(workspaceId, wantedTimeout);
+      }
 
       // The pickers. Empty is null everywhere here, and null is what takes the
       // microphone, the speaker or the button away rather than falling back.
@@ -592,6 +608,7 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
     setDescription(held.description ?? '');
     setShare(held.defaultMemoryShare);
     setTurns(held.taskMaxTurns === null ? '' : String(held.taskMaxTurns));
+    setScriptTimeout(held.scriptTimeoutSeconds === null ? '' : String(held.scriptTimeoutSeconds));
     setCompanion(held.companionModelId ?? '');
     setTranscription(held.transcriptionModelId ?? '');
     setSpeech(held.speechModelId ?? '');
@@ -1000,6 +1017,37 @@ export function WorkspaceSettingsPage({ session, onSignOut }: WorkspaceSettingsP
               placeholder={workspace === null ? '' : String(workspace.taskMaxTurnsDefault)}
               value={turns}
               onChange={(event) => { touch('turns'); setTurns(event.target.value); }}
+            />
+          </div>
+        </div>
+
+        {/*
+          How long one run of a tool or function here may hold its thread,
+          where the tool or function has set no timeout of its own. Beside the
+          two above because it is the same kind of judgement about the work
+          this workspace does: overnight research and a chat answering
+          questions have no reason to agree on it.
+        */}
+        <div className={styles.field}>
+          <span className={styles.labelWithHint}>
+            <label className={styles.label} htmlFor="workspace-script-timeout">
+              {t('Tool Timeout')}
+            </label>
+            <FieldHint label={t('Tool Timeout')}>
+              {t('Seconds one tool or function call may run; empty uses the installation’s bound.')}
+            </FieldHint>
+          </span>
+
+          <div className={styles.shareRow}>
+            <input
+              id="workspace-script-timeout"
+              className={styles.input}
+              type="number"
+              min={1}
+              max={600}
+              placeholder={workspace === null ? '' : String(workspace.scriptTimeoutSecondsDefault)}
+              value={scriptTimeout}
+              onChange={(event) => { touch('scriptTimeout'); setScriptTimeout(event.target.value); }}
             />
           </div>
         </div>

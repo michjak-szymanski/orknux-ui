@@ -20,6 +20,7 @@ import {
   fetchTool,
   sameToolParameters,
   setToolEnabled,
+  setToolTimeout,
   timeAgo,
   toolParametersOf,
   updateTool,
@@ -27,6 +28,7 @@ import {
   withToolParameters,
 } from '../../api/tools';
 import type { Tool, ToolParam } from '../../api/tools';
+import { VARIABLE_TYPE_LABEL } from '../../api/variables';
 import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import codeIcon from '../../assets/code.svg';
 import plusIcon from '../../assets/plus.svg';
@@ -49,6 +51,7 @@ import { compile, declareImports, declareObjects } from '../../components/monaco
 import { importTypes } from '../../components/importTypes';
 import { objectTypes } from '../../components/objectTypes';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
+import { useWorkspaceVariables } from './workspaceVariables';
 import { shellUser } from '../../session/user';
 import styles from './EditorPage.module.css';
 import { t } from '../../i18n';
@@ -89,6 +92,16 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
    * change here is written into the code below before it can be saved.
    */
   const [params, setParams] = useState<ToolParam[]>([]);
+  /** The workspace's variables this tool is handed, by id and in order. */
+  const [externals, setExternals] = useState<string[]>([]);
+  /**
+   * How long one call may run, in seconds, as the field holds it.
+   *
+   * Text rather than a number, because empty is an answer: it means the
+   * workspace default, and a zero standing in for "nothing typed" would read
+   * as a timeout of no seconds at all.
+   */
+  const [timeoutSeconds, setTimeoutSeconds] = useState('');
   /**
    * The workspace's functions this tool calls, under the names it calls them.
    *
@@ -181,9 +194,21 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
     setDescription(found.description ?? '');
     setSource(found.typescript ?? found.source);
     setParams(found.params);
+    setExternals(found.externals.map((external) => external.variableId));
+    setTimeoutSeconds(found.timeoutSeconds == null ? '' : String(found.timeoutSeconds));
     setImports(found.imports);
     setLibraries(found.libraries);
   }
+
+  /*
+   * What an external may point at. Their values are not here and cannot be: an
+   * external parameter is chosen by name, and read only inside the sandbox.
+   *
+   * Read again when the window comes back and when the list is reached for,
+   * rather than once: an editor is left open for a long time, and the variable
+   * it should be offering is made on another page — see `useWorkspaceVariables`.
+   */
+  const { variables, refresh: refreshVariables } = useWorkspaceVariables(workspaceId);
 
   /*
    * The objects this workspace defines, fetched for two jobs at once: filling
@@ -371,13 +396,40 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tool, libraries]);
 
-  /** The tool's parameter list, as TypeScript would write it. */
-  const declarations = useMemo(
+  /**
+   * The workspace's variables this tool is handed, by name and in order.
+   *
+   * The tail of every declaration: the sandbox passes the declared parameters
+   * first and these after them, so reading a parameter list back off the code
+   * means knowing which of its entries are not parameters at all.
+   */
+  const handed = useMemo(
     () =>
-      params
+      externals.map((variableId) => {
+        const held = variables.find((candidate) => candidate.id === variableId);
+        return { name: held?.name ?? 'external', type: held?.type ?? 'STRING' };
+      }),
+    [externals, variables],
+  );
+
+  /**
+   * The tool's parameter list, as TypeScript would write it.
+   *
+   * Declared parameters first, then the workspace's variables — the same order
+   * the sandbox passes them, which is what makes this the code's parameter list
+   * and not just a label.
+   */
+  const declarations = useMemo(
+    () => [
+      ...params
         .filter((param) => param.name.trim() !== '')
         .map((param) => `${param.name.trim()}: ${tsType(param.type, objectNameOf(param.objectId))}`),
-    [params, objects],
+      ...externals.map((variableId) => {
+        const held = variables.find((candidate) => candidate.id === variableId);
+        return held === undefined ? 'external: string' : `${held.name}: ${held.type.toLowerCase()}`;
+      }),
+    ],
+    [params, externals, variables, objects],
   );
 
   /**
@@ -400,11 +452,16 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
    */
   const panelMoved = useMemo(() => {
     if (tool === null) return false;
-    return !sameToolParameters(declared(params), declared(tool.params));
+    const wasExternals = tool.externals.map((external) => external.variableId);
+    return (
+      !sameToolParameters(declared(params), declared(tool.params)) ||
+      externals.length !== wasExternals.length ||
+      externals.some((variableId, at) => variableId !== wasExternals[at])
+    );
     // `declared` is a plain helper over its arguments, and reading it as a
     // dependency would rebuild this on every render for nothing.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tool, params]);
+  }, [tool, params, externals]);
 
   /*
    * The code follows the panel.
@@ -507,7 +564,7 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
        * is about to be compiled rather than left saying what the tool took
        * before. That is what makes the two impossible to disagree.
        */
-      const read = toolParametersOf(offered.code, tool.name, objects, params);
+      const read = toolParametersOf(offered.code, tool.name, handed, objects, params);
       if ('problem' in read) {
         failOffer(
           `The parameters could not be read - ${read.problem}.`,
@@ -592,21 +649,30 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
         return false;
       }
 
-      apply(
-        await updateTool(tool.id, {
-          name: name.trim(),
-          description: description.trim(),
-          source: emitted.javascript,
-          typescript: source,
-          // A half-written row is not a parameter yet, and sending it would be
-          // refused for a name no script can be called by.
-          params: params.filter((param) => param.name.trim() !== ''),
-          // The same rule for an import: a row nobody has named is not one yet.
-          imports: named(imports),
-          // And for a library.
-          libraries: chosen(libraries),
-        }),
-      );
+      const stored = await updateTool(tool.id, {
+        name: name.trim(),
+        description: description.trim(),
+        source: emitted.javascript,
+        typescript: source,
+        // A half-written row is not a parameter yet, and sending it would be
+        // refused for a name no script can be called by.
+        params: params.filter((param) => param.name.trim() !== ''),
+        externalVariableIds: externals,
+        // The same rule for an import: a row nobody has named is not one yet.
+        imports: named(imports),
+        // And for a library.
+        libraries: chosen(libraries),
+      });
+      /*
+       * The timeout travels apart from the rest, because the server keeps it out
+       * of UpdateToolInput on purpose - a save of the code never carries it.
+       * Sent only when it moved, against what the save just brought back, and
+       * the answer is the tool as it now stands, so it is the baseline the same
+       * way the save's own answer is. Out of range is the server's refusal to
+       * make, and it lands in the catch below like any other.
+       */
+      const wanted = timeoutSeconds.trim() === '' ? null : Number(timeoutSeconds);
+      apply(wanted === (stored.timeoutSeconds ?? null) ? stored : await setToolTimeout(stored.id, wanted));
       setSaved(true);
       setStatus({ ok: true, message: "the code compiles and the sandbox's parser accepts it" });
       return true;
@@ -641,16 +707,19 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
     return (
       name.trim() !== tool.name.trim() ||
       description.trim() !== (tool.description ?? '').trim() ||
+      // The timeout as the field holds it against the one stored, both spelled
+      // as text: empty is the workspace default on either side.
+      timeoutSeconds.trim() !== (tool.timeoutSeconds == null ? '' : String(tool.timeoutSeconds)) ||
       source !== (tool.typescript ?? tool.source) ||
-      // The parameters a save would send, which the code column is kept in step
-      // with above and so is asked for once.
+      // The parameters and externals a save would send, which the code column
+      // is kept in step with above and so is asked for once.
       panelMoved ||
       // The imports, which the code column knows nothing about; see `importsMoved`.
       importsMoved ||
       // And the libraries, which it knows nothing about either.
       librariesMoved
     );
-  }, [tool, name, description, source, panelMoved, importsMoved, librariesMoved]);
+  }, [tool, name, description, timeoutSeconds, source, panelMoved, importsMoved, librariesMoved]);
 
   /*
    * The three ways out, and the question before any of them: a link, a Back
@@ -902,6 +971,29 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                     placeholder={t('What an agent reads to decide whether to call this.')}
                   />
                 </div>
+                <div className={styles.field}>
+                  <span className={styles.headingWithHint}>
+                    <label className={styles.label} htmlFor="tool-timeout">
+                      {t('Timeout')}
+                    </label>
+                    <FieldHint label={t('Timeout')}>
+                      {t('How long one call may run, in seconds; empty uses the workspace default.')}
+                    </FieldHint>
+                  </span>
+                  <input
+                    id="tool-timeout"
+                    className={styles.input}
+                    type="number"
+                    min={1}
+                    max={600}
+                    placeholder={t('Workspace default')}
+                    value={timeoutSeconds}
+                    onChange={(event) => {
+                      setTimeoutSeconds(event.target.value);
+                      setSaved(false);
+                    }}
+                  />
+                </div>
               </div>
 
               {/*
@@ -1069,6 +1161,112 @@ export function ToolEditorPage({ session, onSignOut }: ToolEditorPageProps) {
                 <p className={styles.paramHint}>
                   {t('An agent calling this tool fills these in by name. The declaration below takes them in this order.')}
                 </p>
+              </div>
+
+              {/*
+                What the workspace hands it, as opposed to what the agent does.
+                Appended to the signature in the order they are listed, so the
+                code reads them as ordinary arguments after its own.
+              */}
+              <div className={styles.panelSection}>
+                <span className={styles.headingWithHint}>
+                  <h2 className={styles.panelHeading}>{t('External Parameters')}</h2>
+                  <FieldHint label={t('External Parameters')}>
+                    {t('The workspace’s values, handed to this tool after its own parameters. Their values are never shown here — which is why a variable that is set looks empty on this page: what is chosen is the name, and only the sandbox ever sees what is behind it.')}
+                  </FieldHint>
+                </span>
+                <div className={styles.paramList}>
+                  {externals.map((variableId, index) => {
+                    const held = variables.find((candidate) => candidate.id === variableId);
+                    return (
+                      <div key={`${variableId}-${index}`} className={styles.paramRow}>
+                        {/* One line, like an import's: the × belongs beside its
+                            fields, and this box's own class stacks children. */}
+                        <div className={styles.paramTopLine}>
+                          <select
+                            className={`${styles.paramName} ${styles.inputMono}`}
+                            value={variableId}
+                            aria-label={`External parameter ${index + 1}`}
+                            /*
+                              Reaching for the list is a reason to read it again:
+                              somebody about to change what this tool is handed
+                              has often just been to the Variables page to make it.
+                            */
+                            onMouseDown={refreshVariables}
+                            onFocus={refreshVariables}
+                            onChange={(event) => {
+                              setExternals((current) =>
+                                current.map((row, at) => (at === index ? event.target.value : row)),
+                              );
+                              setSaved(false);
+                            }}
+                          >
+                            {variables.map((variable) => (
+                              <option key={variable.id} value={variable.id}>
+                                {variable.name} · {variable.catalogName}
+                              </option>
+                            ))}
+                          </select>
+                          <span className={styles.typeBadge}>
+                            {held === undefined ? '—' : VARIABLE_TYPE_LABEL[held.type]}
+                          </span>
+                          <button
+                            type="button"
+                            className={styles.removeParam}
+                            aria-label={`Remove external parameter ${index + 1}`}
+                            onClick={() => {
+                              setExternals((current) => current.filter((_, at) => at !== index));
+                              setSaved(false);
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    className={styles.addParam}
+                    disabled={variables.length === 0}
+                    title={
+                      variables.length === 0
+                        ? t('This workspace has no variables yet')
+                        : 'Hand this tool one of the workspace’s variables'
+                    }
+                    onClick={() => {
+                      const next = variables.find((variable) => !externals.includes(variable.id));
+                      if (next === undefined) return;
+                      setExternals((current) => [...current, next.id]);
+                      setSaved(false);
+                    }}
+                  >
+                    <img src={plusIcon} alt="" width={12} height={12} />
+                    {t('Add External')}
+                  </button>
+                  {/*
+                    A way out to where these are defined - most of all in the
+                    empty case, which tells somebody to define a variable first
+                    and would otherwise leave them to find the page themselves.
+                    A new tab, because this editor has nothing listening for a
+                    navigation away, so the same tab would discard the code
+                    being written without saying so. The function editor's twin
+                    says the same.
+                  */}
+                  <p className={styles.paramHint}>
+                    {variables.length === 0
+                      ? 'Define a variable first; externals are chosen from what the workspace keeps. '
+                      : ''}
+                    <a
+                      className={styles.shortcutLink}
+                      href={`/workspace/${workspaceId}/variables`}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                    >
+                      {t('Open Variables')}
+                    </a>
+                  </p>
+                </div>
               </div>
 
               {/*

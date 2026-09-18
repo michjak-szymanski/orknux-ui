@@ -1139,3 +1139,13 @@
   line-height: 1.5;
   color: var(--color-text-muted);
 }
+
+/* A way out, inside a hint: the function editor's twin. */
+.shortcutLink {
+  color: var(--color-accent-brand);
+  text-decoration: none;
+}
+
+.shortcutLink:hover {
+  text-decoration: underline;
+}
