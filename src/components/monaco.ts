@@ -321,6 +321,21 @@ declare global {
     | { ok: true; error?: undefined }
     | { error: string; ok?: undefined };
 
+  /** The one message a permalink points at, or why it could not be read. */
+  type SlackLinkedMessage =
+    | { channel: string; ts: string; user: string | null; text: string; threadTs: string | null; error?: undefined }
+    | { error: string; text?: undefined };
+
+  /** Who a user id belongs to, or why that could not be said. */
+  type SlackUserInfo =
+    | { id: string; name: string; realName: string | null; displayName: string | null; bot: boolean; error?: undefined }
+    | { error: string; id?: undefined };
+
+  /** The notation Slack renders as a mention, ready to put in a message. */
+  type SlackMention =
+    | { mention: string; id: string; label: string; error?: undefined }
+    | { error: string; mention?: undefined };
+
   type OrknuxRequest = {
     url: string;
     /** Any method; lower case is fine, it is upper-cased on the way out. */
@@ -412,6 +427,45 @@ declare global {
         ts: string,
         emoji: string,
       ): SlackReaction;
+
+      /**
+       * The one message a Slack permalink points at.
+       *
+       * A message pasted into another message travels as its permalink, and
+       * this follows it — so "the message they linked" is readable rather
+       * than an address.
+       *
+       * @param link the permalink, as Slack writes one.
+       */
+      message(
+        connection: OrknuxConnectionRef,
+        link: string,
+      ): SlackLinkedMessage;
+
+      /**
+       * Who a Slack user id is.
+       *
+       * A mention arrives in text as "<@U0123ABCD>", which names nobody until
+       * it is looked up.
+       *
+       * @param userId the id, bare or as the whole mention notation.
+       */
+      user(
+        connection: OrknuxConnectionRef,
+        userId: string,
+      ): SlackUserInfo;
+
+      /**
+       * The notation that pings somebody, from their name.
+       *
+       * @param name a display name, username, email, id, or a user group's
+       *   handle — with or without the "@". Put the answer's "mention" into
+       *   post()'s text as it is; never write "<@…>" from a guessed id.
+       */
+      mention(
+        connection: OrknuxConnectionRef,
+        name: string,
+      ): SlackMention;
     };
 
     /**
