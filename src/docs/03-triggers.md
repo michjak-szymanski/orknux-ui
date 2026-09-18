@@ -113,8 +113,9 @@ nothing here".
 ### GitHub and Microsoft Teams
 
 Neither is a connection type, and neither needs a release of this application to
-support. Both are **plugins** — `plugins/github/github.js` and
-`plugins/teams/teams.js`, loaded on the Plugins screen — sitting in front of a
+support. Both are **plugins** — `github` and `teams` in the
+[orknux-extension](https://github.com/michjak-szymanski/orknux-extension)
+repository, loaded on the Plugins screen — sitting in front of a
 webhook trigger and checking the signature the sender puts on every delivery.
 A host that changes its signature scheme is a new version of that file.
 
