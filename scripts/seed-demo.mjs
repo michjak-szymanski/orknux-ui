@@ -564,13 +564,19 @@ log(`${FUNCTIONS.length} functions`);
 
 /* ------------------------------------------------------------------- tools */
 
+/*
+ * Each declares the parameters its code takes, and exports the function the
+ * sandbox calls: a save now refuses code whose arity disagrees with the
+ * declared list, and a tool without a default export was never callable.
+ */
 const TOOLS = [
   {
     name: 'lookupCustomer',
     description: 'Who is asking: their plan, and how many tickets they already have open.',
+    params: [{ name: 'email', type: 'STRING' }],
     source: [
       '/** Looks the customer up by the address they wrote from. */',
-      'function lookupCustomer(email) {',
+      'export default function lookupCustomer(email) {',
       '  const found = orknux.http.get("https://crm.northwind.internal/customers?email=" + email);',
       '  return { name: found.name, plan: found.plan, openTickets: found.open };',
       '}',
@@ -579,9 +585,10 @@ const TOOLS = [
   {
     name: 'recentIncidents',
     description: 'Incidents on the status page in the last day, so an answer is not contradicted by one.',
+    params: [],
     source: [
       '/** The last day of incidents, newest first. */',
-      'function recentIncidents() {',
+      'export default function recentIncidents() {',
       '  const feed = orknux.http.get("https://status.northwind.internal/api/incidents?since=24h");',
       '  return feed.incidents.map((i) => i.startedAt + ": " + i.title + " (" + i.status + ")");',
       '}',
@@ -590,9 +597,14 @@ const TOOLS = [
   {
     name: 'raiseJiraIssue',
     description: 'Raises the ticket in Jira when the answer is that somebody has to do something.',
+    params: [
+      { name: 'summary', type: 'STRING' },
+      { name: 'description', type: 'STRING' },
+      { name: 'priority', type: 'STRING' },
+    ],
     source: [
       '/** Raises an issue in the support project and returns its key. */',
-      'function raiseJiraIssue(summary, description, priority) {',
+      'export default function raiseJiraIssue(summary, description, priority) {',
       '  const issue = orknux.jira.create({ project: "SUP", summary, description, priority });',
       '  return issue.key;',
       '}',
