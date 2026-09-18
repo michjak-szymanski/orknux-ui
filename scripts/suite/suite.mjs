@@ -507,6 +507,14 @@ export const TESTS = [
     alone: true,
   },
   {
+    name: 'plugin-tool-grant-check',
+    what: "an agent's Tools list offers what a plugin's tools() declares, and only that",
+    needs: ['workspace'],
+    // `alone` for the reason plugin-accept-check is: a loaded plugin is
+    // installation-wide, and its rows appear in every workspace at once.
+    alone: true,
+  },
+  {
     name: 'library-install-check',
     what: 'naming a package on the Libraries screen: the field, the pinned version, and the refusal',
     needs: ['session'],

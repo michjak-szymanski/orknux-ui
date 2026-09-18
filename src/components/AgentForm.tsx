@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 
 import { fetchMemoryBudget, updateAgent } from '../api/agents';
 import type { Agent, SessionMemoryBudget } from '../api/agents';
-import { fetchWorkspaceFunctions } from '../api/functions';
+import { fetchPluginTools } from '../api/plugins';
 import { fetchMcpServers } from '../api/integrations';
 import type { McpServer } from '../api/integrations';
 import { fetchMemoryCatalogs } from '../api/memory';
@@ -91,25 +91,26 @@ export interface AgentFormProps {
 const TOOL_PAGE_SIZE = 100;
 
 /**
- * One row of the Tools grant: a workspace tool, or a function a plugin brought.
+ * One row of the Tools grant: a workspace tool, or a tool a plugin offers.
  *
  * The two are one list because they are one grant. A name in `Agent.tools` may
- * now be a plugin function's as well as a tool's, and either way the agent is
- * offered it as a tool - so a second box would be two lists feeding one field,
- * and the count over each would be a lie about the other. What tells them apart
- * is the row's muted word: the plugin's name, where a tool has `off`.
+ * be a plugin tool's as well as a workspace tool's, and either way the agent
+ * is offered it as a tool - so a second box would be two lists feeding one
+ * field, and the count over each would be a lie about the other. What tells
+ * them apart is the row's muted word: the plugin's name, where a tool has
+ * `off`.
  */
 interface GrantableTool {
-  /** The tool's id, or the function's behind a prefix so the two cannot collide. */
+  /** The tool's id, or the plugin tool's name behind a prefix so the two cannot collide. */
   id: string;
-  /** What the grant is stored under, for a tool and a plugin function alike. */
+  /** What the grant is stored under, for both kinds alike. */
   name: string;
-  /** The plugin that brought it, or null for the workspace's own tools. */
+  /** The plugin that offers it, or null for the workspace's own tools. */
   plugin: string | null;
-  /** Only a tool can be switched off; a plugin's function is on while its plugin is loaded. */
+  /** Only a workspace tool can be switched off; a plugin's tool is on while its plugin is loaded. */
   off: boolean;
-  /** The row's own page: the tool editor, or the function's read-only view. */
-  link: string;
+  /** The row's own page: the tool editor, or the page of the function a plugin tool fronts. Null where it has none. */
+  link: string | null;
 }
 
 /**
@@ -476,19 +477,20 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
     skip: noWorkspace,
   });
   /*
-   * The workspace's tools and the functions its plugins brought, as one list -
-   * see `GrantableTool` for why it is one. The functions come from the same
-   * query the Functions page reads, filtered to the plugins' own: a workspace
-   * function is called by an action node, not granted to an agent. A tool
-   * shadows a plugin function of the same name on the server, so the shadowed
-   * row is left out here rather than drawn as a tick that grants both.
+   * The workspace's tools and the tools its plugins offer, as one list - see
+   * `GrantableTool` for why it is one. The plugin rows are the plugins'
+   * `tools()` surface, which is the whole of what a plugin exposes to agents:
+   * its functions belong to workflows, and one it wants a model to call is
+   * fronted by a tool. A workspace tool shadows a plugin tool of the same
+   * name on the server, so the shadowed row is left out here rather than
+   * drawn as a tick that grants both.
    */
   const toolCatalogue = useCatalogue<GrantableTool>(
     'tools',
     async () => {
-      const [held, declared] = await Promise.all([
+      const [held, offered] = await Promise.all([
         fetchWorkspaceTools(workspaceId, 0, TOOL_PAGE_SIZE),
-        fetchWorkspaceFunctions(workspaceId, 0, TOOL_PAGE_SIZE),
+        fetchPluginTools(),
       ]);
       const rows: GrantableTool[] = held.content.map((tool) => ({
         id: tool.id,
@@ -498,14 +500,18 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
         link: `/workspace/${workspaceId}/tools/${tool.id}`,
       }));
       const taken = new Set(rows.map((row) => row.name));
-      for (const fn of declared.content) {
-        if (fn.scope !== 'PLUGIN' || fn.plugin === null || taken.has(fn.name)) continue;
+      for (const offer of offered) {
+        if (taken.has(offer.name)) continue;
         rows.push({
-          id: `fn:${fn.id}`,
-          name: fn.name,
-          plugin: fn.plugin.name,
+          // The name is the identity a plugin tool has; the prefix keeps it
+          // from colliding with a workspace tool's numeric id.
+          id: `pt:${offer.name}`,
+          name: offer.name,
+          plugin: offer.plugin,
           off: false,
-          link: `/workspace/${workspaceId}/functions/${fn.id}`,
+          // A tool fronting one of the plugin's functions has that function's
+          // page to go to; one with a run of its own has no page.
+          link: offer.functionId === null ? null : `/workspace/${workspaceId}/functions/${offer.functionId}`,
         });
       }
       return rows;
@@ -952,8 +958,8 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
         {/*
           And what it may *do*. The strictest of the grants: a skill is a
           page this agent reads, a tool is code it runs. The rows bearing a
-          plugin's name are that plugin's functions, granted and stored the
-          same way - one name in the same list.
+          plugin's name are the tools that plugin offers to agents, granted
+          and stored the same way - one name in the same list.
         */}
         <GrantList<GrantableTool>
           label={t('Tools')}
@@ -961,7 +967,7 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
           styles={styles}
           catalogue={toolCatalogue}
           empty={t("No tools in this workspace yet.")}
-          hint={t('The workspace\'s own tools, and functions its plugins brought — a granted name is offered to the model as a tool either way.')}
+          hint={t('The workspace\'s own tools, and the tools its plugins offer — a granted name is offered to the model either way.')}
           keyOf={(tool) => tool.id}
           nameOf={(tool) => tool.name}
           metaOf={(tool) => tool.plugin ?? (tool.off ? 'off' : null)}

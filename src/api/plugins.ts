@@ -207,6 +207,28 @@ export async function uploadPlugin(file: File, typescript?: string, accept?: str
   return (await answer.json()) as Loaded;
 }
 
+/**
+ * One tool a plugin offers to agents, under its granted name.
+ *
+ * Not the administrator's plugin list: granting a tool to an agent is workspace
+ * work, so this is readable wherever an agent is edited. `functionId` is set
+ * for a tool fronting one of the plugin's functions - the page a row can jump
+ * to - and null for a tool with a run of its own, which has no page.
+ */
+export interface PluginAgentTool {
+  name: string;
+  description: string | null;
+  plugin: string;
+  functionId: string | null;
+}
+
+export async function fetchPluginTools(): Promise<PluginAgentTool[]> {
+  const data = await graphql<{ pluginTools: PluginAgentTool[] }>(
+    `query PluginTools { pluginTools { name description plugin functionId } }`,
+  );
+  return data.pluginTools;
+}
+
 export async function unloadPlugin(id: string): Promise<boolean> {
   const data = await graphql<{ unloadPlugin: boolean }>(
     `mutation UnloadPlugin($id: ID!) { unloadPlugin(id: $id) }`,
