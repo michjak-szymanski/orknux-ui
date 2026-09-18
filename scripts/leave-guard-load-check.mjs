@@ -161,11 +161,12 @@ console.log(
  * a declaration written by hand that says something else again.
  */
 const TOOL_NAME = `${PREFIX}Tool${STAMP}`;
-const TOOL_TS = `function ${TOOL_NAME}(ticket: any, note: string): string {
+/* A default export, because the sandbox calls one and the save now checks. */
+const TOOL_TS = `export default function ${TOOL_NAME}(ticket: any, note: string): string {
   return note + ticket.channel;
 }
 `;
-const TOOL_JS = `function ${TOOL_NAME}(ticket, note) {
+const TOOL_JS = `export default function ${TOOL_NAME}(ticket, note) {
   return note + ticket.channel;
 }
 `;

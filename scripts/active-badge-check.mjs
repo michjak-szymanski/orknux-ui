@@ -99,11 +99,12 @@ for (const old of left.workspaceSkills.content.filter((held) => held.name.starts
 
 const TOOL_NAME = `${PREFIX}Tool${STAMP}`;
 /* What the editor opens, and what the sandbox is handed: the same tool, twice. */
-const TOOL_TS = `function ${TOOL_NAME}(city: string): string {
+/* A default export, because the sandbox calls one and the save now checks. */
+const TOOL_TS = `export default function ${TOOL_NAME}(city: string): string {
   return city;
 }
 `;
-const TOOL_JS = `function ${TOOL_NAME}(city) {
+const TOOL_JS = `export default function ${TOOL_NAME}(city) {
   return city;
 }
 `;

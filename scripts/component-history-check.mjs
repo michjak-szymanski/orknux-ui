@@ -44,8 +44,10 @@ try {
     )
   ).createTool.id;
 
-  const first = `export default function ${TAG}() { return 'first'; }`;
-  const second = `export default function ${TAG}() { return 'second'; }`;
+  // Takes the one default `input` the tool declares: code whose arity
+  // disagrees with the declared parameters is refused at save now.
+  const first = `export default function ${TAG}(input) { return 'first'; }`;
+  const second = `export default function ${TAG}(input) { return 'second'; }`;
   const write = (code) =>
     graphql('mutation($id: ID!, $code: String!) { updateTool(id: $id, input: { source: $code, typescript: $code }) { id } }', {
       id: toolId,

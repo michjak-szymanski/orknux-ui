@@ -87,8 +87,9 @@ const madeTool = await graphql(
       workspaceId: WORKSPACE,
       name: TOOL_NAME,
       description: 'A tool this check made for itself.',
-      source: `function ${TOOL_NAME}(city) {\n  return city;\n}\n`,
-      typescript: `function ${TOOL_NAME}(city: string): string {\n  return city;\n}\n`,
+      // A default export, because the sandbox calls one and the save now checks.
+      source: `export default function ${TOOL_NAME}(city) {\n  return city;\n}\n`,
+      typescript: `export default function ${TOOL_NAME}(city: string): string {\n  return city;\n}\n`,
       params: [{ name: 'city', type: 'STRING' }],
     },
   },
