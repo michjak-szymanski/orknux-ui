@@ -165,6 +165,12 @@ export class PluginPermissionsRequired extends ApiError {
     message: string,
     readonly permissions: PluginPermission[],
     readonly capabilities: PluginPermission[],
+    /**
+     * The library files the plugin ships with, by path, where those are new.
+     * A third list for the same reason there are two: what is being allowed
+     * is that these files ride in beside the plugin's own code.
+     */
+    readonly libraries: string[] = [],
   ) {
     super(message, 400);
     this.name = 'PluginPermissionsRequired';
@@ -191,14 +197,39 @@ export async function uploadPlugin(file: File, typescript?: string, accept?: str
     credentials: 'include',
   });
 
+  return await loadedOrRefused(answer);
+}
+
+/**
+ * Loads a plugin from where it lives, libraries and all.
+ *
+ * The URL names the plugin's own file; the server walks its imports, fetches
+ * what they name from beside it, and asks the same agreement an upload asks -
+ * so the first load of a plugin that ships libraries comes back as a
+ * [PluginPermissionsRequired] carrying the list, and the second, with `accept`
+ * naming it, is the permission.
+ */
+export async function loadPluginFromUrl(url: string, accept?: string[]): Promise<Loaded> {
+  const answer = await fetch('/api/plugins/url', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url, accept: accept?.join(',') }),
+    credentials: 'include',
+  });
+  return await loadedOrRefused(answer);
+}
+
+/** The answer to any load, read the one way: a refusal's lists, or the result. */
+async function loadedOrRefused(answer: Response): Promise<Loaded> {
   if (!answer.ok) {
     // The server explains a refusal — too large, not JavaScript, not text — and
     // that sentence is more use than the status code.
     const said = await answer.text().catch(() => '');
     const asked = wanted(said, 'permissions');
     const askedOfServer = wanted(said, 'capabilities');
-    if (asked.length > 0 || askedOfServer.length > 0) {
-      throw new PluginPermissionsRequired(reason(said), asked, askedOfServer);
+    const shipped = wantedPaths(said);
+    if (asked.length > 0 || askedOfServer.length > 0 || shipped.length > 0) {
+      throw new PluginPermissionsRequired(reason(said), asked, askedOfServer, shipped);
     }
     const message = said.trim() === '' ? `Could not load the plugin (status ${answer.status})` : reason(said);
     throw new ApiError(message, answer.status);
@@ -324,6 +355,19 @@ function wanted(said: string, kind: 'permissions' | 'capabilities'): PluginPermi
     const { name, summary } = one as Partial<PluginPermission>;
     return { name: name ?? '', summary: summary ?? '' };
   });
+}
+
+/** The library paths a refusal asks about; empty when it is about something else. */
+function wantedPaths(said: string): string[] {
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(said) as Record<string, unknown>;
+  } catch {
+    return [];
+  }
+  const asked = parsed['libraries'];
+  if (!Array.isArray(asked)) return [];
+  return asked.filter((one): one is string => typeof one === 'string');
 }
 
 /** Bytes as something to read in a table. */

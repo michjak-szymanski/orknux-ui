@@ -5,12 +5,14 @@ import {
   fetchPluginSource,
   fetchPlugins,
   loadPlugin,
+  loadPluginFromUrl,
   pluginSize,
   pluginSourceUrl,
   pluginTemplate,
   unloadPlugin,
+  uploadPlugin,
 } from '../../api/plugins';
-import type { Plugin, PluginPermission } from '../../api/plugins';
+import type { Loaded, Plugin, PluginPermission } from '../../api/plugins';
 import type { SessionUser } from '../../api/session';
 import { timeAgo } from '../../api/tools';
 import downloadIcon from '../../assets/download.svg';
@@ -41,8 +43,14 @@ export interface AdminPluginsPageProps {
 interface Asking {
   /** The name it arrived as: what was picked, or the last part of the URL. */
   name: string;
-  source: string;
+  /** The text of a single-file plugin; absent for a zip or a server-side URL load. */
+  source?: string;
+  /** The archive itself, for a zip: accepting re-sends the same bytes. */
+  archive?: File;
+  /** The address, for a load the server fetches: accepting fetches it again. */
+  address?: string;
   /** The server's lists, in the server's words. */
+  libraries: string[];
   permissions: PluginPermission[];
   /** Kept apart from the permissions: these ask the server to act, not the sandbox to relax. */
   capabilities: PluginPermission[];
@@ -99,30 +107,55 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
    * the same question is asked before the sandbox is relaxed for it.
    */
   async function loadSource(name: string, source: string, accept?: string[]) {
+    await attempted({ name, source }, () => loadPlugin(name, source, accept));
+  }
+
+  /** A zip: the plugin and its libraries, sent as the archive they came as. */
+  async function loadArchive(archive: File, accept?: string[]) {
+    await attempted({ name: archive.name, archive }, () => uploadPlugin(archive, undefined, accept));
+  }
+
+  /** A URL the server fetches from, imports and all. */
+  async function loadAddress(address: string, accept?: string[]) {
+    const name = address.substring(address.lastIndexOf('/') + 1);
+    await attempted({ name, address }, () => loadPluginFromUrl(address, accept));
+  }
+
+  /**
+   * One load, however the plugin arrived, refused the one way.
+   *
+   * A refusal is not an error to reprint: it is a decision nobody has made
+   * yet. What was being loaded is held on the ask, so accepting is the same
+   * load carried on.
+   */
+  async function attempted(
+    what: Omit<Asking, 'permissions' | 'capabilities' | 'libraries'>,
+    attempt: () => Promise<Loaded>,
+  ) {
     setBusy(true);
     setError(null);
     setNotice(null);
     setAsking(null);
     try {
-      const loaded = await loadPlugin(name, source, accept);
-      const what = loaded.replaced ? `Replaced ${loaded.plugin.key}` : `Loaded ${loaded.plugin.key}`;
+      const loaded = await attempt();
+      const named = loaded.replaced ? `Replaced ${loaded.plugin.key}` : `Loaded ${loaded.plugin.key}`;
       // Saying what it provides is the useful half: those names are what a
       // workflow will pick, and they are prefixed, so they are not what the
       // plugin author typed.
       setNotice(
         loaded.provides.length === 0
-          ? `${what}. It declares no functions.`
-          : `${what}. Provides ${loaded.provides.join(', ')}.`,
+          ? `${named}. It declares no functions.`
+          : `${named}. Provides ${loaded.provides.join(', ')}.`,
       );
       load();
     } catch (cause: unknown) {
-      /*
-        Not an error to reprint: it is a decision nobody has made yet. The
-        message the server sent says the same thing in one sentence, and the
-        list below says it in the shape somebody can answer.
-      */
       if (cause instanceof PluginPermissionsRequired) {
-        setAsking({ name, source, permissions: cause.permissions, capabilities: cause.capabilities });
+        setAsking({
+          ...what,
+          permissions: cause.permissions,
+          capabilities: cause.capabilities,
+          libraries: cause.libraries,
+        });
       } else {
         setError(cause instanceof Error ? cause.message : t('Could not load that plugin.'));
       }
@@ -135,7 +168,12 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
 
   async function onPicked(file: File | undefined) {
     if (file === undefined) return;
-    await loadSource(file.name, await file.text());
+    // An archive is the plugin and its libraries; a bare file is the plugin.
+    if (file.name.endsWith('.zip')) {
+      await loadArchive(file);
+    } else {
+      await loadSource(file.name, await file.text());
+    }
   }
 
   /**
@@ -148,17 +186,31 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
   async function onUrl() {
     const address = url.trim();
     if (address === '') return;
-    setBusy(true);
-    setError(null);
-    setNotice(null);
-    setAsking(null);
-    try {
-      const { name, source } = await fetchPluginSource(address);
+
+    /*
+     * Two fetchers, because they can reach different things. TypeScript needs
+     * the compiler, which is here - so a .ts URL is fetched by the browser,
+     * compiled, and uploaded, under the other site's CORS policy. Everything
+     * else the server fetches itself: no CORS in the way, the installation's
+     * proxy rules in force, and the plugin's imports fetched from beside it -
+     * which is the whole of how a multi-file plugin loads from where it lives.
+     */
+    if (address.endsWith('.ts') || address.endsWith('.mts')) {
+      setBusy(true);
+      setError(null);
+      setNotice(null);
+      setAsking(null);
+      try {
+        const { name, source } = await fetchPluginSource(address);
+        setUrl('');
+        await loadSource(name, source);
+      } catch (cause: unknown) {
+        setError(cause instanceof Error ? cause.message : t('Could not fetch that URL.'));
+        setBusy(false);
+      }
+    } else {
       setUrl('');
-      await loadSource(name, source);
-    } catch (cause: unknown) {
-      setError(cause instanceof Error ? cause.message : t('Could not fetch that URL.'));
-      setBusy(false);
+      await loadAddress(address);
     }
   }
 
@@ -197,12 +249,19 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
    * rather than landing under this answer.
    */
   async function onAccept(pending: Asking) {
-    await loadSource(
-      pending.name,
-      pending.source,
-      // Both lists go back in one answer; the server reads each by its own names.
-      [...pending.permissions, ...pending.capabilities].map((one) => one.name),
-    );
+    // Every list goes back in one answer; the server reads each by its own
+    // names - and a library's name is its path.
+    const names = [
+      ...[...pending.permissions, ...pending.capabilities].map((one) => one.name),
+      ...pending.libraries,
+    ];
+    if (pending.archive !== undefined) {
+      await loadArchive(pending.archive, names);
+    } else if (pending.address !== undefined) {
+      await loadAddress(pending.address, names);
+    } else {
+      await loadSource(pending.name, pending.source ?? '', names);
+    }
   }
 
   async function onUnload(plugin: Plugin) {
@@ -269,7 +328,7 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
           ref={picker}
           className={styles.picker}
           type="file"
-          accept=".js,.mjs,.ts,.mts,text/javascript,text/plain"
+          accept=".js,.mjs,.ts,.mts,.zip,text/javascript,text/plain,application/zip"
           onChange={(event) => void onPicked(event.target.files?.[0])}
         />
         <div className={styles.actions}>
@@ -355,6 +414,29 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
             sandbox, a capability has the server act on the plugin's behalf,
             and those are not decisions of the same size.
           */}
+          {/*
+            The files it ships with, folded shut by default: what matters at
+            this distance is that there are files and how many, and the paths
+            are one click away for whoever wants to read them. Allowing covers
+            them either way - the count is part of the sentence, so nothing is
+            agreed to unseen-and-unsaid.
+          */}
+          {asking.libraries.length > 0 && (
+            <details className={styles.askingFiles}>
+              <summary className={styles.askingLine}>
+                {asking.libraries.length === 1
+                  ? t('It ships 1 library file of its own.')
+                  : `It ships ${asking.libraries.length} library files of its own.`}
+              </summary>
+              <ul className={styles.permissions}>
+                {asking.libraries.map((path) => (
+                  <li key={path} className={styles.permission}>
+                    <span className={styles.permissionName}>{path}</span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
           {asking.capabilities.length > 0 && (
             <>
               <p className={styles.askingLine}>

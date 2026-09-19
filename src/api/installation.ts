@@ -63,6 +63,13 @@ export interface InstallationSettings {
   /** What a fresh installation would wait: ORKNUX_TASK_SWEEP_MINUTES. */
   taskSweepMinutesConfigured: number;
   /**
+   * How large one of a plugin's source files may be, in KB - the plugin
+   * itself, each library it ships, and each file a load-from-URL fetches.
+   */
+  pluginMaxSourceKb: number;
+  /** What a fresh installation allows: the built-in default. */
+  pluginMaxSourceKbConfigured: number;
+  /**
    * False where the installation runs Temporal, and the field is not offered.
    *
    * A `configurable` flag like `chatConfigurable`, and the fact behind it is
@@ -77,7 +84,8 @@ const FIELDS =
   'chatEnabled chatConfigurable metricsAnonymous metricsAnonymousConfigured ' +
   'revisionRetentionDays revisionRetentionDaysConfigured ' +
   'executionRetentionDays executionRetentionDaysConfigured ' +
-  'taskSweepMinutes taskSweepMinutesConfigured taskSweepConfigurable';
+  'taskSweepMinutes taskSweepMinutesConfigured taskSweepConfigurable ' +
+  'pluginMaxSourceKb pluginMaxSourceKbConfigured';
 
 export async function fetchInstallationSettings(): Promise<InstallationSettings> {
   const data = await graphql<{ installationSettings: InstallationSettings }>(
@@ -172,4 +180,21 @@ export async function setTaskSweepMinutes(minutes: number): Promise<Installation
     { minutes },
   );
   return data.setTaskSweepMinutes;
+}
+
+/**
+ * How large one of a plugin's source files may be, in KB.
+ *
+ * Between 64 KB and 20 MB; anything else is refused with a message saying so.
+ * Administrators only, and recorded in the audit log. Every load reads it
+ * fresh, so it takes effect without a restart.
+ */
+export async function setPluginMaxSourceKb(kb: number): Promise<InstallationSettings> {
+  const data = await graphql<{ setPluginMaxSourceKb: InstallationSettings }>(
+    `mutation SetPluginMaxSourceKb($kb: Int!) {
+       setPluginMaxSourceKb(kb: $kb) { ${FIELDS} }
+     }`,
+    { kb },
+  );
+  return data.setPluginMaxSourceKb;
 }

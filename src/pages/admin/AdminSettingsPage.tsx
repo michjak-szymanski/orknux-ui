@@ -6,6 +6,7 @@ import {
   setChatEnabled,
   setMetricsAnonymous,
   setExecutionRetentionDays,
+  setPluginMaxSourceKb,
   setRevisionRetentionDays,
   setTaskSweepMinutes,
 } from '../../api/installation';
@@ -52,6 +53,8 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
   const [runRetention, setRunRetention] = useState('');
   /** The same, for the interval box: a half-typed number is not a setting. */
   const [sweep, setSweep] = useState('');
+  /** And for the plugin source cap, for the same reason. */
+  const [pluginSource, setPluginSource] = useState('');
 
   useEffect(() => {
     /*
@@ -70,9 +73,9 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
         if (abandoned) return;
         setSettings(held);
         setRetention(String(held.revisionRetentionDays));
-      setRunRetention(String(held.executionRetentionDays));
         setRunRetention(String(held.executionRetentionDays));
         setSweep(String(held.taskSweepMinutes));
+        setPluginSource(String(held.pluginMaxSourceKb));
       })
       .catch((cause: unknown) => {
         if (abandoned) return;
@@ -95,6 +98,7 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
       setSettings(held);
       setRetention(String(held.revisionRetentionDays));
       setSweep(String(held.taskSweepMinutes));
+      setPluginSource(String(held.pluginMaxSourceKb));
       // The shell reads the same settings to decide whether to offer the Chat
       // tab, so it is told rather than left showing a link to a page that is off.
       forgetInstallation();
@@ -455,6 +459,45 @@ export function AdminSettingsPage({ session, onSignOut }: AdminSettingsPageProps
                 </div>
               </>
             )}
+
+            <h2 className={styles.sectionHeading}>{t('Plugins')}</h2>
+
+            <div className={styles.setting}>
+              <div className={styles.settingText}>
+                <span className={styles.labelWithHint}>
+                  <p className={styles.settingLabel}>{t('How large a plugin source file may be')}</p>
+                  <FieldHint label={t('How large a plugin source file may be')}>
+                    {t('One cap for the plugin\'s own file, each library it ships, and each file a load-from-URL fetches. A source is stored whole and read whole on every call, so this number is about the heap as much as the disk. 5120 KB unless somebody says otherwise; every load reads it fresh, so no restart is needed.')}
+                  </FieldHint>
+                </span>
+              </div>
+              <div className={styles.retention}>
+                <input
+                  id="plugin-max-source-kb"
+                  name="pluginMaxSourceKb"
+                  className={styles.input}
+                  type="number"
+                  min={64}
+                  max={20480}
+                  value={pluginSource}
+                  onChange={(event) => setPluginSource(event.target.value)}
+                  disabled={busy}
+                  aria-label={t('How many KB one plugin source file may be')}
+                />
+                <span className={styles.retentionUnit}>KB</span>
+                <button
+                  type="button"
+                  className={styles.primaryButton}
+                  onClick={() => void save(() => setPluginMaxSourceKb(Number(pluginSource)))}
+                  disabled={
+                    busy ||
+                    pluginSource.trim() === '' ||
+                    Number(pluginSource) === settings.pluginMaxSourceKb
+                  }
+                  aria-label={t('Save how large a plugin source file may be')}
+                >{t('Save')}</button>
+              </div>
+            </div>
 
             {saved && <p className={styles.saved}>{t('Saved.')}</p>}
           </>

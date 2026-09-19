@@ -422,3 +422,17 @@
 .subtitleLink:hover {
   text-decoration: underline;
 }
+
+/*
+ * The shipped-files fold in the ask. Shut by default - the sentence carries
+ * the count, the paths are a click away - and the summary keeps its marker,
+ * which the flex the line class brings would swallow.
+ */
+.askingFiles {
+  margin: 0;
+}
+
+.askingFiles > summary {
+  display: list-item;
+  cursor: pointer;
+}
