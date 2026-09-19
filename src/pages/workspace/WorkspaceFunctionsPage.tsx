@@ -8,7 +8,7 @@ import {
   timeAgo,
   valueTypeLabel,
 } from '../../api/functions';
-import type { WorkspaceFunction } from '../../api/functions';
+import type { FunctionScope, WorkspaceFunction } from '../../api/functions';
 import type { SessionUser } from '../../api/session';
 import copyIcon from '../../assets/copy.svg';
 import settingsIcon from '../../assets/settings-14.svg';
@@ -52,6 +52,12 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
   const [page, setPage] = usePageWithin(workspaceId);
   const [pageSize, setPageSize] = usePageSize('functions');
   /*
+   * One origin, or both. The list has carried the plugins' functions since
+   * they existed, and rows named slack_this and github_that among the
+   * workspace's own are findable but not siftable - this is the sieve.
+   */
+  const [scope, setScope] = useState<FunctionScope | ''>('');
+  /*
    * A function just made, arriving from the editor as `?made=<id>`.
    *
    * The list is a handful to a page and sorted by name, so something created a
@@ -92,7 +98,7 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
     if (workspaceId === '') return;
     setLoading(true);
     setError(null);
-    fetchWorkspaceFunctions(workspaceId, page - 1, pageSize)
+    fetchWorkspaceFunctions(workspaceId, page - 1, pageSize, scope === '' ? undefined : scope)
       .then((result) => {
         setFunctions(result);
         setLoading(false);
@@ -102,7 +108,7 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
         setError(cause instanceof Error ? cause.message : t('Could not load the functions.'));
         setLoading(false);
       });
-  }, [workspaceId, page, pageSize]);
+  }, [workspaceId, page, pageSize, scope]);
 
   useEffect(load, [load]);
 
@@ -155,6 +161,24 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
             naming the object a parameter meant. There is one form now.
           */}
           <div className={transferStyles.headerActions}>
+            {/*
+              One origin, or both. A select rather than tabs, because it is a
+              sieve over one list and not two lists wearing one heading.
+            */}
+            <select
+              className={styles.sourceFilter}
+              aria-label={t('Which functions to list')}
+              value={scope}
+              onChange={(event) => {
+                setScope(event.target.value as FunctionScope | '');
+                // Which page somebody is on means nothing in another sieve.
+                setPage(1);
+              }}
+            >
+              <option value="">{t('All sources')}</option>
+              <option value="WORKSPACE">{t('The workspace\'s own')}</option>
+              <option value="PLUGIN">{t('From plugins')}</option>
+            </select>
             <ImportComponentsButton workspaceId={workspaceId} onImported={load} />
             <UseTemplateButton workspaceId={workspaceId} kind="FUNCTION" onImported={load} />
             <button
@@ -190,6 +214,11 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
                 to={`/workspace/${workspaceId}/functions/${fn.id}`}
               >
                 {fn.name}
+                {/* Where it came from, said on the row: the first thing
+                    anybody asks about a function they did not write. */}
+                {fn.plugin !== null && (
+                  <span className={styles.pluginBadge}>{fn.plugin.name}</span>
+                )}
               </Link>
               <span className={`${styles.colParams} ${styles.mono}`} title={fn.signature}>
                 {fn.signature}

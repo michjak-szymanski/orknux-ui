@@ -152,8 +152,8 @@ const FUNCTION_FIELDS =
    signature timeoutSeconds lastModifiedAt lastModifiedBy`;
 
 const WORKSPACE_FUNCTIONS_QUERY = `
-  query WorkspaceFunctions($workspaceId: ID!, $page: Int!, $size: Int!) {
-    workspaceFunctions(workspaceId: $workspaceId, page: $page, size: $size) {
+  query WorkspaceFunctions($workspaceId: ID!, $page: Int!, $size: Int!, $scope: FunctionScope) {
+    workspaceFunctions(workspaceId: $workspaceId, page: $page, size: $size, scope: $scope) {
       content { ${FUNCTION_FIELDS} }
       page
       size
@@ -231,16 +231,22 @@ export function asImportInput(held: ScriptImportInput): ScriptImportInput {
   return { functionId: held.functionId, name: held.name };
 }
 
-/** `page` is 0-based, matching the server. */
+/**
+ * `page` is 0-based, matching the server. `scope` narrows the list to one
+ * origin - the workspace's own, or what the plugins brought - and absent is
+ * both, which is what the list always showed.
+ */
 export async function fetchWorkspaceFunctions(
   workspaceId: string,
   page: number,
   size: number,
+  scope?: FunctionScope,
 ): Promise<PageOf<WorkspaceFunction>> {
   const data = await graphql<{ workspaceFunctions: PageOf<WorkspaceFunction> }>(WORKSPACE_FUNCTIONS_QUERY, {
     workspaceId,
     page,
     size,
+    scope: scope ?? null,
   });
   return data.workspaceFunctions;
 }

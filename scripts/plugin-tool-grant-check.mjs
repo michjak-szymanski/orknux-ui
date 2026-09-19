@@ -117,6 +117,33 @@ record(
   'a function no tool fronts is not on the menu',
 );
 
+/*
+ * The browsers know the plugins' rows too. The Tools page lists what the
+ * plugins offer beside the workspace's own - each row wearing its plugin -
+ * and both pages carry the same sieve: everything, the workspace's own, or
+ * the plugins'.
+ */
+await page.goto(`${BASE}/workspace/${WORKSPACE}/tools`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('select[aria-label="Which tools to list"]', { timeout: 20_000 });
+await page.selectOption('select[aria-label="Which tools to list"]', 'PLUGIN');
+await page.waitForTimeout(800);
+const toolsPage = await page.locator('main, body').first().innerText();
+record(toolsPage.includes(`${KEY}_fronted`), 'the tools browser lists what the plugin offers');
+record(toolsPage.includes(`${KEY}_standalone`), 'the standalone tool included');
+const badge = page.locator(`text=${KEY}_fronted`).locator('..').locator('span', { hasText: KEY });
+record((await badge.count()) > 0, 'and the row wears the plugin that offers it');
+
+await page.goto(`${BASE}/workspace/${WORKSPACE}/functions`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('select[aria-label="Which functions to list"]', { timeout: 20_000 });
+await page.selectOption('select[aria-label="Which functions to list"]', 'PLUGIN');
+await page.waitForTimeout(800);
+const functionsPage = await page.locator('main, body').first().innerText();
+record(functionsPage.includes(`${KEY}_workflowOnly`), "the functions browser sieves to the plugins' rows");
+await page.selectOption('select[aria-label="Which functions to list"]', 'WORKSPACE');
+await page.waitForTimeout(800);
+const ownOnly = await page.locator('main, body').first().innerText();
+record(!ownOnly.includes(`${KEY}_workflowOnly`), "and the workspace's-own sieve leaves them out");
+
 record(await unloadMine(), 'the scratch plugin is unloaded again');
 
 await finish(browser);
