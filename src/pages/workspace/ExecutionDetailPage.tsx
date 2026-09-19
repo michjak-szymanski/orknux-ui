@@ -832,7 +832,9 @@ function NodeDetailsPanel({
       ? { label: t('Condition'), to: `/workspace/${workspaceId}/conditions/${step.conditionId}` }
       : step.actionId != null
         ? { label: t('Action'), to: `/workspace/${workspaceId}/actions/${step.actionId}` }
-        : null;
+        : step.agentId != null
+          ? { label: t('Agent'), to: `/workspace/${workspaceId}/agents/${step.agentId}/settings` }
+          : null;
 
   return (
     <aside className={styles.panel} aria-label={t('Node details')}>

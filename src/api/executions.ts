@@ -68,6 +68,8 @@ export interface ExecutionStep {
   /** The catalogue entry the step ran, which the run links back to. */
   actionId: string | null;
   conditionId: string | null;
+  /** The agent an agent step ran, for the same link back to its definition. */
+  agentId: string | null;
   /**
    * Which way out of itself this step sent the run; null where it answered
    * nothing. FAILURE means the step failed and the run went on down the node's
@@ -249,7 +251,7 @@ export function formatRelative(iso: string): string {
 const EXECUTION_DETAIL_FIELDS = `
   id workspaceId workflowId workflowName status trigger startedAt finishedAt durationSeconds error workflowAssigned
   stoppedAtNodeKey stoppedReason startedFrom
-  steps { key kind name description status startedAt finishedAt durationSeconds input output error actionId conditionId branch attempts carriedOver x y }
+  steps { key kind name description status startedAt finishedAt durationSeconds input output error actionId conditionId agentId branch attempts carriedOver x y }
   edges { source target branch }
   logs { id nodeKey at level message }
   pictures { id nodeKey url prompt filename contentType }
