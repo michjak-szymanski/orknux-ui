@@ -8,18 +8,20 @@ import {
   createSkillCatalog,
   deleteSkill,
   deleteSkillCatalog,
+  fetchPluginSkillCatalogs,
   fetchSkillCatalogs,
   fetchWorkspaceSkills,
   renameSkillCatalog,
   setSkillEnabled,
 } from '../../api/skills';
-import type { Skill, SkillCatalog } from '../../api/skills';
+import type { PluginSkillCatalog, Skill, SkillCatalog } from '../../api/skills';
 import { timeAgo } from '../../api/tools';
 import folderOpenIcon from '../../assets/folder-open.svg';
 import folderIcon from '../../assets/folder.svg';
 import penIcon from '../../assets/pen.svg';
 import chevronDown12Icon from '../../assets/chevron-down-12.svg';
 import plusIcon from '../../assets/plus.svg';
+import puzzleIcon from '../../assets/puzzle.svg';
 import searchIcon from '../../assets/search.svg';
 import toggleOffIcon from '../../assets/toggle-off.svg';
 import toggleOnIcon from '../../assets/toggle-on.svg';
@@ -32,6 +34,7 @@ import {
   UseTemplateButton,
 } from '../../components/ComponentTransfer';
 import { Loader } from '../../components/Loader';
+import { Markdown } from '../../components/Markdown';
 import { NameDialog } from '../../components/NameDialog';
 import { UsedBy } from '../../components/UsedBy';
 import { WorkspaceSidebar } from '../../components/WorkspaceSidebar';
@@ -43,6 +46,14 @@ export interface WorkspaceSkillsPageProps {
   session: SessionUser;
   onSignOut?: () => void;
 }
+
+/**
+ * How a plugin's catalog is spelled in `selected`.
+ *
+ * A workspace catalog is selected by its numeric id and a plugin's has none,
+ * so the prefix is what keeps one field able to hold either.
+ */
+const PLUGIN_PREFIX = 'plugin:';
 
 /** A catalog is a page's worth; the search box filters what is already here. */
 const PAGE_SIZE = 50;
@@ -73,6 +84,15 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
   const asked = addressed.get('catalog');
 
   const [catalogs, setCatalogs] = useState<SkillCatalog[] | null>(null);
+  /**
+   * The catalogs the loaded plugins bring, read once.
+   *
+   * Beside the workspace's own in the rail rather than on a screen of their
+   * own: what somebody wants to know is what an agent could be given, and
+   * that is one list. They are not rows — nothing here can be renamed,
+   * deleted, added to or edited — so the panel draws them read-only.
+   */
+  const [pluginCatalogs, setPluginCatalogs] = useState<PluginSkillCatalog[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [skills, setSkills] = useState<PageOf<Skill> | null>(null);
   const [search, setSearch] = useState('');
@@ -82,6 +102,11 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
   const [creating, setCreating] = useState(false);
 
   const current = catalogs?.find((catalog) => catalog.id === selected) ?? null;
+  /** A plugin's catalog is selected by name behind a prefix, so ids cannot clash. */
+  const currentPlugin =
+    selected?.startsWith(PLUGIN_PREFIX) === true
+      ? pluginCatalogs?.find((catalog) => catalog.name === selected.slice(PLUGIN_PREFIX.length)) ?? null
+      : null;
 
   const loadCatalogs = useCallback(
     async (keep?: string) => {
@@ -106,12 +131,26 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
   }, [loadCatalogs, workspaceId]);
 
   const loadSkills = useCallback(async () => {
-    if (selected === null) {
+    // A plugin's catalog is not a folder in this workspace, so there is
+    // nothing here to page through: its skills arrived with the catalog.
+    if (selected === null || selected.startsWith(PLUGIN_PREFIX)) {
       setSkills(null);
       return;
     }
     setSkills(await fetchWorkspaceSkills(workspaceId, 0, PAGE_SIZE, selected));
   }, [workspaceId, selected]);
+
+  useEffect(() => {
+    /*
+     * Its own effect, and its own failure. A plugin's catalogs being
+     * unreadable is not a reason for the workspace's own to go missing, so
+     * this one sets a list or leaves it empty rather than raising the error
+     * the page shows.
+     */
+    fetchPluginSkillCatalogs()
+      .then(setPluginCatalogs)
+      .catch(() => setPluginCatalogs([]));
+  }, []);
 
   useEffect(() => {
     loadSkills().catch((cause: unknown) => {
@@ -223,6 +262,38 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
                 </button>
               );
             })}
+
+            {/*
+              And what the plugins bring, under a rule so the two kinds read
+              as two kinds. A plugin's catalog is granted the same way and
+              carries the same skills; what it cannot do is be edited, which
+              the panel says rather than the rail.
+            */}
+            {pluginCatalogs !== null && pluginCatalogs.length > 0 && (
+              <>
+                <p className={styles.sidebarNote}>{t('FROM PLUGINS')}</p>
+                {pluginCatalogs.map((catalog) => {
+                  const at = `${PLUGIN_PREFIX}${catalog.name}`;
+                  const open = at === selected;
+                  return (
+                    <button
+                      key={catalog.name}
+                      type="button"
+                      className={open ? styles.catalogCurrent : styles.catalog}
+                      onClick={() => setSelected(at)}
+                      aria-current={open ? 'true' : undefined}
+                      title={`${catalog.name} — from the ${catalog.plugin} plugin`}
+                    >
+                      <img src={puzzleIcon} alt="" width={14} height={14} />
+                      <span className={styles.catalogName}>{catalog.name}</span>
+                      <span className={open ? styles.countCurrent : styles.count}>
+                        {catalog.skills.length}
+                      </span>
+                    </button>
+                  );
+                })}
+              </>
+            )}
           </div>
           )}
         </aside>
@@ -259,7 +330,55 @@ export function WorkspaceSkillsPage({ session, onSignOut }: WorkspaceSkillsPageP
             </p>
           )}
 
-          {current === null ? (
+          {currentPlugin !== null ? (
+            /*
+              A plugin's catalog, read-only and saying so.
+
+              Every action a workspace skill has is missing here because none
+              of them means anything: a plugin's skills are replaced wholesale
+              the next time it is loaded, so an edit would be an edit somebody
+              loses without being told. What is left is what somebody actually
+              came for — what the agent would read, in full.
+            */
+            <>
+              <header className={styles.catalogHeader}>
+                <h1 className={styles.catalogHeading}>{currentPlugin.name}</h1>
+              </header>
+              <div className={styles.rule} />
+
+              <div className={styles.stats}>
+                {/* One line, and the whole of what is different here: where
+                    it came from, and that it is granted like any other. */}
+                <p className={styles.statsText}>
+                  {t('From the plugin')} {currentPlugin.plugin} — {t('granted by name, and not edited here.')}
+                </p>
+              </div>
+
+              <div className={styles.cards}>
+                {currentPlugin.skills.length === 0 && (
+                  <p className={styles.empty}>{t('This plugin brings no skills.')}</p>
+                )}
+                {currentPlugin.skills.map((skill) => (
+                  <article key={skill.name} className={styles.card}>
+                    <header className={styles.cardHeader}>
+                      <h2 className={styles.cardTitle}>{skill.name}</h2>
+                    </header>
+                    <p className={styles.cardBody}>{skill.description ?? t('No description')}</p>
+                    {/*
+                      The page itself, folded away. A skill is long, and a
+                      catalog of them opened flat is a screen nobody reads -
+                      but what it says is the only thing worth coming here
+                      for, so it is one click and not a page away.
+                    */}
+                    <details>
+                      <summary className={styles.statsText}>{t('Read it')}</summary>
+                      <Markdown>{skill.content}</Markdown>
+                    </details>
+                  </article>
+                ))}
+              </div>
+            </>
+          ) : current === null ? (
             <p className={styles.empty}>
               {catalogs?.length === 0
                 ? t('Add a catalog to start writing skills.')

@@ -424,6 +424,33 @@
 }
 
 /*
+ * Installing, from the details pane.
+ *
+ * Its own size rather than `.accept`'s, which is a dialog's button: this is
+ * the one thing somebody came to this screen to do, sitting alone at the top
+ * of the larger half of it, and at a dialog's size it read as a footnote to
+ * the name beside it. Sized like Load Plugin in the header, which is the same
+ * act arriving by the other door.
+ */
+.primaryAction {
+  flex-shrink: 0;
+  padding: var(--space-10) var(--space-14);
+  background: var(--color-accent-brand);
+  border: 0;
+  border-radius: var(--radius-6);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.primaryAction:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/*
  * What a loaded plugin was granted, under its name.
  *
  * The same line as the signatures above it, in amber, because it is the one

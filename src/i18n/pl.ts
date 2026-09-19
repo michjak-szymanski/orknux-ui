@@ -1006,6 +1006,7 @@ export const PL: Record<string, string> = {
   "No plugins are loaded into this installation, so there is nothing to configure.": "Do tej instalacji nie wczytano żadnych wtyczek, więc nie ma czego konfigurować.",
   "It asks the server to do these on its behalf.": "Prosi też serwer, by robił za nią te rzeczy.",
   "The workspace's own tools, and the tools its plugins offer — a granted name is offered to the model either way.": "Własne narzędzia przestrzeni roboczej oraz narzędzia oferowane przez wtyczki — przyznana nazwa trafia do modelu tak czy tak.",
+  "The workspace's own catalogs, and the ones its plugins bring.": "Własne katalogi przestrzeni roboczej oraz te, które wnoszą wtyczki.",
   "The sandbox a plugin runs in switches these off for everything, because a plugin is somebody else's code running on this installation. Accepting turns them on for this plugin alone, and records who agreed and when. A plugin edited later to need something more is refused again, with the new list, rather than arriving under this answer.": "Piaskownica, w której działa wtyczka, wyłącza to wszystko dla każdego, bo wtyczka to cudzy kod działający w tej instalacji. Zgoda włącza je wyłącznie dla tej wtyczki i zapisuje, kto się zgodził i kiedy. Wtyczka zmieniona później tak, że potrzebuje czegoś więcej, zostanie odrzucona ponownie, z nową listą, zamiast wejść pod tę zgodą.",
 
   // --- access, users and what is decided elsewhere -----------------------
@@ -1921,6 +1922,11 @@ export const PL: Record<string, string> = {
   "All sources": "Wszystkie źródła",
   "The workspace's own": "Własne przestrzeni roboczej",
   "From plugins": "Z wtyczek",
+  "FROM PLUGINS": "Z WTYCZEK",
+  "From the plugin": "Z wtyczki",
+  "granted by name, and not edited here.": "przyznawany po nazwie i nieedytowany tutaj.",
+  "This plugin brings no skills.": "Ta wtyczka nie wnosi żadnych umiejętności.",
+  "Read it": "Przeczytaj",
   "From a plugin": "Z wtyczki",
   "Which functions to list": "Które funkcje wyświetlić",
   "Which tools to list": "Które narzędzia wyświetlić",

@@ -2,10 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import type { PageOf } from '../../api/client';
-import { createObject, fetchWorkspaceObjects } from '../../api/objects';
+import { createObject, fetchPluginObjects, fetchWorkspaceObjects } from '../../api/objects';
 import type { WorkflowObject } from '../../api/objects';
 import type { SessionUser } from '../../api/session';
 import { timeAgo } from '../../api/tools';
+import puzzleIcon from '../../assets/puzzle.svg';
 import settingsIcon from '../../assets/settings-14.svg';
 import { AppShell } from '../../components/AppShell';
 import { CompactPagination } from '../../components/CompactPagination';
@@ -47,6 +48,15 @@ export function WorkspaceObjectsPage({ session, onSignOut }: WorkspaceObjectsPag
   const [pageSize, setPageSize] = usePageSize('objects');
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  /**
+   * The shapes the loaded plugins export, read once.
+   *
+   * Under the workspace's own rather than on a screen of their own: what
+   * somebody wants to know is what a property could point at, and that is one
+   * list. They are not this workspace's to edit — a plugin's shape is replaced
+   * the next time it is loaded — so the rows carry no actions.
+   */
+  const [fromPlugins, setFromPlugins] = useState<WorkflowObject[] | null>(null);
 
   const load = useCallback(() => {
     if (workspaceId === '') return;
@@ -60,6 +70,17 @@ export function WorkspaceObjectsPage({ session, onSignOut }: WorkspaceObjectsPag
   }, [workspaceId, page, pageSize]);
 
   useEffect(load, [load]);
+
+  useEffect(() => {
+    /*
+     * Its own effect, and its own failure: a plugin's shapes being unreadable
+     * is not a reason for the workspace's own list to go missing, so this one
+     * sets a list or leaves it empty rather than raising the page's error.
+     */
+    fetchPluginObjects()
+      .then(setFromPlugins)
+      .catch(() => setFromPlugins([]));
+  }, []);
 
   return (
     <AppShell
@@ -148,6 +169,58 @@ export function WorkspaceObjectsPage({ session, onSignOut }: WorkspaceObjectsPag
             </span>
           </div>
         ))}
+
+        {/*
+          And what the plugins export, under a rule and without actions.
+
+          Here rather than elsewhere because a property points at one of these
+          exactly the way it points at one of the workspace's own — they are
+          rows in the same table — so a list that showed only half of what can
+          be pointed at would be the wrong list. What they do not get is the
+          row's actions: a plugin's shape is replaced wholesale the next time
+          it is loaded, so an edit would be an edit somebody loses.
+        */}
+        {fromPlugins !== null && fromPlugins.length > 0 && (
+          <>
+            <div className={styles.tableHeader}>
+              <span className={styles.colName}>{t('From plugins')}</span>
+              <span className={styles.colDescription} />
+              <span className={styles.colStatus} />
+              <span className={styles.colModified} />
+              <span className={styles.colActions} />
+            </div>
+            {fromPlugins.map((held) => (
+              <div key={held.id} className={styles.row}>
+                <Link
+                  className={`${styles.colName} ${styles.name}`}
+                  to={`/workspace/${workspaceId}/objects/${held.id}`}
+                >
+                  <img src={puzzleIcon} alt="" width={12} height={12} />{' '}
+                  {held.name}
+                </Link>
+                <span
+                  className={`${styles.colDescription} ${held.description === null ? styles.noDescription : styles.description}`}
+                >
+                  {held.description ?? t('No description')}
+                </span>
+                <span className={`${styles.colStatus} ${styles.modified}`}>{held.propertyCount}</span>
+                <span className={`${styles.colModified} ${styles.modified}`}>
+                  {held.lastModifiedBy}
+                </span>
+                <span className={styles.colActions}>
+                  <Link
+                    className={styles.rowAction}
+                    to={`/workspace/${workspaceId}/objects/${held.id}`}
+                    aria-label={`Open ${held.name}`}
+                    title={`Open ${held.name}`}
+                  >
+                    <img src={settingsIcon} alt="" width={14} height={14} />
+                  </Link>
+                </span>
+              </div>
+            ))}
+          </>
+        )}
 
         {objects !== null && (
           <CompactPagination

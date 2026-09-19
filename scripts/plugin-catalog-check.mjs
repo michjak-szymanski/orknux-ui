@@ -122,7 +122,10 @@ record(
   shown.includes('Every plugin already installed keeps running'),
   'and what still works is said beside it',
 );
-record(!shown.includes('Choose a plugin to read what it does'), 'the details pane does not invite a choice from nothing');
+record(
+  !shown.includes('Choose a plugin to read what it does'),
+  'the details pane does not invite a choice from nothing',
+);
 record(asks.length === 1, `and it is asked once, not in a loop (${asks.length} calls)`);
 
 // Local goes on working while the marketplace does not.

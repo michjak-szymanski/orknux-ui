@@ -19,7 +19,10 @@ export interface ObjectProperty {
 
 export interface WorkflowObject {
   id: string;
-  workspaceId: string;
+  /** Null for a shape a plugin exports: it belongs to the installation. */
+  workspaceId: string | null;
+  /** Set for a shape a plugin exports; there is nowhere to edit one. */
+  pluginId: string | null;
   name: string;
   description: string | null;
   properties: ObjectProperty[];
@@ -49,9 +52,24 @@ export interface ObjectValidation {
 }
 
 const OBJECT_FIELDS = `
-  id workspaceId name description propertyCount createdAt createdBy lastModifiedAt lastModifiedBy
+  id workspaceId pluginId name description propertyCount createdAt createdBy lastModifiedAt lastModifiedBy
   properties { name kind refObjectId elementKind description display }
 `;
+
+/**
+ * The shapes the loaded plugins export, available in every workspace.
+ *
+ * Beside the workspace's own rather than among them: a workspace's object is
+ * something somebody drew and can edit, and a plugin's is replaced the next
+ * time the plugin is loaded. What they share is the part a reference needs —
+ * an id to point at, which is why both are rows in the same table.
+ */
+export async function fetchPluginObjects(): Promise<WorkflowObject[]> {
+  const data = await graphql<{ pluginObjects: WorkflowObject[] }>(
+    `query PluginObjects { pluginObjects { ${OBJECT_FIELDS} } }`,
+  );
+  return data.pluginObjects;
+}
 
 export async function fetchWorkspaceObjects(
   workspaceId: string,

@@ -58,6 +58,12 @@ export interface Plugin {
   enabled: boolean;
   /** The files it ships with, by path. Empty for a single-file plugin. */
   libraries: string[];
+  /**
+   * The instruction sets it brings: markdown an agent reads, never code it
+   * runs. They reach an agent as a catalog named after the plugin's key,
+   * granted from the same field every other catalog is.
+   */
+  skills: PluginSkillDeclaration[];
   /** Where it came from, when that was the marketplace. Null for a file or a URL. */
   marketplaceKey: string | null;
   marketplaceVersion: string | null;
@@ -204,10 +210,24 @@ export interface PluginFunctionDeclaration {
   signature: string;
 }
 
+/**
+ * One instruction set a plugin brings.
+ *
+ * Nothing here runs. `content` is the markdown an agent reads, frontmatter and
+ * all — the same text the agent loads, so what a screen shows is what is
+ * followed.
+ */
+export interface PluginSkillDeclaration {
+  name: string;
+  description: string | null;
+  content: string;
+}
+
 const PLUGIN_FIELDS = `
   id key name filename sizeBytes apiVersion sha256 uploadedAt uploadedBy
   enabled libraries marketplaceKey marketplaceVersion icon summary author version
   declaredFunctions { name description returnType signature params { name type } }
+  skills { name description content }
   declaredParameters { name description type required secret }
   permissions { name summary }
   permissionsAcceptedAt permissionsAcceptedBy

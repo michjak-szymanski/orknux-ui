@@ -541,6 +541,13 @@ export const TESTS = [
     needs: [],
   },
   {
+    name: 'plugin-details-check',
+    what: 'the marketplace opens on its first listing rather than on an invitation to click',
+    // Stubs the catalog call in the browser: it installs nothing and changes
+    // nothing, so it runs beside the others.
+    needs: [],
+  },
+  {
     name: 'agent-connection-grant-check',
     what: 'a connection is granted to an agent and picked for a plugin by name, never typed as a number',
     needs: ['workspace'],

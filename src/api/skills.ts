@@ -59,6 +59,40 @@ export async function fetchSkillCatalogs(workspaceId: string): Promise<SkillCata
   return data.skillCatalogs;
 }
 
+/**
+ * A folder of skills a plugin brought, offered under the plugin's key.
+ *
+ * Not a `SkillCatalog`: there is no row behind it, so nothing here can be
+ * renamed, deleted or added to. What it shares with the workspace's own is the
+ * only part an agent needs — a name to grant.
+ */
+export interface PluginSkillCatalog {
+  /** `jira_plugin` — the plugin's key, suffixed. What goes on a grant list. */
+  name: string;
+  /** The plugin's key on its own, for a screen saying where this came from. */
+  key: string;
+  /** What the plugin is called on screen. */
+  plugin: string;
+  skills: PluginSkill[];
+}
+
+/** One instruction set a plugin brings: markdown an agent reads, never code it runs. */
+export interface PluginSkill {
+  name: string;
+  description: string | null;
+  content: string;
+}
+
+/** Installation-wide, like the plugins themselves, so no workspace is asked for. */
+export async function fetchPluginSkillCatalogs(): Promise<PluginSkillCatalog[]> {
+  const data = await graphql<{ pluginSkillCatalogs: PluginSkillCatalog[] }>(
+    `query PluginSkillCatalogs {
+       pluginSkillCatalogs { name key plugin skills { name description content } }
+     }`,
+  );
+  return data.pluginSkillCatalogs;
+}
+
 export async function createSkillCatalog(workspaceId: string, name: string): Promise<SkillCatalog> {
   const data = await graphql<{ createSkillCatalog: SkillCatalog }>(
     `mutation CreateSkillCatalog($workspaceId: ID!, $name: String!) {

@@ -11,8 +11,7 @@ import { fetchMemoryCatalogs } from '../api/memory';
 import type { MemoryCatalog } from '../api/memory';
 import { answers, fetchModels } from '../api/models';
 import type { Model } from '../api/models';
-import { fetchSkillCatalogs } from '../api/skills';
-import type { SkillCatalog } from '../api/skills';
+import { fetchPluginSkillCatalogs, fetchSkillCatalogs } from '../api/skills';
 import { fetchWorkspaceTools } from '../api/tools';
 import chevronDownIcon from '../assets/chevron-down.svg';
 import chevronDown12Icon from '../assets/chevron-down-12.svg';
@@ -111,6 +110,28 @@ interface GrantableTool {
   off: boolean;
   /** The row's own page: the tool editor, or the page of the function a plugin tool fronts. Null where it has none. */
   link: string | null;
+}
+
+/**
+ * A skill catalog an agent can be granted: the workspace's own, or a plugin's.
+ *
+ * One list for the same reason the tools are one list - it is one grant. A
+ * name in `Agent.skillCatalogs` may be a workspace catalog's or a plugin's
+ * key, and the agent draws on it either way, so a second box would be two
+ * lists feeding one field. What tells them apart is the row's muted word: the
+ * plugin's name, where a workspace catalog shows how many skills it holds.
+ */
+interface GrantableCatalog {
+  /** The catalog's id, or the plugin's key behind a prefix so the two cannot collide. */
+  id: string;
+  /** What the grant is stored under, for both kinds alike. */
+  name: string;
+  /** How many skills it holds. */
+  count: number;
+  /** The plugin that brought it, or null for the workspace's own. */
+  plugin: string | null;
+  /** The catalog's own page, or the plugin's. */
+  link: string;
 }
 
 /**
@@ -475,9 +496,45 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
   const memoryCatalogue = useCatalogue('memory catalogs', () => fetchMemoryCatalogs(workspaceId), [workspaceId], {
     skip: noWorkspace,
   });
-  const skillCatalogue = useCatalogue('skill catalogs', () => fetchSkillCatalogs(workspaceId), [workspaceId], {
-    skip: noWorkspace,
-  });
+  /*
+   * The workspace's skill catalogs and the ones its plugins bring, as one
+   * list - see `GrantableCatalog` for why it is one. A workspace catalog
+   * shadows a plugin's of the same name on the server, so the shadowed row is
+   * left out here rather than drawn as a tick that grants both.
+   */
+  const skillCatalogue = useCatalogue<GrantableCatalog>(
+    'skill catalogs',
+    async () => {
+      const [held, brought] = await Promise.all([
+        fetchSkillCatalogs(workspaceId),
+        fetchPluginSkillCatalogs(),
+      ]);
+      const rows: GrantableCatalog[] = held.map((catalog) => ({
+        id: catalog.id,
+        name: catalog.name,
+        count: catalog.skillCount,
+        plugin: null,
+        link: `/workspace/${workspaceId}/skills?catalog=${catalog.id}`,
+      }));
+      const taken = new Set(rows.map((row) => row.name));
+      for (const offer of brought) {
+        if (taken.has(offer.name)) continue;
+        rows.push({
+          // The key is the identity a plugin catalog has; the prefix keeps it
+          // from colliding with a workspace catalog's numeric id.
+          id: `ps:${offer.name}`,
+          name: offer.name,
+          count: offer.skills.length,
+          plugin: offer.plugin,
+          // Nothing to edit, so the way out is the plugin it came with.
+          link: '/admin/plugins',
+        });
+      }
+      return rows;
+    },
+    [workspaceId],
+    { skip: noWorkspace },
+  );
   /*
    * The workspace's tools and the tools its plugins offer, as one list - see
    * `GrantableTool` for why it is one. The plugin rows are the plugins'
@@ -963,16 +1020,17 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
           Granted per catalog, like memory: what an agent is expected to know
           is decided once rather than once per skill.
         */}
-        <GrantList<SkillCatalog>
+        <GrantList<GrantableCatalog>
           label={t('Skill Catalogs')}
           what="skill catalogs"
           styles={styles}
           catalogue={skillCatalogue}
           empty={t("No skill catalogs in this workspace yet.")}
+          hint={t("The workspace's own catalogs, and the ones its plugins bring.")}
           keyOf={(catalog) => catalog.id}
           nameOf={(catalog) => catalog.name}
-          metaOf={(catalog) => catalog.skillCount}
-          linkOf={(catalog) => `/workspace/${workspaceId}/skills?catalog=${catalog.id}`}
+          metaOf={(catalog) => catalog.plugin ?? catalog.count}
+          linkOf={(catalog) => catalog.link}
           granted={skillCatalogs}
           onChange={setSkillCatalogs}
         />

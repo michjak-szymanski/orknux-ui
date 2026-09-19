@@ -406,7 +406,19 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
   const installedOf = (listing: MarketplaceListing) =>
     plugins?.find((one) => one.marketplaceKey === listing.key || one.key === listing.key);
 
-  const open = reading === null ? undefined : listings?.find((one) => one.key === reading);
+  /*
+   * What the details pane is showing: the one somebody picked, or the first
+   * on the shelf.
+   *
+   * Opening on the first rather than on an invitation to choose. The pane is
+   * the larger half of the screen and a shelf nobody has clicked yet left it
+   * empty - which reads as something that failed to load rather than as a
+   * prompt, and costs a click to learn otherwise. `reading` stays null until
+   * somebody picks, so the fallback follows a refreshed list to its new first
+   * entry instead of pinning whatever happened to be first when the page
+   * opened.
+   */
+  const open = listings?.find((one) => one.key === reading) ?? listings?.[0];
 
   /** One plugin as a row: what it is, and what can be done to it. */
   function pluginRow(plugin: Plugin, where: Source | 'installed' = 'installed') {
@@ -484,6 +496,20 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
                 ships {plugin.libraries.length === 1 ? '1 file' : `${plugin.libraries.length} files`}
                 {'  ·  '}
                 {plugin.libraries.join('  ·  ')}
+              </span>
+            )}
+            {/*
+              The instruction sets it brings, under the name an agent is
+              granted them by. Said as the grant rather than as a count,
+              because the question somebody reading this row has is what to
+              type on an agent's settings page — and the answer is the key.
+            */}
+            {plugin.skills.length > 0 && (
+              <span className={styles.declares}>
+                teaches {plugin.skills.map((one) => one.name).join('  ·  ')}
+                {'  ·  grant "'}
+                {plugin.key}
+                {'"'}
               </span>
             )}
             {/*
@@ -929,11 +955,11 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
                       key={listing.key}
                       type="button"
                       className={
-                        reading === listing.key
+                        open?.key === listing.key
                           ? `${styles.listing} ${styles.listingOn}`
                           : styles.listing
                       }
-                      aria-pressed={reading === listing.key}
+                      aria-pressed={open?.key === listing.key}
                       onClick={() => setReading(listing.key)}
                     >
                       <span className={styles.listingIcon}>
@@ -966,7 +992,13 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
               */}
               <div className={styles.details}>
                 {open === undefined ? (
-                  <p className={styles.notice}>{t('Choose a plugin to read what it does.')}</p>
+                  /*
+                    Only when the shelf itself is empty, now that the pane
+                    opens on the first listing. It used to say "choose a
+                    plugin" beside a list somebody had not clicked, which was
+                    a prompt where the screen could simply have shown one.
+                  */
+                  <p className={styles.notice}>{t('The marketplace offers nothing yet.')}</p>
                 ) : (
                   <>
                     <div className={styles.detailsHead}>
@@ -995,7 +1027,7 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
                         {!open.installed && (
                           <button
                             type="button"
-                            className={styles.accept}
+                            className={styles.primaryAction}
                             disabled={busy}
                             onClick={() => void install(open)}
                           >{t('Install')}</button>
@@ -1003,7 +1035,7 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
                         {open.updatable && (
                           <button
                             type="button"
-                            className={styles.accept}
+                            className={styles.primaryAction}
                             disabled={busy}
                             onClick={() => void install(open)}
                           >{`Update to ${open.version}`}</button>
