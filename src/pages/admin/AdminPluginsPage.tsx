@@ -162,10 +162,10 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
    * Not on arrival: reading it is a call to another service, and most visits
    * to this screen are about what is already installed.
    */
-  const browse = useCallback((refresh = false) => {
+  const browse = useCallback(() => {
     setCatalogLoading(true);
     setCatalogError(null);
-    fetchMarketplace(refresh)
+    fetchMarketplace()
       .then((found) => {
         setListings(found);
         setCatalogLoading(false);
@@ -574,44 +574,59 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
           </button>
           {/*
             What was written, not what runs: TypeScript where there is any. A
-            plain link, so the browser saves it and the session cookie goes with
-            the request.
+            plain link, so the browser saves it and the session cookie goes
+            with the request.
+
+            On the Local shelf only, beside the other things a file raises.
+            Installed answers what is running here and whether it is on;
+            taking a copy of the source is a question about the file, and the
+            file's questions live where files are loaded.
           */}
-          <a
-            className={styles.rowAction}
-            href={pluginSourceUrl(plugin.id)}
-            title={`Download ${plugin.name}`}
-            aria-label={`Download ${plugin.name}`}
-          >
-            <img src={downloadIcon} alt="" width={14} height={14} />
-          </a>
+          {asFile && (
+            <a
+              className={styles.rowAction}
+              href={pluginSourceUrl(plugin.id)}
+              title={`Download ${plugin.name}`}
+              aria-label={`Download ${plugin.name}`}
+            >
+              <img src={downloadIcon} alt="" width={14} height={14} />
+            </a>
+          )}
           {/*
-           * Confirmed in the row rather than in a modal. Unloading is one
+           * Unloading belongs where loading does, which is the catalog — a
+           * plugin from the marketplace is uninstalled there, one of your own
+           * is removed from the shelf it was loaded onto. Installed is what
+           * runs here and what can be done to it while it stays; taking it
+           * away is the other tab's act, and the switch above is the
+           * reversible half somebody usually wanted anyway.
+           *
+           * Confirmed in the row rather than in a modal: unloading is one
            * click and the only dialog in this codebase that would fit is the
            * workflow one, which is about workflows.
            */}
-          {confirming === plugin.id ? (
-            <>
+          {asFile &&
+            (confirming === plugin.id ? (
+              <>
+                <button
+                  type="button"
+                  className={styles.confirm}
+                  disabled={busy}
+                  onClick={() => void onUnload(plugin)}
+                >{t('Unload')}</button>
+                <button type="button" className={styles.cancel} onClick={() => setConfirming(null)}>{t('Cancel')}</button>
+              </>
+            ) : (
               <button
                 type="button"
-                className={styles.confirm}
+                className={styles.rowAction}
                 disabled={busy}
-                onClick={() => void onUnload(plugin)}
-              >{t('Unload')}</button>
-              <button type="button" className={styles.cancel} onClick={() => setConfirming(null)}>{t('Cancel')}</button>
-            </>
-          ) : (
-            <button
-              type="button"
-              className={styles.rowAction}
-              disabled={busy}
-              onClick={() => setConfirming(plugin.id)}
-              aria-label={`Unload ${plugin.name}`}
-              title={`Unload ${plugin.name}`}
-            >
-              <img src={trashIcon} alt="" width={14} height={14} />
-            </button>
-          )}
+                onClick={() => setConfirming(plugin.id)}
+                aria-label={`Unload ${plugin.name}`}
+                title={`Unload ${plugin.name}`}
+              >
+                <img src={trashIcon} alt="" width={14} height={14} />
+              </button>
+            ))}
         </span>
       </div>
     );
@@ -864,7 +879,7 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
                   type="button"
                   className={styles.accept}
                   disabled={catalogLoading}
-                  onClick={() => browse(true)}
+                  onClick={() => browse()}
                 >{catalogLoading ? t('Trying…') : t('Try again')}</button>
               </div>
             </div>
@@ -894,7 +909,7 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
                     type="button"
                     className={styles.refresh}
                     disabled={catalogLoading || busy}
-                    onClick={() => browse(true)}
+                    onClick={() => browse()}
                   >{t('Refresh')}</button>
                 </div>
 

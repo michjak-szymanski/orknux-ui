@@ -109,15 +109,14 @@ const LISTING_FIELDS = `
 /**
  * What the marketplace offers, as this installation sees it.
  *
- * `refresh` re-reads the catalog at its source rather than taking the cached
- * read — for somebody who has just published and wants to see it.
+ * Read at its source every time — nothing is cached on the way — so Refresh
+ * and Try again are this call again and not an argument to it. There was a
+ * `refresh` flag for a while and it was passed all the way to the
+ * marketplace, which has no such argument and refused the whole query.
  */
-export async function fetchMarketplace(refresh = false): Promise<MarketplaceListing[]> {
+export async function fetchMarketplace(): Promise<MarketplaceListing[]> {
   const data = await graphql<{ marketplacePlugins: MarketplaceListing[] }>(
-    `query Marketplace($refresh: Boolean) {
-       marketplacePlugins(refresh: $refresh) { ${LISTING_FIELDS} }
-     }`,
-    { refresh },
+    `query Marketplace { marketplacePlugins { ${LISTING_FIELDS} } }`,
   );
   return data.marketplacePlugins;
 }

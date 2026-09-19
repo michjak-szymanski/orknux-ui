@@ -850,8 +850,12 @@
  * `iconButton` pulls its padding back with a `margin` shorthand, and a
  * shorthand in the composed file beats a longhand here whichever way the two
  * stylesheets happen to be emitted. Two classes deep, it wins either way.
+ *
+ * And only where something follows it. On Installed the switch is the whole
+ * column, and a trailing margin there pulls it out of line with the heading
+ * above it for the sake of a gap to nothing.
  */
-.colActions .toggle {
+.colActions .toggle:not(:last-child) {
   margin-inline-end: var(--space-8);
 }
 

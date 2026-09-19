@@ -61,26 +61,29 @@ record(
 );
 
 /*
- * The switch is not one of the buttons beside it, and the spacing has to say
- * so. It says so by being wider than the gap the buttons keep between
- * themselves - which `iconButton`'s negative margin quietly closed to two
- * pixels the first time, because a shorthand there beats a longhand here.
+ * An installation with nothing installed has no row to read, and that is not
+ * a failure - so this waits briefly and skips rather than timing out.
  */
-// An installation with nothing installed has no switch to measure, and that
-// is not a failure - so this waits briefly and skips rather than timing out.
 const switched = await page
   .waitForSelector('[role=switch]', { timeout: 5_000 })
   .then(() => true)
   .catch(() => false);
 if (switched) {
-  const spacing = await page.evaluate(() => {
-    const row = document.querySelector('[role=switch]').parentElement;
-    const [a, b, c] = [...row.children].map((one) => one.getBoundingClientRect());
-    return { afterSwitch: Math.round(b.left - a.right), betweenButtons: Math.round(c.left - b.right) };
-  });
+  /*
+   * Installed says what is running and whether it is on, and offers nothing
+   * else. Taking a plugin away belongs where putting one there does - a
+   * marketplace plugin is uninstalled from its details, one of your own is
+   * removed from the Local shelf - and taking a copy of the source is a
+   * question about a file, which is the same shelf.
+   */
+  const offered = await page.evaluate(() =>
+    [...document.querySelector('[role=switch]').parentElement.children].map(
+      (one) => one.getAttribute('role') ?? one.tagName.toLowerCase(),
+    ),
+  );
   record(
-    spacing.afterSwitch > spacing.betweenButtons,
-    `the switch stands off from the buttons (${spacing.afterSwitch}px vs ${spacing.betweenButtons}px)`,
+    offered.join('|') === 'switch',
+    `Installed offers the switch and nothing else (${offered.join(', ') || 'nothing'})`,
   );
 }
 
@@ -137,6 +140,25 @@ record(
   localColumns.join('|') === 'name|api|size|loaded|actions',
   `and Local asks a file's questions (${localColumns.join(', ')})`,
 );
+
+/*
+ * And here, where the switch does sit beside buttons, it is not one of them -
+ * which the spacing has to say. It says it by being wider than the gap the
+ * buttons keep between themselves, a gap `iconButton`'s negative margin
+ * quietly closed to two pixels the first time, a shorthand there beating a
+ * longhand here.
+ */
+if (await page.locator('[role=switch]').count()) {
+  const spacing = await page.evaluate(() => {
+    const row = document.querySelector('[role=switch]').parentElement;
+    const [a, b, c] = [...row.children].map((one) => one.getBoundingClientRect());
+    return { afterSwitch: Math.round(b.left - a.right), betweenButtons: Math.round(c.left - b.right) };
+  });
+  record(
+    spacing.afterSwitch > spacing.betweenButtons,
+    `the switch stands off from the buttons (${spacing.afterSwitch}px vs ${spacing.betweenButtons}px)`,
+  );
+}
 
 // Trying again is a button, and it asks exactly one more time.
 await page.getByRole('button', { name: 'Marketplace', exact: true }).click();
