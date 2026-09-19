@@ -60,6 +60,30 @@ record(
   `Installed says what a plugin is (${installedColumns.join(', ')})`,
 );
 
+/*
+ * The switch is not one of the buttons beside it, and the spacing has to say
+ * so. It says so by being wider than the gap the buttons keep between
+ * themselves - which `iconButton`'s negative margin quietly closed to two
+ * pixels the first time, because a shorthand there beats a longhand here.
+ */
+// An installation with nothing installed has no switch to measure, and that
+// is not a failure - so this waits briefly and skips rather than timing out.
+const switched = await page
+  .waitForSelector('[role=switch]', { timeout: 5_000 })
+  .then(() => true)
+  .catch(() => false);
+if (switched) {
+  const spacing = await page.evaluate(() => {
+    const row = document.querySelector('[role=switch]').parentElement;
+    const [a, b, c] = [...row.children].map((one) => one.getBoundingClientRect());
+    return { afterSwitch: Math.round(b.left - a.right), betweenButtons: Math.round(c.left - b.right) };
+  });
+  record(
+    spacing.afterSwitch > spacing.betweenButtons,
+    `the switch stands off from the buttons (${spacing.afterSwitch}px vs ${spacing.betweenButtons}px)`,
+  );
+}
+
 await page.getByRole('tab', { name: 'Catalog' }).click();
 await page.waitForSelector('text=Marketplace', { timeout: 10_000 });
 await page.waitForTimeout(600);

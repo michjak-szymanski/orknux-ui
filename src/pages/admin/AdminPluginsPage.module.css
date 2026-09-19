@@ -840,6 +840,21 @@
   composes: iconButton from '../../styles/iconButton.module.css';
 }
 
+/*
+ * And set apart from what follows it. On the triggers page this switch has a
+ * column of its own; here it shares one with the actions, and a switch at the
+ * row's own gap from a download button reads as a third button. It is not a
+ * button: it is what the row currently is.
+ *
+ * Written through the column rather than on `.toggle` alone because
+ * `iconButton` pulls its padding back with a `margin` shorthand, and a
+ * shorthand in the composed file beats a longhand here whichever way the two
+ * stylesheets happen to be emitted. Two classes deep, it wins either way.
+ */
+.colActions .toggle {
+  margin-inline-end: var(--space-8);
+}
+
 .update {
   padding: var(--space-4) var(--space-10);
   border: 1px solid var(--color-accent);
