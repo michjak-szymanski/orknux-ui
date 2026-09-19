@@ -436,3 +436,403 @@
   display: list-item;
   cursor: pointer;
 }
+
+/* ------------------------------------------------------------------ tabs */
+
+/*
+ * Two questions, two tabs: what is running here, and where more come from.
+ * Underlined rather than boxed - the page already has a card under it, and a
+ * second bordered surface above one reads as two screens stacked.
+ */
+.tabs {
+  display: flex;
+  gap: var(--space-4);
+  width: 100%;
+  margin-top: var(--space-20);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-10) var(--space-14);
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--color-text-primary);
+}
+
+.tabOn {
+  border-bottom-color: var(--color-accent);
+  color: var(--color-text-primary);
+}
+
+/* How many are loaded, beside the word rather than after it in prose. */
+.tabCount {
+  padding: 1px var(--space-6);
+  border-radius: 999px;
+  background: var(--color-surface);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+
+/* --------------------------------------------------------------- catalog */
+
+.catalog {
+  display: flex;
+  gap: var(--space-20);
+  width: 100%;
+  margin-top: var(--space-20);
+  min-height: 0;
+}
+
+/* Where a plugin comes from, as a rail rather than a second row of tabs. */
+.rail {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: var(--space-2);
+  width: 160px;
+}
+
+.railItem {
+  padding: var(--space-8) var(--space-12);
+  border: none;
+  border-radius: var(--radius-md);
+  background: none;
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.railItem:hover {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.railItemOn {
+  background: var(--color-surface);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.catalogBody {
+  display: flex;
+  flex: 1 0 0;
+  gap: var(--space-20);
+  min-width: 0;
+}
+
+/* ------------------------------------------------------------ the offers */
+
+.listingList {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: 340px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.listingHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding: var(--space-10) var(--space-14);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.refresh {
+  padding: var(--space-4) var(--space-10);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: none;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.refresh:hover:not(:disabled) {
+  color: var(--color-text-primary);
+}
+
+.refresh:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* One offering: a face, a name with its state, a line, and who wrote it. */
+.listing {
+  display: flex;
+  gap: var(--space-12);
+  width: 100%;
+  padding: var(--space-12) var(--space-14);
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  border-left: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.listing:last-child {
+  border-bottom: none;
+}
+
+.listing:hover {
+  background: var(--color-bg);
+}
+
+.listingOn {
+  border-left-color: var(--color-accent);
+  background: var(--color-bg);
+}
+
+.listingIcon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.listingBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.listingName {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.listingVersion {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+
+.listingSummary {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.listingMeta {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+/*
+ * The three states a listing can be in, as marks rather than sentences: the
+ * row has one line for prose and it belongs to the plugin, not to us.
+ */
+.installedMark,
+.updateMark,
+.offMark {
+  padding: 1px var(--space-6);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.installedMark {
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+}
+
+.updateMark {
+  background: var(--color-accent-soft, var(--color-bg));
+  color: var(--color-accent);
+}
+
+.offMark {
+  background: var(--color-amber-soft, var(--color-bg));
+  color: var(--color-text-secondary);
+}
+
+/* ----------------------------------------------------------- the details */
+
+.details {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.detailsHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-16);
+  padding: var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.detailsTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+.detailsName {
+  display: block;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.detailsMeta {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.detailsActions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+/*
+ * Somebody else's prose, given room and a ceiling: the pane scrolls rather
+ * than the page, so the list beside it stays where it was.
+ */
+.detailsBody {
+  padding: var(--space-16);
+  overflow-y: auto;
+  max-height: 60vh;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+/* ------------------------------------------------------------- the local */
+
+.localPane {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--space-14);
+  min-width: 0;
+}
+
+.localNote {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+/* ------------------------------------------------ a row's own two states */
+
+/* Switched off: everything still there, and visibly not running. */
+.rowOff .name,
+.rowOff .declares,
+.rowOff .allows {
+  opacity: 0.6;
+}
+
+/* The version it was installed at, beside the name it was installed under. */
+.fromMarket {
+  padding: 1px var(--space-6);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+
+.toggle {
+  min-width: 46px;
+  padding: var(--space-4) var(--space-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: none;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.toggleOn {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.toggle:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.update {
+  padding: var(--space-4) var(--space-10);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  background: none;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-accent);
+  cursor: pointer;
+}
+
+.update:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* The two panes stack where there is no room to sit side by side. */
+@media (max-width: 1100px) {
+  .catalog {
+    flex-direction: column;
+  }
+
+  .rail {
+    flex-direction: row;
+    width: 100%;
+  }
+
+  .catalogBody {
+    flex-direction: column;
+  }
+
+  .listingList {
+    width: 100%;
+  }
+}

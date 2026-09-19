@@ -51,6 +51,103 @@ export interface Plugin {
   sha256: string;
   uploadedAt: string;
   uploadedBy: string;
+  /**
+   * Whether it is switched on. Off keeps everything and offers nothing: the
+   * functions stop being callable and the tools leave the agents' menus.
+   */
+  enabled: boolean;
+  /** The files it ships with, by path. Empty for a single-file plugin. */
+  libraries: string[];
+  /** Where it came from, when that was the marketplace. Null for a file or a URL. */
+  marketplaceKey: string | null;
+  marketplaceVersion: string | null;
+}
+
+/** One plugin the marketplace offers, with what is installed here folded in. */
+export interface MarketplaceListing {
+  key: string;
+  name: string;
+  author: string;
+  summary: string;
+  /** Markdown, from a public repository; rendered rather than printed. */
+  description: string;
+  version: string;
+  /** An emoji, or the URL of a small image. Null where the catalog offers none. */
+  icon: string | null;
+  downloads: number;
+  rating: number | null;
+  reviews: number;
+  published: string;
+  installed: boolean;
+  installedVersion: string | null;
+  /** Installed, and the catalog is offering a version this one is not. */
+  updatable: boolean;
+}
+
+const LISTING_FIELDS = `
+  key name author summary description version icon downloads rating reviews published
+  installed installedVersion updatable
+`;
+
+/**
+ * What the marketplace offers, as this installation sees it.
+ *
+ * `refresh` re-reads the catalog at its source rather than taking the cached
+ * read — for somebody who has just published and wants to see it.
+ */
+export async function fetchMarketplace(refresh = false): Promise<MarketplaceListing[]> {
+  const data = await graphql<{ marketplacePlugins: MarketplaceListing[] }>(
+    `query Marketplace($refresh: Boolean) {
+       marketplacePlugins(refresh: $refresh) { ${LISTING_FIELDS} }
+     }`,
+    { refresh },
+  );
+  return data.marketplacePlugins;
+}
+
+/** What an install came to: the plugin, or the agreement it is waiting on. */
+export interface MarketplaceInstall {
+  plugin: Plugin | null;
+  needsPermissions: PluginPermission[];
+  needsCapabilities: PluginPermission[];
+  needsLibraries: string[];
+  message: string | null;
+}
+
+/**
+ * Installs a plugin from the marketplace, or updates one already installed —
+ * one call, because they are one act.
+ *
+ * A first install, or one whose demands have grown, comes back with `plugin`
+ * null and the lists to accept; sending those names back in `accept` is the
+ * permission. That is the same bargain an upload makes, so a screen has one
+ * thing to draw either way.
+ */
+export async function installFromMarketplace(key: string, accept?: string[]): Promise<MarketplaceInstall> {
+  const data = await graphql<{ installMarketplacePlugin: MarketplaceInstall }>(
+    `mutation InstallMarketplacePlugin($key: String!, $accept: String) {
+       installMarketplacePlugin(key: $key, accept: $accept) {
+         plugin { ${PLUGIN_FIELDS} }
+         needsPermissions { name summary }
+         needsCapabilities { name summary }
+         needsLibraries
+         message
+       }
+     }`,
+    { key, accept: accept?.join(',') ?? null },
+  );
+  return data.installMarketplacePlugin;
+}
+
+/** Switches a plugin off, or back on. Everything stays either way. */
+export async function setPluginEnabled(id: string, enabled: boolean): Promise<Plugin> {
+  const data = await graphql<{ setPluginEnabled: Plugin }>(
+    `mutation SetPluginEnabled($id: ID!, $enabled: Boolean!) {
+       setPluginEnabled(id: $id, enabled: $enabled) { ${PLUGIN_FIELDS} }
+     }`,
+    { id, enabled },
+  );
+  return data.setPluginEnabled;
 }
 
 /**
@@ -93,6 +190,7 @@ export interface PluginFunctionDeclaration {
 
 const PLUGIN_FIELDS = `
   id key name filename sizeBytes apiVersion sha256 uploadedAt uploadedBy
+  enabled libraries marketplaceKey marketplaceVersion
   declaredFunctions { name description returnType signature params { name type } }
   declaredParameters { name description type required secret }
   permissions { name summary }
