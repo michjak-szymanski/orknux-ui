@@ -3,12 +3,13 @@
  *
  * The Answer Shape control's other mode: instead of a shape picked inline, the
  * agent points at an object node already on the canvas. The shape is derived
- * from the target at the save - never sent - the agent's ports grow the
- * shape's fields, and the canvas draws the pointing as a dashed line ending in
- * an arrow: a dependency, since nothing runs along it, with the arrow saying
- * which way the answer moves. The run half - the node's fields actually
- * filled from the answer - is `AgentNodeRunnerTest` on the server; this is
- * the screen.
+ * from the target at the save - never sent - and the answer is spoken for:
+ * the agent offers nothing inline any more, the object node is where the
+ * fields are read, and the canvas draws the pointing as a dashed line ending
+ * in an arrow: a dependency, since nothing runs along it, with the arrow
+ * saying which way the answer moves. The run half - the node's fields
+ * actually filled from the answer - is `AgentNodeRunnerTest` on the server;
+ * this is the screen.
  *
  * It makes its own object and workflow under stamped names and removes both;
  * what a killed run leaves behind is swept by prefix at the start.
@@ -27,7 +28,7 @@ const { workspaceWorkflows } = await graphql(
   { workspaceId: WORKSPACE },
 ).catch(() => ({ workspaceWorkflows: { content: [] } }));
 for (const old of (workspaceWorkflows?.content ?? []).filter((one) => one.name.startsWith(PREFIX))) {
-  await graphql(`mutation ($id: ID!) { deleteWorkflow(id: $id) }`, { id: old.workflowId }).catch(() => {});
+  await graphql(`mutation ($id: ID!) { removeWorkflow(id: $id) }`, { id: old.workflowId }).catch(() => {});
   console.log(`NOTE: swept workflow ${old.name}`);
 }
 const { workspaceObjects } = await graphql(
@@ -87,10 +88,17 @@ record(dash !== 'none' && dash !== '', `the line is dashed (${dash})`);
 const marker = await path.getAttribute('marker-end');
 record(marker !== null && marker !== '', `and ends in an arrow (${marker})`);
 
-// The agent's ports follow the derived shape.
+/*
+ * The answer is spoken for: the object node is where it is read, so the agent
+ * offers nothing - no chips, no fields in any picker - and the object node
+ * offers the shape instead. One answer, one place to read it.
+ */
 const agentNode = page.locator('.react-flow__node', { hasText: 'Support responder' }).first();
 const nodeText = await agentNode.innerText();
-record(nodeText.includes('llmResult.intentType'), 'the agent offers the shape\'s fields under its name');
+record(!nodeText.includes('llmResult'), 'the agent no longer offers its answer inline');
+const objectNode = page.locator('.react-flow__node', { hasText: 'SlackUserPrompt' }).first();
+const objectText = await objectNode.innerText();
+record(objectText.includes('intentType'), 'the object node is where the fields are read');
 
 // The panel says where the answer goes.
 await agentNode.click();
@@ -102,6 +110,6 @@ record(pickerText.includes('SlackUserPrompt'), `and it names the object node ("$
 
 await page.screenshot({ path: shot('save-into-editor.png') });
 
-await graphql(`mutation ($id: ID!) { deleteWorkflow(id: $id) }`, { id: workflowId }).catch(() => {});
+await graphql(`mutation ($id: ID!) { removeWorkflow(id: $id) }`, { id: workflowId }).catch(() => {});
 await graphql(`mutation ($id: ID!) { deleteObject(id: $id) }`, { id: createObject.id }).catch(() => {});
 await finish(browser);
