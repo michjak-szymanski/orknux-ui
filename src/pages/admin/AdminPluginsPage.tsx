@@ -22,6 +22,8 @@ import downloadIcon from '../../assets/download.svg';
 import fileCodeIcon from '../../assets/file-code.svg';
 import plusIcon from '../../assets/plus.svg';
 import puzzleIcon from '../../assets/puzzle.svg';
+import toggleOffIcon from '../../assets/toggle-off.svg';
+import toggleOnIcon from '../../assets/toggle-on.svg';
 import trashIcon from '../../assets/trash-2.svg';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { AppShell } from '../../components/AppShell';
@@ -547,19 +549,29 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
             >{t('Update')}</button>
           )}
           {/*
-            On and off, as one control that says which it is. Switched off a
+            On and off, as one control that says which it is — and the same
+            control a trigger has, because it is the same act: switched off, a
             plugin keeps its rows, its edits and every workspace's answers,
-            and offers nothing — the reversible half of unloading.
+            and offers nothing. The reversible half of unloading.
           */}
           <button
             type="button"
-            className={plugin.enabled ? `${styles.toggle} ${styles.toggleOn}` : styles.toggle}
+            className={styles.toggle}
             role="switch"
             aria-checked={plugin.enabled}
             disabled={busy}
             onClick={() => void onEnabled(plugin, !plugin.enabled)}
+            aria-label={`${plugin.enabled ? 'Disable' : 'Enable'} ${plugin.name}`}
             title={plugin.enabled ? `Switch ${plugin.name} off` : `Switch ${plugin.name} on`}
-          >{plugin.enabled ? t('On') : t('Off')}</button>
+          >
+            <img
+              src={plugin.enabled ? toggleOnIcon : toggleOffIcon}
+              data-keeps-colour
+              alt=""
+              width={36}
+              height={20}
+            />
+          </button>
           {/*
             What was written, not what runs: TypeScript where there is any. A
             plain link, so the browser saves it and the session cookie goes with
@@ -858,7 +870,22 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
             </div>
           )}
 
-          {source === 'marketplace' && catalogError === null && (
+          {/*
+            And the same rule while the answer is still on its way. A shelf
+            drawn before anything has arrived is two empty columns that turn
+            out, a moment later, to have been the wrong thing to draw — the
+            marketplace was down all along. Nothing is laid out until there is
+            something to lay out.
+          */}
+          {source === 'marketplace' && catalogError === null && listings === null && (
+            <div className={styles.catalogBody}>
+              <div className={styles.catalogWaiting}>
+                <Loader />
+              </div>
+            </div>
+          )}
+
+          {source === 'marketplace' && catalogError === null && listings !== null && (
             <div className={styles.catalogBody}>
               <div className={styles.listingList}>
                 <div className={styles.listingHead}>

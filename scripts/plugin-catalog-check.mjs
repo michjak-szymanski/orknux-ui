@@ -19,6 +19,8 @@ await page.route('**/graphql', async (route) => {
   const body = route.request().postData() ?? '';
   if (body.includes('marketplacePlugins')) {
     asks.push(Date.now());
+    // Slowly, so the state between the question and the answer can be looked at.
+    await new Promise((done) => setTimeout(done, 800));
     // The marketplace being down, as the server reports it.
     await route.fulfill({
       status: 200,
@@ -71,6 +73,20 @@ record(opened.includes('Load Plugin'), 'Catalog opens on Local, which always wor
 record(asks.length === 0, `and the marketplace is still unasked (${asks.length} calls)`);
 
 await page.getByRole('button', { name: 'Marketplace', exact: true }).click();
+
+/*
+ * Mid-flight: nothing is laid out yet. Drawing the list and the details pane
+ * while the answer is still coming means drawing two empty columns that turn
+ * out to have been wrong - the marketplace was down all along.
+ */
+await page.waitForTimeout(300);
+const waiting = await page.locator('main, body').first().innerText();
+record(!waiting.includes('From the marketplace'), 'nothing is drawn before the answer arrives');
+record(
+  !waiting.includes('Choose a plugin to read what it does'),
+  'and no pane invites a choice from a list that has not come',
+);
+
 await page.waitForTimeout(1500);
 
 const shown = await page.locator('main, body').first().innerText();
