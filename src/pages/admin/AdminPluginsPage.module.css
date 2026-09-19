@@ -538,11 +538,17 @@
 
 /* ------------------------------------------------------------ the offers */
 
+/*
+ * A floor under both panes. A catalog of two plugins drew a pair of boxes an
+ * inch high beside acres of empty page, which reads as a screen that failed
+ * to load rather than one with two plugins in it.
+ */
 .listingList {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
   width: 340px;
+  min-height: 320px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
@@ -689,6 +695,7 @@
   flex: 1 0 0;
   flex-direction: column;
   min-width: 0;
+  min-height: 320px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
@@ -824,23 +831,47 @@
  */
 .catalogDown {
   display: flex;
+  flex: 1 0 0;
   flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-8);
-  padding: var(--space-16);
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-10);
+  min-height: 320px;
+  padding: var(--space-32) var(--space-20);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  text-align: center;
+}
+
+.catalogDownFace {
+  font-size: 30px;
+  line-height: 1;
+  opacity: 0.7;
 }
 
 .catalogDownLine {
   margin: 0;
-  font-size: var(--text-sm);
+  font-size: var(--text-lg);
   font-weight: 600;
   color: var(--color-text-primary);
 }
 
+/* What still works, which is the half somebody actually needs to know. */
 .catalogDownNote {
+  max-width: 52ch;
   margin: 0;
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   color: var(--color-text-secondary);
+}
+
+/* The server's own sentence, kept and kept quiet: it is for whoever is
+   fixing the marketplace, not for whoever wanted a plugin. */
+.catalogDownWhy {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  opacity: 0.75;
 }
 
 /* The two panes stack where there is no room to sit side by side. */

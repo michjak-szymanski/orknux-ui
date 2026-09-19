@@ -127,11 +127,13 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
   const [url, setUrl] = useState('');
 
   const [tab, setTab] = useState<Tab>('installed');
-  const [source, setSource] = useState<Source>('marketplace');
+  const [source, setSource] = useState<Source>('local');
   /** The catalog, read once the shelf is opened rather than on arrival. */
   const [listings, setListings] = useState<MarketplaceListing[] | null>(null);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [catalogLoading, setCatalogLoading] = useState(false);
+  /** Whether the catalog has been asked for at all; see the effect below. */
+  const asked = useRef(false);
   /** Which offering's details are open, by key. */
   const [reading, setReading] = useState<string | null>(null);
 
@@ -174,8 +176,20 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
   }, []);
 
   useEffect(() => {
-    if (tab === 'catalog' && source === 'marketplace' && listings === null && !catalogLoading) browse();
-  }, [tab, source, listings, catalogLoading, browse]);
+    /*
+     * Once per visit to the shelf, and the flag is what makes it once.
+     *
+     * Asking on "we have no listings yet" instead would read as satisfied
+     * again the moment a failed attempt cleared its own error — so a
+     * marketplace that is down was asked in a tight loop, and the message
+     * saying so was wiped by the next attempt before anybody could read it.
+     * Asking again is a button.
+     */
+    if (tab === 'catalog' && source === 'marketplace' && !asked.current) {
+      asked.current = true;
+      browse();
+    }
+  }, [tab, source, browse]);
 
   /**
    * One load, however the plugin arrived, refused the one way.
@@ -747,19 +761,53 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
             the file on your own machine.
           */}
           <nav className={styles.rail} aria-label={t('Catalog')}>
-            <button
-              type="button"
-              className={source === 'marketplace' ? `${styles.railItem} ${styles.railItemOn}` : styles.railItem}
-              onClick={() => setSource('marketplace')}
-            >{t('Marketplace')}</button>
+            {/*
+              Local first, and it opens here: loading a file of your own is
+              the shelf that always works, and the one this installation owns.
+              The marketplace is somebody else's service and is asked for only
+              when somebody goes looking for it.
+            */}
             <button
               type="button"
               className={source === 'local' ? `${styles.railItem} ${styles.railItemOn}` : styles.railItem}
               onClick={() => setSource('local')}
             >{t('Local')}</button>
+            <button
+              type="button"
+              className={source === 'marketplace' ? `${styles.railItem} ${styles.railItemOn}` : styles.railItem}
+              onClick={() => setSource('marketplace')}
+            >{t('Marketplace')}</button>
           </nav>
 
-          {source === 'marketplace' && (
+          {/*
+            A marketplace that cannot be read takes the whole shelf, not a
+            corner of it: a sliver of red beside an empty list and a pane
+            inviting somebody to choose from nothing is three states of
+            confusion where there is one fact. Said plainly, with what is not
+            affected beside it — everything installed goes on running,
+            because a plugin is stored here, source, libraries and the face it
+            wears, and nothing asks the marketplace again until somebody asks.
+          */}
+          {source === 'marketplace' && catalogError !== null && (
+            <div className={styles.catalogBody}>
+              <div className={styles.catalogDown}>
+                <span className={styles.catalogDownFace} aria-hidden="true">🛒</span>
+                <p className={styles.catalogDownLine}>{t('The marketplace cannot be reached right now.')}</p>
+                <p className={styles.catalogDownNote}>
+                  {t('Only this list is affected. Every plugin already installed keeps running, and Local still loads a file of your own.')}
+                </p>
+                <p className={styles.catalogDownWhy}>{catalogError}</p>
+                <button
+                  type="button"
+                  className={styles.accept}
+                  disabled={catalogLoading}
+                  onClick={() => browse(true)}
+                >{catalogLoading ? t('Trying…') : t('Try again')}</button>
+              </div>
+            </div>
+          )}
+
+          {source === 'marketplace' && catalogError === null && (
             <div className={styles.catalogBody}>
               <div className={styles.listingList}>
                 <div className={styles.listingHead}>
@@ -777,29 +825,7 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
                     <Loader />
                   </p>
                 )}
-                {/*
-                  The one thing on this screen that needs the marketplace, and
-                  the one thing an outage takes away. Said plainly, with what
-                  is *not* affected beside it: everything installed goes on
-                  running, because a plugin is stored here — source, libraries
-                  and the face it wears — and nothing asks the marketplace
-                  again until somebody opens this shelf.
-                */}
-                {catalogError !== null && (
-                  <div className={styles.catalogDown}>
-                    <p className={styles.catalogDownLine}>{catalogError}</p>
-                    <p className={styles.catalogDownNote}>
-                      {t('Only this list is affected. Every plugin already installed keeps running, and Local still loads a file of your own.')}
-                    </p>
-                    <button
-                      type="button"
-                      className={styles.refresh}
-                      disabled={catalogLoading}
-                      onClick={() => browse(true)}
-                    >{t('Try again')}</button>
-                  </div>
-                )}
-                {!catalogLoading && catalogError === null && listings?.length === 0 && (
+                {!catalogLoading && listings?.length === 0 && (
                   <p className={styles.notice}>{t('The marketplace offers nothing yet.')}</p>
                 )}
 

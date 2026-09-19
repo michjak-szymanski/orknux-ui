@@ -534,6 +534,13 @@ export const TESTS = [
     alone: true,
   },
   {
+    name: 'plugin-catalog-check',
+    what: 'the plugins screen opens on Local, and says what a marketplace outage costs',
+    // Reads the admin screen and stubs the catalog call in the browser; it
+    // loads nothing and changes nothing, so it runs beside the others.
+    needs: [],
+  },
+  {
     name: 'agent-connection-grant-check',
     what: 'a connection is granted to an agent and picked for a plugin by name, never typed as a number',
     needs: ['workspace'],

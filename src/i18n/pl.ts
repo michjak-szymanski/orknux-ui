@@ -695,6 +695,8 @@ export const PL: Record<string, string> = {
   "update": "aktualizacja",
   "Uninstall": "Odinstaluj",
   "From the marketplace": "Ze sklepu",
+  "The marketplace cannot be reached right now.": "Nie można teraz połączyć się ze sklepem.",
+  "Trying…": "Próbuję…",
   "Only this list is affected. Every plugin already installed keeps running, and Local still loads a file of your own.": "Dotyczy to wyłącznie tej listy. Każda już zainstalowana wtyczka działa dalej, a zakładka Lokalne nadal wczytuje własny plik.",
   "From a file of your own": "Z własnego pliku",
   "Choose a plugin to read what it does.": "Wybierz wtyczkę, aby przeczytać, co robi.",
