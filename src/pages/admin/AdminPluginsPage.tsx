@@ -22,7 +22,7 @@ import downloadIcon from '../../assets/download.svg';
 import fileCodeIcon from '../../assets/file-code.svg';
 import plusIcon from '../../assets/plus.svg';
 import puzzleIcon from '../../assets/puzzle.svg';
-import trashIcon from '../../assets/trash.svg';
+import trashIcon from '../../assets/trash-2.svg';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { AppShell } from '../../components/AppShell';
 import { FieldHint } from '../../components/FieldHint';
