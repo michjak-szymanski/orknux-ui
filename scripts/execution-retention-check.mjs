@@ -107,8 +107,14 @@ if (await drawn(page, 'admin settings')) {
   await page.screenshot({ path: shot('revision-retention.png'), fullPage: true });
 }
 
-// Its own data, swept up: the installation goes back to what it kept before.
-await graphql('mutation($days: Int!) { setRevisionRetentionDays(days: $days) { executionRetentionDays } }', {
+/*
+ * Its own data, swept up: the installation goes back to what it kept before.
+ * The EXECUTION mutation - this used to call the revision one beside it, a
+ * copy that put the wrong setting back and left this one where the check had
+ * moved it, so the failure only appeared once the stored number differed
+ * from the number the check happens to choose.
+ */
+await graphql('mutation($days: Int!) { setExecutionRetentionDays(days: $days) { executionRetentionDays } }', {
   days: started.executionRetentionDays,
 });
 const ended = await stored();

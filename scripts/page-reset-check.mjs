@@ -9,9 +9,9 @@
  * a truthful answer of nothing.
  *
  * Every paged list on a workspace had it; the triggers screen is where it was
- * found because that list pages at five. What is asserted here is the rule
- * rather than the screen: **turning a page and then switching workspace lands
- * on the first page of the new one**, and the list drawn is that workspace's.
+ * found. What is asserted here is the rule rather than the screen: **turning a
+ * page and then switching workspace lands on the first page of the new one**,
+ * and the list drawn is that workspace's.
  *
  * It makes its own two workspaces - one with enough triggers for three pages,
  * one with a single trigger - because the bug needs a "before" with more pages
@@ -28,7 +28,13 @@ const PREFIX = 'zzPageReset';
  * anything it is testing.
  */
 const STAMP = Date.now();
-const PAGE_SIZE = 5;
+/*
+ * The default every list footer starts on - `DEFAULT_PAGE_SIZE` in
+ * `src/components/pageSize.ts`. The triggers list paged at five when this was
+ * written; the footers were then given a shared picker defaulting to ten, and
+ * a fixture one trigger past two five-row pages stopped reaching page 3.
+ */
+const PAGE_SIZE = 10;
 
 const { browser, page, graphql } = await open({ viewport: { width: 1440, height: 1000 } });
 

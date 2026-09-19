@@ -192,11 +192,18 @@ const saysNothingLeft = message.some((said) => /nothing left to import/i.test(sa
 const importOff = await page.locator('dialog[open] button:has-text("Import")').last().isDisabled();
 console.log(`says there is nothing left: ${saysNothingLeft}; Import is off: ${importOff}`);
 
-// And Keep puts it back.
+/*
+ * And Keep puts it back - to the badge it wore before, whatever that was.
+ * This used to expect "Renamed" outright, which was true while a workflow's
+ * name was taken installation-wide: the fixture workspace's workflow made any
+ * other workspace's import a rename. Names are per-workspace now, so into a
+ * bare workspace the row is "New" - and what Keep promises is restoration,
+ * not any particular badge.
+ */
 await page.locator('dialog[open] button[aria-label^="Keep"]').first().click();
 await page.waitForTimeout(1800);
 const restored = await rows();
-const putBack = restored.find((row) => row.kind === 'Workflow')?.badge === 'Renamed';
+const putBack = restored.find((row) => row.kind === 'Workflow')?.badge === workflowRow?.badge;
 console.log(`Keep put it back: ${putBack}`);
 await page.locator('dialog[open] button:has-text("Cancel")').click();
 await page.waitForTimeout(500);
