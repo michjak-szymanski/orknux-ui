@@ -67,6 +67,17 @@ export interface Plugin {
    * loaded from a file.
    */
   icon: string | null;
+  /**
+   * What the plugin says about itself, from the `plugin.json` it ships.
+   *
+   * Prose only: what it is allowed to do is read from the code when somebody
+   * accepts it, never from what it claims here. Null for a plugin that ships
+   * no manifest, which is every plugin loaded before there were any.
+   */
+  summary: string | null;
+  author: string | null;
+  /** Its own claim, which is not `marketplaceVersion` — see the schema. */
+  version: string | null;
 }
 
 /** One plugin the marketplace offers, with what is installed here folded in. */
@@ -196,7 +207,7 @@ export interface PluginFunctionDeclaration {
 
 const PLUGIN_FIELDS = `
   id key name filename sizeBytes apiVersion sha256 uploadedAt uploadedBy
-  enabled libraries marketplaceKey marketplaceVersion icon
+  enabled libraries marketplaceKey marketplaceVersion icon summary author version
   declaredFunctions { name description returnType signature params { name type } }
   declaredParameters { name description type required secret }
   permissions { name summary }

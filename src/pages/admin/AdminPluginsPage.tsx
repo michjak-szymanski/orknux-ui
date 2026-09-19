@@ -425,13 +425,23 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
               {plugin.name}
               {!plugin.enabled && <span className={styles.offMark}>{t('off')}</span>}
               {/*
-                Where it came from, where that is the catalog: the version it
-                was installed at, so the Update beside it means something.
+                What it calls itself, where its manifest says — and where it
+                came from, where that is the catalog: the version it was
+                installed at, so the Update beside it means something. The
+                catalog's wins when they differ, because that is the one the
+                update is measured against.
               */}
-              {plugin.marketplaceVersion !== null && (
-                <span className={styles.fromMarket}>{plugin.marketplaceVersion}</span>
+              {(plugin.marketplaceVersion ?? plugin.version) !== null && (
+                <span className={styles.fromMarket}>{plugin.marketplaceVersion ?? plugin.version}</span>
               )}
+              {plugin.author !== null && <span className={styles.byline}>{plugin.author}</span>}
             </span>
+            {/*
+              The line the plugin wrote about itself, above what it declares:
+              a list of signatures says what it offers and never what it is
+              for, and "for" is what somebody scanning this list wants.
+            */}
+            {plugin.summary !== null && <span className={styles.summary}>{plugin.summary}</span>}
             {/*
              * What it declares, under the name. A plugin is worth listing for
              * what it offers, and "declares 2 functions" answers less than
