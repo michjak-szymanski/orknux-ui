@@ -38,6 +38,12 @@ export interface GraphNode {
    * outputs grow a field per entry of it. Meaningless on every other kind.
    */
   outputObjectId?: string | null;
+  /**
+   * The object node on this graph an AGENT node's answer is saved into, by
+   * that node's key. The shape is then derived from the target at every save,
+   * overriding whatever outputObjectId is sent beside it.
+   */
+  outputNodeKey?: string | null;
   /** The image model an IMAGE node draws with; null until one is picked. */
   imageModelId?: string | null;
   /**
@@ -198,7 +204,7 @@ const GRAPH_FIELDS = `
   enabled
   assignmentId
   nodes {
-    key kind name description agentId triggerId actionId conditionId objectId outputObjectId imageModelId outputName icon orientation
+    key kind name description agentId triggerId actionId conditionId objectId outputObjectId outputNodeKey imageModelId outputName icon orientation
     yesLabel noLabel fallbackEnabled retryAttempts retryBackoffSeconds
     retryMultiplier retryMaxWaitSeconds retryJitter retryBudgetSeconds x y
     mappings { name expression mode sourceNodeKey }

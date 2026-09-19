@@ -507,6 +507,15 @@ export const TESTS = [
     alone: true,
   },
   {
+    name: 'agent-save-into-check',
+    what: "an agent's answer saved into an object node: derived shape, dashed arrowed line, named on the panel",
+    needs: ['workspace'],
+    /*
+     * Makes its own workflow and object under stamped names and takes both
+     * away; nothing installation-wide is touched, so it runs beside others.
+     */
+  },
+  {
     name: 'plugin-tool-grant-check',
     what: "an agent's Tools list offers what a plugin's tools() declares, and only that",
     needs: ['workspace'],

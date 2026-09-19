@@ -186,6 +186,13 @@ interface NodeData extends Record<string, unknown> {
    * has a field per entry of it. Only an agent node has one.
    */
   outputObjectId: string | null;
+  /**
+   * The object node on this graph the answer is saved into, by that node's
+   * key; null is neither asked nor done. The other way to shape an answer:
+   * the shape is then the target's, derived at every save, and the target's
+   * fields are filled from the answer. Only an agent node has one.
+   */
+  outputNodeKey: string | null;
   /** The image model an image node draws with; null until one is picked. */
   imageModelId: string | null;
   /**
@@ -1148,12 +1155,17 @@ const KIND_COLOUR: Record<NodeKind, string> = {
  * here, because a second dashed line in a different colour would read as a
  * third kind of thing rather than as the same kind.
  *
- * No arrowhead, and this is now the line that is defined by not having one. The
- * lines a run travels grew one for issue #200; a dependency deliberately did
- * not, because an arrow on it would be back to claiming direction, which is the
- * whole of what was wrong with drawing it solid.
+ * It carries an arrowhead now, in its own colour, pointing the way the data
+ * moves: from what produces to what reads, from an agent to the object node it
+ * saves its answer into. Dependencies went unpointed at first - an arrow read
+ * as claiming the run's direction - but a dashed line with an arrow claims
+ * nothing about the run: the dash says nothing travels here, and the arrow
+ * says who writes and who reads, which a plain dash left to be guessed.
  */
 const DEPENDENCY_LINE = { stroke: 'var(--color-accent-brand)', strokeDasharray: '6 4' };
+
+/** The arrowhead a dependency ends in: the dash's own colour, data's direction. */
+const DEPENDENCY_ARROW = { type: MarkerType.ArrowClosed, width: 18, height: 18, color: 'var(--color-accent-brand)' } as const;
 
 /**
  * The arrowhead on a line a run travels — issue #200.
@@ -1876,6 +1888,35 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
     return nodes.filter((node) => leadingIn.has(node.id) && (node.data as NodeData).kind === 'SESSION');
   }, [edges, nodes, selectedKey]);
 
+  /**
+   * The object nodes an agent's answer could be saved into: the ones on this
+   * canvas with a saved shape, since the shape is what the answer is held to.
+   * A shape of the node's own has no definition to hold anything to, so it is
+   * not offered. The selected node itself is left out - an agent is never an
+   * object node, so that is only ever hygiene against a half-edited draft.
+   */
+  const savableNodes = useMemo(
+    () =>
+      nodes
+        .filter((node) => {
+          const data = node.data as NodeData;
+          return data.kind === 'OBJECT' && data.objectId !== null && node.id !== selectedKey;
+        })
+        .map((node) => ({ key: node.id, name: (node.data as NodeData).name, objectId: (node.data as NodeData).objectId })),
+    [nodes, selectedKey],
+  );
+
+  /**
+   * The object the Answer Shape's jump opens: the chosen shape, or the shape
+   * of the node the answer is saved into - the same definition either way.
+   */
+  const shapeJumpId =
+    draft === null
+      ? null
+      : draft.outputNodeKey !== null
+        ? (savableNodes.find((into) => into.key === draft.outputNodeKey)?.objectId ?? null)
+        : draft.outputObjectId;
+
   const wiredSessions = useMemo<NodeData[]>(
     () => wiredSessionNodes.map((node) => node.data as NodeData),
     [wiredSessionNodes],
@@ -1978,7 +2019,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
               markerEnd: arrowIn('var(--color-danger)'),
             }
           : kindOfNode.get(edge.source) === 'SESSION'
-            ? { ...edge, style: { ...edge.style, ...DEPENDENCY_LINE } }
+            ? { ...edge, style: { ...edge.style, ...DEPENDENCY_LINE }, markerEnd: DEPENDENCY_ARROW }
             : { ...edge, markerEnd: FLOW_ARROW };
       /*
        * Every line drawn by us, whether it carries anything or not. The type
@@ -2007,6 +2048,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           onPoints: setPoints,
         },
         style: DEPENDENCY_LINE,
+        markerEnd: DEPENDENCY_ARROW,
         // Not the graph's, so not something a drag can move or a key can delete.
         selectable: false,
         deletable: false,
@@ -2021,8 +2063,42 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
         reconnectable: false,
       }));
 
-    return [...carrying, ...loose];
-  }, [edges, carried, edgePoints, setPoints, kindOfNode]);
+    /*
+     * The saving, drawn. An agent that saves its answer into an object node
+     * points at it, and the pointing is a dependency like any other here -
+     * nothing runs along it; the answer still travels the solid path - so it
+     * gets the dash, and the arrow says which way the answer moves. Left out
+     * where the two are wired directly: the solid line already says it.
+     */
+    const saves = nodes
+      .map((node) => ({ key: node.id, data: node.data as NodeData }))
+      .filter(
+        (node) =>
+          node.data.kind === 'AGENT' &&
+          node.data.outputNodeKey !== null &&
+          nodes.some((target) => target.id === node.data.outputNodeKey) &&
+          !edges.some((edge) => edge.source === node.key && edge.target === node.data.outputNodeKey),
+      )
+      .map((node) => ({
+        id: `saves:${node.key}->${node.data.outputNodeKey}`,
+        source: node.key,
+        target: node.data.outputNodeKey as string,
+        type: 'carried',
+        data: {
+          says: [],
+          points: edgePoints[`saves:${node.key}->${node.data.outputNodeKey}`],
+          onPoints: setPoints,
+        },
+        style: DEPENDENCY_LINE,
+        markerEnd: DEPENDENCY_ARROW,
+        selectable: false,
+        deletable: false,
+        focusable: false,
+        reconnectable: false,
+      }));
+
+    return [...carrying, ...loose, ...saves];
+  }, [edges, nodes, carried, edgePoints, setPoints, kindOfNode]);
 
   /*
    * Nothing tells us an edge has gone - it simply stops being in the list - so
@@ -2260,6 +2336,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
               conditionId: node.conditionId,
               objectId: node.objectId ?? null,
               outputObjectId: node.outputObjectId ?? null,
+              outputNodeKey: node.outputNodeKey ?? null,
               imageModelId: node.imageModelId ?? null,
               outputName: node.outputName ?? null,
               icon: node.icon ?? null,
@@ -2490,6 +2567,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           objectId: null,
           // Prose until a shape is chosen, which is what an agent always was.
           outputObjectId: null,
+          outputNodeKey: null,
           imageModelId: null,
           /*
            * An agent starts with its answer named.
@@ -2661,6 +2739,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           data.conditionId === draft.conditionId &&
           data.objectId === draft.objectId &&
           data.outputObjectId === draft.outputObjectId &&
+          data.outputNodeKey === draft.outputNodeKey &&
           data.imageModelId === draft.imageModelId &&
           data.outputName === draft.outputName &&
           data.icon === draft.icon &&
@@ -3060,6 +3139,7 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
           conditionId: data.conditionId,
           objectId: data.objectId,
           outputObjectId: data.outputObjectId,
+          outputNodeKey: data.outputNodeKey,
           imageModelId: data.imageModelId,
           outputName: data.outputName,
           icon: data.icon,
@@ -3143,6 +3223,9 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
             // ports grow a field per entry of it, and they have to grow when
             // the shape is picked rather than at the next save.
             data.outputObjectId,
+            // In for the same reason: pointing at an object node derives the
+            // shape and the ports on the preview, not at the next save.
+            data.outputNodeKey,
             data.imageModelId,
             data.outputName,
             /*
@@ -4103,7 +4186,7 @@ Change the keystroke in Preferences.`}
                           {t('Answer Shape')}
                         </label>
                         <FieldHint label={t('Answer Shape')}>
-                          {t('The agent must answer a JSON object of this shape; empty keeps prose.')}
+                          {t('The agent must answer a JSON object of this shape; empty keeps prose. An object node saves the answer into that node.')}
                         </FieldHint>
                       </span>
                       <span className={styles.labelLinks}>
@@ -4114,11 +4197,11 @@ Change the keystroke in Preferences.`}
                         >
                           {t('New')}
                         </button>
-                        {draft.outputObjectId !== null && (
+                        {shapeJumpId !== null && (
                           <Link
-                            to={`/workspace/${workspaceId}/objects/${draft.outputObjectId}`}
+                            to={`/workspace/${workspaceId}/objects/${shapeJumpId}`}
                             className={styles.definitionJump}
-                            onClick={leavingFor(`/workspace/${workspaceId}/objects/${draft.outputObjectId}`)}
+                            onClick={leavingFor(`/workspace/${workspaceId}/objects/${shapeJumpId}`)}
                             title={t('Opens the object this node points at')}
                             aria-label={t('Open the object\'s definition')}
                           >
@@ -4127,16 +4210,42 @@ Change the keystroke in Preferences.`}
                         )}
                       </span>
                     </span>
+                    {/*
+                      One list for the two ways an answer takes a shape. A saved
+                      object holds the answer inline, a fan of dotted paths under
+                      the node's name; an object node on this graph is the
+                      redirection - the answer is held to that node's shape and
+                      saved into it, and the canvas draws the pointing as a
+                      dotted line with an arrow, agent to node. The node rows are
+                      prefixed so the two kinds of value cannot collide.
+                    */}
                     <DefinitionPicker
                       id="node-answer-shape"
-                      value={draft.outputObjectId ?? ''}
-                      options={objects.map((shape) => ({ value: shape.id, label: shape.name }))}
+                      value={
+                        draft.outputNodeKey !== null
+                          ? `node:${draft.outputNodeKey}`
+                          : (draft.outputObjectId ?? '')
+                      }
+                      options={[
+                        ...savableNodes.map((into) => ({
+                          value: `node:${into.key}`,
+                          label: into.name,
+                          hint: t('An object node on this graph; the answer is saved into it'),
+                        })),
+                        ...objects.map((shape) => ({ value: shape.id, label: shape.name })),
+                      ]}
                       pinned={{
                         value: '',
                         label: t('Prose'),
                         hint: t('No shape; the agent answers in words'),
                       }}
-                      onChoose={(chosen) => setDraft({ ...draft, outputObjectId: chosen || null })}
+                      onChoose={(chosen) =>
+                        setDraft(
+                          chosen.startsWith('node:')
+                            ? { ...draft, outputNodeKey: chosen.slice('node:'.length), outputObjectId: null }
+                            : { ...draft, outputObjectId: chosen || null, outputNodeKey: null },
+                        )
+                      }
                       placeholder={t('Choose a shape…')}
                       searchPlaceholder={t("Search objects…")}
                     />
