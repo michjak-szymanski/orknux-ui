@@ -1882,6 +1882,7 @@ export const PL: Record<string, string> = {
   "Expand": "Rozwiń",
   "Expand Description": "Rozwiń opis",
   "Edit this in a larger box": "Edytuj to w większym polu",
+  "This graph never finished loading, so saving would store the empty canvas over it. Reload the page first.": "Ten graf nie zdążył się wczytać, więc zapis nadpisałby go pustym płótnem. Najpierw odśwież stronę.",
   "Prose": "Proza",
   "No shape; the agent answers in words": "Bez kształtu; agent odpowiada słowami",
 

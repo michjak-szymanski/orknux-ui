@@ -3343,8 +3343,25 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   const busyRef = useRef(busy);
   busyRef.current = busy;
 
+  /**
+   * Whether what is on screen is the workflow, and so fit to be stored.
+   *
+   * A save sends the whole picture and the server replaces the stored graph
+   * with it - so a canvas that never finished loading must never be saved. It
+   * happened: a load failed while the server was restarting, the canvas came
+   * up empty, and a habitual Ctrl+S stored the emptiness over a graph of six
+   * nodes. Reload is the way forward from a failed load, and this is the
+   * sentence that says so instead of obliging.
+   */
+  function fitToSave(): boolean {
+    if (graphArrived && loadError === null) return true;
+    setError(t('This graph never finished loading, so saving would store the empty canvas over it. Reload the page first.'));
+    return false;
+  }
+
   /** @returns whether the graph is now on the server. */
   async function handleSave(): Promise<boolean> {
+    if (!fitToSave()) return false;
     setBusy(true);
     setError(null);
     try {
@@ -3750,6 +3767,9 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
   }
 
   async function handlePublish() {
+    // The same rule the save holds: publishing saves first, and a canvas
+    // that never loaded is not the workflow.
+    if (!fitToSave()) return;
     setBusy(true);
     setError(null);
     try {
