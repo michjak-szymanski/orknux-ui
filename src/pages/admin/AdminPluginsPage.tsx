@@ -63,6 +63,36 @@ interface Asking {
   capabilities: PluginPermission[];
 }
 
+/**
+ * A plugin's face, drawn safely.
+ *
+ * An SVG from a marketplace is somebody else's markup, and markup put into a
+ * page can carry a script. An `<img>` cannot: a browser renders an SVG behind
+ * one as a picture and runs nothing in it, so the drawing arrives as a data
+ * URI rather than as elements. An emoji is a character and stands as itself;
+ * a URL is drawn from where it is, the way any other picture is.
+ */
+function Face({ icon, size }: { icon: string | null; size: number }) {
+  if (icon === null || icon.trim() === '') {
+    return <span aria-hidden="true">🧩</span>;
+  }
+  const held = icon.trim();
+  if (held.startsWith('<svg') || held.startsWith('<?xml')) {
+    return (
+      <img
+        src={`data:image/svg+xml;utf8,${encodeURIComponent(held)}`}
+        alt=""
+        width={size}
+        height={size}
+      />
+    );
+  }
+  if (held.startsWith('http://') || held.startsWith('https://')) {
+    return <img src={held} alt="" width={size} height={size} />;
+  }
+  return <span aria-hidden="true">{held}</span>;
+}
+
 /** Which half of the screen is being read. */
 type Tab = 'installed' | 'catalog';
 
@@ -368,7 +398,14 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
     return (
       <div key={plugin.id} className={plugin.enabled ? styles.row : `${styles.row} ${styles.rowOff}`}>
         <span className={styles.colName}>
-          <img className={styles.icon} src={puzzleIcon} alt="" width={16} height={16} />
+          {/* The face it came with, or the shape every plugin shares. */}
+          <span className={styles.icon}>
+            {plugin.icon === null ? (
+              <img src={puzzleIcon} alt="" width={16} height={16} />
+            ) : (
+              <Face icon={plugin.icon} size={18} />
+            )}
+          </span>
           <span className={styles.nameBlock}>
             <span className={styles.name}>
               {plugin.name}
@@ -740,8 +777,27 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
                     <Loader />
                   </p>
                 )}
+                {/*
+                  The one thing on this screen that needs the marketplace, and
+                  the one thing an outage takes away. Said plainly, with what
+                  is *not* affected beside it: everything installed goes on
+                  running, because a plugin is stored here — source, libraries
+                  and the face it wears — and nothing asks the marketplace
+                  again until somebody opens this shelf.
+                */}
                 {catalogError !== null && (
-                  <p className={`${styles.notice} ${styles.noticeError}`}>{catalogError}</p>
+                  <div className={styles.catalogDown}>
+                    <p className={styles.catalogDownLine}>{catalogError}</p>
+                    <p className={styles.catalogDownNote}>
+                      {t('Only this list is affected. Every plugin already installed keeps running, and Local still loads a file of your own.')}
+                    </p>
+                    <button
+                      type="button"
+                      className={styles.refresh}
+                      disabled={catalogLoading}
+                      onClick={() => browse(true)}
+                    >{t('Try again')}</button>
+                  </div>
                 )}
                 {!catalogLoading && catalogError === null && listings?.length === 0 && (
                   <p className={styles.notice}>{t('The marketplace offers nothing yet.')}</p>
@@ -761,12 +817,8 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
                       aria-pressed={reading === listing.key}
                       onClick={() => setReading(listing.key)}
                     >
-                      <span className={styles.listingIcon} aria-hidden="true">
-                        {listing.icon !== null && listing.icon.includes('/') ? (
-                          <img src={listing.icon} alt="" width={22} height={22} />
-                        ) : (
-                          listing.icon ?? '🧩'
-                        )}
+                      <span className={styles.listingIcon}>
+                        <Face icon={listing.icon} size={22} />
                       </span>
                       <span className={styles.listingBody}>
                         <span className={styles.listingName}>
@@ -800,12 +852,8 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
                   <>
                     <div className={styles.detailsHead}>
                       <div className={styles.detailsTitle}>
-                        <span className={styles.listingIcon} aria-hidden="true">
-                          {open.icon !== null && open.icon.includes('/') ? (
-                            <img src={open.icon} alt="" width={26} height={26} />
-                          ) : (
-                            open.icon ?? '🧩'
-                          )}
+                        <span className={styles.listingIcon}>
+                          <Face icon={open.icon} size={26} />
                         </span>
                         <span>
                           <span className={styles.detailsName}>{open.name}</span>

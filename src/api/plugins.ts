@@ -61,6 +61,12 @@ export interface Plugin {
   /** Where it came from, when that was the marketplace. Null for a file or a URL. */
   marketplaceKey: string | null;
   marketplaceVersion: string | null;
+  /**
+   * The face it wears: the SVG itself, or an emoji. Copied in at install, so
+   * it draws whether or not the marketplace can be reached. Null for a plugin
+   * loaded from a file.
+   */
+  icon: string | null;
 }
 
 /** One plugin the marketplace offers, with what is installed here folded in. */
@@ -190,7 +196,7 @@ export interface PluginFunctionDeclaration {
 
 const PLUGIN_FIELDS = `
   id key name filename sizeBytes apiVersion sha256 uploadedAt uploadedBy
-  enabled libraries marketplaceKey marketplaceVersion
+  enabled libraries marketplaceKey marketplaceVersion icon
   declaredFunctions { name description returnType signature params { name type } }
   declaredParameters { name description type required secret }
   permissions { name summary }

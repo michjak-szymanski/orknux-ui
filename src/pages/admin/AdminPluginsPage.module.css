@@ -817,6 +817,32 @@
   cursor: default;
 }
 
+/*
+ * The marketplace being down, said where it is felt. A refusal note rather
+ * than a red error row: nothing here has gone wrong with this installation,
+ * and the second line is the half that matters - what still works.
+ */
+.catalogDown {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-8);
+  padding: var(--space-16);
+}
+
+.catalogDownLine {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.catalogDownNote {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
 /* The two panes stack where there is no room to sit side by side. */
 @media (max-width: 1100px) {
   .catalog {
