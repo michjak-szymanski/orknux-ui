@@ -1773,6 +1773,35 @@ function WorkflowEditor({ session, onSignOut }: WorkflowEditorPageProps) {
    */
   const ownFields = useRef(new Map<string, NodeMapping[]>());
   const [draft, setDraft] = useState<NodeData | null>(null);
+
+  /**
+   * The text field opened out into a big box, or null.
+   *
+   * A prompt does not fit a one-line field, and a one-line field is most of
+   * what the panel has room for - so every value field and the description
+   * carry an Expand that opens the same text in a box the size of the screen.
+   * The box edits the draft directly, exactly as the small field does: there
+   * is nothing to save or cancel, only somewhere bigger to type.
+   */
+  const [expandedField, setExpandedField] = useState<
+    { target: 'description' } | { target: 'mapping'; index: number; label: string } | null
+  >(null);
+
+  // The box is about one node's field; picking another node closes it.
+  useEffect(() => setExpandedField(null), [selectedKey]);
+
+  // Escape closes it, the way it closes the builder panel beside the page.
+  useEffect(() => {
+    if (expandedField === null) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        setExpandedField(null);
+      }
+    }
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [expandedField]);
   /** The field whose name is mid-edit, if any, and the name it had. */
   const [fieldEdit, setFieldEdit] = useState<{ index: number; was: string } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -4702,6 +4731,23 @@ Change the keystroke in Preferences.`}
                                     }
                                   >{t('Remove')}</button>
                                 )}
+                                {/*
+                                  Somewhere bigger to type. Only on a value: a
+                                  reference is picked, not written, and a big
+                                  box for a field name would be a big box for
+                                  twelve characters.
+                                */}
+                                {mapping.mode === 'VALUE' && (
+                                  <button
+                                    type="button"
+                                    className={styles.parameterSync}
+                                    aria-label={`Expand ${mapping.name}`}
+                                    title={t('Edit this in a larger box')}
+                                    onClick={() =>
+                                      setExpandedField({ target: 'mapping', index, label: mapping.name })
+                                    }
+                                  >{t('Expand')}</button>
+                                )}
                                 {(() => {
                                   // The node holds a copy on purpose, and a copy
                                   // drifts. This is how the definition's wording
@@ -5066,9 +5112,18 @@ Change the keystroke in Preferences.`}
                 )}
 
                 <div className={styles.field}>
-                  <label className={styles.label} htmlFor="node-description">
-                    {t('Description')}
-                  </label>
+                  <span className={styles.labelRow}>
+                    <label className={styles.label} htmlFor="node-description">
+                      {t('Description')}
+                    </label>
+                    <button
+                      type="button"
+                      className={styles.parameterSync}
+                      aria-label={t('Expand Description')}
+                      title={t('Edit this in a larger box')}
+                      onClick={() => setExpandedField({ target: 'description' })}
+                    >{t('Expand')}</button>
+                  </span>
                   <div className={`${styles.inputWrapper} ${styles.inputWrapperTall}`}>
                     <textarea
                       id="node-description"
@@ -5104,6 +5159,61 @@ Change the keystroke in Preferences.`}
           )}
         </aside>
       </div>
+
+      {/*
+        The big box an Expand opens. It edits the draft directly, exactly as
+        the small field it stands for does - there is nothing to save or
+        cancel, only somewhere the size of the screen to type - so Done, the
+        backdrop and Escape all just close it.
+      */}
+      {expandedField !== null && draft !== null && (
+        <div
+          className={styles.expandOverlay}
+          role="presentation"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setExpandedField(null);
+          }}
+        >
+          <div
+            className={styles.expandDialog}
+            role="dialog"
+            aria-label={expandedField.target === 'description' ? t('Description') : expandedField.label}
+          >
+            <div className={styles.expandHead}>
+              <span className={styles.expandTitle}>
+                {expandedField.target === 'description' ? t('Description') : expandedField.label}
+              </span>
+              <button
+                type="button"
+                className={styles.parameterSync}
+                onClick={() => setExpandedField(null)}
+              >{t('Done')}</button>
+            </div>
+            <textarea
+              className={styles.expandText}
+              autoFocus
+              spellCheck={false}
+              value={
+                expandedField.target === 'description'
+                  ? (draft.description ?? '')
+                  : (draft.mappings[expandedField.index]?.expression ?? '')
+              }
+              onChange={(event) =>
+                setDraft(
+                  expandedField.target === 'description'
+                    ? { ...draft, description: event.target.value || null }
+                    : {
+                        ...draft,
+                        mappings: draft.mappings.map((held, at) =>
+                          at === expandedField.index ? { ...held, expression: event.target.value } : held,
+                        ),
+                      },
+                )
+              }
+            />
+          </div>
+        </div>
+      )}
 
       <IconPickerDialog
         open={browsingIcons}

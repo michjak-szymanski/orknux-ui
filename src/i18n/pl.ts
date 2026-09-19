@@ -1879,6 +1879,9 @@ export const PL: Record<string, string> = {
   "Answer Shape": "Kształt odpowiedzi",
   "The agent must answer a JSON object of this shape; empty keeps prose. An object node saves the answer into that node.": "Agent musi odpowiedzieć obiektem JSON o tym kształcie; puste zostawia prozę. Węzeł obiektu zapisuje odpowiedź do tego węzła.",
   "An object node on this graph; the answer is saved into it": "Węzeł obiektu na tym grafie; odpowiedź zostaje do niego zapisana",
+  "Expand": "Rozwiń",
+  "Expand Description": "Rozwiń opis",
+  "Edit this in a larger box": "Edytuj to w większym polu",
   "Prose": "Proza",
   "No shape; the agent answers in words": "Bez kształtu; agent odpowiada słowami",
 

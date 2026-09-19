@@ -507,6 +507,11 @@ export const TESTS = [
     alone: true,
   },
   {
+    name: 'field-expand-check',
+    what: "a node panel's text fields open out into a big box that edits the same draft",
+    needs: ['workspace'],
+  },
+  {
     name: 'object-default-name-check',
     what: 'a shape picked into a nameless object node names the output after itself',
     needs: ['workspace'],
