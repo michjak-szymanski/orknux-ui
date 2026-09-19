@@ -155,6 +155,32 @@
   width: 80px;
 }
 
+/*
+ * The Installed table's own three, which the Local one does not draw: what a
+ * plugin calls itself, whose it is, and where it came from. A file's
+ * questions - which API, how large, loaded when - belong to the shelf where
+ * files are loaded, and carrying both sets everywhere was five columns of
+ * which two mattered wherever you happened to be standing.
+ */
+.colVersion {
+  flex-shrink: 0;
+  width: 90px;
+  font-variant-numeric: tabular-nums;
+}
+
+.colAuthor {
+  flex-shrink: 0;
+  width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.colSource {
+  flex-shrink: 0;
+  width: 110px;
+}
+
 .colWhen {
   flex-shrink: 0;
   width: 240px;

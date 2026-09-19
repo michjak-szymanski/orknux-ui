@@ -43,6 +43,21 @@ record(await page.getByRole('tab', { name: 'Catalog' }).isVisible(), 'and Catalo
 await page.waitForTimeout(600);
 record(asks.length === 0, `Installed asks the marketplace nothing (${asks.length} calls)`);
 
+/*
+ * The two tables answer two questions, so they carry two sets of columns.
+ * Installed is the plugin's own account of itself; a file's questions - which
+ * API, how large, loaded when - belong on the shelf where files are loaded.
+ * Carrying both sets everywhere is what this pins shut.
+ */
+const installedColumns = (await page.locator('[class*="tableHeader"]').first().innerText())
+  .split('\n')
+  .map((one) => one.trim().toLowerCase())
+  .filter(Boolean);
+record(
+  installedColumns.join('|') === 'plugin|version|author|source|actions',
+  `Installed says what a plugin is (${installedColumns.join(', ')})`,
+);
+
 await page.getByRole('tab', { name: 'Catalog' }).click();
 await page.waitForSelector('text=Marketplace', { timeout: 10_000 });
 await page.waitForTimeout(600);
@@ -73,6 +88,15 @@ await page.waitForTimeout(400);
 const local = await page.locator('main, body').first().innerText();
 record(local.includes('Load Plugin'), 'Local still offers to load a file');
 record(local.includes('Load from URL'), 'and to load from a URL');
+
+const localColumns = (await page.locator('[class*="tableHeader"]').first().innerText())
+  .split('\n')
+  .map((one) => one.trim().toLowerCase())
+  .filter(Boolean);
+record(
+  localColumns.join('|') === 'name|api|size|loaded|actions',
+  `and Local asks a file's questions (${localColumns.join(', ')})`,
+);
 
 // Trying again is a button, and it asks exactly one more time.
 await page.getByRole('button', { name: 'Marketplace', exact: true }).click();

@@ -407,7 +407,18 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
   const open = reading === null ? undefined : listings?.find((one) => one.key === reading);
 
   /** One plugin as a row: what it is, and what can be done to it. */
-  function pluginRow(plugin: Plugin) {
+  function pluginRow(plugin: Plugin, where: Source | 'installed' = 'installed') {
+    /*
+     * Two tables, two sets of columns, because they answer two questions.
+     *
+     * Installed is read to know what this installation *has*: what each
+     * plugin is called, what it is for, whose it is, which version. Local is
+     * read while loading files by hand, where the questions are the file's —
+     * which API it targets, how large it is, when it came in and from whom.
+     * One table carrying both was five columns of which two mattered
+     * wherever you happened to be standing.
+     */
+    const asFile = where === 'local';
     const listing = listingFor(plugin);
     return (
       <div key={plugin.id} className={plugin.enabled ? styles.row : `${styles.row} ${styles.rowOff}`}>
@@ -425,16 +436,15 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
               {plugin.name}
               {!plugin.enabled && <span className={styles.offMark}>{t('off')}</span>}
               {/*
-                What it calls itself, where its manifest says — and where it
-                came from, where that is the catalog: the version it was
-                installed at, so the Update beside it means something. The
-                catalog's wins when they differ, because that is the one the
-                update is measured against.
+                Beside the name only where nothing else carries them: the
+                Installed table gives the version and the author columns of
+                their own, and saying a thing twice on one row is a row that
+                has to be read twice.
               */}
-              {(plugin.marketplaceVersion ?? plugin.version) !== null && (
+              {asFile && (plugin.marketplaceVersion ?? plugin.version) !== null && (
                 <span className={styles.fromMarket}>{plugin.marketplaceVersion ?? plugin.version}</span>
               )}
-              {plugin.author !== null && <span className={styles.byline}>{plugin.author}</span>}
+              {asFile && plugin.author !== null && <span className={styles.byline}>{plugin.author}</span>}
             </span>
             {/*
               The line the plugin wrote about itself, above what it declares:
@@ -492,15 +502,35 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
             )}
           </span>
         </span>
-        {/* The plugin API it asked for, which the server agreed to. */}
-        <span className={styles.colApi}>
-          <span className={styles.api}>v{plugin.apiVersion}</span>
-        </span>
-        <span className={`${styles.colSize} ${styles.muted}`}>{pluginSize(plugin.sizeBytes)}</span>
-        <span className={`${styles.colWhen} ${styles.muted}`}>
-          {timeAgo(plugin.uploadedAt)}
-          {plugin.uploadedBy !== '' && ` by ${plugin.uploadedBy}`}
-        </span>
+        {asFile ? (
+          <>
+            {/* The plugin API it asked for, which the server agreed to. */}
+            <span className={styles.colApi}>
+              <span className={styles.api}>v{plugin.apiVersion}</span>
+            </span>
+            <span className={`${styles.colSize} ${styles.muted}`}>{pluginSize(plugin.sizeBytes)}</span>
+            <span className={`${styles.colWhen} ${styles.muted}`}>
+              {timeAgo(plugin.uploadedAt)}
+              {plugin.uploadedBy !== '' && ` by ${plugin.uploadedBy}`}
+            </span>
+          </>
+        ) : (
+          <>
+            {/*
+              What it calls itself and whose it is — the catalog's version
+              where there is one, because that is what an update is measured
+              against. An em dash where a plugin says nothing, rather than a
+              blank that reads as a column that failed to load.
+            */}
+            <span className={`${styles.colVersion} ${styles.muted}`}>
+              {plugin.marketplaceVersion ?? plugin.version ?? '—'}
+            </span>
+            <span className={`${styles.colAuthor} ${styles.muted}`}>{plugin.author ?? '—'}</span>
+            <span className={`${styles.colSource} ${styles.muted}`}>
+              {plugin.marketplaceKey !== null ? t('Marketplace') : t('Local')}
+            </span>
+          </>
+        )}
         <span className={styles.colActions}>
           {/*
             An update, where the catalog has moved on and this installation
@@ -575,8 +605,19 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
     );
   }
 
-  /** The header a list of plugins carries, said once. */
-  const tableHead = (
+  /** What is installed here: the plugin's own account of itself. */
+  const installedHead = (
+    <div className={styles.tableHeader}>
+      <span className={styles.colName}>{t('Plugin')}</span>
+      <span className={styles.colVersion}>{t('Version')}</span>
+      <span className={styles.colAuthor}>{t('Author')}</span>
+      <span className={styles.colSource}>{t('Source')}</span>
+      <span className={styles.colActions}>{t('Actions')}</span>
+    </div>
+  );
+
+  /** And what was loaded by hand: the questions a file raises. */
+  const localHead = (
     <div className={styles.tableHeader}>
       <span className={styles.colName}>{t('Name')}</span>
       <span className={styles.colApi}>API</span>
@@ -744,7 +785,7 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
 
       {tab === 'installed' && (
         <section className={styles.card}>
-          {tableHead}
+          {installedHead}
 
           {loading && (
             <p className={styles.notice}>
@@ -759,7 +800,7 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
             </p>
           )}
 
-          {plugins?.map(pluginRow)}
+          {plugins?.map((one) => pluginRow(one, 'installed'))}
         </section>
       )}
 
@@ -1022,7 +1063,7 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
                   so the list that shows them is the list that says so.
                 */}
                 <div className={styles.card}>
-                  {tableHead}
+                  {localHead}
                   {loading && (
                     <p className={styles.notice}>
                       <Loader />
@@ -1031,7 +1072,7 @@ export function AdminPluginsPage({ session, onSignOut }: AdminPluginsPageProps) 
                   {!loading && hand.length === 0 && (
                     <p className={styles.notice}>{t('Nothing has been loaded from a file or a URL.')}</p>
                   )}
-                  {hand.map(pluginRow)}
+                  {hand.map((one) => pluginRow(one, 'local'))}
                 </div>
               </div>
             </div>
