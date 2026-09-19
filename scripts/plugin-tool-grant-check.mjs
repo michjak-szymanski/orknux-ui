@@ -133,6 +133,12 @@ record(toolsPage.includes(`${KEY}_standalone`), 'the standalone tool included');
 const badge = page.locator(`text=${KEY}_fronted`).locator('..').locator('span', { hasText: KEY });
 record((await badge.count()) > 0, 'and the row wears the plugin that offers it');
 
+// And one plugin by name, which is the question people actually ask.
+await page.selectOption('select[aria-label="Which tools to list"]', { label: KEY });
+await page.waitForTimeout(800);
+const oneToolPlugin = await page.locator('main, body').first().innerText();
+record(oneToolPlugin.includes(`${KEY}_fronted`), 'the sieve narrows the tools to one plugin by name');
+
 await page.goto(`${BASE}/workspace/${WORKSPACE}/functions`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('select[aria-label="Which functions to list"]', { timeout: 20_000 });
 await page.selectOption('select[aria-label="Which functions to list"]', 'PLUGIN');
@@ -143,6 +149,13 @@ await page.selectOption('select[aria-label="Which functions to list"]', 'WORKSPA
 await page.waitForTimeout(800);
 const ownOnly = await page.locator('main, body').first().innerText();
 record(!ownOnly.includes(`${KEY}_workflowOnly`), "and the workspace's-own sieve leaves them out");
+await page.selectOption('select[aria-label="Which functions to list"]', { label: KEY });
+await page.waitForTimeout(800);
+const onePlugin = await page.locator('main, body').first().innerText();
+record(
+  onePlugin.includes(`${KEY}_fronted`) && onePlugin.includes(`${KEY}_workflowOnly`),
+  'the sieve narrows the functions to one plugin by name',
+);
 
 record(await unloadMine(), 'the scratch plugin is unloaded again');
 

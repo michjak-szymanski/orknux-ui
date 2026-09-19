@@ -8,7 +8,7 @@ import {
   timeAgo,
   valueTypeLabel,
 } from '../../api/functions';
-import type { FunctionScope, WorkspaceFunction } from '../../api/functions';
+import type { WorkspaceFunction } from '../../api/functions';
 import type { SessionUser } from '../../api/session';
 import copyIcon from '../../assets/copy.svg';
 import settingsIcon from '../../assets/settings-14.svg';
@@ -52,11 +52,32 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
   const [page, setPage] = usePageWithin(workspaceId);
   const [pageSize, setPageSize] = usePageSize('functions');
   /*
-   * One origin, or both. The list has carried the plugins' functions since
-   * they existed, and rows named slack_this and github_that among the
-   * workspace's own are findable but not siftable - this is the sieve.
+   * One origin, or both, or one plugin by name. The list has carried the
+   * plugins' functions since they existed, and rows named slack_this and
+   * github_that among the workspace's own are findable but not siftable -
+   * this is the sieve. A plugin's own row in it is `plugin:<id>`.
    */
-  const [scope, setScope] = useState<FunctionScope | ''>('');
+  const [scope, setScope] = useState<string>('');
+  /** The plugins with functions here, for the sieve's own rows. */
+  const [pluginChoices, setPluginChoices] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    if (workspaceId === '') return;
+    let current = true;
+    fetchWorkspaceFunctions(workspaceId, 0, ALL_OF_THEM, 'PLUGIN')
+      .then((all) => {
+        if (!current) return;
+        const seen = new Map<string, string>();
+        all.content.forEach((fn) => {
+          if (fn.plugin !== null) seen.set(fn.plugin.id, fn.plugin.name);
+        });
+        setPluginChoices([...seen.entries()].map(([id, name]) => ({ id, name })));
+      })
+      .catch(() => undefined);
+    return () => {
+      current = false;
+    };
+  }, [workspaceId]);
   /*
    * A function just made, arriving from the editor as `?made=<id>`.
    *
@@ -98,7 +119,13 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
     if (workspaceId === '') return;
     setLoading(true);
     setError(null);
-    fetchWorkspaceFunctions(workspaceId, page - 1, pageSize, scope === '' ? undefined : scope)
+    fetchWorkspaceFunctions(
+      workspaceId,
+      page - 1,
+      pageSize,
+      scope === 'WORKSPACE' || scope === 'PLUGIN' ? scope : undefined,
+      scope.startsWith('plugin:') ? scope.slice('plugin:'.length) : undefined,
+    )
       .then((result) => {
         setFunctions(result);
         setLoading(false);
@@ -170,7 +197,7 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
               aria-label={t('Which functions to list')}
               value={scope}
               onChange={(event) => {
-                setScope(event.target.value as FunctionScope | '');
+                setScope(event.target.value);
                 // Which page somebody is on means nothing in another sieve.
                 setPage(1);
               }}
@@ -178,6 +205,12 @@ export function WorkspaceFunctionsPage({ session, onSignOut }: WorkspaceFunction
               <option value="">{t('All sources')}</option>
               <option value="WORKSPACE">{t('The workspace\'s own')}</option>
               <option value="PLUGIN">{t('From plugins')}</option>
+              {/* And each plugin by name, which is the question people ask. */}
+              {pluginChoices.map((plugin) => (
+                <option key={plugin.id} value={`plugin:${plugin.id}`}>
+                  {plugin.name}
+                </option>
+              ))}
             </select>
             <ImportComponentsButton workspaceId={workspaceId} onImported={load} />
             <UseTemplateButton workspaceId={workspaceId} kind="FUNCTION" onImported={load} />

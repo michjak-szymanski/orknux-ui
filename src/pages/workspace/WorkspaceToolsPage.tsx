@@ -59,9 +59,23 @@ export function WorkspaceToolsPage({ session, onSignOut }: WorkspaceToolsPagePro
    * not a place to browse - so the browser lists them beside the workspace's
    * own, each row saying which plugin offers it.
    */
-  const [source, setSource] = useState<'' | 'WORKSPACE' | 'PLUGIN'>('');
+  const [source, setSource] = useState<string>('');
+  /** The plugins offering tools, for the sieve's own rows. */
+  const [pluginChoices, setPluginChoices] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+
+  useEffect(() => {
+    let current = true;
+    fetchPluginTools()
+      .then((offered) => {
+        if (current) setPluginChoices([...new Set(offered.map((one) => one.plugin))]);
+      })
+      .catch(() => undefined);
+    return () => {
+      current = false;
+    };
+  }, []);
 
   const load = useCallback(() => {
     if (workspaceId === '') return;
@@ -83,11 +97,13 @@ export function WorkspaceToolsPage({ session, onSignOut }: WorkspaceToolsPagePro
       return;
     }
 
-    if (source === 'PLUGIN') {
+    if (source === 'PLUGIN' || source.startsWith('plugin:')) {
+      const wanted = source.startsWith('plugin:') ? source.slice('plugin:'.length) : null;
       fetchPluginTools()
         .then((offered) => {
-          setRows(offered.map((one) => ({ kind: 'plugin' as const, offered: one })));
-          setTotal(offered.length);
+          const kept = wanted === null ? offered : offered.filter((one) => one.plugin === wanted);
+          setRows(kept.map((one) => ({ kind: 'plugin' as const, offered: one })));
+          setTotal(kept.length);
           setServerPaged(false);
         })
         .catch(failed);
@@ -148,7 +164,7 @@ export function WorkspaceToolsPage({ session, onSignOut }: WorkspaceToolsPagePro
             aria-label={t('Which tools to list')}
             value={source}
             onChange={(event) => {
-              setSource(event.target.value as '' | 'WORKSPACE' | 'PLUGIN');
+              setSource(event.target.value);
               // Which page somebody is on means nothing in another sieve.
               setPage(1);
             }}
@@ -156,6 +172,12 @@ export function WorkspaceToolsPage({ session, onSignOut }: WorkspaceToolsPagePro
             <option value="">{t('All sources')}</option>
             <option value="WORKSPACE">{t('The workspace\'s own')}</option>
             <option value="PLUGIN">{t('From plugins')}</option>
+            {/* And each plugin by name, which is the question people ask. */}
+            {pluginChoices.map((plugin) => (
+              <option key={plugin} value={`plugin:${plugin}`}>
+                {plugin}
+              </option>
+            ))}
           </select>
           <ImportComponentsButton workspaceId={workspaceId} onImported={load} />
           <UseTemplateButton workspaceId={workspaceId} kind="TOOL" onImported={load} />

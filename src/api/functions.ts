@@ -152,8 +152,8 @@ const FUNCTION_FIELDS =
    signature timeoutSeconds lastModifiedAt lastModifiedBy`;
 
 const WORKSPACE_FUNCTIONS_QUERY = `
-  query WorkspaceFunctions($workspaceId: ID!, $page: Int!, $size: Int!, $scope: FunctionScope) {
-    workspaceFunctions(workspaceId: $workspaceId, page: $page, size: $size, scope: $scope) {
+  query WorkspaceFunctions($workspaceId: ID!, $page: Int!, $size: Int!, $scope: FunctionScope, $pluginId: ID) {
+    workspaceFunctions(workspaceId: $workspaceId, page: $page, size: $size, scope: $scope, pluginId: $pluginId) {
       content { ${FUNCTION_FIELDS} }
       page
       size
@@ -241,12 +241,15 @@ export async function fetchWorkspaceFunctions(
   page: number,
   size: number,
   scope?: FunctionScope,
+  /** Narrower still: what one plugin brought. Wins over scope. */
+  pluginId?: string,
 ): Promise<PageOf<WorkspaceFunction>> {
   const data = await graphql<{ workspaceFunctions: PageOf<WorkspaceFunction> }>(WORKSPACE_FUNCTIONS_QUERY, {
     workspaceId,
     page,
     size,
     scope: scope ?? null,
+    pluginId: pluginId ?? null,
   });
   return data.workspaceFunctions;
 }
