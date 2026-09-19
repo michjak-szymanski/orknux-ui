@@ -21,12 +21,14 @@
  * canvas already has for a dependency, and a check that hard-codes the dashes
  * would go on passing if somebody gave sessions a third style of their own.
  *
- * The arrowhead is measured too, for the reason the style was changed at all: a
- * dependency with a direction arrow on it still reads as flow. When this was
- * written no line in the editor had one and it asserted exactly that; issue
- * #200 then gave the lines a run travels an arrow, which makes this the check
- * that keeps the two apart. What it asserts now is the shape of the rule: the
- * step points, and neither dependency does.
+ * The arrowhead is measured too, and its story has two turns. When this was
+ * written no line had one and it asserted exactly that; issue #200 gave the
+ * lines a run travels an arrow, and the dependencies deliberately kept none;
+ * then the dependencies gained one as well - the dash says nothing travels
+ * here, and the arrow says which way the data moves, which a plain dash left
+ * to be guessed. What the rule comes to now: every line points, and what
+ * tells a dependency from a step is the dash and the colour its arrow wears -
+ * so a session's arrow must match the dependency's, not the step's.
  *
  * The fixture is built and swept here. It needs no model and never runs: the
  * graph is saved over GraphQL and read back off the canvas, so what is measured
@@ -192,9 +194,14 @@ if (await drawn(page, 'the workflow editor')) {
     );
     const bare = (one) => one.marker === null || one.marker === '' || one.marker === 'none';
     record(
-      bare(session) && bare(reads) && !bare(flow),
-      `the arrow is on the step and on neither dependency: ` +
+      !bare(session) && !bare(reads) && !bare(flow),
+      `every line points; the dash and the arrow's colour are what tell them apart: ` +
         `${session.marker || 'none'} / ${flow.marker} / ${reads.marker || 'none'}`,
+    );
+    record(
+      session.marker === reads.marker && session.marker !== flow.marker,
+      `the session's arrow is the dependency's, not the step's: ` +
+        `${session.marker} against ${flow.marker}`,
     );
   }
 }

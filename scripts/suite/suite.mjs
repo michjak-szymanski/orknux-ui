@@ -205,7 +205,7 @@ export const TESTS = [
   },
   {
     name: 'flow-arrow-check',
-    what: 'the lines a run travels point, in their own colour, and the dependencies still do not',
+    what: 'every line points in its own colour; the dash and the arrow tell a dependency from a step',
     needs: ['workspace'],
     /*
      * Issue #200. It builds its own graph - a flow line, a failure line and an

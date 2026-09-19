@@ -12,12 +12,13 @@
  * the source end. That second half is the direction claim, and it is why this
  * reads `marker-start` as well.
  *
- * The dependency lines deliberately keep none. A dashed line here means "this
- * node reads a field from that one" or "this agent keeps that conversation" -
- * neither is a step, the validator does not count them towards a node's
- * incoming, and the engine never sees them. `session-edge-check` made that
- * argument first, when it asserted no line had an arrow at all; the arrow is
- * what now separates the two kinds, so both checks say it from their own side.
+ * The dependency lines point too now, in their own colour. They went unpointed
+ * at first - an arrow read as claiming the run's direction - but a dashed line
+ * with an arrow claims nothing about the run: the dash says nothing travels
+ * here, and the arrow says which way the data moves - producer to reader,
+ * agent to the object node it saves into - which a plain dash left to be
+ * guessed. What still separates the two kinds is the dash, and the colour the
+ * arrow wears.
  *
  * The fixture is built and swept here: four agent nodes, one failure branch,
  * one node left unwired to make the dashed line. It needs no model and never
@@ -215,8 +216,14 @@ if (await drawn(page, 'the workflow editor')) {
 
     /* ---- and a dependency still does not point ---- */
     record(
-      reads.end === '' || reads.end === 'none',
-      `the dashed dependency has none, because it is not a step (${JSON.stringify(reads.end)})`,
+      reads.end !== '' && reads.end !== 'none',
+      `the dashed dependency points as well - the dash says nothing travels, ` +
+        `the arrow says which way the data moves (${reads.end})`,
+    );
+    record(reads.defined, "the dependency's arrowhead is really defined");
+    record(
+      reads.headFill !== null && reads.headFill === reads.stroke,
+      `and it wears the dash's own colour (${reads.headFill} against ${reads.stroke})`,
     );
     record(/\d/.test(reads.dash), `and is still the dashed line it was (${reads.dash})`);
   }
