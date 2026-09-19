@@ -1188,6 +1188,20 @@ const FLOW_ARROW = { type: MarkerType.ArrowClosed, width: 18, height: 18 } as co
 /** The same arrowhead, in the colour of whichever line it is ending. */
 const arrowIn = (colour: string) => ({ ...FLOW_ARROW, color: colour });
 
+/**
+ * An object's name as something a reference can point at: words joined, first
+ * letter down - "Slack User Prompt" and "SlackUserPrompt" both come to
+ * slackUserPrompt. Null where nothing referenceable is left, which is a name
+ * of digits and punctuation; the name box simply stays empty then.
+ */
+function referenceableName(name: string): string | null {
+  const words = name.split(/[^A-Za-z0-9]+/).filter((word) => word !== '');
+  const joined = words.map((word, at) => (at === 0 ? word : word[0].toUpperCase() + word.slice(1))).join('');
+  const trimmed = joined.replace(/^[0-9]+/, '');
+  if (trimmed === '') return null;
+  return trimmed[0].toLowerCase() + trimmed.slice(1);
+}
+
 const KIND_CLASS: Record<NodeKind, string> = {
   TRIGGER: 'trigger',
   AGENT: 'agent',
@@ -4447,7 +4461,21 @@ Change the keystroke in Preferences.`}
                         // nothing set aside - a node that opened on a shape -
                         // what is on screen stays, as something to start from.
                         const held = to === null ? ownFields.current.get(key) : undefined;
-                        setDraft({ ...draft, objectId: to, mappings: held ?? draft.mappings });
+                        /*
+                          A shape picked into a nameless node names it after
+                          itself - SlackUserPrompt becomes slackUserPrompt - so
+                          the whole object is referenceable without anybody
+                          knowing to type a name first. Derived rather than a
+                          fixed word, because output names are unique on a
+                          graph and every object node defaulting to the same
+                          one would refuse to save. A name somebody typed, or
+                          a node that already had one, is never touched.
+                        */
+                        const suggested =
+                          to !== null && (draft.outputName === null || draft.outputName.trim() === '')
+                            ? (referenceableName(objects.find((one) => one.id === to)?.name ?? '') ?? draft.outputName)
+                            : draft.outputName;
+                        setDraft({ ...draft, objectId: to, mappings: held ?? draft.mappings, outputName: suggested });
                       }}
                       placeholder={t('Choose a shape…')}
                       searchPlaceholder={t("Search objects…")}

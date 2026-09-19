@@ -507,6 +507,11 @@ export const TESTS = [
     alone: true,
   },
   {
+    name: 'object-default-name-check',
+    what: 'a shape picked into a nameless object node names the output after itself',
+    needs: ['workspace'],
+  },
+  {
     name: 'agent-save-into-check',
     what: "an agent's answer saved into an object node: derived shape, dashed arrowed line, named on the panel",
     needs: ['workspace'],
