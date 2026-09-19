@@ -5,8 +5,8 @@ import { Link } from 'react-router-dom';
 import { fetchMemoryBudget, updateAgent } from '../api/agents';
 import type { Agent, SessionMemoryBudget } from '../api/agents';
 import { fetchPluginTools } from '../api/plugins';
-import { fetchMcpServers } from '../api/integrations';
-import type { McpServer } from '../api/integrations';
+import { fetchMcpServers, fetchWorkspaceConnections } from '../api/integrations';
+import type { McpServer, WorkspaceConnection } from '../api/integrations';
 import { fetchMemoryCatalogs } from '../api/memory';
 import type { MemoryCatalog } from '../api/memory';
 import { answers, fetchModels } from '../api/models';
@@ -443,6 +443,8 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
   const [memoryCatalogs, setMemoryCatalogs] = useState<string[]>(agent.memoryCatalogs);
   const [skillCatalogs, setSkillCatalogs] = useState<string[]>(agent.skillCatalogs);
   const [tools, setTools] = useState<string[]>(agent.tools);
+  /** Which of the workspace's connections it may name, by id - see the grant list below. */
+  const [connectionIds, setConnectionIds] = useState<string[]>(agent.connectionIds);
   const [icon, setIcon] = useState<string | null>(agent.icon ?? null);
   /**
    * The share of the model's window a session may take back, or null to follow
@@ -532,6 +534,24 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
   const serverCatalogue = useCatalogue<McpServer>(t('MCP servers'), () => fetchMcpServers(workspaceId), [workspaceId], {
     skip: noWorkspace,
   });
+  /*
+   * The workspace's connections, for the grant list below.
+   *
+   * The grant is stored by id - a connection is referenced by id everywhere
+   * else - but nobody grants "9", so the list draws names and this form
+   * translates at its edges: ids to names going in, names back to ids in
+   * onChange. A granted id whose connection is gone has no name to translate
+   * to and is drawn as `#id`, which is also how it translates back, so it can
+   * still be revoked.
+   */
+  const connectionCatalogue = useCatalogue<WorkspaceConnection>(
+    t('connections'),
+    () => fetchWorkspaceConnections(workspaceId),
+    [workspaceId],
+    { skip: noWorkspace },
+  );
+  const connectionName = (id: string) =>
+    connectionCatalogue.items.find((held) => held.id === id)?.name ?? `#${id}`;
 
   /*
    * Only the models are unpacked here. The three grant lists are handed the
@@ -640,6 +660,7 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
         memoryCatalogs,
         skillCatalogs,
         tools,
+        connectionIds,
         icon,
         // Sent every save rather than left out, which is what lets the slider
         // put it back to the default.
@@ -651,6 +672,7 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
       setMemoryCatalogs(updated.memoryCatalogs);
       setSkillCatalogs(updated.skillCatalogs);
       setTools(updated.tools);
+      setConnectionIds(updated.connectionIds);
       setModelId(updated.modelId ?? '');
       setShare(updated.memoryShare);
       setSaved(true);
@@ -974,6 +996,36 @@ export function AgentForm({ workspaceId, agent, styles, heading, onSaved, onCanc
           linkOf={(tool) => tool.link}
           granted={tools}
           onChange={setTools}
+        />
+
+        {/*
+          And what it may point those tools at. The one grant that comes with a
+          standing instruction rather than an ability: the briefing lists these
+          and tells the agent to name one only when explicitly told to, so a
+          tick here widens what the agent *may* do without changing what it
+          does unprompted.
+        */}
+        <GrantList<WorkspaceConnection>
+          label={t('Connections')}
+          what="connections"
+          styles={styles}
+          catalogue={connectionCatalogue}
+          empty={t('No connections in this workspace yet.')}
+          hint={t('Connections the agent may name where a tool takes one. It is told to use one only when explicitly asked to, and to leave tools to their configured defaults otherwise.')}
+          keyOf={(connection) => connection.id}
+          nameOf={(connection) => connection.name}
+          metaOf={(connection) => connection.type.toLowerCase()}
+          linkOf={(connection) => `/workspace/${workspaceId}/integrations/connections/${connection.id}`}
+          granted={connectionIds.map(connectionName)}
+          onChange={(names) =>
+            setConnectionIds(
+              names.map(
+                (name) =>
+                  connectionCatalogue.items.find((held) => held.name === name)?.id ??
+                  name.replace(/^#/, ''),
+              ),
+            )
+          }
         />
 
         {/*

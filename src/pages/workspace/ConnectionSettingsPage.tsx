@@ -8,6 +8,7 @@ import {
   disconnectWorkspaceConnection,
   fetchWorkspaceConnection,
   revealWorkspaceConnectionAppToken,
+  revealWorkspaceConnectionUserToken,
   revealWorkspaceConnectionSecret,
   statusLabel,
   testWorkspaceConnection,
@@ -133,6 +134,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
    */
   const secret = useSecretField();
   const appToken = useSecretField();
+  const userToken = useSecretField();
   const { variables, refresh: refreshVariables } = useWorkspaceVariables(workspaceId);
   const [urlOverride, setUrlOverride] = useState('');
   const [smtpUsername, setSmtpUsername] = useState('');
@@ -175,6 +177,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
         setSmtpPort(found.smtpPort === null ? '' : String(found.smtpPort));
         secret.reset({ stored: found.secretSet, variable: found.secretVariableId });
         appToken.reset({ stored: found.appTokenSet, variable: found.appTokenVariableId });
+        userToken.reset({ stored: found.userTokenSet, variable: found.userTokenVariableId });
       })
       .catch((cause: unknown) => {
         if (abandoned) return;
@@ -243,6 +246,14 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
       appToken.show((await revealWorkspaceConnectionAppToken(connectionId)) ?? '');
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : t('Could not reveal the app-level token.'));
+    }
+  }
+
+  async function handleRevealUserToken() {
+    try {
+      userToken.show((await revealWorkspaceConnectionUserToken(connectionId)) ?? '');
+    } catch (cause) {
+      setSaveError(cause instanceof Error ? cause.message : t('Could not reveal the user token.'));
     }
   }
 
@@ -340,9 +351,15 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
       setSaved(false);
       return;
     }
+    if (slack && userToken.unchosen) {
+      setSaveError(t('Choose the workspace secret this connection reads its user token from.'));
+      setSaved(false);
+      return;
+    }
 
     const sendingSecret = secret.sending;
     const sendingAppToken = appToken.sending;
+    const sendingUserToken = userToken.sending;
 
     setSaving(true);
     setSaveError(null);
@@ -377,6 +394,11 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
           : 'variable' in sendingAppToken
             ? { appTokenVariableId: sendingAppToken.variable }
             : { appToken: sendingAppToken.value }),
+        ...(sendingUserToken === null
+          ? {}
+          : 'variable' in sendingUserToken
+            ? { userTokenVariableId: sendingUserToken.variable }
+            : { userToken: sendingUserToken.value }),
         urlOverride: slack ? undefined : urlOverride.trim(),
         // Only for a mail connection: sending these for a Slack one would write
         // settings nothing reads and clear what somebody typed elsewhere.
@@ -388,6 +410,7 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
       setConnection(updated);
       secret.reset({ stored: updated.secretSet, variable: updated.secretVariableId });
       appToken.reset({ stored: updated.appTokenSet, variable: updated.appTokenVariableId });
+      userToken.reset({ stored: updated.userTokenSet, variable: updated.userTokenVariableId });
       setSaved(true);
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : t('Could not save the credentials.'));
@@ -711,6 +734,38 @@ export function ConnectionSettingsPage({ session, onSignOut }: ConnectionSetting
                 broken={
                   connection.appTokenVariableMissing
                     ? t('The workspace secret this app-level token was read from is gone, so this connection cannot listen. Point this field at another secret, or give it a value of its own.')
+                    : null
+                }
+              />
+            )}
+
+            {slack && (
+              <SecretField
+                id="connection-user-token"
+                label={t('User Token')}
+                field={userToken}
+                options={offered(
+                  connection.userTokenVariableId,
+                  connection.userTokenVariableName,
+                  connection.userTokenVariableCatalog,
+                )}
+                variablesPath={`/workspace/${workspaceId}/variables`}
+                placeholder="xoxp-..."
+                hint={
+                  <>
+                    Optional, and beginning <code>xoxp-</code>. From OAuth &amp; Permissions, a User
+                    OAuth Token with search:read. Search runs on this token when one is stored,
+                    because Slack answers search only for a user; everything else keeps using the
+                    bot token above.
+                  </>
+                }
+                onSource={(next) => chooseSource(userToken, next)}
+                onValue={touched}
+                onVariable={touched}
+                onReveal={() => void handleRevealUserToken()}
+                broken={
+                  connection.userTokenVariableMissing
+                    ? t('The workspace secret this user token was read from is gone, so this connection cannot search. Point this field at another secret, or give it a value of its own.')
                     : null
                 }
               />

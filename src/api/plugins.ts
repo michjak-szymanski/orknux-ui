@@ -359,6 +359,8 @@ export interface PluginParameterSetting {
   name: string;
   description: string | null;
   type: string;
+  /** Which kind of connection a `connection` parameter takes; null for every other type. */
+  connectionType: string | null;
   required: boolean;
   secret: boolean;
   /** What somebody typed. Null when this points at a variable, or is unanswered. */
@@ -372,7 +374,7 @@ export interface PluginParameterSetting {
 const WORKSPACE_PLUGIN_FIELDS = `
   missing
   plugin { ${PLUGIN_FIELDS} }
-  parameters { name description type required secret literal variableId variableName missing }
+  parameters { name description type connectionType required secret literal variableId variableName missing }
 `;
 
 export async function fetchWorkspacePlugins(workspaceId: string): Promise<WorkspacePlugin[]> {

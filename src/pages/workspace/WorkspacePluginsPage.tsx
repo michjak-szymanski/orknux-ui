@@ -7,6 +7,8 @@ import {
   setPluginParameter,
 } from '../../api/plugins';
 import type { PluginParameterSetting, WorkspacePlugin } from '../../api/plugins';
+import { fetchWorkspaceConnections } from '../../api/integrations';
+import type { WorkspaceConnection } from '../../api/integrations';
 import type { SessionUser } from '../../api/session';
 import type { Variable } from '../../api/variables';
 import puzzleIcon from '../../assets/puzzle.svg';
@@ -74,6 +76,27 @@ export function WorkspacePluginsPage({ session, onSignOut }: WorkspacePluginsPag
    * made on the Variables page after this one was opened.
    */
   const { variables, refresh: refreshVariables } = useWorkspaceVariables(workspaceId);
+  /*
+   * What a connection parameter picks from. A connection is referenced by which
+   * one it is, not by a number somebody read off another page's URL, so the row
+   * offers the workspace's connections by name and stores the choice.
+   */
+  const [connections, setConnections] = useState<WorkspaceConnection[]>([]);
+
+  useEffect(() => {
+    if (workspaceId === '') return;
+    let current = true;
+    fetchWorkspaceConnections(workspaceId)
+      .then((found) => {
+        if (current) setConnections(found);
+      })
+      .catch(() => {
+        // The list stays empty and the picker says so; the page still loads.
+      });
+    return () => {
+      current = false;
+    };
+  }, [workspaceId]);
 
   const load = useCallback(() => {
     if (workspaceId === '') return;
@@ -269,6 +292,7 @@ export function WorkspacePluginsPage({ session, onSignOut }: WorkspacePluginsPag
                           pluginId={entry.plugin.id}
                           parameter={parameter}
                           variables={variables}
+                          connections={connections}
                           busy={busy}
                           onSet={(answer) => void onSet(entry.plugin.id, parameter.name, answer)}
                           onClear={() => void onClear(entry.plugin.id, parameter.name)}
@@ -321,6 +345,7 @@ interface ParameterRowProps {
   pluginId: string;
   parameter: PluginParameterSetting;
   variables: Variable[];
+  connections: WorkspaceConnection[];
   busy: boolean;
   onSet: (answer: { literal: string } | { variableId: string }) => void;
   onClear: () => void;
@@ -339,13 +364,30 @@ interface ParameterRowProps {
  * the refusal would be inviting somebody to paste a token into a page that shows
  * it back. So the switch still says both words and Value is the one that cannot
  * be pressed, which says why rather than quietly leaving half the control out.
+ *
+ * A connection parameter is the opposite way round: the server refuses a
+ * variable for one, and what it stores is which of the workspace's connections
+ * was picked - so the box is a picker of them by name, never a number typed in.
  */
-function ParameterRow({ pluginId, parameter, variables, busy, onSet, onClear }: ParameterRowProps) {
+function ParameterRow({ pluginId, parameter, variables, connections, busy, onSet, onClear }: ParameterRowProps) {
   const [typed, setTyped] = useState(parameter.literal ?? '');
 
   // The stored value is the one to edit whenever it changes underneath, which it
   // does every time an answer comes back from the server.
   useEffect(() => setTyped(parameter.literal ?? ''), [parameter.literal]);
+
+  const takesConnection = parameter.type.toLowerCase() === 'connection';
+  /** The connections this parameter may name: the declared kind's, or all of them. */
+  const offeredConnections = takesConnection
+    ? connections.filter(
+        (held) => parameter.connectionType === null || held.type === parameter.connectionType,
+      )
+    : [];
+  /** What the picker shows for the stored choice: the name, or that it is gone. */
+  const storedConnection =
+    takesConnection && parameter.literal !== null
+      ? offeredConnections.find((held) => held.id === parameter.literal) ?? null
+      : null;
 
   const stored: Answer = parameter.secret || parameter.variableId !== null ? 'REFERENCE' : 'VALUE';
   const [mode, setMode] = useState<Answer>(stored);
@@ -421,11 +463,16 @@ function ParameterRow({ pluginId, parameter, variables, busy, onSet, onClear }: 
               type="button"
               className={mode === option ? `${styles.modeOption} ${styles.modeOptionOn}` : styles.modeOption}
               aria-pressed={mode === option}
-              disabled={parameter.secret && option === 'VALUE'}
+              disabled={
+                (parameter.secret && option === 'VALUE') ||
+                (takesConnection && option === 'REFERENCE')
+              }
               title={
                 parameter.secret && option === 'VALUE'
                   ? t('A secret is only ever answered by pointing at a variable')
-                  : undefined
+                  : takesConnection && option === 'REFERENCE'
+                    ? t('A connection is picked from the workspace\'s connections, never read from a variable')
+                    : undefined
               }
               onClick={() => setMode(option)}
             >
@@ -458,6 +505,45 @@ function ParameterRow({ pluginId, parameter, variables, busy, onSet, onClear }: 
             labels={VARIABLE_LABELS}
             onChange={(option) => onSet({ variableId: option.expression })}
           />
+        </div>
+      ) : takesConnection ? (
+        /*
+         * Which connection, by name. What the server stores is the connection's
+         * id, but a number is not how anybody thinks of their Slack - and a
+         * picker cannot be answered with an id that belongs to another
+         * workspace, which the box it replaced happily accepted and the save
+         * then refused.
+         */
+        <div className={styles.inputWrapper}>
+          <select
+            id={fieldId}
+            className={`${styles.input} ${styles.parameterValue}`}
+            value={parameter.literal ?? ''}
+            disabled={busy}
+            onChange={(event) => {
+              if (event.target.value !== '') onSet({ literal: event.target.value });
+            }}
+          >
+            <option value="" disabled>
+              {t('Choose a connection…')}
+            </option>
+            {offeredConnections.map((held) => (
+              <option key={held.id} value={held.id}>
+                {held.name}
+              </option>
+            ))}
+            {/*
+              A stored choice that is no longer among the workspace's
+              connections stays visible rather than silently becoming the
+              placeholder: the parameter is still set to it, and what it is set
+              to is the one thing this control must not misreport.
+            */}
+            {parameter.literal !== null && storedConnection === null && (
+              <option value={parameter.literal}>
+                {`#${parameter.literal} (no longer in this workspace)`}
+              </option>
+            )}
+          </select>
         </div>
       ) : (
         <div className={styles.inputWrapper}>
@@ -497,6 +583,14 @@ function ParameterRow({ pluginId, parameter, variables, busy, onSet, onClear }: 
       {parameter.secret && variables.length === 0 && (
         <p className={styles.parameterNote}>
           {t('A secret is only ever answered by pointing at a variable, and this workspace has none yet. Add one on the Variables page and it will be offered here.')}
+        </p>
+      )}
+
+      {takesConnection && offeredConnections.length === 0 && (
+        <p className={styles.parameterNote}>
+          {parameter.connectionType === null
+            ? t('This workspace has no connections yet. Add one on the Integrations page and it will be offered here.')
+            : `This workspace has no ${parameter.connectionType} connections yet. Add one on the Integrations page and it will be offered here.`}
         </p>
       )}
 

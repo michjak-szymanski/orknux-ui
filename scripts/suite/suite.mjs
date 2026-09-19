@@ -534,6 +534,14 @@ export const TESTS = [
     alone: true,
   },
   {
+    name: 'agent-connection-grant-check',
+    what: 'a connection is granted to an agent and picked for a plugin by name, never typed as a number',
+    needs: ['workspace'],
+    // `alone` for the same reason: it loads a scratch plugin, which is
+    // installation-wide while it exists.
+    alone: true,
+  },
+  {
     name: 'library-install-check',
     what: 'naming a package on the Libraries screen: the field, the pinned version, and the refusal',
     needs: ['session'],

@@ -33,6 +33,8 @@ export interface Agent {
   skillCatalogs: string[];
   /** Which of the workspace's tools it may call. */
   tools: string[];
+  /** Which of the workspace's connections it may name when a tool takes one. */
+  connectionIds: string[];
   /** Which icon a node drawn from this starts with; null draws the kind's own. */
   icon: string | null;
   /**
@@ -103,7 +105,7 @@ export interface SessionMemoryBudget {
 }
 
 const AGENT_FIELDS =
-  'id workspaceId name type description systemPrompt enabled modelId modelName mcpServers orknuxAccess shellAccess memoryCatalogs skillCatalogs tools icon memoryShare';
+  'id workspaceId name type description systemPrompt enabled modelId modelName mcpServers orknuxAccess shellAccess memoryCatalogs skillCatalogs tools connectionIds icon memoryShare';
 
 const WORKSPACE_AGENTS_QUERY = `
   query WorkspaceAgents($workspaceId: ID!, $page: Int!, $size: Int!) {
@@ -224,6 +226,8 @@ export async function updateAgent(
     skillCatalogs?: string[];
     /** Which tools it may call; left out, the grant is unchanged. */
     tools?: string[];
+    /** Which of the workspace's connections it may name; left out, the grant is unchanged. */
+    connectionIds?: string[];
     /** Which icon a node drawn from this agent starts with; null clears it. */
     icon?: string | null;
     /**

@@ -77,6 +77,7 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
    */
   const secret = useSecretField();
   const appToken = useSecretField();
+  const userToken = useSecretField();
   const { variables, refresh: refreshVariables } = useWorkspaceVariables(workspaceId);
   const [smtpUsername, setSmtpUsername] = useState('');
   const [smtpFrom, setSmtpFrom] = useState('');
@@ -97,6 +98,7 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
       setAuthType('BEARER_TOKEN');
       secret.clear();
       appToken.clear();
+      userToken.clear();
       setSmtpUsername('');
       setSmtpFrom('');
       setSmtpSecurity('STARTTLS');
@@ -119,6 +121,7 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
     // whichever of them it is.
     !secret.unchosen &&
     !appToken.unchosen &&
+    !userToken.unchosen &&
     (slack
       ? // The bot token alone, from either source. An app-level token is what
         // makes the connection listen as well as send, and a connection that
@@ -165,6 +168,7 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
 
     const sendingSecret = secret.sending;
     const sendingAppToken = appToken.sending;
+    const sendingUserToken = userToken.sending;
 
     setSubmitting(true);
     setError(null);
@@ -194,6 +198,11 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
           : 'variable' in sendingAppToken
             ? { appTokenVariableId: sendingAppToken.variable }
             : { appToken: sendingAppToken.value.trim() || undefined }),
+        ...(!slack || sendingUserToken === null
+          ? {}
+          : 'variable' in sendingUserToken
+            ? { userTokenVariableId: sendingUserToken.variable }
+            : { userToken: sendingUserToken.value.trim() || undefined }),
         smtpPort: mail ? Number(smtpPort) : undefined,
         smtpUsername: mail ? smtpUsername.trim() || undefined : undefined,
         smtpFrom: mail ? smtpFrom.trim() : undefined,
@@ -422,6 +431,25 @@ export function WorkspaceConnectionDialog({ open, workspaceId, onClose, onCreate
                   </>
                 }
                 onSource={(next) => chooseSource(appToken, next)}
+                onValue={() => setError(null)}
+                onVariable={() => setError(null)}
+              />
+
+              <SecretField
+                id="workspace-connection-user-token"
+                label={t('User Token')}
+                field={userToken}
+                options={secrets}
+                variablesPath={`/workspace/${workspaceId}/variables`}
+                placeholder={t('xoxp-... (optional)')}
+                hint={
+                  <>
+                    Optional, and beginning <code>xoxp-</code>. From OAuth &amp; Permissions, a User
+                    OAuth Token with search:read. Slack answers search only for a user, so with one
+                    stored this connection can search messages; everything else uses the bot token.
+                  </>
+                }
+                onSource={(next) => chooseSource(userToken, next)}
                 onValue={() => setError(null)}
                 onVariable={() => setError(null)}
               />

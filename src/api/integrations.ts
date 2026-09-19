@@ -61,6 +61,12 @@ export interface WorkspaceConnection {
   appTokenVariableName: string | null;
   appTokenVariableCatalog: string | null;
   appTokenVariableMissing: boolean;
+  /** Whether a user token of the connection's own is stored, which is what lets a Slack connection search. */
+  userTokenSet: boolean;
+  userTokenVariableId: string | null;
+  userTokenVariableName: string | null;
+  userTokenVariableCatalog: string | null;
+  userTokenVariableMissing: boolean;
   /** The port a mail connection will use, which is the default one when none was chosen. */
   smtpPort: number | null;
   /** Who a mail connection logs in as; null sends without authenticating. */
@@ -112,6 +118,7 @@ const WORKSPACE_CONNECTION_FIELDS =
   'id workspaceId name type url urlOverride effectiveUrl authType headers { name value } inherited secretSet ' +
   'secretVariableId secretVariableName secretVariableCatalog secretVariableMissing ' +
   'appTokenSet appTokenVariableId appTokenVariableName appTokenVariableCatalog appTokenVariableMissing ' +
+  'userTokenSet userTokenVariableId userTokenVariableName userTokenVariableCatalog userTokenVariableMissing ' +
   'smtpPort smtpUsername smtpFrom smtpSecurity status lastCheckMessage lastCheckedAt';
 const MCP_SERVER_FIELDS =
   'id workspaceId name address authType headers { name value } secretSet ' +
@@ -194,6 +201,13 @@ const REVEAL_CONNECTION_MUTATION = `
 const REVEAL_CONNECTION_APP_TOKEN_MUTATION = `
   mutation RevealWorkspaceConnectionAppToken($id: ID!) {
     revealWorkspaceConnectionAppToken(id: $id)
+  }
+`;
+
+/** And the third, the user token search runs on. */
+const REVEAL_CONNECTION_USER_TOKEN_MUTATION = `
+  mutation RevealWorkspaceConnectionUserToken($id: ID!) {
+    revealWorkspaceConnectionUserToken(id: $id)
   }
 `;
 
@@ -303,6 +317,10 @@ export async function createWorkspaceConnection(input: {
   appToken?: string;
   /** The app-level token's own reference, chosen separately from `secretVariableId`. */
   appTokenVariableId?: string;
+  /** Slack's user token (xoxp-). Given one, the connection can also search. */
+  userToken?: string;
+  /** The user token's own reference, chosen separately again. */
+  userTokenVariableId?: string;
   /** Where the mail server listens; omitted takes the port the security implies. */
   smtpPort?: number;
   /** Who to log in as; omitted sends without authenticating, and the password is `secret`. */
@@ -332,6 +350,8 @@ export async function updateWorkspaceConnection(
     secretVariableId?: string;
     appToken?: string;
     appTokenVariableId?: string;
+    userToken?: string;
+    userTokenVariableId?: string;
     smtpPort?: number;
     smtpUsername?: string;
     smtpFrom?: string;
@@ -363,6 +383,14 @@ export async function revealWorkspaceConnectionAppToken(id: string): Promise<str
     { id },
   );
   return data.revealWorkspaceConnectionAppToken;
+}
+
+export async function revealWorkspaceConnectionUserToken(id: string): Promise<string | null> {
+  const data = await graphql<{ revealWorkspaceConnectionUserToken: string | null }>(
+    REVEAL_CONNECTION_USER_TOKEN_MUTATION,
+    { id },
+  );
+  return data.revealWorkspaceConnectionUserToken;
 }
 
 /**
